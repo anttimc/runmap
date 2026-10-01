@@ -1,0 +1,372 @@
+import {
+  AttributionControl,
+  ImageSource,
+  Map,
+  NavigationControl,
+  setWorkerUrl,
+  type MapSourceDataEvent,
+  type StyleSpecification,
+} from "maplibre-gl";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+import "maplibre-gl/dist/maplibre-gl.css";
+import "./style.css";
+
+// MapLibre derives its worker URL from import.meta.url by default. After Vite
+// bundles the library that resolves beside our app bundle, where the worker is
+// not automatically copied. A worker-aware URL import makes Vite bundle the
+// worker and its shared module, then gives MapLibre the production URL.
+setWorkerUrl(maplibreWorkerUrl);
+
+interface MapConfig {
+  bounds_wgs84: [number, number, number, number];
+  image_coordinates: [
+    [number, number],
+    [number, number],
+    [number, number],
+    [number, number],
+  ];
+  source_shape: [number, number];
+  resolution_m: number;
+  smoothing: {
+    minimum: number;
+    maximum: number;
+    step: number;
+    default: number;
+    raw_value: number;
+  };
+  slope_legend: { percent: number; color: string }[];
+}
+
+const FIRST_LABEL_LAYER_ID = "water-place-labels";
+
+function openStreetMapStyle(): StyleSpecification {
+  const tileJsonUrl = (import.meta.env.VITE_OSM_VECTOR_TILEJSON_URL as string | undefined)
+    || "https://vector.openstreetmap.org/shortbread_v1/tilejson.json";
+  const labelFont = ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"];
+  return {
+    version: 8,
+    name: "Runmap neutral OSM",
+    sources: {
+      openstreetmap: {
+        type: "vector",
+        url: tileJsonUrl,
+        attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>',
+      },
+    },
+    layers: [
+      { id: "background", type: "background", paint: { "background-color": "#eceae5" } },
+      {
+        id: "land",
+        type: "fill",
+        source: "openstreetmap",
+        "source-layer": "land",
+        paint: {
+          "fill-color": [
+            "match", ["get", "kind"],
+            ["forest", "wood"], "#deded8",
+            ["grass", "meadow", "park"], "#e5e4de",
+            "#e9e7e2",
+          ],
+          "fill-opacity": 0.78,
+        },
+      },
+      {
+        id: "sites",
+        type: "fill",
+        source: "openstreetmap",
+        "source-layer": "sites",
+        paint: { "fill-color": "#dedbd5", "fill-opacity": 0.55 },
+      },
+      {
+        id: "ocean",
+        type: "fill",
+        source: "openstreetmap",
+        "source-layer": "ocean",
+        paint: { "fill-color": "#d7dde0" },
+      },
+      {
+        id: "water",
+        type: "fill",
+        source: "openstreetmap",
+        "source-layer": "water_polygons",
+        paint: { "fill-color": "#d7dde0" },
+      },
+      {
+        id: "street-areas",
+        type: "fill",
+        source: "openstreetmap",
+        "source-layer": "street_polygons",
+        paint: { "fill-color": "#d2d0ca", "fill-opacity": 0.8 },
+      },
+      {
+        id: "buildings",
+        type: "fill",
+        source: "openstreetmap",
+        "source-layer": "buildings",
+        minzoom: 13,
+        paint: {
+          "fill-color": "#cfccc6",
+          "fill-opacity": 0.7,
+          "fill-outline-color": "#bbb9b4",
+        },
+      },
+      {
+        id: "water-lines",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "water_lines",
+        paint: {
+          "line-color": "#aeb9bf",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 16, 1.8],
+        },
+      },
+      {
+        id: "road-casing",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: ["all", ["!", ["get", "rail"]], ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary"]]]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#a5a49f",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 7, 1, 12, 3, 16, 8],
+          "line-opacity": 0.8,
+        },
+      },
+      {
+        id: "roads",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: ["all", ["!", ["get", "rail"]], ["!", ["in", ["get", "kind"], ["literal", ["path", "footway", "cycleway", "bridleway", "steps"]]]]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": [
+            "match", ["get", "kind"],
+            ["motorway", "trunk", "primary", "secondary"], "#f4f2ed",
+            "#d8d6d0",
+          ],
+          "line-width": ["interpolate", ["linear"], ["zoom"], 7, 0.6, 12, 1.8, 16, 5.5],
+          "line-opacity": 0.92,
+        },
+      },
+      {
+        id: "paths",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: ["in", ["get", "kind"], ["literal", ["path", "footway", "cycleway", "bridleway", "steps"]]],
+        minzoom: 12,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#777976",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.55, 16, 1.5],
+          "line-dasharray": [2, 1.5],
+          "line-opacity": 0.9,
+        },
+      },
+      {
+        id: "railways",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: ["==", ["get", "rail"], true],
+        paint: {
+          "line-color": "#858580",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.6, 16, 1.8],
+          "line-dasharray": [3, 2],
+          "line-opacity": 0.75,
+        },
+      },
+      {
+        id: FIRST_LABEL_LAYER_ID,
+        type: "symbol",
+        source: "openstreetmap",
+        "source-layer": "water_polygons_labels",
+        minzoom: 11,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": labelFont,
+          "text-size": 11,
+        },
+        paint: {
+          "text-color": "#50585c",
+          "text-halo-color": "rgba(247, 246, 242, 0.94)",
+          "text-halo-width": 1.2,
+        },
+      },
+      {
+        id: "street-labels",
+        type: "symbol",
+        source: "openstreetmap",
+        "source-layer": "street_labels",
+        minzoom: 12,
+        layout: {
+          "symbol-placement": "line",
+          "text-field": ["get", "name"],
+          "text-font": labelFont,
+          "text-size": ["interpolate", ["linear"], ["zoom"], 12, 10, 16, 12],
+          "text-letter-spacing": 0.02,
+        },
+        paint: {
+          "text-color": "#3f403e",
+          "text-halo-color": "rgba(247, 246, 242, 0.96)",
+          "text-halo-width": 1.3,
+        },
+      },
+      {
+        id: "place-labels",
+        type: "symbol",
+        source: "openstreetmap",
+        "source-layer": "place_labels",
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": labelFont,
+          "text-size": [
+            "match", ["get", "kind"],
+            ["city", "town"], 15,
+            ["village", "suburb"], 13,
+            11,
+          ],
+          "text-variable-anchor": ["top", "bottom", "left", "right"],
+          "text-radial-offset": 0.35,
+        },
+        paint: {
+          "text-color": "#343532",
+          "text-halo-color": "rgba(247, 246, 242, 0.96)",
+          "text-halo-width": 1.5,
+        },
+      },
+    ],
+  };
+}
+
+const wavelengthInput = element<HTMLInputElement>("wavelength");
+const wavelengthValue = element<HTMLOutputElement>("wavelength-value");
+const opacityInput = element<HTMLInputElement>("opacity");
+const opacityValue = element<HTMLOutputElement>("opacity-value");
+const status = element<HTMLSpanElement>("status");
+const legendBar = element<HTMLDivElement>("legend-bar");
+const legendLabels = element<HTMLDivElement>("legend-labels");
+
+let map: Map;
+let debounceTimer: number | undefined;
+
+function element<T extends HTMLElement>(id: string): T {
+  const found = document.getElementById(id);
+  if (!found) throw new Error(`Missing #${id}`);
+  return found as T;
+}
+
+function terrainUrl(wavelength: number): string {
+  return `/api/terrain.png?wavelength_m=${wavelength}&max_size=1600`;
+}
+
+function setStatus(message: string, kind: "ready" | "busy" | "error" = "ready"): void {
+  status.textContent = message;
+  status.dataset.kind = kind;
+}
+
+function renderLegend(stops: MapConfig["slope_legend"]): void {
+  const maximum = stops.at(-1)?.percent ?? 40;
+  legendBar.style.background = `linear-gradient(to top, ${stops
+    .map((stop) => `${stop.color} ${(100 * stop.percent) / maximum}%`)
+    .join(", ")})`;
+  legendLabels.replaceChildren(
+    ...stops
+      .slice()
+      .reverse()
+      .map((stop) => {
+        const label = document.createElement("span");
+        label.textContent = `${stop.percent}%`;
+        return label;
+      }),
+  );
+}
+
+function updateTerrain(wavelength: number): void {
+  setStatus("Updating…", "busy");
+  const source = map.getSource("terrain") as ImageSource | undefined;
+  source?.updateImage({ url: terrainUrl(wavelength) });
+}
+
+function scheduleTerrainUpdate(): void {
+  const wavelength = Number(wavelengthInput.value);
+  wavelengthValue.value = wavelength === 0 ? "Raw" : `${wavelength} m`;
+  window.clearTimeout(debounceTimer);
+  debounceTimer = window.setTimeout(() => updateTerrain(wavelength), 180);
+}
+
+async function start(): Promise<void> {
+  const response = await fetch("/api/config");
+  if (!response.ok) throw new Error(`Configuration request failed (${response.status})`);
+  const config = (await response.json()) as MapConfig;
+  const setting = config.smoothing;
+  wavelengthInput.min = String(setting.minimum);
+  wavelengthInput.max = String(setting.maximum);
+  wavelengthInput.step = String(setting.step);
+  wavelengthInput.value = String(setting.default);
+  wavelengthValue.value = `${setting.default} m`;
+  renderLegend(config.slope_legend);
+
+  const styleUrl = import.meta.env.VITE_MAP_STYLE_URL as string | undefined;
+  map = new Map({
+    container: "map",
+    style: styleUrl || openStreetMapStyle(),
+    center: [
+      (config.bounds_wgs84[0] + config.bounds_wgs84[2]) / 2,
+      (config.bounds_wgs84[1] + config.bounds_wgs84[3]) / 2,
+    ],
+    attributionControl: false,
+  });
+  map.addControl(new NavigationControl({ visualizePitch: true }), "bottom-right");
+  map.addControl(new AttributionControl({
+    compact: true,
+    customAttribution: "Elevation: National Land Survey of Finland (CC BY 4.0)",
+  }));
+  map.on("sourcedata", (event: MapSourceDataEvent) => {
+    if (event.sourceId === "terrain" && event.isSourceLoaded) setStatus("Ready");
+  });
+
+  map.on("load", () => {
+    map.addSource("terrain", {
+      type: "image",
+      url: terrainUrl(setting.default),
+      coordinates: config.image_coordinates,
+    });
+    map.addLayer({
+      id: "terrain-slope",
+      type: "raster",
+      source: "terrain",
+      paint: {
+        "raster-opacity": Number(opacityInput.value) / 100,
+        "raster-fade-duration": 0,
+      },
+    }, map.getLayer(FIRST_LABEL_LAYER_ID) ? FIRST_LABEL_LAYER_ID : undefined);
+    map.fitBounds(
+      [[config.bounds_wgs84[0], config.bounds_wgs84[1]], [config.bounds_wgs84[2], config.bounds_wgs84[3]]],
+      { padding: 42, duration: 0 },
+    );
+    wavelengthInput.disabled = false;
+    opacityInput.disabled = false;
+    setStatus("Loading overlay…", "busy");
+  });
+
+  wavelengthInput.addEventListener("input", scheduleTerrainUpdate);
+  wavelengthInput.addEventListener("change", () => {
+    window.clearTimeout(debounceTimer);
+    updateTerrain(Number(wavelengthInput.value));
+  });
+  opacityInput.addEventListener("input", () => {
+    const opacity = Number(opacityInput.value);
+    opacityValue.value = `${opacity}%`;
+    if (map.getLayer("terrain-slope")) {
+      map.setPaintProperty("terrain-slope", "raster-opacity", opacity / 100);
+    }
+  });
+}
+
+void start().catch((error) => {
+  console.error(error);
+  setStatus("Startup failed", "error");
+});

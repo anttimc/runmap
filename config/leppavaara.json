@@ -1,0 +1,6 @@
+{
+  "name": "Leppävaara, Espoo",
+  "crs": "EPSG:3067",
+  "bounds": [374000, 6676000, 380000, 6682000],
+  "note": "Provisional 6 km square covering Leppävaara and surroundings, not an administrative boundary. Select the display crop within this download after inspecting coverage; smoothing needs boundary context."
+}

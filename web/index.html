@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111827" />
+    <title>Runmap terrain</title>
+  </head>
+  <body>
+    <main id="app">
+      <div id="map" aria-label="Interactive Leppävaara terrain map"></div>
+
+      <section class="controls" aria-labelledby="controls-title">
+        <div class="heading-row">
+          <div>
+            <p class="eyebrow">Leppävaara terrain</p>
+            <h1 id="controls-title">Slope explorer</h1>
+          </div>
+          <span id="status" class="status" role="status">Starting…</span>
+        </div>
+
+        <label class="control-label" for="wavelength">
+          <span>Thin-plate smoothing</span>
+          <output id="wavelength-value" for="wavelength">40 m</output>
+        </label>
+        <input id="wavelength" type="range" min="0" max="100" step="2" value="40" disabled />
+        <div class="range-notes"><span>Raw</span><span>Broader smoothing</span></div>
+        <p class="explanation">
+          Half-amplitude wavelength: terrain variation at this wavelength is reduced by half.
+        </p>
+
+        <label class="control-label" for="opacity">
+          <span>Overlay opacity</span>
+          <output id="opacity-value" for="opacity">78%</output>
+        </label>
+        <input id="opacity" type="range" min="0" max="100" step="1" value="78" disabled />
+
+        <div class="legend" aria-label="Slope magnitude legend">
+          <div class="legend-heading"><span>Slope magnitude</span><span>grade</span></div>
+          <div class="legend-body">
+            <div id="legend-bar" class="legend-bar"></div>
+            <div id="legend-labels" class="legend-labels"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
