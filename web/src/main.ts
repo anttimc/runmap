@@ -38,6 +38,8 @@ interface MapConfig {
 }
 
 const FIRST_LABEL_LAYER_ID = "water-place-labels";
+const FIRST_ABOVE_TERRAIN_LAYER_ID = "context-road-casing";
+const RUNNER_PATH_CASING_LAYER_ID = "runner-path-casing";
 
 function openStreetMapStyle(): StyleSpecification {
   const tileJsonUrl = (import.meta.env.VITE_OSM_VECTOR_TILEJSON_URL as string | undefined)
@@ -138,7 +140,7 @@ function openStreetMapStyle(): StyleSpecification {
         type: "line",
         source: "openstreetmap",
         "source-layer": "streets",
-        filter: ["all", ["!", ["get", "rail"]], ["!", ["in", ["get", "kind"], ["literal", ["path", "footway", "cycleway", "bridleway", "steps"]]]]],
+        filter: ["all", ["!", ["get", "rail"]], ["!", ["in", ["get", "kind"], ["literal", ["pedestrian", "track", "path", "footway", "cycleway", "steps"]]]]],
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": [
@@ -148,21 +150,6 @@ function openStreetMapStyle(): StyleSpecification {
           ],
           "line-width": ["interpolate", ["linear"], ["zoom"], 7, 0.6, 12, 1.8, 16, 5.5],
           "line-opacity": 0.92,
-        },
-      },
-      {
-        id: "paths",
-        type: "line",
-        source: "openstreetmap",
-        "source-layer": "streets",
-        filter: ["in", ["get", "kind"], ["literal", ["path", "footway", "cycleway", "bridleway", "steps"]]],
-        minzoom: 12,
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": "#777976",
-          "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.55, 16, 1.5],
-          "line-dasharray": [2, 1.5],
-          "line-opacity": 0.9,
         },
       },
       {
@@ -176,6 +163,144 @@ function openStreetMapStyle(): StyleSpecification {
           "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.6, 16, 1.8],
           "line-dasharray": [3, 2],
           "line-opacity": 0.75,
+        },
+      },
+      {
+        id: FIRST_ABOVE_TERRAIN_LAYER_ID,
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: [
+          "all",
+          ["!", ["get", "rail"]],
+          ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "living_street", "service"]]],
+        ],
+        minzoom: 9,
+        maxzoom: 13.5,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#4e504d",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.2, 12, 2.5, 13.5, 3.2],
+          "line-opacity": ["interpolate", ["linear"], ["zoom"], 9, 0.38, 12, 0.48, 13.5, 0],
+        },
+      },
+      {
+        id: "context-roads",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: [
+          "all",
+          ["!", ["get", "rail"]],
+          ["in", ["get", "kind"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "living_street", "service"]]],
+        ],
+        minzoom: 9,
+        maxzoom: 13.5,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#f8f7f3",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.5, 12, 1.3, 13.5, 1.7],
+          "line-opacity": ["interpolate", ["linear"], ["zoom"], 9, 0.8, 12, 0.88, 13.5, 0],
+        },
+      },
+      {
+        id: RUNNER_PATH_CASING_LAYER_ID,
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: [
+          "all",
+          ["in", ["get", "kind"], ["literal", ["pedestrian", "track", "path", "footway", "cycleway", "steps"]]],
+          ["match", ["get", "foot"], "no", false, true],
+        ],
+        minzoom: 13,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "rgba(250, 249, 245, 0.92)",
+          "line-width": [
+            "interpolate", ["linear"], ["zoom"],
+            13, ["match", ["get", "kind"], "pedestrian", 4.2, 2.3],
+            17, ["match", ["get", "kind"], "pedestrian", 6.4, 3.8],
+          ],
+        },
+      },
+      {
+        id: "runner-paths-unmaintained",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: [
+          "all",
+          ["in", ["get", "kind"], ["literal", ["track", "path", "footway", "cycleway", "steps"]]],
+          ["match", ["get", "foot"], "no", false, true],
+          ["!", ["any",
+            ["match", ["get", "surface"], ["asphalt", "concrete", "concrete:plates", "paved", "paving_stones", "sett", "cobblestone", "compacted", "fine_gravel", "gravel", "wood"], true, false],
+            ["match", ["get", "tracktype"], ["grade1", "grade2"], true, false],
+            ["all",
+              ["in", ["get", "kind"], ["literal", ["footway", "cycleway", "track"]]],
+              ["!", ["any",
+                ["match", ["get", "surface"], ["dirt", "earth", "ground", "grass", "mud", "sand"], true, false],
+                ["match", ["get", "tracktype"], ["grade3", "grade4", "grade5"], true, false],
+              ]],
+            ],
+          ]],
+        ],
+        minzoom: 13,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#555752",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.7, 17, 1.15],
+          "line-dasharray": [1, 1.8],
+          "line-opacity": 0.9,
+        },
+      },
+      {
+        id: "runner-paths-maintained",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: [
+          "all",
+          ["in", ["get", "kind"], ["literal", ["track", "path", "footway", "cycleway", "steps"]]],
+          ["match", ["get", "foot"], "no", false, true],
+          ["any",
+            ["match", ["get", "surface"], ["asphalt", "concrete", "concrete:plates", "paved", "paving_stones", "sett", "cobblestone", "compacted", "fine_gravel", "gravel", "wood"], true, false],
+            ["match", ["get", "tracktype"], ["grade1", "grade2"], true, false],
+            ["all",
+              ["in", ["get", "kind"], ["literal", ["footway", "cycleway", "track"]]],
+              ["!", ["any",
+                ["match", ["get", "surface"], ["dirt", "earth", "ground", "grass", "mud", "sand"], true, false],
+                ["match", ["get", "tracktype"], ["grade3", "grade4", "grade5"], true, false],
+              ]],
+            ],
+          ],
+        ],
+        minzoom: 13,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#292a28",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1.05, 17, 1.75],
+          "line-dasharray": [3, 1.5],
+          "line-opacity": 0.96,
+        },
+      },
+      {
+        id: "runner-pedestrian-roads",
+        type: "line",
+        source: "openstreetmap",
+        "source-layer": "streets",
+        filter: [
+          "all",
+          ["==", ["get", "kind"], "pedestrian"],
+          ["match", ["get", "foot"], "no", false, true],
+        ],
+        minzoom: 13,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#292a28",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 13, 2.1, 17, 3.3],
+          "line-dasharray": [3, 1.2],
+          "line-opacity": 0.96,
         },
       },
       {
@@ -342,7 +467,11 @@ async function start(): Promise<void> {
         "raster-opacity": Number(opacityInput.value) / 100,
         "raster-fade-duration": 0,
       },
-    }, map.getLayer(FIRST_LABEL_LAYER_ID) ? FIRST_LABEL_LAYER_ID : undefined);
+    }, map.getLayer(FIRST_ABOVE_TERRAIN_LAYER_ID)
+      ? FIRST_ABOVE_TERRAIN_LAYER_ID
+      : map.getLayer(FIRST_LABEL_LAYER_ID)
+        ? FIRST_LABEL_LAYER_ID
+        : undefined);
     map.fitBounds(
       [[config.bounds_wgs84[0], config.bounds_wgs84[1]], [config.bounds_wgs84[2], config.bounds_wgs84[3]]],
       { padding: 42, duration: 0 },

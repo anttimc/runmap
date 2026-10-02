@@ -110,6 +110,35 @@ input[type="range"]:disabled { cursor: wait; opacity: 0.45; }
 .legend-bar { width: 18px; border-radius: 5px; }
 .legend-labels { display: flex; flex-direction: column; justify-content: space-between; font-size: 0.68rem; color: #586366; }
 
+.path-keys {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.path-key {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #586366;
+  font-size: 0.68rem;
+}
+
+.path-key-line {
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(to right, #292a28 0 7px, transparent 7px 10px), #faf9f5;
+  box-shadow: 0 0 0 1px rgb(41 42 40 / 28%);
+}
+
+.path-key-line.pedestrian { height: 6px; }
+.path-key-line.maintained { height: 4px; }
+.path-key-line.unmaintained {
+  height: 3px;
+  background: repeating-linear-gradient(to right, #555752 0 3px, transparent 3px 8px), #faf9f5;
+}
+
 .maplibregl-ctrl-bottom-right { margin-bottom: 8px; }
 .maplibregl-ctrl-attrib { font-size: 10px; }
 
