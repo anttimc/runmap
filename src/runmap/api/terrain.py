@@ -9,7 +9,7 @@ from time import perf_counter
 import numpy as np
 import rasterio
 from PIL import Image
-from rasterio.warp import transform_bounds
+from rasterio.warp import transform, transform_bounds
 
 from runmap.terrain.derivatives import terrain_gradient
 from runmap.terrain.smoothing import PreparedThinPlateSmoother
@@ -29,7 +29,14 @@ SLOPE_COLORS = np.array([
 class TerrainRenderer:
     """Keep source spectral data in memory and render bounded PNG overlays."""
 
-    def __init__(self, elevation, resolution_m, bounds_wgs84, cache_entries=12):
+    def __init__(
+        self,
+        elevation,
+        resolution_m,
+        bounds_wgs84,
+        image_coordinates=None,
+        cache_entries=12,
+    ):
         z = np.asarray(elevation, dtype=np.float64)
         if z.ndim != 2 or not np.isfinite(z).all():
             raise ValueError("Interactive smoothing requires a complete finite 2D raster")
@@ -37,6 +44,20 @@ class TerrainRenderer:
         self._shape = z.shape
         self.resolution_m = float(resolution_m)
         self.bounds_wgs84 = tuple(float(value) for value in bounds_wgs84)
+        if image_coordinates is None:
+            west, south, east, north = self.bounds_wgs84
+            image_coordinates = (
+                (west, north),
+                (east, north),
+                (east, south),
+                (west, south),
+            )
+        coordinates = np.asarray(image_coordinates, dtype=np.float64)
+        if coordinates.shape != (4, 2) or not np.isfinite(coordinates).all():
+            raise ValueError("Image coordinates must contain four finite lon/lat pairs")
+        self.image_coordinates = tuple(
+            (float(longitude), float(latitude)) for longitude, latitude in coordinates
+        )
         self._cache_entries = cache_entries
         self._cache = OrderedDict()
         self._lock = RLock()
@@ -51,18 +72,34 @@ class TerrainRenderer:
                 raise ValueError("Interactive smoothing requires square raster cells")
             elevation = dataset.read(1, masked=True).filled(np.nan)
             bounds = transform_bounds(dataset.crs, "EPSG:4326", *dataset.bounds, densify_pts=21)
+            raster_bounds = dataset.bounds
+            corner_x = [
+                raster_bounds.left,
+                raster_bounds.right,
+                raster_bounds.right,
+                raster_bounds.left,
+            ]
+            corner_y = [
+                raster_bounds.top,
+                raster_bounds.top,
+                raster_bounds.bottom,
+                raster_bounds.bottom,
+            ]
+            longitude, latitude = transform(
+                dataset.crs, "EPSG:4326", corner_x, corner_y
+            )
+            image_coordinates = tuple(zip(longitude, latitude))
             resolution = float(dataset.res[0])
-        return cls(elevation, resolution, bounds)
+        return cls(elevation, resolution, bounds, image_coordinates=image_coordinates)
 
     @property
     def shape(self):
         return self._shape
 
     def config(self):
-        west, south, east, north = self.bounds_wgs84
         return {
-            "bounds_wgs84": [west, south, east, north],
-            "image_coordinates": [[west, north], [east, north], [east, south], [west, south]],
+            "bounds_wgs84": list(self.bounds_wgs84),
+            "image_coordinates": [list(coordinate) for coordinate in self.image_coordinates],
             "source_shape": list(self._shape),
             "resolution_m": self.resolution_m,
             "smoothing": {

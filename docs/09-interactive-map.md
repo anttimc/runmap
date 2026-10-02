@@ -22,6 +22,8 @@ At API startup, the backend loads the complete raster, removes its best-fitting 
 
 The response is an indexed, georeferenced PNG. MapLibre displays it as one image source over the raster bounds. The backend keeps a small in-memory PNG cache and serializes calculations to limit peak memory use.
 
+The image source uses the four raster corners transformed individually from EPSG:3067 to WGS84, in top-left, top-right, bottom-right, bottom-left order. A transformed bounding envelope must not be substituted for these corners: the Finnish grid is rotated relative to Web Mercator at Leppävaara, and envelope corners shift the overlay by roughly 200 m on the ground.
+
 Endpoints:
 
 - `GET /api/config` — bounds, image corners, source shape, control limits, and legend.
