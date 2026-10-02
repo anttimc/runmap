@@ -19,6 +19,11 @@ Initial planning record: 2026-09-05.
 | D18 | Add spectral thin-plate smoothing, parameterized by half-amplitude wavelength | It preserves planar trends, penalizes curvature, and is fast on the complete regular elevation grid; the 40 m trial leads the current synthetic comparison |
 | D19 | Use spectral biharmonic thin-plate smoothing with a default 40 m half-amplitude wavelength | User selected it as the working method after smooth and sharp-feature comparisons; the setting remains adjustable in the UI |
 | D20 | Compute interactive smoothing in Python and update a MapLibre image source | The full raster is fast enough locally, this keeps one numerical reference, and it avoids transferring source elevation or adding browser FFT/WASM complexity |
+| D21 | Represent wider coverage as named regions over one shared 5 km EPSG:3067 elevation grid | Regions can overlap without duplicating downloads, and processing remains bounded |
+| D22 | Retain downloaded MML source versions and fetch each required source tile once | The elevation changes slowly, reproducibility matters, and normal map navigation must not depend on live MML requests |
+| D23 | Preload known public regions and keep anonymous acquisition disabled initially | Capital-region/default rendering should be predictable, while uncontrolled panning must not create unbounded downloads |
+| D24 | Precompute the default 40 m product and generate a finite set of other hosted presets lazily | Default navigation stays fast without multiplying full-coverage storage by every slider position |
+| D25 | Deliver hosted terrain as versioned Web Mercator XYZ tiles while calculating in EPSG:3067 | MapLibre/CDN delivery and metre-based numerical analysis have different grid requirements |
 
 ## Initial implementation defaults
 
@@ -47,6 +52,8 @@ These follow the stack discussion and can be revised with evidence.
 | Q7 | Which basemap provider and hosting arrangement should be used? | M3; confirm production terms before M5 |
 | Q8 | Is route drawing/import the next feature after path exploration? | M4 |
 | Q9 | Is Odin or Go experimentation a separate learning goal? | Optional M6 |
+| Q10 | What exact public capital-region bounds and private Jämsä bounds should be configured? | Wider-coverage implementation |
+| Q11 | Does a 512 m halo make 5 km thin-plate analysis tiles agree sufficiently with a larger-domain reference? | Before tiled results are published |
 
 ## Reference project
 
@@ -56,4 +63,4 @@ Its documented road selection focuses on drivable roads and excludes paths and t
 
 ## Not decided
 
-No exact performance promise, route-hilliness formula, path sample interval, final smoother or smoothing threshold, automatic routing algorithm, public deployment target, or compiled-language requirement has been adopted.
+No exact performance promise, route-hilliness formula, path sample interval, automatic routing algorithm, hosting provider, or compiled-language requirement has been adopted. The working terrain smoother and default are D19; hosted storage and delivery defaults are detailed in the [region and hosting design](11-region-and-hosting-design.md) and remain subject to the validation named there.

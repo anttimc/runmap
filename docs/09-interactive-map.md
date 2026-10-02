@@ -91,3 +91,8 @@ These are development observations, not performance guarantees.
 - The numerical calculation remains full-source even when only part of the map is visible.
 - The DCT reflecting boundary can affect the outer edge; the UI does not yet distinguish a trusted interior display crop.
 - The slider uses server-rendered colours. Independent client-side recolouring would require sending numerical data or a custom texture/shader representation.
+
+The planned replacement for the first limitation is documented in the
+[region and hosting design](11-region-and-hosting-design.md). It preserves this
+single-raster path as a numerical reference while introducing shared source
+tiles, haloed analysis tiles, and browser XYZ delivery.

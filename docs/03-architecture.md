@@ -74,6 +74,12 @@ data/           # Local source and generated data; not source-controlled by defa
 
 Start with a single local machine. A job queue, multiple services, or PostGIS are later options rather than initial dependencies.
 
+The single-raster interactive prototype is not the storage model for wider
+coverage. Named regions will reference a shared fixed grid of local elevation
+tiles, and browser delivery will use a separate XYZ tile grid. Acquisition,
+haloed processing, cache identities, and hosted delivery are specified in the
+[region and hosting design](11-region-and-hosting-design.md).
+
 For the first experiment, keep `smooth(surface, mask, grid, settings)` and `differentiate(surface, mask, grid)` separate. Start with raw, Gaussian, and regularized nonlinear-diffusion candidates. A compiled extension may later accelerate a measured diffusion bottleneck as well as profile calculations. No compiled implementation is currently required.
 
 ## Compiled extension boundary
