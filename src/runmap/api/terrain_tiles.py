@@ -9,7 +9,7 @@ from time import perf_counter
 import contourpy
 import numpy as np
 import rasterio
-from rasterio.transform import from_bounds, from_origin
+from rasterio.transform import from_bounds
 from rasterio.warp import Resampling, reproject, transform, transform_bounds
 
 from runmap.api.terrain import colorize_slope_png, slope_legend
@@ -18,7 +18,7 @@ from runmap.regions import ANALYSIS_CRS, SOURCE_RESOLUTION_M
 
 
 WEB_MERCATOR_LIMIT = 20037508.342789244
-RENDER_VERSION = 4
+RENDER_VERSION = 5
 CONTOUR_RENDER_VERSION = 2
 CONTOUR_INTERVAL_M = 5
 CONTOUR_INDEX_INTERVAL_M = 25
@@ -83,7 +83,7 @@ class TerrainTileService:
             "terrain_tiles": {
                 "template": (
                     f"/api/regions/{self.region.id}/terrain/v{RENDER_VERSION}"
-                    "/w{wavelength}/{z}/{x}/{y}.png"
+                    f"/{self.manifest_id}/w{{wavelength}}/{{z}}/{{x}}/{{y}}.png"
                 ),
                 "tile_size": DISPLAY_TILE_SIZE,
                 "min_zoom": DISPLAY_MIN_ZOOM,
@@ -92,7 +92,7 @@ class TerrainTileService:
             "contour_tiles": {
                 "template": (
                     f"/api/regions/{self.region.id}/contours/v{CONTOUR_RENDER_VERSION}"
-                    "/{z}/{x}/{y}.mvt"
+                    f"/{self.manifest_id}/{{z}}/{{x}}/{{y}}.mvt"
                 ),
                 "tile_size": DISPLAY_TILE_SIZE,
                 "min_zoom": 12,
@@ -224,38 +224,32 @@ class TerrainTileService:
             if tile.east > request_bounds[0] and tile.west < request_bounds[2]
             and tile.north > request_bounds[1] and tile.south < request_bounds[3]
         ]
-        paths = [self.store.ensure_derived_tile(self.manifest_id, tile, wavelength) for tile in tiles]
-        west = min(tile.west for tile in tiles)
-        south = min(tile.south for tile in tiles)
-        east = max(tile.east for tile in tiles)
-        north = max(tile.north for tile in tiles)
-        rows = int((north - south) / SOURCE_RESOLUTION_M)
-        cols = int((east - west) / SOURCE_RESOLUTION_M)
-        source = np.full((rows, cols), np.nan, dtype=np.float32)
-        for tile, path in zip(tiles, paths):
-            with rasterio.open(path) as dataset:
-                encoded = dataset.read(1)
-            values = np.where(
-                encoded == DERIVED_NODATA, np.nan, encoded * MAGNITUDE_SCALE
-            ).astype(np.float32)
-            row = int((north - tile.north) / SOURCE_RESOLUTION_M)
-            col = int((tile.west - west) / SOURCE_RESOLUTION_M)
-            source[row:row + values.shape[0], col:col + values.shape[1]] = values
+        paths = [
+            self.store.ensure_derived_tile(self.manifest_id, tile, wavelength)
+            for tile in tiles
+        ]
         destination = np.full(
             (DISPLAY_TILE_SIZE, DISPLAY_TILE_SIZE), np.nan, dtype=np.float32
         )
-        reproject(
-            source=source,
-            destination=destination,
-            src_transform=from_origin(west, north, SOURCE_RESOLUTION_M, SOURCE_RESOLUTION_M),
-            src_crs=ANALYSIS_CRS,
-            src_nodata=np.nan,
-            dst_transform=from_bounds(*mercator_bounds, DISPLAY_TILE_SIZE, DISPLAY_TILE_SIZE),
-            dst_crs="EPSG:3857",
-            dst_nodata=np.nan,
-            resampling=Resampling.bilinear,
-        )
-        return colorize_slope_png(100 * destination)
+        for path in paths:
+            with rasterio.open(path) as dataset:
+                warped = np.full(
+                    (DISPLAY_TILE_SIZE, DISPLAY_TILE_SIZE), np.nan, dtype=np.float32
+                )
+                reproject(
+                    source=rasterio.band(dataset, 1),
+                    destination=warped,
+                    src_nodata=DERIVED_NODATA,
+                    dst_transform=from_bounds(
+                        *mercator_bounds, DISPLAY_TILE_SIZE, DISPLAY_TILE_SIZE
+                    ),
+                    dst_crs="EPSG:3857",
+                    dst_nodata=np.nan,
+                    resampling=Resampling.bilinear,
+                )
+            covered = np.isfinite(warped)
+            destination[covered] = warped[covered]
+        return colorize_slope_png(100 * destination * MAGNITUDE_SCALE)
 
 
 def _varint(value):

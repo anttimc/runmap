@@ -1,6 +1,8 @@
 # 9. Interactive terrain map
 
-Status: first local prototype implemented. It displays slope magnitude for the active 10 × 10 km Leppävaara region and updates it when the thin-plate half-amplitude wavelength changes.
+Status: first local prototype implemented. It displays slope magnitude for the
+active 40 × 40 km region centered near Leppävaara and updates it when the
+thin-plate half-amplitude wavelength changes.
 
 ## Interaction
 
@@ -26,7 +28,7 @@ Status: first local prototype implemented. It displays slope magnitude for the a
 
 At API startup, the backend opens the active region manifest without assembling
 the entire region or calculating a full-region DCT. Analysis is divided into
-four 5 km cores. Each derived job reads a 512 m halo from the surrounding
+64 5 km cores. Each derived job reads a 512 m halo from the surrounding
 prepared COGs, smooths and differentiates the 3,012 × 3,012 native-resolution
 window, discards the halo, and stores slope magnitude and uphill bearing in a
 two-band UInt16 COG. The default 40 m coverage is precomputed; other finite
@@ -55,10 +57,10 @@ Endpoints:
 
 - `GET /api/config` — region, manifest, bounds, preset values, legend, and XYZ
   tile template.
-- `GET /api/regions/{region_id}/terrain/v4/w{wavelength_m}/{z}/{x}/{y}.png` —
-  versioned 256 × 256 slope-magnitude tile for zooms 8–15.
-- `GET /api/regions/{region_id}/contours/v2/{z}/{x}/{y}.mvt` — versioned
-  source-elevation vector contour tile for zooms 12–15.
+- `GET /api/regions/{region_id}/terrain/v5/{manifest_id}/w{wavelength_m}/{z}/{x}/{y}.png`
+  — versioned 256 × 256 slope-magnitude tile for zooms 8–15.
+- `GET /api/regions/{region_id}/contours/v2/{manifest_id}/{z}/{x}/{y}.mvt` —
+  versioned source-elevation vector contour tile for zooms 12–15.
 - `GET /api/terrain.png?wavelength_m=40&max_size=1600` — legacy whole-raster
   image, available only with `RUNMAP_ELEVATION_PATH`.
 
@@ -66,6 +68,8 @@ Terrain responses include `X-Runmap-Wavelength-M`; contour responses include
 `X-Runmap-Contour-Interval-M`. Both include `X-Runmap-Compute-Ms` and
 `X-Runmap-Manifest`. A tile from the in-process cache reports zero compute
 milliseconds. Versioned tile responses use a one-year immutable cache policy.
+The active manifest ID is part of every immutable tile URL, so activating new
+source coverage cannot reuse browser or CDN entries from an older manifest.
 
 ## Install and run
 
@@ -154,3 +158,32 @@ contained 125 connected features and 14,316 vertices, and encoded to 31 KB.
 
 The storage and cache identities behind this implementation are documented in
 the [region and hosting design](11-region-and-hosting-design.md).
+
+## Overlay performance plan
+
+Cold measurements after expanding the region identified native-resolution
+terrain mosaics as the first bottleneck. A representative terrain tile took
+about 1.57 s at zoom 10, 0.46 s at zoom 11, and 0.19 s at zoom 12; the wide
+tile path could raise process memory above 1 GB. Contours took about 0.20 s at
+zoom 12 and 0.05–0.06 s at zoom 14. Cached responses were effectively
+immediate. These are development-machine observations, not service targets.
+
+Optimization order:
+
+1. Reproject contributing derived COG bands directly into the 256 × 256
+   display tile, allowing GDAL to use overviews and avoiding a native-resolution
+   mosaic. Implemented: the sampled zoom-10 tile improved from 1.44 s to
+   0.71 s, zoom 12 from 0.20 s to 0.06 s, and a zoom-14 core-junction tile
+   from 0.13 s to 0.02 s. Peak memory in the comparison run fell from above
+   1.3 GB to about 209 MB.
+2. Restrict cache locking to lookup/insertion and coordinate duplicate work per
+   key, allowing distinct terrain and contour requests to run concurrently.
+3. Move missing non-default smoothing products into bounded background work;
+   optionally precompute the most-used additional presets.
+4. Simplify contour geometry by zoom, reduce distant sampling density, and add
+   response compression while retaining the accepted visual result.
+5. Separate and enlarge immutable terrain/contour caches, adding disk or CDN
+   caching when deployment warrants it.
+
+Re-profile viewport latency, individual stages, peak memory, and output
+equivalence after each change before proceeding to the next item.

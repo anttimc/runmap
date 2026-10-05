@@ -63,15 +63,15 @@ Goals use `G` identifiers, milestones use `M`, and decisions/questions use `D`/`
 
 ## Current status
 
-The first named region is a grid-aligned 10 × 10 km Leppävaara area. Its four
-5 km analysis cores use 16 shared MML elevation tiles once the 512 m processing
-halo is included. Those tiles have been downloaded, validated, converted to
-COGs, cataloged, and activated through an immutable coverage manifest. The
-default 40 m spectral thin-plate result is precomputed as four derived COGs and
-served to MapLibre as versioned Web Mercator XYZ PNG tiles. Other advertised
-smoothing presets are generated lazily. The old single-raster image path remains
-available as an explicit development override. See the [region and hosting
-design](docs/11-region-and-hosting-design.md).
+The named public region is a grid-aligned 40 × 40 km square centered near
+Leppävaara. Its 64 analysis cores use 100 shared MML elevation tiles once the
+512 m processing halo is included. Source tiles are downloaded, validated,
+converted to COGs, cataloged, and activated through an immutable coverage
+manifest. The default 40 m spectral thin-plate result is precomputed as derived
+COGs and served to MapLibre as versioned Web Mercator XYZ PNG tiles. Other
+advertised smoothing presets are generated lazily. The old single-raster image
+path remains available as an explicit development override. See the [region and
+hosting design](docs/11-region-and-hosting-design.md).
 
 The active study area is **Leppävaara, Espoo, Finland**. Terrain-gradient
 magnitude, smoothing comparisons, and the first interactive map are working;

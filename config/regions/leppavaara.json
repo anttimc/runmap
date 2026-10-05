@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "id": "leppavaara",
-  "title": "Leppävaara 10 km",
-  "bounds_epsg3067": [370000, 6675000, 380000, 6685000],
+  "title": "Leppävaara 40 km",
+  "bounds_epsg3067": [360000, 6660000, 400000, 6700000],
   "acquisition_policy": "preload",
   "public": true,
   "initial_view": {
-    "zoom": 12
+    "zoom": 10
   },
   "attribution_label": "Elevation model 2 m",
-  "note": "First wider-coverage region. Grid-aligned to four shared 5 km source tiles and contains the original 6 km Leppävaara extent."
+  "note": "Grid-aligned 40 km square centered near Leppävaara, with 64 complete 5 km analysis cores."
 }

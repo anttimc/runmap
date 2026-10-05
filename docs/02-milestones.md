@@ -59,6 +59,10 @@ Tasks:
 4. Provide FastAPI endpoints only for interactions requiring backend work.
 5. Test panning and zooming up to the intended viewport size.
 6. Use tiled delivery as data volume warrants; keep full-area source rasters out of browser responses.
+7. Optimize cold overlay delivery: reproject directly from COGs, permit
+   concurrent unique tile renders, move missing smoothing jobs out of request
+   handling, simplify contours by zoom, and expand immutable tile caching in
+   that order, measuring after each step.
 
 Complete when: the user can inspect hill steepness and direction in Leppävaara and compare raw/smoothed results interactively. This establishes terrain exploration; runnable-path suitability is deferred.
 

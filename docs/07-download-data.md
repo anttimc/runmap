@@ -26,7 +26,13 @@ PYTHONPATH=src .venv/bin/python -m runmap.cli region precompute leppavaara --wav
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
 ```
 
-The original comparison raster remains under `data/raw/leppavaara/`. The active application region is defined in `config/regions/leppavaara.json` as a grid-aligned 10 × 10 km EPSG:3067 rectangle: `E 370000–380000`, `N 6675000–6685000`. It contains 25 million 2 m cells and resolves to four 5 × 5 km analysis cores. A 512 m halo around those cores expands acquisition to 16 shared source tiles; 12 are context outside the visible region.
+The original comparison raster remains under `data/raw/leppavaara/`. The active
+application region is defined in `config/regions/leppavaara.json` as a
+grid-aligned 40 × 40 km EPSG:3067 rectangle: `E 360000–400000`,
+`N 6660000–6700000`. It contains 400 million 2 m cells and resolves to 64
+complete 5 × 5 km analysis cores. A 512 m halo around those cores expands
+acquisition to 100 shared source tiles; 36 are processing context outside the
+visible region.
 
 The legacy command outputs `data/raw/leppavaara/elevation-2m.tif` and a JSON provenance sidecar containing acquisition time, bounds, licence, SHA-256, and a credential-free URL. Existing files are never overwritten. Failed transfers discard their partial output. The API key is sent only in an HTTPS authorization header; redirects are refused.
 

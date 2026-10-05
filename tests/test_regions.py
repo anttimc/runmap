@@ -8,7 +8,7 @@ import rasterio
 from rasterio.transform import from_origin
 
 from runmap.elevation.store import ElevationStore
-from runmap.regions import load_region
+from runmap.regions import PROCESSING_HALO_M, load_region
 
 
 def region_document(bounds=None):
@@ -25,6 +25,15 @@ def region_document(bounds=None):
 
 
 class RegionTests(unittest.TestCase):
+    def test_configured_leppavaara_region_is_forty_kilometres(self):
+        project_root = Path(__file__).resolve().parents[1]
+        region = load_region(project_root / "config/regions/leppavaara.json")
+
+        self.assertEqual(region.bounds, (360000, 6660000, 400000, 6700000))
+        self.assertEqual(region.shape, (20000, 20000))
+        self.assertEqual(len(region.analysis_tiles()), 64)
+        self.assertEqual(len(region.source_tiles(PROCESSING_HALO_M)), 100)
+
     def test_grid_aligned_ten_kilometre_region_has_four_shared_tiles(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "area.json"

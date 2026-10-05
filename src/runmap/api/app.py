@@ -72,12 +72,14 @@ def terrain_image(
 
 
 @app.get(
-    "/api/regions/{region_id}/terrain/v{render_version}/w{wavelength_m}/{z}/{x}/{y}.png"
+    "/api/regions/{region_id}/terrain/v{render_version}/{manifest_id}"
+    "/w{wavelength_m}/{z}/{x}/{y}.png"
 )
 def terrain_tile(
     request: Request,
     region_id: str,
     render_version: int,
+    manifest_id: str,
     wavelength_m: int,
     z: int,
     x: int,
@@ -86,8 +88,12 @@ def terrain_tile(
     service = request.app.state.terrain
     if not isinstance(service, TerrainTileService):
         raise HTTPException(status_code=404, detail="Named-region tile service is not active")
-    if region_id != service.region.id or render_version != RENDER_VERSION:
-        raise HTTPException(status_code=404, detail="Unknown region or render version")
+    if (
+        region_id != service.region.id
+        or render_version != RENDER_VERSION
+        or manifest_id != service.manifest_id
+    ):
+        raise HTTPException(status_code=404, detail="Unknown region, manifest, or render version")
     try:
         image, elapsed = service.render_tile(wavelength_m, z, x, y)
     except ValueError as exc:
@@ -104,11 +110,14 @@ def terrain_tile(
     )
 
 
-@app.get("/api/regions/{region_id}/contours/v{render_version}/{z}/{x}/{y}.mvt")
+@app.get(
+    "/api/regions/{region_id}/contours/v{render_version}/{manifest_id}/{z}/{x}/{y}.mvt"
+)
 def contour_tile(
     request: Request,
     region_id: str,
     render_version: int,
+    manifest_id: str,
     z: int,
     x: int,
     y: int,
@@ -116,8 +125,12 @@ def contour_tile(
     service = request.app.state.terrain
     if not isinstance(service, TerrainTileService):
         raise HTTPException(status_code=404, detail="Named-region tile service is not active")
-    if region_id != service.region.id or render_version != CONTOUR_RENDER_VERSION:
-        raise HTTPException(status_code=404, detail="Unknown region or render version")
+    if (
+        region_id != service.region.id
+        or render_version != CONTOUR_RENDER_VERSION
+        or manifest_id != service.manifest_id
+    ):
+        raise HTTPException(status_code=404, detail="Unknown region, manifest, or render version")
     try:
         image, elapsed = service.render_contour_tile(z, x, y)
     except ValueError as exc:

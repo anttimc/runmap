@@ -12,7 +12,7 @@ production deployment decision.
 The first prototype loads one 6 × 6 km elevation raster into memory and returns
 one georeferenced image. The next design must support:
 
-- several disjoint named regions, beginning with a 10 km Leppävaara region and
+- several disjoint named regions, beginning with a 40 km Leppävaara region and
   later including a private area near Jämsä or broader capital-region coverage;
 - one local copy of overlapping MML elevation data rather than one copy per
   region;
@@ -106,12 +106,12 @@ Example using the existing extent:
 {
   "schema_version": 1,
   "id": "leppavaara",
-  "title": "Leppävaara 10 km",
-  "bounds_epsg3067": [370000, 6675000, 380000, 6685000],
+  "title": "Leppävaara 40 km",
+  "bounds_epsg3067": [360000, 6660000, 400000, 6700000],
   "acquisition_policy": "preload",
   "public": true,
   "initial_view": {
-    "zoom": 12
+    "zoom": 10
   },
   "attribution_label": "Elevation model 2 m"
 }
@@ -128,11 +128,11 @@ Example using the existing extent:
 | `initial_view.zoom` | number, derived if absent | Initial MapLibre zoom; center is derived from bounds unless supplied later. |
 | `attribution_label` | string | Dataset label shown with common provider/date attribution. |
 
-The first public bounds are `E 370000–380000`, `N 6675000–6685000`. Broader
-capital-region bounds must be selected explicitly rather than inferred from an
-ambiguous administrative term. The Jämsä definition needs the desired private
-bounds; only its tile identifiers and server-side configuration are needed at
-runtime.
+The public bounds are `E 360000–400000`, `N 6660000–6700000`. They form a
+40 × 40 km square centered on the nearest 5 km grid intersection to Leppävaara,
+keeping every analysis core complete. The Jämsä definition needs the desired
+private bounds; only its tile identifiers and server-side configuration are
+needed at runtime.
 
 Acquisition first selects every 5 km analysis core intersecting the region,
 expands each complete core by the global processing halo, and then selects all
@@ -495,7 +495,7 @@ and service-policy requirements.
 
 ## Parameters still requiring measurement or user input
 
-- Exact bounds for any expansion beyond the first 10 km Leppävaara product.
+- Exact bounds for any expansion beyond the 40 km Leppävaara product.
 - Exact private Jämsä bounds and whether that region is ever published.
 - Numerical seam tolerance and whether the 40 m-tested 512 m halo is sufficient
   at 100 m.
