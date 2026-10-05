@@ -7,7 +7,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 from rasterio.warp import transform
 
-from runmap.api.terrain import TerrainRenderer
+from runmap.api.terrain import SLOPE_COLOR_BANDS, colorize_slope_png, slope_opacity, TerrainRenderer
 
 
 class TerrainRendererTests(unittest.TestCase):
@@ -35,6 +35,18 @@ class TerrainRendererTests(unittest.TestCase):
     def test_render_rejects_out_of_range_settings(self):
         with self.assertRaises(ValueError):
             self.renderer.render_png(101)
+
+    def test_slope_png_uses_sampled_colours_and_smooth_low_slope_transparency(self):
+        slopes = np.linspace(0, 40, 121, dtype=np.float64).reshape(1, -1)
+        image = Image.open(BytesIO(colorize_slope_png(slopes)))
+
+        palette = np.asarray(image.getpalette(), dtype=np.uint8).reshape(-1, 3)
+        used_colours = {tuple(palette[index]) for index in set(image.getdata())}
+        transparency = image.info["transparency"]
+        self.assertEqual(len(used_colours), SLOPE_COLOR_BANDS)
+        self.assertEqual(transparency[1], 0)
+        self.assertEqual(transparency[1 + round(254 * 15 / 40)], 255)
+        self.assertAlmostEqual(float(slope_opacity(7.5)), 0.5)
 
     def test_raster_corners_are_transformed_instead_of_using_bounds_envelope(self):
         raster_transform = from_origin(374000, 6682000, 2, 2)

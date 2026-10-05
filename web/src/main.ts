@@ -35,7 +35,7 @@ interface MapConfig {
     default: number;
     raw_value: number;
   };
-  slope_legend: { percent: number; color: string }[];
+  slope_legend: { percent: number; color: string; opacity: number }[];
   terrain_tiles?: {
     template: string;
     tile_size: number;
@@ -406,10 +406,13 @@ function setStatus(message: string, kind: "ready" | "busy" | "error" = "ready"):
 }
 
 function renderLegend(stops: MapConfig["slope_legend"]): void {
-  const maximum = stops.at(-1)?.percent ?? 40;
-  legendBar.style.background = `linear-gradient(to top, ${stops
-    .map((stop) => `${stop.color} ${(100 * stop.percent) / maximum}%`)
-    .join(", ")})`;
+  const bands = stops.map((stop, index) => {
+    const lower = (100 * index) / stops.length;
+    const upper = (100 * (index + 1)) / stops.length;
+    const color = `color-mix(in srgb, ${stop.color} ${100 * stop.opacity}%, transparent)`;
+    return `${color} ${lower}%, ${color} ${upper}%`;
+  });
+  legendBar.style.background = `linear-gradient(to top, ${bands.join(", ")})`;
   legendLabels.replaceChildren(
     ...stops
       .slice()
@@ -496,6 +499,7 @@ async function start(): Promise<void> {
       paint: {
         "raster-opacity": Number(opacityInput.value) / 100,
         "raster-fade-duration": 0,
+        "raster-resampling": "linear",
       },
     }, map.getLayer(FIRST_ABOVE_TERRAIN_LAYER_ID)
       ? FIRST_ABOVE_TERRAIN_LAYER_ID

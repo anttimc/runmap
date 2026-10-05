@@ -9,13 +9,13 @@ import rasterio
 from rasterio.transform import from_bounds, from_origin
 from rasterio.warp import Resampling, reproject, transform, transform_bounds
 
-from runmap.api.terrain import SLOPE_COLORS, SLOPE_STOPS_PERCENT, colorize_slope_png
+from runmap.api.terrain import colorize_slope_png, slope_legend
 from runmap.elevation.store import DERIVED_NODATA, MAGNITUDE_SCALE
 from runmap.regions import ANALYSIS_CRS, SOURCE_RESOLUTION_M
 
 
 WEB_MERCATOR_LIMIT = 20037508.342789244
-RENDER_VERSION = 1
+RENDER_VERSION = 4
 HOSTED_WAVELENGTHS_M = (0, 20, 40, 60, 80, 100)
 DISPLAY_MIN_ZOOM = 8
 DISPLAY_MAX_ZOOM = 15
@@ -70,13 +70,7 @@ class TerrainTileService:
                 "raw_value": 0,
                 "values": list(HOSTED_WAVELENGTHS_M),
             },
-            "slope_legend": [
-                {
-                    "percent": float(value),
-                    "color": "#" + "".join(f"{channel:02x}" for channel in color),
-                }
-                for value, color in zip(SLOPE_STOPS_PERCENT, SLOPE_COLORS)
-            ],
+            "slope_legend": slope_legend(),
             "terrain_tiles": {
                 "template": (
                     f"/api/regions/{self.region.id}/terrain/v{RENDER_VERSION}"

@@ -42,7 +42,7 @@ class TerrainTileTests(unittest.TestCase):
 
     def test_config_advertises_versioned_raster_tiles_and_presets(self):
         config = self.service.config()
-        self.assertIn("/api/regions/area/terrain/v1/", config["terrain_tiles"]["template"])
+        self.assertIn("/api/regions/area/terrain/v4/", config["terrain_tiles"]["template"])
         self.assertEqual(config["smoothing"]["values"], [0, 20, 40, 60, 80, 100])
 
     def test_outside_tile_is_transparent_without_analysis(self):

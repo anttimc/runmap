@@ -25,26 +25,65 @@ SLOPE_COLORS = np.array([
     [238, 150, 75],
     [209, 73, 91],
 ], dtype=np.uint8)
+# Retain the existing piecewise-linear colour ramp, but use a deliberately
+# small number of samples from it in the display PNG.  This gives the terrain
+# a banded, contour-map appearance without quantising the analysis raster.
+SLOPE_COLOR_BANDS = 6
+SLOPE_OPAQUE_AT_PERCENT = 15.0
+
+
+def slope_palette():
+    """Return the display palette sampled from the shared continuous ramp."""
+    values = np.linspace(0, SLOPE_STOPS_PERCENT[-1], SLOPE_COLOR_BANDS)
+    colors = np.stack([
+        np.interp(values, SLOPE_STOPS_PERCENT, SLOPE_COLORS[:, channel])
+        for channel in range(3)
+    ], axis=1).round().astype(np.uint8)
+    return values, colors
+
+
+def slope_opacity(slope_percent):
+    """Ease from transparent at 0% slope to opaque at 15% slope."""
+    ratio = np.clip(np.asarray(slope_percent) / SLOPE_OPAQUE_AT_PERCENT, 0, 1)
+    return ratio * ratio * (3 - 2 * ratio)
+
+
+def slope_legend():
+    """Return the discrete palette advertised to the map UI."""
+    values, colors = slope_palette()
+    opacities = slope_opacity(values)
+    return [
+        {
+            "percent": float(value),
+            "color": "#" + "".join(f"{channel:02x}" for channel in color),
+            "opacity": float(opacity),
+        }
+        for value, color, opacity in zip(values, colors, opacities)
+    ]
 
 
 def colorize_slope_png(slope_percent):
-    """Encode a slope-percent array with the shared indexed transparent palette."""
+    """Encode slopes using sampled ramp colours and a transparent nodata entry."""
     palette = np.zeros((256, 3), dtype=np.uint8)
     palette_values = np.linspace(0, SLOPE_STOPS_PERCENT[-1], 255)
-    for channel in range(3):
-        palette[1:, channel] = np.interp(
-            palette_values, SLOPE_STOPS_PERCENT, SLOPE_COLORS[:, channel]
-        ).astype(np.uint8)
-    indices = np.where(
-        np.isfinite(slope_percent),
-        1 + np.rint(254 * np.clip(slope_percent, 0, SLOPE_STOPS_PERCENT[-1])
-                    / SLOPE_STOPS_PERCENT[-1]),
-        0,
+    _, colors = slope_palette()
+    color_bins = np.minimum(
+        (palette_values * SLOPE_COLOR_BANDS / SLOPE_STOPS_PERCENT[-1]).astype(np.intp),
+        SLOPE_COLOR_BANDS - 1,
+    )
+    palette[1:] = colors[color_bins]
+    finite = np.isfinite(slope_percent)
+    indices = np.zeros(slope_percent.shape, dtype=np.uint8)
+    clipped = np.clip(slope_percent[finite], 0, SLOPE_STOPS_PERCENT[-1])
+    indices[finite] = 1 + np.rint(
+        254 * clipped / SLOPE_STOPS_PERCENT[-1]
     ).astype(np.uint8)
+    transparency = np.zeros(256, dtype=np.uint8)
+    transparency[1:] = np.rint(255 * slope_opacity(palette_values)).astype(np.uint8)
     output = BytesIO()
     image = Image.fromarray(indices)
     image.putpalette(palette.ravel().tolist())
-    image.save(output, format="PNG", compress_level=4, transparency=0)
+    image.save(output, format="PNG", compress_level=4, transparency=bytes(transparency))
     return output.getvalue()
 
 
@@ -155,10 +194,7 @@ class TerrainRenderer:
                 "default": 40,
                 "raw_value": 0,
             },
-            "slope_legend": [
-                {"percent": float(value), "color": "#" + "".join(f"{channel:02x}" for channel in color)}
-                for value, color in zip(SLOPE_STOPS_PERCENT, SLOPE_COLORS)
-            ],
+            "slope_legend": slope_legend(),
         }
         result.update(self.metadata)
         return result

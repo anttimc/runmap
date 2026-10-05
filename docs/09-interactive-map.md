@@ -46,7 +46,7 @@ Endpoints:
 
 - `GET /api/config` — region, manifest, bounds, preset values, legend, and XYZ
   tile template.
-- `GET /api/regions/{region_id}/terrain/v1/w{wavelength_m}/{z}/{x}/{y}.png` —
+- `GET /api/regions/{region_id}/terrain/v4/w{wavelength_m}/{z}/{x}/{y}.png` —
   versioned 256 × 256 slope-magnitude tile for zooms 8–15.
 - `GET /api/terrain.png?wavelength_m=40&max_size=1600` — legacy whole-raster
   image, available only with `RUNMAP_ELEVATION_PATH`.
