@@ -26,6 +26,7 @@ Initial planning record: 2026-09-05.
 | D25 | Deliver hosted terrain as versioned Web Mercator XYZ tiles while calculating in EPSG:3067 | MapLibre/CDN delivery and metre-based numerical analysis have different grid requirements |
 | D26 | Use a grid-aligned 10 × 10 km Leppävaara region (`E 370000–380000`, `N 6675000–6685000`) as the first wider coverage | It contains the original study area and has exactly four 5 km analysis cores; broader capital-region coverage is deferred |
 | D27 | Use a 512 m processing halo for the first tiled implementation | At 40 m, trusted internal joins agree with a whole-domain reference to the `0.0001` slope-cache quantization; longer hosted wavelengths still require validation |
+| D28 | Use fixed 5 m source-elevation contours, emphasizing each 25 m contour, instead of gradient arrows | Contour orientation shows the gradient axis and spacing shows terrain shape without adding a competing field of symbols; elevation labels can be added later if gradient sign proves necessary |
 
 ## Initial implementation defaults
 
@@ -50,7 +51,7 @@ These follow the stack discussion and can be revised with evidence.
 | Q3 | Which familiar locations form the validation set? | M0 |
 | Q4 | What counts as runnable, including access, surfaces, and stairs? | Later path-analysis milestone |
 | Q5 | Which baseline machine/browser should performance targets describe? | M2–M3 |
-| Q6 | Refine magnitude colours, direction-arrow density, and location details; proposed UI in experiment document. | M3 |
+| Q6 | Refine magnitude colours and contour visibility; decide whether elevation labels or location details are needed to communicate gradient sign. | M3 |
 | Q7 | Which basemap provider and hosting arrangement should be used? | M3; confirm production terms before M5 |
 | Q8 | Is route drawing/import the next feature after path exploration? | M4 |
 | Q9 | Is Odin or Go experimentation a separate learning goal? | Optional M6 |

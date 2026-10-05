@@ -13,8 +13,9 @@ Install the following tools before developing or running the project:
 - pnpm 12.9.1 — frontend package manager and script runner. The frontend is intentionally managed with pnpm, not npm.
 
 The Python package declares these runtime dependencies: NumPy 2.x, Rasterio
-1.x, and SciPy 1.x. The optional `web` extra adds FastAPI 0.x, Pillow 11–12,
-and Uvicorn 0.x; the optional `experiments` extra adds Matplotlib 3.x.
+1.x, and SciPy 1.x. The optional `web` extra adds ContourPy 1.x, FastAPI 0.x,
+Pillow 11–12, and Uvicorn 0.x; the optional `experiments` extra adds Matplotlib
+3.x.
 [`requirements-inspection.txt`](requirements-inspection.txt) is the pinned,
 tested inspection environment; it includes the direct packages above and their
 Python dependencies.
@@ -74,8 +75,9 @@ design](docs/11-region-and-hosting-design.md).
 
 The active study area is **Leppävaara, Espoo, Finland**. Terrain-gradient
 magnitude, smoothing comparisons, and the first interactive map are working;
-direction arrows and click inspection remain to complete the intended terrain
-view. Runnable-path and route analysis follow that refinement.
+fixed source-elevation contours now show the gradient axis and terrain shape.
+Elevation labels or click inspection can be added later if gradient sign is
+needed. Runnable-path and route analysis follow that refinement.
 
 ## Keeping the plan useful
 

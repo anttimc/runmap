@@ -53,7 +53,8 @@ Supports: G1, G2, G4. Depends on: M2. Status: active.
 Tasks:
 
 1. Build a MapLibre page with plain controls and a legend.
-2. Display slope magnitude as a raster overlay and direction as sparse arrows, with selectable location details.
+2. Display slope magnitude as a raster overlay and use elevation contours to
+   communicate gradient direction, with selectable location details if sign is needed.
 3. Add colour/threshold controls and any selected analysis parameters.
 4. Provide FastAPI endpoints only for interactions requiring backend work.
 5. Test panning and zooming up to the intended viewport size.
@@ -70,7 +71,7 @@ Tasks:
 1. Compare map classifications with local observations.
 2. Adjust analysis based on measured failures and the user's preferences.
 3. Benchmark cold and cached interactions on the selected deployment class.
-4. Refine zoom-level summaries and arrow density so short hills are not misleadingly hidden.
+4. Refine zoom-level contour visibility so short hills are not misleadingly hidden.
 5. Document remaining limitations and prepare the next milestone for OSM path extraction and path-gradient analysis.
 
 Complete when: the first release satisfies the goal criteria on the selected area and has documented performance and accuracy limitations.

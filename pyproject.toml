@@ -16,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 experiments = ["matplotlib>=3.9,<4"]
 web = [
+  "contourpy>=1.3,<2",
   "fastapi>=0.115,<1",
   "pillow>=11,<13",
   "uvicorn[standard]>=0.34,<1",

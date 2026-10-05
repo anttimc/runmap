@@ -10,6 +10,8 @@ Status: first local prototype implemented. It displays slope magnitude for the a
 - Debounced overlay updates; changing the setting replaces the raster tile URL
   and MapLibre requests only tiles needed by the view.
 - Slope-magnitude legend capped at 40% and overlay opacity control.
+- Fixed source-DEM contours at 5 m intervals from zoom 12, with every 25 m
+  contour emphasized. Contours are independent of the slope smoothing control.
 - The map initially fits the displayed source coverage; users can pan and zoom normally.
 - A deliberately restrained OpenStreetMap Shortbread vector basemap, with visible contributor attribution.
 - Neutral land, building, and road colors plus subdued blue-gray water avoid competing with the terrain gradient's blue, teal, yellow, orange, and red scale.
@@ -37,6 +39,13 @@ tile source. A 128-entry in-process PNG LRU avoids repeated rendering during a
 server run; the immutable URL and response headers also permit browser or CDN
 caching.
 
+Contours follow a separate fixed source-elevation path. The backend reprojects
+a buffered DEM window onto a two-times display grid, extracts connected 5 m
+polylines with ContourPy, and encodes them directly as Mapbox Vector Tiles.
+Each feature carries its elevation and whether it is a 25 m index contour.
+MapLibre clips the buffered geometry and renders minor and index contours as
+native line layers, keeping them sharp during zoom and rotation.
+
 The old single-raster renderer remains available when `RUNMAP_ELEVATION_PATH`
 is set. It uses an image source whose four EPSG:3067 raster corners are
 transformed individually; this avoids the roughly 200 m displacement caused by
@@ -48,13 +57,15 @@ Endpoints:
   tile template.
 - `GET /api/regions/{region_id}/terrain/v4/w{wavelength_m}/{z}/{x}/{y}.png` —
   versioned 256 × 256 slope-magnitude tile for zooms 8–15.
+- `GET /api/regions/{region_id}/contours/v2/{z}/{x}/{y}.mvt` — versioned
+  source-elevation vector contour tile for zooms 12–15.
 - `GET /api/terrain.png?wavelength_m=40&max_size=1600` — legacy whole-raster
   image, available only with `RUNMAP_ELEVATION_PATH`.
 
-Terrain responses include `X-Runmap-Compute-Ms`, `X-Runmap-Wavelength-M`, and
-`X-Runmap-Manifest` headers. A tile from the in-process cache reports zero
-compute milliseconds. Versioned tile responses use a one-year immutable cache
-policy.
+Terrain responses include `X-Runmap-Wavelength-M`; contour responses include
+`X-Runmap-Contour-Interval-M`. Both include `X-Runmap-Compute-Ms` and
+`X-Runmap-Manifest`. A tile from the in-process cache reports zero compute
+milliseconds. Versioned tile responses use a one-year immutable cache policy.
 
 ## Install and run
 
@@ -126,9 +137,13 @@ zoom-12 XYZ tile rendered in approximately 0.26 s and produced a 57 KB PNG;
 an in-process repeat requires no numerical or PNG recomputation. These remain
 development observations, not guarantees.
 
+A sampled zoom-14 vector contour tile rendered cold in approximately 0.07 s,
+contained 125 connected features and 14,316 vertices, and encoded to 31 KB.
+
 ## Current limitations and next slice
 
-- Dynamic output currently shows magnitude only. Sparse uphill arrows and click inspection follow next.
+- Contours show the gradient axis but not its uphill sign. Elevation labels or
+  click inspection can be added later if that distinction proves necessary.
 - A first request for a non-default preset can perform a synchronous 5 km
   analysis job. A hosted deployment should precompute popular presets or move
   longer misses into a bounded job queue.

@@ -5,8 +5,15 @@ import json
 import unittest
 
 from PIL import Image
+import numpy as np
 
-from runmap.api.terrain_tiles import TerrainTileService, WEB_MERCATOR_LIMIT, xyz_bounds
+from runmap.api.terrain_tiles import (
+    CONTOUR_INTERVAL_M,
+    TerrainTileService,
+    WEB_MERCATOR_LIMIT,
+    _encode_contour_mvt,
+    xyz_bounds,
+)
 from runmap.regions import load_region
 
 
@@ -44,6 +51,9 @@ class TerrainTileTests(unittest.TestCase):
         config = self.service.config()
         self.assertIn("/api/regions/area/terrain/v4/", config["terrain_tiles"]["template"])
         self.assertEqual(config["smoothing"]["values"], [0, 20, 40, 60, 80, 100])
+        self.assertIn("/contours/v2/", config["contour_tiles"]["template"])
+        self.assertTrue(config["contour_tiles"]["template"].endswith(".mvt"))
+        self.assertEqual(config["contour_tiles"]["interval_m"], 5)
 
     def test_outside_tile_is_transparent_without_analysis(self):
         image_bytes, elapsed = self.service.render_tile(40, 8, 0, 0)
@@ -56,6 +66,21 @@ class TerrainTileTests(unittest.TestCase):
     def test_rejects_unadvertised_wavelength(self):
         with self.assertRaisesRegex(ValueError, "one of"):
             self.service.render_tile(42, 12, 0, 0)
+
+    def test_contour_renderer_encodes_five_metre_vector_lines(self):
+        rows, cols = np.mgrid[0:520, 0:520]
+        elevation = (cols / 20).astype("float32")
+        tile = _encode_contour_mvt(elevation)
+
+        self.assertEqual(CONTOUR_INTERVAL_M, 5)
+        self.assertGreater(len(tile), 100)
+        self.assertIn(b"contours", tile)
+        self.assertIn(b"elevation", tile)
+        self.assertIn(b"index", tile)
+
+    def test_rejects_contours_outside_advertised_zoom_range(self):
+        with self.assertRaisesRegex(ValueError, "contour tile range"):
+            self.service.render_contour_tile(11, 0, 0)
 
 
 if __name__ == "__main__":

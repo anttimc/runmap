@@ -42,6 +42,14 @@ interface MapConfig {
     min_zoom: number;
     max_zoom: number;
   };
+  contour_tiles?: {
+    template: string;
+    tile_size: number;
+    min_zoom: number;
+    max_zoom: number;
+    interval_m: number;
+    index_interval_m: number;
+  };
 }
 
 const FIRST_LABEL_LAYER_ID = "water-place-labels";
@@ -506,6 +514,52 @@ async function start(): Promise<void> {
       : map.getLayer(FIRST_LABEL_LAYER_ID)
         ? FIRST_LABEL_LAYER_ID
         : undefined);
+    if (config.contour_tiles) {
+      map.addSource("contours", {
+        type: "vector",
+        tiles: [config.contour_tiles.template],
+        minzoom: config.contour_tiles.min_zoom,
+        maxzoom: config.contour_tiles.max_zoom,
+        bounds: config.bounds_wgs84,
+        attribution: "National Land Survey of Finland (CC BY 4.0)",
+      });
+      map.addLayer({
+        id: "elevation-contours-minor",
+        type: "line",
+        source: "contours",
+        "source-layer": "contours",
+        minzoom: config.contour_tiles.min_zoom,
+        filter: ["==", ["get", "index"], false],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#303432",
+          "line-opacity": 0.38,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.45, 15, 0.9],
+        },
+      }, map.getLayer(FIRST_ABOVE_TERRAIN_LAYER_ID)
+        ? FIRST_ABOVE_TERRAIN_LAYER_ID
+        : map.getLayer(FIRST_LABEL_LAYER_ID)
+          ? FIRST_LABEL_LAYER_ID
+          : undefined);
+      map.addLayer({
+        id: "elevation-contours-index",
+        type: "line",
+        source: "contours",
+        "source-layer": "contours",
+        minzoom: config.contour_tiles.min_zoom,
+        filter: ["==", ["get", "index"], true],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#303432",
+          "line-opacity": 0.62,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.8, 15, 1.5],
+        },
+      }, map.getLayer(FIRST_ABOVE_TERRAIN_LAYER_ID)
+        ? FIRST_ABOVE_TERRAIN_LAYER_ID
+        : map.getLayer(FIRST_LABEL_LAYER_ID)
+          ? FIRST_LABEL_LAYER_ID
+          : undefined);
+    }
     map.fitBounds(
       [[config.bounds_wgs84[0], config.bounds_wgs84[1]], [config.bounds_wgs84[2], config.bounds_wgs84[3]]],
       { padding: 42, duration: 0 },

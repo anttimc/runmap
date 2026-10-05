@@ -9,7 +9,12 @@ from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from runmap.api.terrain import TerrainRenderer
-from runmap.api.terrain_tiles import RENDER_VERSION, TerrainTileService
+from runmap.api.terrain_tiles import (
+    CONTOUR_INTERVAL_M,
+    CONTOUR_RENDER_VERSION,
+    RENDER_VERSION,
+    TerrainTileService,
+)
 from runmap.elevation.store import ElevationStore
 from runmap.regions import find_region
 
@@ -94,6 +99,36 @@ def terrain_tile(
             "Cache-Control": "public, max-age=31536000, immutable",
             "X-Runmap-Compute-Ms": f"{1000 * elapsed:.1f}",
             "X-Runmap-Wavelength-M": str(wavelength_m),
+            "X-Runmap-Manifest": service.manifest_id,
+        },
+    )
+
+
+@app.get("/api/regions/{region_id}/contours/v{render_version}/{z}/{x}/{y}.mvt")
+def contour_tile(
+    request: Request,
+    region_id: str,
+    render_version: int,
+    z: int,
+    x: int,
+    y: int,
+):
+    service = request.app.state.terrain
+    if not isinstance(service, TerrainTileService):
+        raise HTTPException(status_code=404, detail="Named-region tile service is not active")
+    if region_id != service.region.id or render_version != CONTOUR_RENDER_VERSION:
+        raise HTTPException(status_code=404, detail="Unknown region or render version")
+    try:
+        image, elapsed = service.render_contour_tile(z, x, y)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return Response(
+        image,
+        media_type="application/vnd.mapbox-vector-tile",
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "X-Runmap-Compute-Ms": f"{1000 * elapsed:.1f}",
+            "X-Runmap-Contour-Interval-M": str(CONTOUR_INTERVAL_M),
             "X-Runmap-Manifest": service.manifest_id,
         },
     )
