@@ -4,6 +4,46 @@ A hobby project for exploring the hilliness of running paths and routes, with un
 
 The first goal is a map that helps identify flatter running options and useful training hills. The project is also a place to experiment with elevation data and mathematics.
 
+## Dependencies
+
+Install the following tools before developing or running the project:
+
+- Python 3.9 or later — backend, terrain processing, and command-line tools.
+- Node.js 24.21.0 — frontend build and development server. The `node` command must be available on your shell `PATH`.
+- pnpm 12.9.1 — frontend package manager and script runner. The frontend is intentionally managed with pnpm, not npm.
+
+The Python package declares these runtime dependencies: NumPy 2.x, Rasterio
+1.x, and SciPy 1.x. The optional `web` extra adds FastAPI 0.x, Pillow 11–12,
+and Uvicorn 0.x; the optional `experiments` extra adds Matplotlib 3.x.
+[`requirements-inspection.txt`](requirements-inspection.txt) is the pinned,
+tested inspection environment; it includes the direct packages above and their
+Python dependencies.
+
+The frontend declares MapLibre GL JS 6.x, with TypeScript 5.x and Vite 7.x as
+development dependencies. Exact resolved frontend versions are recorded in
+[`web/pnpm-lock.yaml`](web/pnpm-lock.yaml).
+
+For source-elevation downloads, copy [`.env.example`](.env.example) to `.env`
+and provide an MML API key. It is not needed to run the application with
+already prepared local data.
+
+### Install and run locally
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install '.[web]'
+
+cd web
+pnpm install
+pnpm dev
+```
+
+Run the backend in another terminal from the repository root:
+
+```sh
+PYTHONPATH=src .venv/bin/python -m uvicorn runmap.api.app:app --reload
+```
+
 ## Plan hierarchy
 
 1. [Goals](docs/01-goals.md) — why the project exists, intended outcomes, and success criteria.

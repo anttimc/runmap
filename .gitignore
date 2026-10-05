@@ -9,4 +9,5 @@ __pycache__/
 .pytest_cache/
 web/node_modules/
 web/dist/
+.pnpm-store/
 config/regions.local/

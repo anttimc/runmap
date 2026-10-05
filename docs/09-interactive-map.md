@@ -58,6 +58,16 @@ policy.
 
 ## Install and run
 
+### Frontend toolchain
+
+The frontend requires `node` to be available on the shell `PATH`. Node.js
+24.21.0 and pnpm 12.9.1 are the tested versions. Install pnpm through Corepack
+or another supported method, then use pnpm for all frontend dependency and
+script commands. `web/node_modules/` remains project-local and is ignored by
+Git.
+
+### Application commands
+
 Python backend:
 
 ```sh
@@ -70,8 +80,8 @@ Frontend development server, in a second terminal:
 
 ```sh
 cd web
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Open the Vite URL printed by the command. It proxies `/api` to `127.0.0.1:8000`.
@@ -80,7 +90,7 @@ For a single production-style local server:
 
 ```sh
 cd web
-npm run build
+pnpm build
 cd ..
 PYTHONPATH=src .venv/bin/python -m uvicorn runmap.api.app:app
 ```
@@ -94,7 +104,7 @@ precedence and retains the old single-raster development path.
 
 ```sh
 cd web
-VITE_MAP_STYLE_URL='https://example.test/style.json' npm run dev
+VITE_MAP_STYLE_URL='https://example.test/style.json' pnpm dev
 ```
 
 `VITE_OSM_VECTOR_TILEJSON_URL` can instead replace the Shortbread-compatible vector TileJSON endpoint. If a different provider is used, update its attribution as required rather than assuming the OpenStreetMap-only attribution is sufficient.
