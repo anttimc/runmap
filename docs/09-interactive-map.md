@@ -1,12 +1,14 @@
 # 9. Interactive terrain map
 
-Status: first local prototype implemented. It displays slope magnitude for the 6 × 6 km Leppävaara raster and updates it when the thin-plate half-amplitude wavelength changes.
+Status: first local prototype implemented. It displays slope magnitude for the active 10 × 10 km Leppävaara region and updates it when the thin-plate half-amplitude wavelength changes.
 
 ## Interaction
 
-- Spectral biharmonic thin-plate slider from raw (`0 m`) to `100 m`, in 2 m steps.
+- Spectral biharmonic thin-plate slider with hosted presets at raw (`0 m`),
+  `20 m`, `40 m`, `60 m`, `80 m`, and `100 m`.
 - Default half-amplitude wavelength: `40 m`.
-- Debounced overlay updates; MapLibre cancels an older image-source request when a new URL replaces it.
+- Debounced overlay updates; changing the setting replaces the raster tile URL
+  and MapLibre requests only tiles needed by the view.
 - Slope-magnitude legend capped at 40% and overlay opacity control.
 - The map initially fits the displayed source coverage; users can pan and zoom normally.
 - A deliberately restrained OpenStreetMap Shortbread vector basemap, with visible contributor attribution.
@@ -20,18 +22,39 @@ Status: first local prototype implemented. It displays slope magnitude for the 6
 
 ## Execution model
 
-At API startup, the backend loads the complete raster, removes its best-fitting plane, computes the DCT once, and retains the spectrum, plane, and discrete biharmonic eigenvalues in memory. For each new setting it applies the spectral response, performs an inverse DCT, differentiates at the 2 m analysis resolution, and then resizes the resulting magnitude for display.
+At API startup, the backend opens the active region manifest without assembling
+the entire region or calculating a full-region DCT. Analysis is divided into
+four 5 km cores. Each derived job reads a 512 m halo from the surrounding
+prepared COGs, smooths and differentiates the 3,012 × 3,012 native-resolution
+window, discards the halo, and stores slope magnitude and uphill bearing in a
+two-band UInt16 COG. The default 40 m coverage is precomputed; other finite
+presets are created lazily per analysis core.
 
-The response is an indexed, georeferenced PNG. MapLibre displays it as one image source over the raster bounds. The backend keeps a small in-memory PNG cache and serializes calculations to limit peak memory use.
+For a browser request, the backend reads the contributing derived COGs,
+reprojects their slope magnitude from EPSG:3067 into one 256 × 256 Web Mercator
+XYZ tile, and returns an indexed PNG. MapLibre displays these through a raster
+tile source. A 128-entry in-process PNG LRU avoids repeated rendering during a
+server run; the immutable URL and response headers also permit browser or CDN
+caching.
 
-The image source uses the four raster corners transformed individually from EPSG:3067 to WGS84, in top-left, top-right, bottom-right, bottom-left order. A transformed bounding envelope must not be substituted for these corners: the Finnish grid is rotated relative to Web Mercator at Leppävaara, and envelope corners shift the overlay by roughly 200 m on the ground.
+The old single-raster renderer remains available when `RUNMAP_ELEVATION_PATH`
+is set. It uses an image source whose four EPSG:3067 raster corners are
+transformed individually; this avoids the roughly 200 m displacement caused by
+using the corners of a transformed bounding envelope.
 
 Endpoints:
 
-- `GET /api/config` — bounds, image corners, source shape, control limits, and legend.
-- `GET /api/terrain.png?wavelength_m=40&max_size=1600` — rendered slope magnitude.
+- `GET /api/config` — region, manifest, bounds, preset values, legend, and XYZ
+  tile template.
+- `GET /api/regions/{region_id}/terrain/v1/w{wavelength_m}/{z}/{x}/{y}.png` —
+  versioned 256 × 256 slope-magnitude tile for zooms 8–15.
+- `GET /api/terrain.png?wavelength_m=40&max_size=1600` — legacy whole-raster
+  image, available only with `RUNMAP_ELEVATION_PATH`.
 
-The image response includes `X-Runmap-Compute-Ms` and `X-Runmap-Wavelength-M` headers. A cached response reports zero compute milliseconds.
+Terrain responses include `X-Runmap-Compute-Ms`, `X-Runmap-Wavelength-M`, and
+`X-Runmap-Manifest` headers. A tile from the in-process cache reports zero
+compute milliseconds. Versioned tile responses use a one-year immutable cache
+policy.
 
 ## Install and run
 
@@ -62,7 +85,12 @@ cd ..
 PYTHONPATH=src .venv/bin/python -m uvicorn runmap.api.app:app
 ```
 
-FastAPI serves `web/dist` when it exists. Set `RUNMAP_ELEVATION_PATH` to use another complete single-band raster. Set `VITE_MAP_STYLE_URL` when building or running Vite to replace the default OpenStreetMap vector basemap with a complete MapLibre style:
+FastAPI serves `web/dist` when it exists. Set `RUNMAP_ELEVATION_PATH` to use another complete single-band raster. Otherwise the selected named region must have been prepared with the region command. Set `VITE_MAP_STYLE_URL` when building or running Vite to replace the default OpenStreetMap vector basemap with a complete MapLibre style:
+
+By default the backend selects region `leppavaara` from `config/regions` and
+reads `data/elevation`. `RUNMAP_REGION_ID`, `RUNMAP_REGION_DIRECTORY`, and
+`RUNMAP_DATA_ROOT` override those locations. `RUNMAP_ELEVATION_PATH` takes
+precedence and retains the old single-raster development path.
 
 ```sh
 cd web
@@ -82,17 +110,22 @@ On the current machine and 3000 × 3000 source:
 - Default 1600 × 1600 PNG: approximately 1.7 MB.
 - Repeated cached setting: no numerical recomputation.
 
-These are development observations, not performance guarantees.
+For the tiled 10 km named region, one observed local precomputation of all four
+40 m analysis cores took approximately 3.9 s after source preparation. A tested
+zoom-12 XYZ tile rendered in approximately 0.26 s and produced a 57 KB PNG;
+an in-process repeat requires no numerical or PNG recomputation. These remain
+development observations, not guarantees.
 
 ## Current limitations and next slice
 
-- The first view is a single image overlay, not a tile pyramid. Tiling becomes useful when coverage or output size grows.
 - Dynamic output currently shows magnitude only. Sparse uphill arrows and click inspection follow next.
-- The numerical calculation remains full-source even when only part of the map is visible.
-- The DCT reflecting boundary can affect the outer edge; the UI does not yet distinguish a trusted interior display crop.
+- A first request for a non-default preset can perform a synchronous 5 km
+  analysis job. A hosted deployment should precompute popular presets or move
+  longer misses into a bounded job queue.
+- The DCT reflecting boundary can affect the outside edge of available source
+  context. The 512 m halo removes visible internal joins for the tested 40 m
+  setting, but the 100 m preset still needs the same numerical seam check.
 - The slider uses server-rendered colours. Independent client-side recolouring would require sending numerical data or a custom texture/shader representation.
 
-The planned replacement for the first limitation is documented in the
-[region and hosting design](11-region-and-hosting-design.md). It preserves this
-single-raster path as a numerical reference while introducing shared source
-tiles, haloed analysis tiles, and browser XYZ delivery.
+The storage and cache identities behind this implementation are documented in
+the [region and hosting design](11-region-and-hosting-design.md).

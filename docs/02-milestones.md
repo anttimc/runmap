@@ -1,10 +1,12 @@
 # 2. Delivery milestones
 
-Status values: planned, active, complete. M0 is active; the other milestones are planned. Completion requires the listed evidence, not just implemented code.
+Status values: planned, active, complete. M0–M2 are complete, M3 is active,
+and later milestones are planned. Completion requires the listed evidence, not
+just implemented code.
 
 ## M0 — Define the first experiment
 
-Supports: G1, G2, G3. Status: active.
+Supports: G1, G2, G3. Status: complete.
 
 Tasks:
 
@@ -18,7 +20,7 @@ Complete when: area, experiment parameters, expected observations, and unresolve
 
 ## M1 — Create a reproducible local data pipeline
 
-Supports: G3. Depends on: M0. Status: planned.
+Supports: G3. Depends on: M0. Status: complete.
 
 Tasks:
 
@@ -32,7 +34,7 @@ Complete when: a documented command produces inspectable local inputs for analys
 
 ## M2 — Implement and validate terrain gradients and smoothing
 
-Supports: G1, G2, G3. Depends on: M1. Status: planned.
+Supports: G1, G2, G3. Depends on: M1. Status: complete.
 
 Tasks:
 
@@ -46,7 +48,7 @@ Complete when: magnitude and direction are reproducible and validated, and the n
 
 ## M3 — Deliver the first interactive map
 
-Supports: G1, G2, G4. Depends on: M2. Status: planned.
+Supports: G1, G2, G4. Depends on: M2. Status: active.
 
 Tasks:
 

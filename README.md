@@ -22,9 +22,20 @@ Goals use `G` identifiers, milestones use `M`, and decisions/questions use `D`/`
 
 ## Current status
 
-The Leppävaara 6 × 6 km elevation crop has been downloaded and structurally validated. Reusable acquisition, smoothing, differentiation, and comparison components are available. Spectral thin-plate smoothing with a 40 m half-amplitude wavelength is the current default. A local interactive MapLibre prototype now displays dynamically rendered slope magnitude and allows the smoothing scale and overlay opacity to change. The next scaling step is a shared 5 km elevation-tile catalog with lightweight named regions; see the [region and hosting design](docs/11-region-and-hosting-design.md).
+The first named region is a grid-aligned 10 × 10 km Leppävaara area. Its four
+5 km analysis cores use 16 shared MML elevation tiles once the 512 m processing
+halo is included. Those tiles have been downloaded, validated, converted to
+COGs, cataloged, and activated through an immutable coverage manifest. The
+default 40 m spectral thin-plate result is precomputed as four derived COGs and
+served to MapLibre as versioned Web Mercator XYZ PNG tiles. Other advertised
+smoothing presets are generated lazily. The old single-raster image path remains
+available as an explicit development override. See the [region and hosting
+design](docs/11-region-and-hosting-design.md).
 
-The study area is **Leppävaara, Espoo, Finland**. The first visualization will show terrain-gradient magnitude and direction, with a comparison of smoothing methods. M0 is active: exact bounds, validation locations, and experimental parameters remain to be selected. Path and route analysis follow the terrain experiment.
+The active study area is **Leppävaara, Espoo, Finland**. Terrain-gradient
+magnitude, smoothing comparisons, and the first interactive map are working;
+direction arrows and click inspection remain to complete the intended terrain
+view. Runnable-path and route analysis follow that refinement.
 
 ## Keeping the plan useful
 

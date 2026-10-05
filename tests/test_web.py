@@ -70,6 +70,19 @@ class TerrainRendererTests(unittest.TestCase):
             config["bounds_wgs84"][3],
         )
 
+    def test_grid_renderer_includes_region_metadata(self):
+        values = np.ones((4, 5), dtype=np.float32)
+        renderer = TerrainRenderer.from_grid(
+            values,
+            from_origin(370000, 6685000, 2, 2),
+            "EPSG:3067",
+            metadata={"region": {"id": "area"}},
+        )
+
+        config = renderer.config()
+        self.assertEqual(config["region"]["id"], "area")
+        self.assertEqual(config["source_shape"], [4, 5])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,6 +3,7 @@ import {
   ImageSource,
   Map,
   NavigationControl,
+  RasterTileSource,
   setWorkerUrl,
   type MapSourceDataEvent,
   type StyleSpecification,
@@ -35,6 +36,12 @@ interface MapConfig {
     raw_value: number;
   };
   slope_legend: { percent: number; color: string }[];
+  terrain_tiles?: {
+    template: string;
+    tile_size: number;
+    min_zoom: number;
+    max_zoom: number;
+  };
 }
 
 const FIRST_LABEL_LAYER_ID = "water-place-labels";
@@ -376,6 +383,7 @@ const legendLabels = element<HTMLDivElement>("legend-labels");
 
 let map: Map;
 let debounceTimer: number | undefined;
+let terrainTileTemplate: string | undefined;
 
 function element<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
@@ -385,6 +393,11 @@ function element<T extends HTMLElement>(id: string): T {
 
 function terrainUrl(wavelength: number): string {
   return `/api/terrain.png?wavelength_m=${wavelength}&max_size=1600`;
+}
+
+function terrainTiles(wavelength: number): string[] {
+  if (!terrainTileTemplate) return [];
+  return [terrainTileTemplate.replace("{wavelength}", String(wavelength))];
 }
 
 function setStatus(message: string, kind: "ready" | "busy" | "error" = "ready"): void {
@@ -411,8 +424,12 @@ function renderLegend(stops: MapConfig["slope_legend"]): void {
 
 function updateTerrain(wavelength: number): void {
   setStatus("Updating…", "busy");
-  const source = map.getSource("terrain") as ImageSource | undefined;
-  source?.updateImage({ url: terrainUrl(wavelength) });
+  const source = map.getSource("terrain");
+  if (terrainTileTemplate) {
+    (source as RasterTileSource | undefined)?.setTiles(terrainTiles(wavelength));
+  } else {
+    (source as ImageSource | undefined)?.updateImage({ url: terrainUrl(wavelength) });
+  }
 }
 
 function scheduleTerrainUpdate(): void {
@@ -426,6 +443,7 @@ async function start(): Promise<void> {
   const response = await fetch("/api/config");
   if (!response.ok) throw new Error(`Configuration request failed (${response.status})`);
   const config = (await response.json()) as MapConfig;
+  terrainTileTemplate = config.terrain_tiles?.template;
   const setting = config.smoothing;
   wavelengthInput.min = String(setting.minimum);
   wavelengthInput.max = String(setting.maximum);
@@ -454,11 +472,23 @@ async function start(): Promise<void> {
   });
 
   map.on("load", () => {
-    map.addSource("terrain", {
-      type: "image",
-      url: terrainUrl(setting.default),
-      coordinates: config.image_coordinates,
-    });
+    if (config.terrain_tiles) {
+      map.addSource("terrain", {
+        type: "raster",
+        tiles: terrainTiles(setting.default),
+        tileSize: config.terrain_tiles.tile_size,
+        minzoom: config.terrain_tiles.min_zoom,
+        maxzoom: config.terrain_tiles.max_zoom,
+        bounds: config.bounds_wgs84,
+        attribution: "National Land Survey of Finland (CC BY 4.0)",
+      });
+    } else {
+      map.addSource("terrain", {
+        type: "image",
+        url: terrainUrl(setting.default),
+        coordinates: config.image_coordinates,
+      });
+    }
     map.addLayer({
       id: "terrain-slope",
       type: "raster",

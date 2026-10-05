@@ -9,6 +9,7 @@ from time import perf_counter
 import numpy as np
 import rasterio
 from PIL import Image
+from rasterio.transform import array_bounds
 from rasterio.warp import transform, transform_bounds
 
 from runmap.terrain.derivatives import terrain_gradient
@@ -26,6 +27,27 @@ SLOPE_COLORS = np.array([
 ], dtype=np.uint8)
 
 
+def colorize_slope_png(slope_percent):
+    """Encode a slope-percent array with the shared indexed transparent palette."""
+    palette = np.zeros((256, 3), dtype=np.uint8)
+    palette_values = np.linspace(0, SLOPE_STOPS_PERCENT[-1], 255)
+    for channel in range(3):
+        palette[1:, channel] = np.interp(
+            palette_values, SLOPE_STOPS_PERCENT, SLOPE_COLORS[:, channel]
+        ).astype(np.uint8)
+    indices = np.where(
+        np.isfinite(slope_percent),
+        1 + np.rint(254 * np.clip(slope_percent, 0, SLOPE_STOPS_PERCENT[-1])
+                    / SLOPE_STOPS_PERCENT[-1]),
+        0,
+    ).astype(np.uint8)
+    output = BytesIO()
+    image = Image.fromarray(indices)
+    image.putpalette(palette.ravel().tolist())
+    image.save(output, format="PNG", compress_level=4, transparency=0)
+    return output.getvalue()
+
+
 class TerrainRenderer:
     """Keep source spectral data in memory and render bounded PNG overlays."""
 
@@ -36,6 +58,7 @@ class TerrainRenderer:
         bounds_wgs84,
         image_coordinates=None,
         cache_entries=12,
+        metadata=None,
     ):
         z = np.asarray(elevation, dtype=np.float64)
         if z.ndim != 2 or not np.isfinite(z).all():
@@ -61,6 +84,7 @@ class TerrainRenderer:
         self._cache_entries = cache_entries
         self._cache = OrderedDict()
         self._lock = RLock()
+        self.metadata = dict(metadata or {})
 
     @classmethod
     def from_raster(cls, path):
@@ -92,12 +116,32 @@ class TerrainRenderer:
             resolution = float(dataset.res[0])
         return cls(elevation, resolution, bounds, image_coordinates=image_coordinates)
 
+    @classmethod
+    def from_grid(cls, elevation, transform_affine, crs, metadata=None):
+        """Create a renderer from a north-up in-memory metric raster grid."""
+        rows, cols = np.asarray(elevation).shape
+        west, south, east, north = array_bounds(rows, cols, transform_affine)
+        bounds = transform_bounds(crs, "EPSG:4326", west, south, east, north, densify_pts=21)
+        longitude, latitude = transform(
+            crs,
+            "EPSG:4326",
+            [west, east, east, west],
+            [north, north, south, south],
+        )
+        return cls(
+            elevation,
+            float(transform_affine.a),
+            bounds,
+            image_coordinates=tuple(zip(longitude, latitude)),
+            metadata=metadata,
+        )
+
     @property
     def shape(self):
         return self._shape
 
     def config(self):
-        return {
+        result = {
             "bounds_wgs84": list(self.bounds_wgs84),
             "image_coordinates": [list(coordinate) for coordinate in self.image_coordinates],
             "source_shape": list(self._shape),
@@ -116,6 +160,8 @@ class TerrainRenderer:
                 for value, color in zip(SLOPE_STOPS_PERCENT, SLOPE_COLORS)
             ],
         }
+        result.update(self.metadata)
+        return result
 
     def render_png(self, wavelength_m, max_size=1600):
         wavelength = round(float(wavelength_m), 2)
@@ -158,20 +204,4 @@ class TerrainRenderer:
 
     @staticmethod
     def _colorize(slope_percent):
-        palette = np.zeros((256, 3), dtype=np.uint8)
-        palette_values = np.linspace(0, SLOPE_STOPS_PERCENT[-1], 255)
-        for channel in range(3):
-            palette[1:, channel] = np.interp(
-                palette_values, SLOPE_STOPS_PERCENT, SLOPE_COLORS[:, channel]
-            ).astype(np.uint8)
-        indices = np.where(
-            np.isfinite(slope_percent),
-            1 + np.rint(254 * np.clip(slope_percent, 0, SLOPE_STOPS_PERCENT[-1])
-                        / SLOPE_STOPS_PERCENT[-1]),
-            0,
-        ).astype(np.uint8)
-        output = BytesIO()
-        image = Image.fromarray(indices)
-        image.putpalette(palette.ravel().tolist())
-        image.save(output, format="PNG", compress_level=4, transparency=0)
-        return output.getvalue()
+        return colorize_slope_png(slope_percent)
