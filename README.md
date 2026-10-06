@@ -58,6 +58,8 @@ PYTHONPATH=src .venv/bin/python -m uvicorn runmap.api.app:app --reload
 9. [Interactive terrain map](docs/09-interactive-map.md) — local API, MapLibre UI, and development commands.
 10. [Thin-plate DCT mathematics](docs/10-thin-plate-dct-mathematics.md) — continuous formulation, discrete operator, and boundary behavior.
 11. [Region and hosting design](docs/11-region-and-hosting-design.md) — tiled elevation acquisition, region configuration, caches, and public delivery.
+12. [Route-planning design](docs/12-route-planning-design.md) — shared routing architecture, environment-first loops, destination-first return routes, and staged implementation.
+13. [Runnable-path graph prototype](docs/13-path-graph-prototype.md) — bounded OSM extraction, directed pedestrian graph, terrain enrichment, and first measured result.
 
 Goals use `G` identifiers, milestones use `M`, and decisions/questions use `D`/`Q`. These identifiers connect implementation work to its purpose.
 

@@ -336,6 +336,24 @@ class ElevationStore:
             for tile in region.analysis_tiles()
         )
 
+    def ready_derived_paths(self, manifest_id, wavelength_m):
+        """Return existing terrain-gradient COGs for one manifest and preset."""
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """SELECT path FROM derived_tiles
+                   WHERE manifest_id=? AND wavelength_m=? AND algorithm_version=?
+                   AND halo_m=? AND status='ready' ORDER BY tile_id""",
+                (
+                    manifest_id, int(wavelength_m), DERIVED_ALGORITHM_VERSION,
+                    PROCESSING_HALO_M,
+                ),
+            ).fetchall()
+        return tuple(
+            path for row in rows
+            if (path := self._absolute(row["path"])).exists()
+        )
+
     def ensure_derived_tile(self, manifest_id, tile, wavelength_m):
         wavelength = int(wavelength_m)
         if wavelength != wavelength_m or wavelength < 0 or wavelength > 100:

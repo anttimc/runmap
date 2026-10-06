@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "leppavaara-flat-10k",
+  "title": "Flat 10 km loop from Ruusutorpan koulu",
+  "bounds_epsg3067": [373000, 6673000, 380000, 6682000],
+  "start": {
+    "name": "Ruusutorpan koulu",
+    "address": "Leppävaarankatu 24, 02600 Espoo",
+    "latitude": 60.21682,
+    "longitude": 24.80259
+  },
+  "request": {
+    "mode": "environment-loop",
+    "target_distance_m": 10000,
+    "distance_tolerance_m": 500,
+    "minimize": "ascent_m",
+    "max_repeated_fraction": 0.1,
+    "allow_immediate_reversal_for_access_stem": true
+  },
+  "terrain": {
+    "elevation_region": "leppavaara",
+    "wavelength_m": 40,
+    "sampling_interval_m": 10
+  },
+  "area_note": "Preparation extent for Leppävaara and Kilo. Ring I is a later route boundary; the graph retains nearby context to avoid artificial edge dead ends."
+}

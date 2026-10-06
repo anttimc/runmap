@@ -1,15 +1,22 @@
 """Acquisition entry point: PYTHONPATH=src python3 -m runmap.cli."""
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
 import sys
 from urllib.error import HTTPError, URLError
 
+from rasterio.warp import transform
+
 from runmap.elevation.store import ElevationStore
+from runmap.paths.experiments import find_experiment
+from runmap.paths.graph import build_routing_graph, snap_to_vertex, write_graph_outputs
+from runmap.paths.terrain import enrich_graph_terrain
 from runmap.regions import PROCESSING_HALO_M, find_region, list_regions
 from runmap.sources.mml import Bounds, coverage_url, download_elevation
+from runmap.sources.osm import download_highways, highway_query
 
 
 def local_key(path):
@@ -101,10 +108,130 @@ def region_command(argv):
     )
 
 
+def _wgs84_bounds(bounds_epsg3067):
+    west, south, east, north = bounds_epsg3067
+    xs = [west, west, east, east]
+    ys = [south, north, south, north]
+    longitudes, latitudes = transform("EPSG:3067", "EPSG:4326", xs, ys)
+    return min(latitudes), min(longitudes), max(latitudes), max(longitudes)
+
+
+def paths_command(argv):
+    parser = argparse.ArgumentParser(description="Prepare inspectable runnable-path graphs")
+    parser.add_argument(
+        "--experiments", type=Path, default=Path("config/routing-experiments")
+    )
+    parser.add_argument("--regions", type=Path, default=Path("config/regions"))
+    parser.add_argument("--data-root", type=Path, default=Path("data/paths"))
+    parser.add_argument("--elevation-root", type=Path, default=Path("data/elevation"))
+    parser.add_argument("--catalog", type=Path)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    prepare = subparsers.add_parser("prepare", help="Acquire OSM and build a directed graph")
+    prepare.add_argument("experiment_id")
+    prepare.add_argument("--input", type=Path, help="Use an existing Overpass JSON response")
+    prepare.add_argument("--dry-run", action="store_true")
+    prepare.add_argument(
+        "--without-terrain", action="store_true",
+        help="Prepare topology only when derived terrain tiles are unavailable",
+    )
+    args = parser.parse_args(argv)
+    experiment = find_experiment(args.experiments, args.experiment_id)
+    bounds_wgs84 = _wgs84_bounds(experiment.bounds)
+    if args.dry_run:
+        print(f"Experiment {experiment.id}: EPSG:3067 {experiment.bounds}")
+        print(f"Overpass WGS84 bounds: {bounds_wgs84}")
+        print(highway_query(bounds_wgs84))
+        return
+
+    raw_path = args.input or args.data_root / "raw" / experiment.id / "osm-highways.json"
+    if args.input:
+        payload = raw_path.read_bytes()
+        osm_provenance = {
+            "source_path": str(raw_path),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "bytes": len(payload),
+            "bounds_wgs84": list(bounds_wgs84),
+        }
+    else:
+        try:
+            if not raw_path.exists():
+                osm_provenance = download_highways(bounds_wgs84, raw_path)
+            else:
+                sidecar = raw_path.with_suffix(raw_path.suffix + ".json")
+                if not sidecar.exists():
+                    parser.error(f"Existing OSM source has no provenance sidecar: {raw_path}")
+                osm_provenance = json.loads(sidecar.read_text())
+                actual_digest = hashlib.sha256(raw_path.read_bytes()).hexdigest()
+                if actual_digest != osm_provenance.get("sha256"):
+                    parser.error(f"Existing OSM source checksum does not match: {raw_path}")
+        except HTTPError as exc:
+            parser.exit(1, f"OSM download failed: HTTP {exc.code}; retry later or use --input.\n")
+        except URLError:
+            parser.exit(1, "OSM download failed: network connection unavailable.\n")
+    try:
+        osm_document = json.loads(raw_path.read_text())
+        graph = build_routing_graph(
+            osm_document,
+            source={
+                "experiment_id": experiment.id,
+                "experiment_config_digest": experiment.config_digest,
+                "osm": osm_provenance,
+            },
+        )
+        graph["start"] = {
+            "name": experiment.start.name,
+            "address": experiment.start.address,
+            "longitude": experiment.start.longitude,
+            "latitude": experiment.start.latitude,
+        }
+        graph["start_snap"] = snap_to_vertex(
+            graph, experiment.start.longitude, experiment.start.latitude
+        )
+        if not args.without_terrain:
+            terrain = experiment.terrain
+            region = find_region(args.regions, terrain["elevation_region"])
+            store = ElevationStore(args.elevation_root, args.catalog)
+            manifest_id = store.active_manifest_for_region(region)
+            terrain_paths = store.ready_derived_paths(manifest_id, terrain["wavelength_m"])
+            if not terrain_paths:
+                parser.error(
+                    f"No prepared {terrain['wavelength_m']} m terrain tiles for "
+                    f"{region.id}; run region precompute first"
+                )
+            enrich_graph_terrain(
+                graph,
+                terrain_paths,
+                terrain["wavelength_m"],
+                terrain["sampling_interval_m"],
+            )
+            graph["terrain"]["manifest_id"] = manifest_id
+            if graph["terrain"]["valid_fraction"] < 1:
+                parser.error(
+                    "Prepared terrain does not cover every path sample; "
+                    "inspect experiment bounds and derived tiles"
+                )
+        outputs = write_graph_outputs(graph, args.data_root / "prepared" / experiment.id)
+    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        parser.exit(1, f"Path graph preparation failed: {exc}\n")
+    summary = graph["summary"]
+    print(
+        f"Prepared {experiment.id}: {summary['node_count']} nodes, "
+        f"{summary['segment_count']} segments, {summary['arc_count']} directed arcs"
+    )
+    print(
+        f"Components: {summary['component_count']}; largest "
+        f"{summary['largest_component_nodes']} nodes; start snap "
+        f"{graph['start_snap']['snap_distance_m']:.1f} m"
+    )
+    print(f"Inspection GeoJSON: {outputs['geojson']}")
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] == "region":
         region_command(argv[1:])
+    elif argv and argv[0] == "paths":
+        paths_command(argv[1:])
     else:
         legacy_download(argv)
 

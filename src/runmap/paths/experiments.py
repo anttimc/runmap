@@ -1,0 +1,113 @@
+"""Validated configuration for bounded route-planning experiments."""
+
+from dataclasses import dataclass
+import hashlib
+import json
+import math
+from pathlib import Path
+import re
+
+
+EXPERIMENT_SCHEMA_VERSION = 1
+_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+@dataclass(frozen=True)
+class StartLocation:
+    name: str
+    address: str
+    latitude: float
+    longitude: float
+
+
+@dataclass(frozen=True)
+class RoutingExperiment:
+    schema_version: int
+    id: str
+    title: str
+    bounds: tuple
+    start: StartLocation
+    request: dict
+    terrain: dict
+    area_note: str
+    config_digest: str
+
+
+def load_experiment(path):
+    """Load one strictly validated routing-experiment definition."""
+    path = Path(path)
+    document = json.loads(path.read_text())
+    required = {
+        "schema_version", "id", "title", "bounds_epsg3067", "start",
+        "request", "terrain",
+    }
+    missing = required - document.keys()
+    if missing:
+        raise ValueError(f"Routing experiment is missing: {', '.join(sorted(missing))}")
+    if document["schema_version"] != EXPERIMENT_SCHEMA_VERSION:
+        raise ValueError(f"Unsupported routing experiment schema {document['schema_version']}")
+    experiment_id = document["id"]
+    if not isinstance(experiment_id, str) or not _ID.fullmatch(experiment_id):
+        raise ValueError("Routing experiment id must be a lowercase hyphenated slug")
+    if path.stem != experiment_id:
+        raise ValueError("Routing experiment filename must match its id")
+    raw_bounds = document["bounds_epsg3067"]
+    if not isinstance(raw_bounds, list) or len(raw_bounds) != 4:
+        raise ValueError("bounds_epsg3067 must contain west, south, east, north")
+    if any(
+        isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
+        for value in raw_bounds
+    ):
+        raise ValueError("Routing experiment bounds must be finite numbers")
+    bounds = tuple(float(value) for value in raw_bounds)
+    if bounds[2] <= bounds[0] or bounds[3] <= bounds[1]:
+        raise ValueError("Routing experiment bounds must have positive area")
+    start = document["start"]
+    if not isinstance(start, dict):
+        raise ValueError("start must be an object")
+    for key in ("name", "address", "latitude", "longitude"):
+        if key not in start:
+            raise ValueError(f"start is missing {key}")
+    latitude = start["latitude"]
+    longitude = start["longitude"]
+    if not isinstance(latitude, (int, float)) or not -90 <= latitude <= 90:
+        raise ValueError("start.latitude must be from -90 to 90")
+    if not isinstance(longitude, (int, float)) or not -180 <= longitude <= 180:
+        raise ValueError("start.longitude must be from -180 to 180")
+    request = document["request"]
+    if not isinstance(request, dict) or request.get("mode") not in {
+        "environment-loop", "destination-outing"
+    }:
+        raise ValueError("request.mode is unsupported")
+    terrain = document["terrain"]
+    if not isinstance(terrain, dict):
+        raise ValueError("terrain must be an object")
+    if not isinstance(terrain.get("elevation_region"), str):
+        raise ValueError("terrain.elevation_region must be a region id")
+    if not isinstance(terrain.get("wavelength_m"), int) or terrain["wavelength_m"] < 0:
+        raise ValueError("terrain.wavelength_m must be a non-negative integer")
+    if not isinstance(terrain.get("sampling_interval_m"), (int, float)) or terrain["sampling_interval_m"] <= 0:
+        raise ValueError("terrain.sampling_interval_m must be positive")
+    canonical = json.dumps(document, sort_keys=True, separators=(",", ":")).encode()
+    return RoutingExperiment(
+        schema_version=document["schema_version"],
+        id=experiment_id,
+        title=str(document["title"]),
+        bounds=bounds,
+        start=StartLocation(
+            name=str(start["name"]),
+            address=str(start["address"]),
+            latitude=float(latitude),
+            longitude=float(longitude),
+        ),
+        request=dict(request),
+        terrain=dict(terrain),
+        area_note=str(document.get("area_note", "")),
+        config_digest=hashlib.sha256(canonical).hexdigest(),
+    )
+
+
+def find_experiment(directory, experiment_id):
+    if not isinstance(experiment_id, str) or not _ID.fullmatch(experiment_id):
+        raise ValueError("Invalid routing experiment id")
+    return load_experiment(Path(directory) / f"{experiment_id}.json")
