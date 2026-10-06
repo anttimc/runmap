@@ -178,6 +178,10 @@ Optimization order:
    1.3 GB to about 209 MB.
 2. Restrict cache locking to lookup/insertion and coordinate duplicate work per
    key, allowing distinct terrain and contour requests to run concurrently.
+   Implemented with per-key in-flight results; derived-core generation retains
+   a separate safety lock until it moves out of request handling. Four sampled
+   unique zoom-14 terrain tiles improved from 0.257 s serialized to 0.055 s
+   wall time, while simultaneous requests for one tile performed one render.
 3. Move missing non-default smoothing products into bounded background work;
    optionally precompute the most-used additional presets.
 4. Simplify contour geometry by zoom, reduce distant sampling density, and add

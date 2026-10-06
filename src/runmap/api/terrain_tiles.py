@@ -3,7 +3,7 @@
 from collections import OrderedDict
 import math
 import struct
-from threading import RLock
+from threading import Event, RLock
 from time import perf_counter
 
 import contourpy
@@ -43,6 +43,15 @@ def xyz_bounds(z, x, y):
     return left, bottom, right, top
 
 
+class _PendingRender:
+    """Share one in-flight result with requests for the same cache key."""
+
+    def __init__(self):
+        self.event = Event()
+        self.result = None
+        self.error = None
+
+
 class TerrainTileService:
     def __init__(self, region, store, cache_entries=128):
         self.region = region
@@ -51,6 +60,11 @@ class TerrainTileService:
         self._cache_entries = cache_entries
         self._cache = OrderedDict()
         self._lock = RLock()
+        self._inflight = {}
+        # ElevationStore writes one deterministic path per derived core. Keep
+        # lookup/generation serialized until missing presets move to a bounded
+        # background worker; display reprojection happens outside this lock.
+        self._derived_lock = RLock()
         west, south, east, north = region.bounds
         self.bounds_wgs84 = transform_bounds(
             ANALYSIS_CRS, "EPSG:4326", west, south, east, north, densify_pts=21
@@ -115,38 +129,60 @@ class TerrainTileService:
             raise ValueError(f"Wavelength must be one of {HOSTED_WAVELENGTHS_M}")
         if not DISPLAY_MIN_ZOOM <= z <= DISPLAY_MAX_ZOOM:
             raise ValueError("Zoom is outside the terrain tile range")
-        key = wavelength, z, x, y
-        with self._lock:
-            cached = self._cache.get(key)
-            if cached is not None:
-                self._cache.move_to_end(key)
-                return cached, 0.0
-            started = perf_counter()
-            image = self._render_uncached(wavelength, z, x, y)
-            elapsed = perf_counter() - started
-            self._cache[key] = image
-            self._cache.move_to_end(key)
-            while len(self._cache) > self._cache_entries:
-                self._cache.popitem(last=False)
-            return image, elapsed
+        key = "terrain", wavelength, z, x, y
+        return self._render_cached(
+            key, lambda: self._render_uncached(wavelength, z, x, y)
+        )
 
     def render_contour_tile(self, z, x, y):
         """Render fixed source-elevation contours as a transparent PNG tile."""
         if not 12 <= z <= DISPLAY_MAX_ZOOM:
             raise ValueError("Zoom is outside the contour tile range")
         key = "contours", z, x, y
+        return self._render_cached(
+            key, lambda: self._render_contours_uncached(z, x, y)
+        )
+
+    def _render_cached(self, key, render):
+        """Return cached bytes or compute one key without blocking other keys."""
         with self._lock:
             cached = self._cache.get(key)
             if cached is not None:
                 self._cache.move_to_end(key)
                 return cached, 0.0
+            pending = self._inflight.get(key)
+            if pending is None:
+                pending = _PendingRender()
+                self._inflight[key] = pending
+                owner = True
+            else:
+                owner = False
+
+        if not owner:
+            pending.event.wait()
+            if pending.error is not None:
+                raise pending.error
+            return pending.result, 0.0
+
+        try:
             started = perf_counter()
-            image = self._render_contours_uncached(z, x, y)
+            image = render()
             elapsed = perf_counter() - started
+        except BaseException as exc:
+            with self._lock:
+                pending.error = exc
+                self._inflight.pop(key, None)
+                pending.event.set()
+            raise
+
+        with self._lock:
             self._cache[key] = image
             self._cache.move_to_end(key)
             while len(self._cache) > self._cache_entries:
                 self._cache.popitem(last=False)
+            pending.result = image
+            self._inflight.pop(key, None)
+            pending.event.set()
             return image, elapsed
 
     def _render_contours_uncached(self, z, x, y):
@@ -224,10 +260,11 @@ class TerrainTileService:
             if tile.east > request_bounds[0] and tile.west < request_bounds[2]
             and tile.north > request_bounds[1] and tile.south < request_bounds[3]
         ]
-        paths = [
-            self.store.ensure_derived_tile(self.manifest_id, tile, wavelength)
-            for tile in tiles
-        ]
+        with self._derived_lock:
+            paths = [
+                self.store.ensure_derived_tile(self.manifest_id, tile, wavelength)
+                for tile in tiles
+            ]
         destination = np.full(
             (DISPLAY_TILE_SIZE, DISPLAY_TILE_SIZE), np.nan, dtype=np.float32
         )

@@ -1,9 +1,13 @@
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import json
 import math
+from threading import Lock
+from time import sleep
 import unittest
+from unittest.mock import patch
 
 from PIL import Image
 import numpy as np
@@ -127,6 +131,78 @@ class TerrainTileTests(unittest.TestCase):
     def test_rejects_contours_outside_advertised_zoom_range(self):
         with self.assertRaisesRegex(ValueError, "contour tile range"):
             self.service.render_contour_tile(11, 0, 0)
+
+    def test_distinct_tile_keys_render_concurrently(self):
+        active = 0
+        maximum_active = 0
+        state_lock = Lock()
+
+        def render(*args):
+            nonlocal active, maximum_active
+            with state_lock:
+                active += 1
+                maximum_active = max(maximum_active, active)
+            sleep(0.05)
+            with state_lock:
+                active -= 1
+            return b"tile"
+
+        with patch.object(self.service, "_render_uncached", side_effect=render):
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(
+                    lambda x: self.service.render_tile(40, 12, x, 0),
+                    (0, 1),
+                ))
+
+        self.assertEqual(maximum_active, 2)
+        self.assertEqual([result[0] for result in results], [b"tile", b"tile"])
+
+    def test_duplicate_tile_requests_share_one_inflight_render(self):
+        calls = 0
+        state_lock = Lock()
+
+        def render(*args):
+            nonlocal calls
+            with state_lock:
+                calls += 1
+            sleep(0.05)
+            return b"shared"
+
+        with patch.object(self.service, "_render_uncached", side_effect=render):
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                results = list(pool.map(
+                    lambda _: self.service.render_tile(40, 12, 0, 0),
+                    range(4),
+                ))
+
+        self.assertEqual(calls, 1)
+        self.assertEqual([result[0] for result in results], [b"shared"] * 4)
+        self.assertEqual(sum(result[1] > 0 for result in results), 1)
+
+    def test_failed_inflight_render_is_shared_and_can_be_retried(self):
+        calls = 0
+
+        def fail(*args):
+            nonlocal calls
+            calls += 1
+            sleep(0.05)
+            raise RuntimeError("render failed")
+
+        with patch.object(self.service, "_render_uncached", side_effect=fail):
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                futures = [
+                    pool.submit(self.service.render_tile, 40, 12, 0, 0)
+                    for _ in range(2)
+                ]
+                for future in futures:
+                    with self.assertRaisesRegex(RuntimeError, "render failed"):
+                        future.result()
+
+        with patch.object(self.service, "_render_uncached", return_value=b"recovered"):
+            result, _ = self.service.render_tile(40, 12, 0, 0)
+
+        self.assertEqual(calls, 1)
+        self.assertEqual(result, b"recovered")
 
 
 if __name__ == "__main__":
