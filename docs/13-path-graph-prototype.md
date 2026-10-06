@@ -5,8 +5,8 @@
 The first path graph supports the flat 10 km loop experiment defined in the
 [route-planning design](12-route-planning-design.md). Its preparation rectangle
 is `E 373000–380000`, `N 6673000–6682000` in EPSG:3067. This covers the
-Leppävaara/Kilo test neighborhood with context around its edges. Ring I remains
-a route-search boundary to implement later rather than an OSM extraction cut.
+Leppävaara/Kilo test neighborhood with context around its edges. The topology
+study uses its smaller configured bounds; Ring I is not a route boundary.
 
 Ruusutorpan koulu is identified by its public address, Leppävaarankatu 24, and
 an approximate landmark coordinate. Preparation snaps that coordinate to the
@@ -23,12 +23,14 @@ PYTHONPATH=src .venv/bin/python -m runmap.cli paths prepare \
   leppavaara-flat-10k
 ```
 
-The bounded Overpass query downloads only the initial runnable highway classes.
+The bounded Overpass query downloads the initial runnable highway classes and
+any configured route-boundary roads. This experiment currently has no hard
+route boundary.
 The raw response and provenance sidecar are stored under `data/paths/raw/`.
 Prepared outputs under `data/paths/prepared/` are:
 
-- `graph.json`: vertices, physical segments, directed arcs, source identity,
-  start snap, terrain method, and summary;
+- `graph.json`: vertices, physical segments, directed arcs, route boundaries,
+  source identity, start snap, terrain method, and summary;
 - `segments.geojson`: physical geometry and attributes for map inspection;
 - `inspection.json`: compact graph and start-snap summary.
 
@@ -38,13 +40,16 @@ can inspect topology before derived terrain tiles exist.
 
 ## Initial path policy
 
-The importer accepts footways, paths, pedestrian and living streets,
+The importer accepts outdoor footways, paths, pedestrian and living streets,
 pedestrian-permitted cycleways, residential and service streets, tracks,
-steps, and unclassified roads. It rejects area geometry, indoor paths,
-construction, explicit pedestrian denial, and private/no access unless an
-explicit pedestrian permission overrides the general access tag. A cycleway
-also requires an explicit pedestrian permission; missing permission is not
-treated as permission.
+steps, and unclassified roads. It rejects area geometry, indoor and
+building-passage paths, parking aisles, enclosed service roads, unqualified
+level-specific geometry, construction, explicit pedestrian denial, and
+private/no access unless an explicit pedestrian permission overrides the
+general access tag. A level-tagged pedestrian tunnel or bridge remains valid:
+this distinguishes public underpasses from indoor floor plans. A cycleway also
+requires explicit pedestrian permission; missing permission is not treated as
+permission.
 
 Ordinary vehicle `oneway` does not restrict runners. Only explicit pedestrian
 direction tags create a one-direction arc. Bridges and tunnels connect only
@@ -75,25 +80,27 @@ Prepared on 2026-10-06 from a bounded OpenStreetMap Overpass extract:
 
 | Measurement | Result |
 | --- | ---: |
-| Source ways | 33,059 |
-| Selected runnable ways | 31,555 |
-| Graph vertices | 56,977 |
-| Physical segments | 71,032 |
-| Directed arcs | 142,064 |
-| Physical segment length | 2,074.585 km |
-| Undirected components | 364 |
-| Vertices in largest component | 55,853 |
-| Segments missing surface tags | 25,283 |
-| Bridge / tunnel / stair segments | 312 / 368 / 867 |
+| Source ways | 33,160 |
+| Selected runnable ways | 30,219 |
+| Graph vertices | 54,880 |
+| Physical segments | 67,977 |
+| Directed arcs | 135,954 |
+| Physical segment length | 2,011.885 km |
+| Undirected components | 426 |
+| Vertices in largest component | 53,545 |
+| Segments missing surface tags | 24,364 |
+| Bridge / tunnel / stair segments | 310 / 124 / 839 |
+| Route-boundary ways | 0 |
 | Terrain sample coverage | 100% |
 
-The many small components and service segments are retained for inspection.
-The largest component contains about 98% of graph vertices, so route search can
-start there while later quality scoring penalizes driveways, parking aisles,
-poor surfaces, and other unattractive choices. Missing OSM tags remain unknown,
-not implicit evidence of a good surface or public access.
+The many small components and ordinary service segments are retained for
+inspection. The largest component contains about 98% of graph vertices, so
+route search can start there while later quality scoring penalizes driveways,
+poor surfaces, and other unattractive choices. Parking aisles and enclosed
+service circulation are excluded during import. Missing OSM tags remain
+unknown, not implicit evidence of a good surface or public access.
 
-The current JSON graph is about 83 MB and the inspection GeoJSON about 54 MB.
+The current JSON graph is about 80 MB and the inspection GeoJSON about 52 MB.
 They are acceptable experiment artifacts but not a final query format. A more
 compact binary, SQLite, or GeoPackage representation should be considered only
 after the first searches reveal the access patterns actually needed.
@@ -106,9 +113,8 @@ GeoJSON output, and directional terrain integration. A local plot around
 Ruusutorpan koulu was also inspected for plausible connectivity and path-class
 distribution.
 
-Step 2 provides a usable shared graph and measured limitations. Step 3 can now
-add ordinary shortest-path search and the diverse-path baseline without yet
-implementing face cycles.
+Step 2 provides a usable shared graph and measured limitations. The implemented
+[diverse-path baseline](14-diverse-route-baseline.md) now uses it for step 3.
 
 OpenStreetMap data is © OpenStreetMap contributors and available under the
 [ODbL](https://www.openstreetmap.org/copyright).

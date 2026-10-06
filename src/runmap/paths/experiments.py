@@ -10,6 +10,7 @@ import re
 
 EXPERIMENT_SCHEMA_VERSION = 1
 _ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+_OSM_REF = re.compile(r"^[A-Za-z0-9-]+$")
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,9 @@ class RoutingExperiment:
     start: StartLocation
     request: dict
     terrain: dict
+    baseline: dict
+    route_boundaries: tuple
+    topology: dict
     area_note: str
     config_digest: str
 
@@ -39,7 +43,7 @@ def load_experiment(path):
     document = json.loads(path.read_text())
     required = {
         "schema_version", "id", "title", "bounds_epsg3067", "start",
-        "request", "terrain",
+        "request", "terrain", "baseline", "route_boundaries", "topology",
     }
     missing = required - document.keys()
     if missing:
@@ -88,6 +92,43 @@ def load_experiment(path):
         raise ValueError("terrain.wavelength_m must be a non-negative integer")
     if not isinstance(terrain.get("sampling_interval_m"), (int, float)) or terrain["sampling_interval_m"] <= 0:
         raise ValueError("terrain.sampling_interval_m must be positive")
+    baseline = document["baseline"]
+    if not isinstance(baseline, dict):
+        raise ValueError("baseline must be an object")
+    for name in ("anchor_count", "alternative_count"):
+        if not isinstance(baseline.get(name), int) or baseline[name] < 1:
+            raise ValueError(f"baseline.{name} must be a positive integer")
+    for name in ("ascent_costs_per_m", "overlap_factors"):
+        values = baseline.get(name)
+        if not isinstance(values, list) or not values or any(
+            not isinstance(value, (int, float)) or value < 0 for value in values
+        ):
+            raise ValueError(f"baseline.{name} must contain non-negative numbers")
+    if any(value < 1 for value in baseline["overlap_factors"]):
+        raise ValueError("baseline.overlap_factors must be at least one")
+    if not isinstance(baseline.get("stairs_multiplier"), (int, float)) or baseline["stairs_multiplier"] < 1:
+        raise ValueError("baseline.stairs_multiplier must be at least one")
+    route_boundaries = document["route_boundaries"]
+    if not isinstance(route_boundaries, list):
+        raise ValueError("route_boundaries must be a list")
+    for boundary in route_boundaries:
+        if not isinstance(boundary, dict) or not isinstance(boundary.get("osm_ref"), str):
+            raise ValueError("Each route boundary must have an OSM ref")
+        if not _OSM_REF.fullmatch(boundary["osm_ref"]):
+            raise ValueError("Route-boundary OSM refs must be simple identifiers")
+        if boundary.get("behavior") != "do-not-cross":
+            raise ValueError("Unsupported route-boundary behavior")
+    topology = document["topology"]
+    if not isinstance(topology, dict):
+        raise ValueError("topology must be an object")
+    face_bounds = topology.get("face_test_bounds_epsg3067")
+    if not isinstance(face_bounds, list) or len(face_bounds) != 4 or any(
+        not isinstance(value, (int, float)) or not math.isfinite(value)
+        for value in face_bounds
+    ):
+        raise ValueError("topology.face_test_bounds_epsg3067 must contain four numbers")
+    if face_bounds[2] <= face_bounds[0] or face_bounds[3] <= face_bounds[1]:
+        raise ValueError("Topology face-test bounds must have positive area")
     canonical = json.dumps(document, sort_keys=True, separators=(",", ":")).encode()
     return RoutingExperiment(
         schema_version=document["schema_version"],
@@ -102,6 +143,9 @@ def load_experiment(path):
         ),
         request=dict(request),
         terrain=dict(terrain),
+        baseline=dict(baseline),
+        route_boundaries=tuple(dict(boundary) for boundary in route_boundaries),
+        topology=dict(topology),
         area_note=str(document.get("area_note", "")),
         config_digest=hashlib.sha256(canonical).hexdigest(),
     )

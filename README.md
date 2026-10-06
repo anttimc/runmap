@@ -60,6 +60,8 @@ PYTHONPATH=src .venv/bin/python -m uvicorn runmap.api.app:app --reload
 11. [Region and hosting design](docs/11-region-and-hosting-design.md) — tiled elevation acquisition, region configuration, caches, and public delivery.
 12. [Route-planning design](docs/12-route-planning-design.md) — shared routing architecture, environment-first loops, destination-first return routes, and staged implementation.
 13. [Runnable-path graph prototype](docs/13-path-graph-prototype.md) — bounded OSM extraction, directed pedestrian graph, terrain enrichment, and first measured result.
+14. [Diverse-path route baseline](docs/14-diverse-route-baseline.md) — shortest-path primitives, outbound/return diversity, anchor loops, route constraints, and measured alternatives.
+15. [Cyclic topology and half-edge faces](docs/15-cyclic-topology.md) — bridges, 2-core, cyclic blocks, bounded planar faces, and shared-edge cancellation.
 
 Goals use `G` identifiers, milestones use `M`, and decisions/questions use `D`/`Q`. These identifiers connect implementation work to its purpose.
 

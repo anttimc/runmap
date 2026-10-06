@@ -15,25 +15,29 @@ RUNNABLE_HIGHWAY_PATTERN = (
 )
 
 
-def highway_query(bounds_wgs84):
+def highway_query(bounds_wgs84, boundary_refs=()):
     """Return an Overpass query for ways and fully tagged member nodes."""
     south, west, north, east = bounds_wgs84
     if not (-90 <= south < north <= 90 and -180 <= west < east <= 180):
         raise ValueError("Invalid WGS84 query bounds")
     bbox = ",".join(f"{value:.7f}" for value in (south, west, north, east))
-    return (
-        "[out:json][timeout:180];"
+    selectors = [
         f"way[\"highway\"~\"^({RUNNABLE_HIGHWAY_PATTERN})$\"]({bbox});"
-        "out body;>;out body qt;"
-    )
+    ]
+    if boundary_refs:
+        pattern = "|".join(str(reference) for reference in boundary_refs)
+        selectors.append(
+            f"way[\"highway\"][\"ref\"~\"^({pattern})$\"]({bbox});"
+        )
+    return "[out:json][timeout:180];(" + "".join(selectors) + ");out body;>;out body qt;"
 
 
-def download_highways(bounds_wgs84, destination, opener=None):
+def download_highways(bounds_wgs84, destination, boundary_refs=(), opener=None):
     """Download one immutable Overpass JSON response and provenance sidecar."""
     destination = Path(destination)
     if destination.exists():
         raise FileExistsError(f"Refusing to overwrite existing OSM source: {destination}")
-    query = highway_query(bounds_wgs84)
+    query = highway_query(bounds_wgs84, boundary_refs)
     request = Request(
         OVERPASS_URL,
         data=urlencode({"data": query}).encode(),

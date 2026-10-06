@@ -54,7 +54,7 @@ inputs:
 | --- | --- |
 | Start and finish | Ruusutorpan koulu, Leppävaarankatu 24, Espoo |
 | Start-node selection | Snap the landmark to the nearest sensibly accessible vertex on the prepared runnable network; record the chosen vertex and snap distance |
-| Search area | Leppävaara and Kilo west of Ring I; define the exact preparation polygon with a buffer during graph extraction |
+| Search area | Leppävaara and Kilo topology-study extent; prepare a buffered surrounding rectangle to avoid artificial graph-edge dead ends |
 | Target distance | 10 km |
 | Accepted distance | 9.5–10.5 km |
 | Training goal | Minimize total ascent |
@@ -195,8 +195,10 @@ were inspected; measured limitations are recorded in the
 - Report distance, ascent, repeated distance, and the reason for each major
   penalty.
 
-**Evaluation gate:** destination routes usually return by a sensible different
-path when one exists, while unavoidable repetition remains allowed.
+**Evaluation gate:** complete for the first bounded experiment. Synthetic path
+pairs use a distinct return when one exists, and the real anchor search found
+feasible 10 km loops while retaining the unavoidable school access stem. See
+the [diverse-path baseline](14-diverse-route-baseline.md).
 
 ### 4. Prepare cyclic topology
 
@@ -206,8 +208,10 @@ path when one exists, while unavoidable repetition remains allowed.
 - Verify face traversal and shared-edge cancellation on synthetic graphs and
   several real neighborhoods.
 
-**Evaluation gate:** the topology explains dead ends, access stems, and block
-boundaries correctly before it is used for route search.
+**Evaluation gate:** complete for the bounded experiment. The school access is
+confirmed as a bridge outside the 2-core; synthetic and real checks validate
+cyclic blocks, face traversal, adjacency, and shared-edge cancellation. See
+[cyclic topology](15-cyclic-topology.md).
 
 ### 5. Prototype face-region loop search
 

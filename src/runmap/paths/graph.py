@@ -37,8 +37,24 @@ def runnable_reason(tags):
         return False, "unsupported_highway"
     if _tag(tags, "area") in _TRUE:
         return False, "area_geometry"
-    if _tag(tags, "indoor") in _TRUE:
+    indoor = _tag(tags, "indoor")
+    location = _tag(tags, "location")
+    tunnel = _tag(tags, "tunnel")
+    bridge = _tag(tags, "bridge")
+    level = _tag(tags, "level")
+    service = _tag(tags, "service")
+    if indoor not in {"", "no", "false", "0"} or location == "indoor":
         return False, "indoor"
+    if tunnel == "building_passage":
+        return False, "indoor"
+    if service == "parking_aisle":
+        return False, "parking_aisle"
+    if highway == "service" and (
+        tunnel not in {"", "no"} or _tag(tags, "covered") in _TRUE
+    ):
+        return False, "enclosed_service"
+    if level and tunnel in {"", "no"} and bridge in {"", "no"}:
+        return False, "level_geometry"
     if _tag(tags, "construction") or highway in {"construction", "proposed"}:
         return False, "not_in_service"
     foot = _tag(tags, "foot")
@@ -82,7 +98,8 @@ def _selected_tags(tags):
         "highway", "name", "service", "surface", "smoothness", "tracktype", "access",
         "foot", "bicycle", "segregated", "foot:forward", "foot:backward",
         "oneway", "oneway:foot", "lit",
-        "bridge", "tunnel", "layer", "indoor", "covered", "sac_scale",
+        "bridge", "tunnel", "layer", "level", "location", "indoor", "covered",
+        "sac_scale",
     )
     return {name: str(tags[name]) for name in names if name in tags}
 
@@ -100,7 +117,7 @@ def _node_record(element):
     return record
 
 
-def build_routing_graph(osm_document, source=None):
+def build_routing_graph(osm_document, source=None, boundary_refs=()):
     """Build directed arcs while retaining intermediate OSM geometry points."""
     elements = osm_document.get("elements")
     if not isinstance(elements, list):
@@ -111,6 +128,25 @@ def build_routing_graph(osm_document, source=None):
         if element.get("type") == "node" and "lat" in element and "lon" in element
     }
     ways = [element for element in elements if element.get("type") == "way"]
+    boundary_refs = frozenset(str(reference) for reference in boundary_refs)
+    boundaries = []
+    for way in ways:
+        tags = way.get("tags", {})
+        if str(tags.get("ref", "")) not in boundary_refs:
+            continue
+        node_ids = way.get("nodes", [])
+        if len(node_ids) < 2 or any(node_id not in raw_nodes for node_id in node_ids):
+            continue
+        boundaries.append({
+            "id": f"osm-way-{way['id']}",
+            "osm_way_id": str(way["id"]),
+            "ref": str(tags["ref"]),
+            "name": str(tags.get("name", "")),
+            "geometry": [
+                [float(raw_nodes[node_id]["lon"]), float(raw_nodes[node_id]["lat"])]
+                for node_id in node_ids
+            ],
+        })
     rejection_counts = Counter()
     selected_ways = []
     for way in ways:
@@ -201,6 +237,7 @@ def build_routing_graph(osm_document, source=None):
             segment["forward"] != segment["backward"] for segment in segments
         ),
         "barrier_nodes": sum("barrier" in node for node in graph_nodes.values()),
+        "route_boundary_way_count": len(boundaries),
     }
     return {
         "schema_version": GRAPH_SCHEMA_VERSION,
@@ -208,6 +245,7 @@ def build_routing_graph(osm_document, source=None):
         "nodes": [graph_nodes[key] for key in sorted(graph_nodes, key=int)],
         "segments": segments,
         "arcs": arcs,
+        "route_boundaries": boundaries,
         "summary": summary,
     }
 

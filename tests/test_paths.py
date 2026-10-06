@@ -93,6 +93,49 @@ class PathGraphTests(unittest.TestCase):
 
         self.assertEqual(graph["summary"]["component_count"], 2)
 
+    def test_rejects_indoor_and_parking_circulation(self):
+        elements = [node(offset, 24.80 + offset / 1000, 60.20) for offset in range(1, 13)]
+        elements.extend([
+            {"type": "way", "id": 20, "nodes": [1, 2],
+             "tags": {"highway": "footway", "indoor": "yes"}},
+            {"type": "way", "id": 21, "nodes": [3, 4],
+             "tags": {"highway": "footway", "level": "0"}},
+            {"type": "way", "id": 22, "nodes": [5, 6],
+             "tags": {"highway": "service", "service": "parking_aisle"}},
+            {"type": "way", "id": 23, "nodes": [7, 8],
+             "tags": {"highway": "service", "tunnel": "yes"}},
+            {"type": "way", "id": 24, "nodes": [9, 10],
+             "tags": {"highway": "footway", "tunnel": "yes", "level": "-1"}},
+            {"type": "way", "id": 25, "nodes": [11, 12],
+             "tags": {"highway": "footway", "tunnel": "building_passage"}},
+        ])
+
+        graph = build_routing_graph({"elements": elements})
+
+        self.assertEqual(graph["summary"]["selected_way_count"], 1)
+        self.assertEqual(graph["segments"][0]["osm_way_id"], "24")
+        self.assertEqual(graph["summary"]["rejected_way_counts"], {
+            "enclosed_service": 1,
+            "indoor": 2,
+            "level_geometry": 1,
+            "parking_aisle": 1,
+        })
+
+    def test_preserves_configured_non_runnable_route_boundary(self):
+        document = {"elements": [
+            node(1, 24.80, 60.19), node(2, 24.80, 60.21),
+            {
+                "type": "way", "id": 101, "nodes": [1, 2],
+                "tags": {"highway": "primary", "ref": "101", "name": "Kehä I"},
+            },
+        ]}
+
+        graph = build_routing_graph(document, boundary_refs=("101",))
+
+        self.assertEqual(graph["summary"]["segment_count"], 0)
+        self.assertEqual(graph["summary"]["route_boundary_way_count"], 1)
+        self.assertEqual(graph["route_boundaries"][0]["name"], "Kehä I")
+
     def test_snap_and_geojson_are_inspectable(self):
         document = {"elements": [
             node(1, 24.80, 60.20), node(2, 24.81, 60.20),
@@ -160,6 +203,17 @@ class RoutingExperimentTests(unittest.TestCase):
                 "elevation_region": "leppavaara", "wavelength_m": 40,
                 "sampling_interval_m": 10,
             },
+            "baseline": {
+                "anchor_count": 8, "alternative_count": 3,
+                "ascent_costs_per_m": [20], "stairs_multiplier": 8,
+                "overlap_factors": [3, 10],
+            },
+            "route_boundaries": [
+                {"osm_ref": "1", "behavior": "do-not-cross", "name": "Ring I"}
+            ],
+            "topology": {
+                "face_test_bounds_epsg3067": [370000, 6675000, 375000, 6680000]
+            },
         }
         with TemporaryDirectory() as directory:
             path = Path(directory) / "test-loop.json"
@@ -168,15 +222,19 @@ class RoutingExperimentTests(unittest.TestCase):
 
         self.assertEqual(experiment.start.name, "Start")
         self.assertEqual(experiment.terrain["wavelength_m"], 40)
+        self.assertEqual(experiment.baseline["anchor_count"], 8)
+        self.assertEqual(experiment.route_boundaries[0]["osm_ref"], "1")
+        self.assertEqual(experiment.topology["face_test_bounds_epsg3067"][0], 370000)
 
     def test_overpass_query_uses_explicit_bounds(self):
-        query = highway_query((60.1, 24.7, 60.3, 24.9))
+        query = highway_query((60.1, 24.7, 60.3, 24.9), ("1",))
 
         self.assertIn(
             'way["highway"~"^(cycleway|footway|living_street|path|pedestrian|residential|service|steps|track|unclassified)$"]'
             '(60.1000000,24.7000000,60.3000000,24.9000000)',
             query,
         )
+        self.assertIn('way["highway"]["ref"~"^(1)$"]', query)
         self.assertIn("out body", query)
 
 

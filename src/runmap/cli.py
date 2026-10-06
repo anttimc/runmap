@@ -15,6 +15,9 @@ from runmap.paths.experiments import find_experiment
 from runmap.paths.graph import build_routing_graph, snap_to_vertex, write_graph_outputs
 from runmap.paths.terrain import enrich_graph_terrain
 from runmap.regions import PROCESSING_HALO_M, find_region, list_regions
+from runmap.routing.baseline import generate_anchor_loops, write_route_outputs
+from runmap.routing.search import GraphIndex
+from runmap.routing.topology import prepare_topology, write_topology_outputs
 from runmap.sources.mml import Bounds, coverage_url, download_elevation
 from runmap.sources.osm import download_highways, highway_query
 
@@ -137,13 +140,21 @@ def paths_command(argv):
     args = parser.parse_args(argv)
     experiment = find_experiment(args.experiments, args.experiment_id)
     bounds_wgs84 = _wgs84_bounds(experiment.bounds)
+    boundary_refs = tuple(
+        boundary["osm_ref"] for boundary in experiment.route_boundaries
+    )
     if args.dry_run:
         print(f"Experiment {experiment.id}: EPSG:3067 {experiment.bounds}")
         print(f"Overpass WGS84 bounds: {bounds_wgs84}")
-        print(highway_query(bounds_wgs84))
+        print(highway_query(bounds_wgs84, boundary_refs))
         return
 
-    raw_path = args.input or args.data_root / "raw" / experiment.id / "osm-highways.json"
+    boundary_key = "-".join(boundary_refs) if boundary_refs else "none"
+    raw_path = (
+        args.input
+        or args.data_root / "raw" / experiment.id
+        / f"osm-network-boundaries-{boundary_key}.json"
+    )
     if args.input:
         payload = raw_path.read_bytes()
         osm_provenance = {
@@ -155,7 +166,9 @@ def paths_command(argv):
     else:
         try:
             if not raw_path.exists():
-                osm_provenance = download_highways(bounds_wgs84, raw_path)
+                osm_provenance = download_highways(
+                    bounds_wgs84, raw_path, boundary_refs
+                )
             else:
                 sidecar = raw_path.with_suffix(raw_path.suffix + ".json")
                 if not sidecar.exists():
@@ -177,7 +190,14 @@ def paths_command(argv):
                 "experiment_config_digest": experiment.config_digest,
                 "osm": osm_provenance,
             },
+            boundary_refs=boundary_refs,
         )
+        graph["experiment"] = {
+            "bounds_epsg3067": list(experiment.bounds),
+            "request": experiment.request,
+            "route_boundaries": list(experiment.route_boundaries),
+            "area_note": experiment.area_note,
+        }
         graph["start"] = {
             "name": experiment.start.name,
             "address": experiment.start.address,
@@ -226,12 +246,88 @@ def paths_command(argv):
     print(f"Inspection GeoJSON: {outputs['geojson']}")
 
 
+def routes_command(argv):
+    parser = argparse.ArgumentParser(description="Generate experimental running routes")
+    parser.add_argument(
+        "--experiments", type=Path, default=Path("config/routing-experiments")
+    )
+    parser.add_argument("--graph-root", type=Path, default=Path("data/paths/prepared"))
+    parser.add_argument("--output-root", type=Path, default=Path("data/routes/prepared"))
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    baseline = subparsers.add_parser(
+        "baseline", help="Generate anchor-based diverse-path loop alternatives"
+    )
+    baseline.add_argument("experiment_id")
+    topology_parser = subparsers.add_parser(
+        "topology", help="Analyze cyclic topology and enumerate test-area faces"
+    )
+    topology_parser.add_argument("experiment_id")
+    args = parser.parse_args(argv)
+    experiment = find_experiment(args.experiments, args.experiment_id)
+    graph_path = args.graph_root / experiment.id / "graph.json"
+    try:
+        graph = json.loads(graph_path.read_text())
+        graph_digest = graph.get("source", {}).get("experiment_config_digest")
+        if graph_digest != experiment.config_digest:
+            parser.error(
+                "Prepared graph does not match the current experiment configuration; "
+                "run paths prepare again"
+            )
+        index = GraphIndex(graph)
+        if args.command == "topology":
+            result = prepare_topology(
+                index, experiment.topology["face_test_bounds_epsg3067"]
+            )
+            outputs = write_topology_outputs(
+                index, result, args.graph_root / experiment.id / "topology"
+            )
+        else:
+            result = generate_anchor_loops(index, experiment.request, experiment.baseline)
+            if not result["alternatives"]:
+                parser.error("Baseline search produced no route alternatives")
+            outputs = write_route_outputs(
+                index, result, args.output_root / experiment.id
+            )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        parser.exit(1, f"Route generation failed: {exc}\n")
+    if args.command == "topology":
+        summary = result["summary"]
+        print(
+            f"Topology: {summary['bridge_segment_count']} bridges, "
+            f"{summary['core_segment_count']} 2-core segments, "
+            f"{summary['cyclic_component_count']} cyclic components"
+        )
+        print(
+            f"Face test: {summary['face_test_segment_count']} segments, "
+            f"{summary['bounded_face_count']} bounded faces, "
+            f"{summary['connector_corridor_count']} grade-separated connectors"
+        )
+        print(f"Face GeoJSON: {outputs['faces']}")
+        return
+    print(
+        f"Evaluated {result['evaluated_candidate_count']} routes through "
+        f"{result['anchor_count']} anchors; "
+        f"{result['feasible_candidate_count']} satisfy distance and repetition"
+    )
+    for alternative in result["alternatives"]:
+        metrics = alternative["metrics"]
+        print(
+            f"{alternative['id']}: {metrics['distance_m'] / 1000:.2f} km, "
+            f"{metrics['ascent_m']:.1f} m ascent, "
+            f"{metrics['repeated_fraction'] * 100:.1f}% repeated, "
+            f"feasible={alternative['feasible']}"
+        )
+    print(f"Route GeoJSON: {outputs['geojson']}")
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] == "region":
         region_command(argv[1:])
     elif argv and argv[0] == "paths":
         paths_command(argv[1:])
+    elif argv and argv[0] == "routes":
+        routes_command(argv[1:])
     else:
         legacy_download(argv)
 

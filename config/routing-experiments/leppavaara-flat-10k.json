@@ -22,5 +22,16 @@
     "wavelength_m": 40,
     "sampling_interval_m": 10
   },
-  "area_note": "Preparation extent for Leppävaara and Kilo. Ring I is a later route boundary; the graph retains nearby context to avoid artificial edge dead ends."
+  "baseline": {
+    "anchor_count": 24,
+    "alternative_count": 5,
+    "ascent_costs_per_m": [5, 20, 50],
+    "stairs_multiplier": 8,
+    "overlap_factors": [3, 10, 30]
+  },
+  "route_boundaries": [],
+  "topology": {
+    "face_test_bounds_epsg3067": [377000, 6676500, 379500, 6679000]
+  },
+  "area_note": "Preparation extent for the Leppävaara and Kilo topology study, with nearby context to avoid artificial edge dead ends."
 }
