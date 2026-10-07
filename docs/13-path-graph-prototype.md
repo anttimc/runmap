@@ -11,8 +11,8 @@ study uses its smaller configured bounds; Ring I is not a route boundary.
 Ruusutorpan koulu is identified by its public address, Leppävaarankatu 24, and
 an approximate landmark coordinate. Preparation snaps that coordinate to the
 nearest graph vertex and records both the vertex and distance. The first real
-extract snaps 28.3 m to a degree-one paved service branch beside the school;
-this is retained as a visible access stem.
+extract snaps 24.2 m to a degree-two outdoor pedestrian-area boundary beside
+the school.
 
 ## Preparation
 
@@ -51,6 +51,13 @@ this distinguishes public underpasses from indoor floor plans. A cycleway also
 requires explicit pedestrian permission; missing permission is not treated as
 permission.
 
+Outdoor `highway=pedestrian` and `highway=footway` areas are represented by
+their perimeters in this linear graph. This deliberately approximates a
+runner's freedom to cross a plaza, but it preserves the area's connectivity and
+lets it divide planar topology. Indoor, level-specific, vehicle, and service
+areas remain excluded. A later area-routing model can add direct interior
+crossings between entrance points.
+
 Ordinary vehicle `oneway` does not restrict runners. Only explicit pedestrian
 direction tags create a one-direction arc. Bridges and tunnels connect only
 through shared OSM node identifiers; geometric crossings do not create false
@@ -81,15 +88,16 @@ Prepared on 2026-10-06 from a bounded OpenStreetMap Overpass extract:
 | Measurement | Result |
 | --- | ---: |
 | Source ways | 33,160 |
-| Selected runnable ways | 30,219 |
-| Graph vertices | 54,880 |
-| Physical segments | 67,977 |
-| Directed arcs | 135,954 |
-| Physical segment length | 2,011.885 km |
-| Undirected components | 426 |
-| Vertices in largest component | 53,545 |
-| Segments missing surface tags | 24,364 |
-| Bridge / tunnel / stair segments | 310 / 124 / 839 |
+| Selected runnable ways | 30,423 |
+| Graph vertices | 55,627 |
+| Physical segments | 69,707 |
+| Directed arcs | 139,414 |
+| Physical segment length | 2,036.809 km |
+| Undirected components | 398 |
+| Vertices in largest component | 54,394 |
+| Segments missing surface tags | 24,718 |
+| Bridge / tunnel / stair segments | 310 / 125 / 844 |
+| Pedestrian-area boundary segments | 1,336 |
 | Route-boundary ways | 0 |
 | Terrain sample coverage | 100% |
 
@@ -100,7 +108,7 @@ poor surfaces, and other unattractive choices. Parking aisles and enclosed
 service circulation are excluded during import. Missing OSM tags remain
 unknown, not implicit evidence of a good surface or public access.
 
-The current JSON graph is about 80 MB and the inspection GeoJSON about 52 MB.
+The current JSON graph is about 82 MB and the inspection GeoJSON about 54 MB.
 They are acceptable experiment artifacts but not a final query format. A more
 compact binary, SQLite, or GeoPackage representation should be considered only
 after the first searches reveal the access patterns actually needed.

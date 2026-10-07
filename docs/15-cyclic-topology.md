@@ -29,9 +29,7 @@ boundaries and explicitly denied barrier nodes are applied. Parallel edges and
 closed OSM ways are retained as valid two-edge and self-loop cycles.
 
 This decomposition gives bridges a direct routing interpretation: a closed
-route can use one only by traversing it again. The degree-one paved segment at
-the school start is confirmed as a bridge outside the 2-core, matching the
-access stem reported by the diverse-path baseline.
+route can use one only by traversing it again.
 
 ## Half-edge embedding
 
@@ -80,28 +78,28 @@ Ignored local outputs are written under
 
 | Measurement | Result |
 | --- | ---: |
-| Eligible physical segments | 67,892 |
-| Bridges | 17,120 |
-| Articulation vertices | 13,821 |
-| 2-core segments / vertices | 51,216 / 37,728 |
-| Biconnected blocks | 17,402 |
-| Cyclic biconnected blocks | 282 |
-| Cyclic components | 258 |
-| Largest cyclic component | 49,259 segments |
-| Face-test physical segments | 7,145 |
-| Half-edges | 14,290 |
-| Simple bounded faces | 2,003 |
-| Adjacent face pairs | 5,832 |
-| Grade-separated connector corridors | 92 |
-| Connector segments | 346 |
-| Connectors touching at least two faces | 58 |
+| Eligible physical segments | 69,620 |
+| Bridges | 16,951 |
+| Articulation vertices | 13,738 |
+| 2-core segments / vertices | 53,148 / 38,713 |
+| Biconnected blocks | 17,265 |
+| Cyclic biconnected blocks | 314 |
+| Cyclic components | 290 |
+| Largest cyclic component | 50,960 segments |
+| Face-test physical segments | 7,613 |
+| Half-edges | 15,226 |
+| Simple bounded faces | 2,106 |
+| Adjacent face pairs | 5,839 |
+| Grade-separated connector corridors | 94 |
+| Connector segments | 382 |
+| Connectors touching at least two faces | 63 |
 
-Within the face test, 171 grade-separated segments were omitted from the
-planar walk and retained through connector corridors; 2,107 ordinary segments
+Within the face test, 191 grade-separated segments were omitted from the
+planar walk and retained through connector corridors; 2,045 ordinary segments
 were removed by the local core/bridge cleanup. All half-edge walks closed.
-Eleven closed walks were non-simple, while 52 were outer or degenerate.
+Fifty-seven closed walks were non-simple, while 60 were outer or degenerate.
 Accepted face area ranges from about 1.9 m² to 136,352 m², with a median near
-509 m². Very
+457 m². Very
 small faces are retained for measurement; step 5 can decide whether they
 should be filtered, merged, or ignored during loop search.
 
@@ -113,6 +111,12 @@ cancellation. A plot of the real test neighborhood shows coherent block and
 path-island faces. Grade-separated gaps remain absent from the polygons, as
 required by the planar embedding, but their traversable paths are now visible
 as connector lines and linked back to the adjacent faces.
+
+Outdoor pedestrian areas are represented by their boundaries. In particular,
+the asphalt Leppävaaran urheiluaukio now separates the stadium and swimming
+hall surroundings instead of disappearing into one large face. This is a
+topologically useful linear approximation; it does not yet model arbitrary
+shortest movement through the square's interior.
 
 This does not prove that every accepted OSM face is a useful running primitive.
 Tiny roundabouts, duplicate geometry, and large irregular open-space faces

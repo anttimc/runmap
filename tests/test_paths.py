@@ -121,6 +121,26 @@ class PathGraphTests(unittest.TestCase):
             "parking_aisle": 1,
         })
 
+    def test_walkable_pedestrian_area_is_approximated_by_its_boundary(self):
+        document = {"elements": [
+            node(1, 24.80, 60.20), node(2, 24.81, 60.20),
+            node(3, 24.81, 60.21), node(4, 24.80, 60.21),
+            {
+                "type": "way", "id": 30, "nodes": [1, 2, 3, 4, 1],
+                "tags": {
+                    "highway": "pedestrian", "area": "yes", "foot": "yes",
+                },
+            },
+        ]}
+
+        graph = build_routing_graph(document)
+
+        self.assertEqual(graph["summary"]["selected_way_count"], 1)
+        self.assertEqual(graph["summary"]["pedestrian_area_boundary_segments"], 1)
+        self.assertEqual(graph["segments"][0]["from"], "1")
+        self.assertEqual(graph["segments"][0]["to"], "1")
+        self.assertEqual(graph["segments"][0]["tags"]["area"], "yes")
+
     def test_preserves_configured_non_runnable_route_boundary(self):
         document = {"elements": [
             node(1, 24.80, 60.19), node(2, 24.80, 60.21),

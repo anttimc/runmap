@@ -197,8 +197,8 @@ were inspected; measured limitations are recorded in the
 
 **Evaluation gate:** complete for the first bounded experiment. Synthetic path
 pairs use a distinct return when one exists, and the real anchor search found
-feasible 10 km loops while retaining the unavoidable school access stem. See
-the [diverse-path baseline](14-diverse-route-baseline.md).
+feasible 10 km loops without repeated traversal at the start. See the
+[diverse-path baseline](14-diverse-route-baseline.md).
 
 ### 4. Prepare cyclic topology
 
@@ -208,10 +208,9 @@ the [diverse-path baseline](14-diverse-route-baseline.md).
 - Verify face traversal and shared-edge cancellation on synthetic graphs and
   several real neighborhoods.
 
-**Evaluation gate:** complete for the bounded experiment. The school access is
-confirmed as a bridge outside the 2-core; synthetic and real checks validate
-cyclic blocks, face traversal, adjacency, and shared-edge cancellation. See
-[cyclic topology](15-cyclic-topology.md).
+**Evaluation gate:** complete for the bounded experiment. Synthetic and real
+checks validate bridges, cyclic blocks, face traversal, adjacency, and
+shared-edge cancellation. See [cyclic topology](15-cyclic-topology.md).
 
 ### 5. Prototype face-region loop search
 

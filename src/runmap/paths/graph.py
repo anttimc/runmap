@@ -35,8 +35,6 @@ def runnable_reason(tags):
     highway = _tag(tags, "highway")
     if highway not in RUNNABLE_HIGHWAYS:
         return False, "unsupported_highway"
-    if _tag(tags, "area") in _TRUE:
-        return False, "area_geometry"
     indoor = _tag(tags, "indoor")
     location = _tag(tags, "location")
     tunnel = _tag(tags, "tunnel")
@@ -55,6 +53,8 @@ def runnable_reason(tags):
         return False, "enclosed_service"
     if level and tunnel in {"", "no"} and bridge in {"", "no"}:
         return False, "level_geometry"
+    if _tag(tags, "area") in _TRUE and highway not in {"footway", "pedestrian"}:
+        return False, "area_geometry"
     if _tag(tags, "construction") or highway in {"construction", "proposed"}:
         return False, "not_in_service"
     foot = _tag(tags, "foot")
@@ -95,7 +95,7 @@ def geometry_length_m(coordinates):
 
 def _selected_tags(tags):
     names = (
-        "highway", "name", "service", "surface", "smoothness", "tracktype", "access",
+        "highway", "area", "name", "service", "surface", "smoothness", "tracktype", "access",
         "foot", "bicycle", "segregated", "foot:forward", "foot:backward",
         "oneway", "oneway:foot", "lit",
         "bridge", "tunnel", "layer", "level", "location", "indoor", "covered",
@@ -233,6 +233,9 @@ def build_routing_graph(osm_document, source=None, boundary_refs=()):
         "bridge_segments": sum(_tag(segment["tags"], "bridge") not in {"", "no"} for segment in segments),
         "tunnel_segments": sum(_tag(segment["tags"], "tunnel") not in {"", "no"} for segment in segments),
         "stair_segments": highway_counts["steps"],
+        "pedestrian_area_boundary_segments": sum(
+            _tag(segment["tags"], "area") in _TRUE for segment in segments
+        ),
         "pedestrian_oneway_segments": sum(
             segment["forward"] != segment["backward"] for segment in segments
         ),

@@ -67,22 +67,21 @@ contains:
 
 ## First measured result
 
-The updated search evaluated 171 distinct loops through 24 reachable anchors.
+The updated search evaluated 142 distinct loops through 24 reachable anchors.
 Twenty-one satisfied both hard constraints. The five reported alternatives
 were:
 
 | Alternative | Distance | Ascent | Repeated |
 | --- | ---: | ---: | ---: |
-| 1 | 9.75 km | 103.3 m | 0.6% |
-| 2 | 10.49 km | 107.8 m | 0.5% |
-| 3 | 10.37 km | 118.5 m | 2.7% |
-| 4 | 10.46 km | 120.4 m | 2.6% |
-| 5 | 10.43 km | 129.0 m | 0.6% |
+| 1 | 10.41 km | 105.6 m | 0.0% |
+| 2 | 10.45 km | 107.0 m | 1.1% |
+| 3 | 10.04 km | 118.9 m | 2.1% |
+| 4 | 10.48 km | 123.8 m | 0.8% |
+| 5 | 10.27 km | 138.6 m | 1.2% |
 
-None contains an internal immediate reversal. The school access stem is
-unavoidable under the current start snap and is reported separately. Ring I
-does not act as a route boundary; its pedestrian underpasses and bridges remain
-available through normal graph connectivity.
+None contains an internal immediate reversal or a start-access reversal. Ring
+I does not act as a route boundary; its pedestrian underpasses and bridges
+remain available through normal graph connectivity.
 
 These numbers establish a reproducible baseline, not a recommendation that the
 first route is already the best real run. Surface quality, service-road
