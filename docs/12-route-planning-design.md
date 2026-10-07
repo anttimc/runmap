@@ -226,6 +226,12 @@ distance error, repetition, terrain fit, runtime, and failure cases. Decide
 whether face search merits extension before implementing a general cycle
 basis.
 
+**Result:** complete for the bounded experiment. Connected-face growth produces
+feasible, reproducible 10 km loops and warrants refinement, but the anchor
+baseline currently finds a flatter and smoother-looking best route. Face
+boundaries expose small access repetition, stairs, jagged local detours, and a
+13.7 s prototype runtime. See the [face-region loop search](16-face-region-loop-search.md).
+
 ### 6. Add route refinement and richer preferences
 
 - Add local segment replacement, small-cycle insertion/removal, direction

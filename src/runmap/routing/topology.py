@@ -261,7 +261,7 @@ def enumerate_faces(index, connectivity, bounds_epsg3067):
     structural_segments = {}
     structural_reasons = {}
     excluded_by_layer = 0
-    for segment_id in connectivity["eligible_segment_ids"]:
+    for segment_id in sorted(connectivity["eligible_segment_ids"]):
         segment = index.segments[segment_id]
         if segment["from"] not in in_bounds or segment["to"] not in in_bounds:
             continue
@@ -286,7 +286,7 @@ def enumerate_faces(index, connectivity, bounds_epsg3067):
 
     half_edges = {}
     outgoing = defaultdict(list)
-    for segment_id, segment in face_segments.items():
+    for segment_id, segment in sorted(face_segments.items()):
         forward_id = f"{segment_id}:f"
         backward_id = f"{segment_id}:b"
         half_edges[forward_id] = {
@@ -311,7 +311,7 @@ def enumerate_faces(index, connectivity, bounds_epsg3067):
     rejected_open = 0
     rejected_non_simple = 0
     rejected_outer = 0
-    for start_id in half_edges:
+    for start_id in sorted(half_edges):
         if start_id in visited:
             continue
         walk = []

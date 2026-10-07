@@ -56,7 +56,7 @@ def select_loop_anchors(index, start, target_distance_m, count=24):
     return selected
 
 
-def _rank(candidate, target, tolerance, maximum_repeated_fraction):
+def rank_candidate(candidate, target, tolerance, maximum_repeated_fraction):
     metrics = candidate["metrics"]
     distance_violation = max(
         target - tolerance - metrics["distance_m"],
@@ -146,7 +146,7 @@ def generate_anchor_loops(index, request, settings):
                     "return_arc_ids": list(returning.arc_ids),
                     "metrics": route_metrics(index, arc_ids),
                 }
-                candidate["_rank"] = _rank(
+                candidate["_rank"] = rank_candidate(
                     candidate, target, tolerance, maximum_repeated
                 )
                 candidates.append(candidate)

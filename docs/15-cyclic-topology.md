@@ -126,6 +126,7 @@ search should use their actual segments and face attachments rather than treat
 the whole corridor as one indivisible move. Directed traversability must also
 be checked after geometric faces are selected.
 
-Step 4 is complete. Step 5 can seed connected face sets, modify them through
-face adjacency, extract symmetric-difference boundaries, and compare the
-resulting loops with the diverse-path baseline.
+Step 4 is complete. The implemented [face-region loop search](16-face-region-loop-search.md)
+now seeds connected face sets, modifies them through face adjacency, extracts
+symmetric-difference boundaries, and compares the resulting loops with the
+diverse-path baseline.

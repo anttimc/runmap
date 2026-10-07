@@ -16,6 +16,7 @@ from runmap.paths.graph import build_routing_graph, snap_to_vertex, write_graph_
 from runmap.paths.terrain import enrich_graph_terrain
 from runmap.regions import PROCESSING_HALO_M, find_region, list_regions
 from runmap.routing.baseline import generate_anchor_loops, write_route_outputs
+from runmap.routing.face_search import generate_face_region_loops, write_face_route_outputs
 from runmap.routing.search import GraphIndex
 from runmap.routing.topology import prepare_topology, write_topology_outputs
 from runmap.sources.mml import Bounds, coverage_url, download_elevation
@@ -262,6 +263,10 @@ def routes_command(argv):
         "topology", help="Analyze cyclic topology and enumerate test-area faces"
     )
     topology_parser.add_argument("experiment_id")
+    face_parser = subparsers.add_parser(
+        "faces", help="Generate loops from connected planar face regions"
+    )
+    face_parser.add_argument("experiment_id")
     args = parser.parse_args(argv)
     experiment = find_experiment(args.experiments, args.experiment_id)
     graph_path = args.graph_root / experiment.id / "graph.json"
@@ -280,6 +285,20 @@ def routes_command(argv):
             )
             outputs = write_topology_outputs(
                 index, result, args.graph_root / experiment.id / "topology"
+            )
+        elif args.command == "faces":
+            topology_path = args.graph_root / experiment.id / "topology" / "topology.json"
+            topology = json.loads(topology_path.read_text())
+            result = generate_face_region_loops(
+                index,
+                topology,
+                experiment.request,
+                experiment.topology.get("face_search", {}),
+            )
+            if not result["alternatives"]:
+                parser.error("Face-region search produced no usable route alternatives")
+            outputs = write_face_route_outputs(
+                index, result, args.output_root / experiment.id
             )
         else:
             result = generate_anchor_loops(index, experiment.request, experiment.baseline)
@@ -303,6 +322,24 @@ def routes_command(argv):
             f"{summary['connector_corridor_count']} grade-separated connectors"
         )
         print(f"Face GeoJSON: {outputs['faces']}")
+        return
+    if args.command == "faces":
+        print(
+            f"Evaluated {result['evaluated_candidate_count']} usable face-region "
+            f"boundaries from {len(result['seed_face_ids'])} seeds; "
+            f"{result['feasible_candidate_count']} satisfy distance and repetition; "
+            f"{result['runtime_seconds']:.1f} s"
+        )
+        for alternative in result["alternatives"]:
+            metrics = alternative["metrics"]
+            print(
+                f"{alternative['id']}: {metrics['distance_m'] / 1000:.2f} km, "
+                f"{metrics['ascent_m']:.1f} m ascent, "
+                f"{metrics['repeated_fraction'] * 100:.1f}% repeated, "
+                f"{alternative['face_count']} faces, "
+                f"feasible={alternative['feasible']}"
+            )
+        print(f"Route GeoJSON: {outputs['geojson']}")
         return
     print(
         f"Evaluated {result['evaluated_candidate_count']} routes through "

@@ -31,7 +31,18 @@
   },
   "route_boundaries": [],
   "topology": {
-    "face_test_bounds_epsg3067": [377000, 6676500, 379500, 6679000]
+    "face_test_bounds_epsg3067": [377000, 6676500, 379500, 6679000],
+    "face_search": {
+      "seed_count": 12,
+      "variants_per_seed": 6,
+      "max_faces": 500,
+      "maximum_candidates": 250,
+      "maximum_boundary_overlap": 0.8,
+      "alternative_count": 5,
+      "ascent_cost_per_m": 20,
+      "stairs_multiplier": 8,
+      "access_overlap_factor": 10
+    }
   },
   "area_note": "Preparation extent for the Leppävaara and Kilo topology study, with nearby context to avoid artificial edge dead ends."
 }
