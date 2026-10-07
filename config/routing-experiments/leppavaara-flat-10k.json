@@ -41,7 +41,35 @@
       "alternative_count": 5,
       "ascent_cost_per_m": 20,
       "stairs_multiplier": 8,
-      "access_overlap_factor": 10
+      "access_overlap_factor": 10,
+      "growth": {
+        "beam_width": 3,
+        "maximum_chunk_size": 3,
+        "chunk_proposals_per_size": 12,
+        "shape_weight": 1,
+        "near_reversal_weight": 750,
+        "jitter": 75
+      },
+      "stairs": {
+        "mode": "avoid",
+        "penalty_per_m": 10
+      },
+      "turns": {
+        "sharp_threshold_degrees": 170,
+        "maximum_sharp_turns": 0,
+        "concave_turn_weight": 30,
+        "turn_weight": 1,
+        "compactness_weight": 10
+      },
+      "edge_profile": {
+        "id": "street-shoes",
+        "forbidden_highways": ["track"],
+        "forbidden_surfaces": [
+          "unpaved", "compacted", "fine_gravel", "gravel", "dirt", "earth",
+          "ground", "grass", "mud", "sand", "woodchips"
+        ],
+        "forbid_unknown_surface_highways": ["path", "track"]
+      }
     }
   },
   "area_note": "Preparation extent for the Leppävaara and Kilo topology study, with nearby context to avoid artificial edge dead ends."

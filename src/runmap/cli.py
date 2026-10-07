@@ -324,18 +324,33 @@ def routes_command(argv):
         print(f"Face GeoJSON: {outputs['faces']}")
         return
     if args.command == "faces":
+        if result.get("profile_summary"):
+            profile = result["profile_summary"]
+            print(
+                f"Profile topology: {profile['base_face_count']} base faces -> "
+                f"{profile['superface_count']} usable superfaces; "
+                f"{profile['dissolved_separator_count']} separators dissolved"
+            )
         print(
             f"Evaluated {result['evaluated_candidate_count']} usable face-region "
             f"boundaries from {len(result['seed_face_ids'])} seeds; "
-            f"{result['feasible_candidate_count']} satisfy distance and repetition; "
+            f"{result['feasible_candidate_count']} satisfy all hard constraints; "
             f"{result['runtime_seconds']:.1f} s"
+        )
+        print(
+            f"Growth: {result['expanded_growth_state_count']} beam states, "
+            f"{result['proposed_growth_chunk_count']} face chunks proposed"
         )
         for alternative in result["alternatives"]:
             metrics = alternative["metrics"]
+            shape = alternative["shape_metrics"]
             print(
                 f"{alternative['id']}: {metrics['distance_m'] / 1000:.2f} km, "
                 f"{metrics['ascent_m']:.1f} m ascent, "
                 f"{metrics['repeated_fraction'] * 100:.1f}% repeated, "
+                f"{metrics['stair_distance_m']:.0f} m stairs, "
+                f"{shape['concave_turn_count']} concave turns, "
+                f"{shape['maximum_turn_degrees']:.0f}° maximum turn, "
                 f"{alternative['face_count']} faces, "
                 f"feasible={alternative['feasible']}"
             )

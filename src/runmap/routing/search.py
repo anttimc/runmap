@@ -179,6 +179,7 @@ def shortest_path(
     model=None,
     overlap_segments=frozenset(),
     overlap_factor=1.0,
+    blocked_segments=frozenset(),
 ):
     """Find one least-cost directed path with optional segment reuse penalty."""
     if start not in index.nodes or destination not in index.nodes:
@@ -197,7 +198,10 @@ def shortest_path(
             break
         for arc_id in index.outgoing.get(node_id, ()):
             arc = index.arcs[arc_id]
-            if arc["segment_id"] in index.boundary_blocked_segments:
+            if (
+                arc["segment_id"] in index.boundary_blocked_segments
+                or arc["segment_id"] in blocked_segments
+            ):
                 continue
             if arc["to"] in index.blocked_nodes and arc["to"] != destination:
                 continue
@@ -220,7 +224,7 @@ def shortest_path(
     return PathResult(tuple(arc_ids), distances[destination])
 
 
-def shortest_distances(index, start, maximum=math.inf):
+def shortest_distances(index, start, maximum=math.inf, blocked_segments=frozenset()):
     """Calculate physical-length distance from a start to reachable vertices."""
     if start not in index.nodes:
         raise ValueError("Route start is not in the graph")
@@ -234,7 +238,10 @@ def shortest_distances(index, start, maximum=math.inf):
             continue
         for arc_id in index.outgoing.get(node_id, ()):
             arc = index.arcs[arc_id]
-            if arc["segment_id"] in index.boundary_blocked_segments:
+            if (
+                arc["segment_id"] in index.boundary_blocked_segments
+                or arc["segment_id"] in blocked_segments
+            ):
                 continue
             if arc["to"] in index.blocked_nodes:
                 continue

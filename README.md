@@ -63,6 +63,8 @@ PYTHONPATH=src .venv/bin/python -m uvicorn runmap.api.app:app --reload
 14. [Diverse-path route baseline](docs/14-diverse-route-baseline.md) — shortest-path primitives, outbound/return diversity, anchor loops, route constraints, and measured alternatives.
 15. [Cyclic topology and half-edge faces](docs/15-cyclic-topology.md) — bridges, 2-core, cyclic blocks, bounded planar faces, and shared-edge cancellation.
 16. [Face-region loop search](docs/16-face-region-loop-search.md) — connected-face growth, single-cycle validation, directed route extraction, and baseline comparison.
+17. [Route profiles and superfaces](docs/17-route-profiles-and-superfaces.md) — surface- and stair-aware filtering, topology simplification, and shape-aware beam search with face chunks.
+18. [Cycle-catalog route search](docs/18-cycle-catalog-route-search.md) — preprocess reusable good loops, index their joins, and compose them for request-specific length and training goals.
 
 Goals use `G` identifiers, milestones use `M`, and decisions/questions use `D`/`Q`. These identifiers connect implementation work to its purpose.
 

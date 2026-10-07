@@ -93,6 +93,7 @@ route measurements can be inspected.
 | Embedded topology | Store the angular order and opposite side of geometric edges for areas where face traversal is valid. A half-edge/DCEL-like representation supplements the routing graph rather than replacing it. |
 | Terrain and environment enrichment | Attach elevation profiles, ascent/descent, gradient characteristics, land-cover context, and other route-quality attributes to graph arcs. |
 | Topology index | Identify bridges, the 2-core, cyclic components, biconnected regions, planar faces, and later any additional cycle basis. |
+| Cycle catalog | Precompute diverse, profile-compatible runnable cycles at several scales and index how they can be joined. |
 | Candidate generators | Produce loop candidates from cycles or face regions, and destination candidates from diverse path pairs. |
 | Scoring and constraints | Compare distance, terrain, environment, overlap, turns, access stems, and road/path quality with an explainable score breakdown. |
 | Refinement and validation | Adjust candidate length, orient and connect route pieces, enforce traversal rules, and reject disconnected or invalid walks. |
@@ -240,10 +241,34 @@ boundaries expose small access repetition, stairs, jagged local detours, and a
   preferences one at a time, with route-level examples.
 - Keep every score component observable so weight changes can be evaluated.
 
+The first slices are implemented: a configurable street-shoe edge profile
+filters the full directed graph and dissolves unsuitable shared face edges into
+profile-specific superfaces. Stairs can be avoided, penalized, or allowed, and
+face boundaries now reject near reversals while preferring fewer concavities
+and more compact shapes. A bounded beam search evaluates the actual boundary
+during growth and can add connected chunks of up to three faces. See
+[route profiles and superfaces](17-route-profiles-and-superfaces.md).
+
 **Evaluation gate:** preferences cause predictable route changes and do not
 silently violate the core route request.
 
-### 7. Integrate an exploratory UI
+### 7. Precompute and search a reusable cycle catalog
+
+- Generate profile-compatible cycles at several scales independently of a
+  particular final route length.
+- Deduplicate and retain a diverse catalog with quality metrics and provenance.
+- Precompute compatible envelope merges between cycles.
+- Search cycle combinations for the request, then expand and validate the
+  result on the directed graph.
+
+This models how a runner combines known good loops into a longer route. The
+current online face beam remains an offline cycle generator, fallback, and
+local refinement tool. See [cycle-catalog route search](18-cycle-catalog-route-search.md).
+
+**Evaluation gate:** a 10 km request composes reusable cycles into better-shaped
+routes with substantially less request-time topology work than online growth.
+
+### 8. Integrate an exploratory UI
 
 - Present environment-first and destination-first planning as separate modes.
 - Show a small set of alternatives rather than claiming one optimum.
