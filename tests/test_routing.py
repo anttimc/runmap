@@ -6,6 +6,7 @@ from runmap.routing.search import (
     GraphIndex,
     diverse_path_pair,
     route_metrics,
+    shortest_distances,
     shortest_path,
 )
 
@@ -53,6 +54,26 @@ def graph_document(nodes, edges, start="s"):
 
 
 class ShortestPathTests(unittest.TestCase):
+    def test_reverse_distances_measure_return_reachability(self):
+        graph = graph_document(
+            [("s", 24.0, 60.0), ("a", 24.01, 60.0), ("b", 24.02, 60.0)],
+            [
+                ("sa", "s", "a", 100, 0, {"highway": "path"}),
+                ("bs", "b", "s", 150, 0, {"highway": "path"}),
+            ],
+        )
+        graph["arcs"] = [
+            arc for arc in graph["arcs"]
+            if arc["id"] in {"sa:f", "bs:f"}
+        ]
+        index = GraphIndex(graph)
+
+        outward = shortest_distances(index, "s")
+        returning = shortest_distances(index, "s", reverse=True)
+
+        self.assertEqual(outward, {"s": 0.0, "a": 100.0})
+        self.assertEqual(returning, {"s": 0.0, "b": 150.0})
+
     def test_ascent_cost_can_prefer_a_longer_flat_path(self):
         graph = graph_document(
             [("s", 24.0, 60.0), ("a", 24.01, 60.0), ("d", 24.02, 60.0)],

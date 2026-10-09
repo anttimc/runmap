@@ -8,7 +8,8 @@ The first goal is a map that helps identify flatter running options and useful t
 
 Install the following tools before developing or running the project:
 
-- Python 3.9 or later — backend, terrain processing, and command-line tools.
+- Python 3.11 or later — backend, terrain processing, optimization, and
+  command-line tools.
 - Node.js 24.21.0 — frontend build and development server. The `node` command must be available on your shell `PATH`.
 - pnpm 12.9.1 — frontend package manager and script runner. The frontend is intentionally managed with pnpm, not npm.
 
@@ -64,9 +65,33 @@ PYTHONPATH=src .venv/bin/python -m uvicorn runmap.api.app:app --reload
 15. [Cyclic topology and half-edge faces](docs/15-cyclic-topology.md) — bridges, 2-core, cyclic blocks, bounded planar faces, and shared-edge cancellation.
 16. [Face-region loop search](docs/16-face-region-loop-search.md) — connected-face growth, single-cycle validation, directed route extraction, and baseline comparison.
 17. [Route profiles and superfaces](docs/17-route-profiles-and-superfaces.md) — surface- and stair-aware filtering, topology simplification, and shape-aware beam search with face chunks.
-18. [Cycle-catalog route search](docs/18-cycle-catalog-route-search.md) — preprocess reusable good loops, index their joins, and compose them for request-specific length and training goals.
+18. [Cycle-catalog route search](docs/18-cycle-catalog-route-search.md) — superseded standalone-cycle catalog design, retained as history.
+19. [Cycle-catalog preprocessing](docs/19-cycle-catalog-preprocessing.md) — superseded overlapping multiscale prototype and measured Leppävaara results.
+20. [Start-local one-cycle search](docs/20-one-cycle-search.md) — superseded one-cycle heuristic and exact-oracle reference.
+21. [Continuous cycle refinement](docs/21-continuous-cycle-refinement.md) — active plan for disjoint microcycles, rooted adjacency, and a merge/split hierarchy.
 
 Goals use `G` identifiers, milestones use `M`, and decisions/questions use `D`/`Q`. These identifiers connect implementation work to its purpose.
+
+Stage 1 of continuous cycle refinement inventories every profile atomic region
+and renders its classification over the prepared path map:
+
+```sh
+MPLCONFIGDIR=artifacts/mpl-cache PYTHONPATH=src .venv/bin/python -m runmap.cli routes atomic leppavaara-flat-10k
+```
+
+This requires the prepared graph/topology and the `experiments` extra. See
+[the stage 1 evaluation](docs/21-continuous-cycle-refinement.md#stage-1-implementation-and-first-evaluation)
+for output paths, shape settings, and measured classifications.
+
+Stage 2 repairs poor or standalone-ineligible regions through local adjacent
+merges and writes the partition, merge provenance, and comparison maps:
+
+```sh
+MPLCONFIGDIR=artifacts/mpl-cache PYTHONPATH=src .venv/bin/python -m runmap.cli routes microcycles leppavaara-flat-10k
+```
+
+See [the stage 2 evaluation](docs/21-continuous-cycle-refinement.md#stage-2-implementation-and-first-evaluation)
+for the first results, repair limits, and remaining stage 1 substrate issues.
 
 ## Current status
 

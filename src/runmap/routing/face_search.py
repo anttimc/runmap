@@ -9,7 +9,10 @@ import random
 import time
 
 from runmap.routing.baseline import rank_candidate
-from runmap.routing.profiles import dissolve_forbidden_separators
+from runmap.routing.profiles import (
+    dissolve_forbidden_separators,
+    effective_edge_profile,
+)
 from runmap.routing.search import (
     CostModel,
     route_coordinates,
@@ -148,6 +151,37 @@ def _reverse_arcs(index, arc_ids):
     return tuple(result)
 
 
+def _polygon_area(points):
+    return abs(sum(
+        first[0] * second[1] - second[0] * first[1]
+        for first, second in zip(points, points[1:] + points[:1])
+    )) / 2
+
+
+def _convex_hull(points):
+    points = sorted(set(points))
+    if len(points) <= 2:
+        return points
+
+    def cross(origin, first, second):
+        return (
+            (first[0] - origin[0]) * (second[1] - origin[1])
+            - (first[1] - origin[1]) * (second[0] - origin[0])
+        )
+
+    lower = []
+    for point in points:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], point) <= 0:
+            lower.pop()
+        lower.append(point)
+    upper = []
+    for point in reversed(points):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], point) <= 0:
+            upper.pop()
+        upper.append(point)
+    return lower[:-1] + upper[:-1]
+
+
 def _face_adjacency(embedding):
     adjacent = defaultdict(set)
     for item in embedding["face_adjacency"]:
@@ -182,6 +216,25 @@ def boundary_shape_metrics(index, ordered, region_area_m2, sharp_threshold=170):
         perimeter ** 2 / (4 * math.pi * region_area_m2)
         if region_area_m2 > 0 else math.inf
     )
+    mean_latitude = sum(
+        index.nodes[node_id]["latitude"] for node_id in nodes
+    ) / len(nodes)
+    mean_longitude = sum(
+        index.nodes[node_id]["longitude"] for node_id in nodes
+    ) / len(nodes)
+    local_points = [
+        (
+            (index.nodes[node_id]["longitude"] - mean_longitude)
+            * 111000 * math.cos(math.radians(mean_latitude)),
+            (index.nodes[node_id]["latitude"] - mean_latitude) * 111000,
+        )
+        for node_id in nodes
+    ]
+    hull_area = _polygon_area(_convex_hull(local_points))
+    convexity = (
+        min(region_area_m2 / hull_area, 1.0)
+        if region_area_m2 > 0 and hull_area > 0 else 0
+    )
     return {
         "junction_turn_count": len(meaningful),
         "concave_turn_count": concave,
@@ -189,6 +242,11 @@ def boundary_shape_metrics(index, ordered, region_area_m2, sharp_threshold=170):
         "maximum_turn_degrees": round(max(map(abs, turns), default=0), 3),
         "turn_penalty": round(sum((abs(turn) / 90) ** 2 for turn in turns), 6),
         "compactness": round(compactness, 6),
+        "isoperimetric_quotient": round(
+            1 / compactness if math.isfinite(compactness) and compactness > 0 else 0,
+            6,
+        ),
+        "convexity_ratio": round(convexity, 6),
     }
 
 
@@ -235,14 +293,21 @@ def _growth_chunks(selected, adjacent, maximum_size, proposals_per_size, rng):
 
 def _growth_state(
     index, face_by_id, selected, boundary, target, turns, sharp_threshold,
-    shape_weight, near_reversal_weight, jitter,
+    shape_weight, near_reversal_weight, jitter, area_m2=None,
+    boundary_length_m=None,
 ):
     ordered = ordered_boundary(index, boundary)
     if ordered is None:
         return None
-    area = sum(float(face_by_id[face_id]["area_m2"]) for face_id in selected)
+    area = (
+        sum(float(face_by_id[face_id]["area_m2"]) for face_id in selected)
+        if area_m2 is None else area_m2
+    )
     shape = boundary_shape_metrics(index, ordered, area, sharp_threshold)
-    perimeter = sum(float(index.segments[item[0]]["length_m"]) for item in ordered)
+    perimeter = (
+        sum(float(index.segments[item[0]]["length_m"]) for item in ordered)
+        if boundary_length_m is None else boundary_length_m
+    )
     return {
         "selected": frozenset(selected),
         "boundary": frozenset(boundary),
@@ -384,15 +449,9 @@ def _build_candidate(
 
 def _prepare_face_embedding(index, topology, settings):
     """Apply route restrictions and return the searchable face embedding."""
-    profile = settings.get("edge_profile")
-    stairs_mode = settings.get("stairs", {}).get("mode", "avoid")
-    if stairs_mode not in {"avoid", "penalize", "allow"}:
-        raise ValueError("stairs.mode must be avoid, penalize, or allow")
-    if stairs_mode == "avoid":
-        profile = dict(profile or {"id": "default"})
-        profile["forbidden_highways"] = sorted(
-            set(profile.get("forbidden_highways", ())) | {"steps"}
-        )
+    profile = effective_edge_profile(
+        settings.get("edge_profile"), settings.get("stairs")
+    )
     if not profile:
         return topology["face_embedding"], frozenset(), None
     embedding = dissolve_forbidden_separators(

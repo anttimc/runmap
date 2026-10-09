@@ -31,7 +31,15 @@ def _adjacency(segments):
 
 def connectivity_topology(index):
     """Compute bridges, articulation points, biconnected blocks, and 2-core."""
-    segments = _eligible_segments(index)
+    return connectivity_for_segments(index, _eligible_segments(index))
+
+
+def connectivity_for_segments(index, segment_ids):
+    """Compute connectivity topology for an explicit physical-segment subset."""
+    segments = {
+        segment_id: index.segments[segment_id]
+        for segment_id in segment_ids
+    }
     self_loops = {
         segment_id: segment for segment_id, segment in segments.items()
         if segment["from"] == segment["to"]
@@ -544,6 +552,161 @@ def _signed_area(coordinates):
         first[0] * second[1] - second[0] * first[1]
         for first, second in zip(coordinates, coordinates[1:])
     )
+
+
+def complete_block_embedding(index, segment_ids, block_id="block"):
+    """Return every face walk and both incidences for one planar cyclic block."""
+    segments = {
+        segment_id: index.segments[segment_id]
+        for segment_id in sorted(segment_ids)
+    }
+    node_ids = sorted({
+        node_id
+        for segment in segments.values()
+        for node_id in (segment["from"], segment["to"])
+    }, key=_sortable_id)
+    longitudes = [index.nodes[node_id]["longitude"] for node_id in node_ids]
+    latitudes = [index.nodes[node_id]["latitude"] for node_id in node_ids]
+    eastings, northings = transform(
+        "EPSG:4326", "EPSG:3067", longitudes, latitudes
+    )
+    projected = {
+        node_id: (x, y)
+        for node_id, x, y in zip(node_ids, eastings, northings)
+    }
+
+    half_edges = {}
+    outgoing = defaultdict(list)
+    for segment_id, segment in segments.items():
+        forward_id = f"{segment_id}:f"
+        backward_id = f"{segment_id}:b"
+        half_edges[forward_id] = {
+            "id": forward_id,
+            "segment_id": segment_id,
+            "origin": segment["from"],
+            "destination": segment["to"],
+            "twin": backward_id,
+            "forward": True,
+        }
+        half_edges[backward_id] = {
+            "id": backward_id,
+            "segment_id": segment_id,
+            "origin": segment["to"],
+            "destination": segment["from"],
+            "twin": forward_id,
+            "forward": False,
+        }
+        outgoing[segment["from"]].append(forward_id)
+        outgoing[segment["to"]].append(backward_id)
+    for origin, edge_ids in outgoing.items():
+        edge_ids.sort(key=lambda edge_id: _half_edge_angle(
+            half_edges[edge_id], segments, projected
+        ))
+
+    visited = set()
+    walks = []
+    open_walk_count = 0
+    for start_id in sorted(half_edges):
+        if start_id in visited:
+            continue
+        walk = []
+        local = set()
+        current_id = start_id
+        while current_id not in local and current_id not in visited:
+            local.add(current_id)
+            walk.append(current_id)
+            current = half_edges[current_id]
+            around_destination = outgoing[current["destination"]]
+            twin_offset = around_destination.index(current["twin"])
+            current_id = around_destination[(twin_offset - 1) % len(around_destination)]
+        visited.update(local)
+        if current_id != start_id:
+            open_walk_count += 1
+            continue
+        walks.append(walk)
+
+    faces = []
+    face_by_half_edge = {}
+    for offset, walk in enumerate(walks, 1):
+        face_id = f"{block_id}:face-{offset}"
+        origins = [half_edges[edge_id]["origin"] for edge_id in walk]
+        coordinates = _face_coordinates(walk, half_edges, segments)
+        face_longitudes, face_latitudes = zip(*coordinates)
+        face_eastings, face_northings = transform(
+            "EPSG:4326", "EPSG:3067", face_longitudes, face_latitudes
+        )
+        projected_coordinates = list(zip(face_eastings, face_northings))
+        signed_area = _signed_area(projected_coordinates)
+        simple = len(set(origins)) == len(origins)
+        if signed_area > 1:
+            kind = "bounded"
+        elif signed_area < -1:
+            kind = "outer"
+        else:
+            kind = "degenerate"
+        face = {
+            "id": face_id,
+            "kind": kind,
+            "simple": simple,
+            "selectable": kind == "bounded" and simple,
+            "half_edge_ids": list(walk),
+            "segment_ids": [
+                half_edges[edge_id]["segment_id"] for edge_id in walk
+            ],
+            "node_ids": origins,
+            "perimeter_m": round(sum(
+                float(segments[half_edges[edge_id]["segment_id"]]["length_m"])
+                for edge_id in walk
+            ), 3),
+            "signed_area_m2": round(signed_area, 3),
+            "area_m2": round(abs(signed_area), 3),
+            "geometry": coordinates,
+        }
+        faces.append(face)
+        for edge_id in walk:
+            face_by_half_edge[edge_id] = face_id
+
+    incidences = []
+    missing_incidences = []
+    for segment_id in sorted(segments):
+        face_ids = [
+            face_by_half_edge.get(f"{segment_id}:f"),
+            face_by_half_edge.get(f"{segment_id}:b"),
+        ]
+        if any(face_id is None for face_id in face_ids):
+            missing_incidences.append(segment_id)
+        incidences.append({"segment_id": segment_id, "faces": face_ids})
+
+    outer_faces = [face for face in faces if face["kind"] == "outer"]
+    non_simple_faces = [face for face in faces if not face["simple"]]
+    degenerate_faces = [face for face in faces if face["kind"] == "degenerate"]
+    valid = (
+        open_walk_count == 0
+        and not missing_incidences
+        and len(outer_faces) == 1
+        and not non_simple_faces
+        and not degenerate_faces
+    )
+    return {
+        "id": block_id,
+        "segment_ids": sorted(segments),
+        "node_ids": node_ids,
+        "cycle_rank": len(segments) - len(node_ids) + 1,
+        "faces": faces,
+        "selectable_face_ids": [
+            face["id"] for face in faces if face["selectable"]
+        ],
+        "outer_face_id": outer_faces[0]["id"] if len(outer_faces) == 1 else None,
+        "segment_incidences": incidences,
+        "valid_for_dual": valid,
+        "validation": {
+            "open_walk_count": open_walk_count,
+            "outer_face_count": len(outer_faces),
+            "non_simple_face_ids": [face["id"] for face in non_simple_faces],
+            "degenerate_face_ids": [face["id"] for face in degenerate_faces],
+            "missing_incidence_segment_ids": missing_incidences,
+        },
+    }
 
 
 def prepare_topology(index, face_bounds):

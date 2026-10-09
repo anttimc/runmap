@@ -146,9 +146,11 @@ class GraphIndex:
         self.segments = {segment["id"]: segment for segment in graph["segments"]}
         self.arcs = {arc["id"]: arc for arc in graph["arcs"]}
         self.outgoing = defaultdict(list)
+        self.incoming = defaultdict(list)
         self.degree = Counter()
         for arc in graph["arcs"]:
             self.outgoing[arc["from"]].append(arc["id"])
+            self.incoming[arc["to"]].append(arc["id"])
         for segment in graph["segments"]:
             self.degree[segment["from"]] += 1
             self.degree[segment["to"]] += 1
@@ -224,8 +226,10 @@ def shortest_path(
     return PathResult(tuple(arc_ids), distances[destination])
 
 
-def shortest_distances(index, start, maximum=math.inf, blocked_segments=frozenset()):
-    """Calculate physical-length distance from a start to reachable vertices."""
+def shortest_distances(
+    index, start, maximum=math.inf, blocked_segments=frozenset(), reverse=False
+):
+    """Calculate distances from a start in the directed graph or its reverse."""
     if start not in index.nodes:
         raise ValueError("Route start is not in the graph")
     distances = {start: 0.0}
@@ -236,19 +240,24 @@ def shortest_distances(index, start, maximum=math.inf, blocked_segments=frozense
             continue
         if distance > maximum:
             continue
-        for arc_id in index.outgoing.get(node_id, ()):
+        arc_ids = (
+            index.incoming.get(node_id, ()) if reverse
+            else index.outgoing.get(node_id, ())
+        )
+        for arc_id in arc_ids:
             arc = index.arcs[arc_id]
             if (
                 arc["segment_id"] in index.boundary_blocked_segments
                 or arc["segment_id"] in blocked_segments
             ):
                 continue
-            if arc["to"] in index.blocked_nodes:
+            neighbour = arc["from"] if reverse else arc["to"]
+            if neighbour in index.blocked_nodes:
                 continue
             candidate = distance + float(arc["length_m"])
-            if candidate <= maximum and candidate < distances.get(arc["to"], math.inf):
-                distances[arc["to"]] = candidate
-                heapq.heappush(queue, (candidate, arc["to"]))
+            if candidate <= maximum and candidate < distances.get(neighbour, math.inf):
+                distances[neighbour] = candidate
+                heapq.heappush(queue, (candidate, neighbour))
     return distances
 
 

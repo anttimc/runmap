@@ -62,13 +62,39 @@
         "compactness_weight": 10
       },
       "edge_profile": {
-        "id": "street-shoes",
-        "forbidden_highways": ["track"],
-        "forbidden_surfaces": [
-          "unpaved", "compacted", "fine_gravel", "gravel", "dirt", "earth",
-          "ground", "grass", "mud", "sand", "woodchips"
+        "id": "maintained-mixed-surface",
+        "require_known_surface_on_boundary": true,
+        "forbidden_access_values": [
+          "no", "private", "destination", "customers", "permit", "delivery"
         ],
-        "forbid_unknown_surface_highways": ["path", "track"]
+        "forbidden_surfaces": [
+          "unpaved", "earth", "grass", "mud", "sand",
+          "woodchips"
+        ]
+      }
+    },
+    "cycle_catalog": {
+      "target_cycle_lengths_m": [1000, 2000, 3000, 4000],
+      "length_tolerance_fraction": 0.12,
+      "seed_count": 12,
+      "one_way_access_budget_m": 2500,
+      "minimum_seed_spacing_m": 250,
+      "maximum_portals_per_cycle": 8,
+      "minimum_seed_component_faces": 20,
+      "variants_per_seed": 2,
+      "candidates_per_variant": 2,
+      "maximum_cycles_per_band": 12,
+      "maximum_cycle_overlap": 0.75,
+      "beam_width": 3,
+      "coarse_perimeter_bucket_m": 500,
+      "chunk_proposals_per_size": 12,
+      "maximum_faces": 150,
+      "composition": {
+        "source_band_m": 1000,
+        "root_count": 3,
+        "maximum_modules": 4,
+        "beam_width_per_root": 6,
+        "minimum_shared_boundary_m": 5
       }
     }
   },

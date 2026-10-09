@@ -254,16 +254,16 @@ silently violate the core route request.
 
 ### 7. Precompute and search a reusable cycle catalog
 
-- Generate profile-compatible cycles at several scales independently of a
-  particular final route length.
-- Deduplicate and retain a diverse catalog with quality metrics and provenance.
-- Precompute compatible envelope merges between cycles.
-- Search cycle combinations for the request, then expand and validate the
-  result on the directed graph.
+- Partition profile-compatible faces into small non-overlapping microcycles.
+- Connect the microcycle adjacency structure to several access-near roots.
+- Build a deterministic merge hierarchy whose active peers remain disjoint.
+- Select a rooted hierarchy resolution for the request, then expand and
+  validate it on the directed graph.
 
 This models how a runner combines known good loops into a longer route. The
-current online face beam remains an offline cycle generator, fallback, and
-local refinement tool. See [cycle-catalog route search](18-cycle-catalog-route-search.md).
+previous overlapping length-band catalog is retained only as an experiment.
+See the active [continuous cycle refinement](21-continuous-cycle-refinement.md)
+plan.
 
 **Evaluation gate:** a 10 km request composes reusable cycles into better-shaped
 routes with substantially less request-time topology work than online growth.
