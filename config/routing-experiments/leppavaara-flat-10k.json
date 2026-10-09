@@ -1,8 +1,13 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "leppavaara-flat-10k",
   "title": "Flat 10 km loop from Ruusutorpan koulu",
-  "bounds_epsg3067": [373000, 6673000, 380000, 6682000],
+  "bounds_epsg3067": [
+    373000,
+    6673000,
+    380000,
+    6682000
+  ],
   "start": {
     "name": "Ruusutorpan koulu",
     "address": "Leppävaarankatu 24, 02600 Espoo",
@@ -25,78 +30,18 @@
   "baseline": {
     "anchor_count": 24,
     "alternative_count": 5,
-    "ascent_costs_per_m": [5, 20, 50],
+    "ascent_costs_per_m": [
+      5,
+      20,
+      50
+    ],
     "stairs_multiplier": 8,
-    "overlap_factors": [3, 10, 30]
+    "overlap_factors": [
+      3,
+      10,
+      30
+    ]
   },
   "route_boundaries": [],
-  "topology": {
-    "face_test_bounds_epsg3067": [377000, 6676500, 379500, 6679000],
-    "face_search": {
-      "seed_count": 12,
-      "variants_per_seed": 6,
-      "max_faces": 500,
-      "maximum_candidates": 250,
-      "maximum_boundary_overlap": 0.8,
-      "alternative_count": 5,
-      "ascent_cost_per_m": 20,
-      "stairs_multiplier": 8,
-      "access_overlap_factor": 10,
-      "growth": {
-        "beam_width": 3,
-        "maximum_chunk_size": 3,
-        "chunk_proposals_per_size": 12,
-        "shape_weight": 1,
-        "near_reversal_weight": 750,
-        "jitter": 75
-      },
-      "stairs": {
-        "mode": "avoid",
-        "penalty_per_m": 10
-      },
-      "turns": {
-        "sharp_threshold_degrees": 170,
-        "maximum_sharp_turns": 0,
-        "concave_turn_weight": 30,
-        "turn_weight": 1,
-        "compactness_weight": 10
-      },
-      "edge_profile": {
-        "id": "maintained-mixed-surface",
-        "require_known_surface_on_boundary": true,
-        "forbidden_access_values": [
-          "no", "private", "destination", "customers", "permit", "delivery"
-        ],
-        "forbidden_surfaces": [
-          "unpaved", "earth", "grass", "mud", "sand",
-          "woodchips"
-        ]
-      }
-    },
-    "cycle_catalog": {
-      "target_cycle_lengths_m": [1000, 2000, 3000, 4000],
-      "length_tolerance_fraction": 0.12,
-      "seed_count": 12,
-      "one_way_access_budget_m": 2500,
-      "minimum_seed_spacing_m": 250,
-      "maximum_portals_per_cycle": 8,
-      "minimum_seed_component_faces": 20,
-      "variants_per_seed": 2,
-      "candidates_per_variant": 2,
-      "maximum_cycles_per_band": 12,
-      "maximum_cycle_overlap": 0.75,
-      "beam_width": 3,
-      "coarse_perimeter_bucket_m": 500,
-      "chunk_proposals_per_size": 12,
-      "maximum_faces": 150,
-      "composition": {
-        "source_band_m": 1000,
-        "root_count": 3,
-        "maximum_modules": 4,
-        "beam_width_per_root": 6,
-        "minimum_shared_boundary_m": 5
-      }
-    }
-  },
-  "area_note": "Preparation extent for the Leppävaara and Kilo topology study, with nearby context to avoid artificial edge dead ends."
+  "area_note": "Buffered Leppävaara and Kilo path exploration and routing baseline extent; graph-edge dead ends need inspection."
 }

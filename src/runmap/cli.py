@@ -16,15 +16,7 @@ from runmap.paths.graph import build_routing_graph, snap_to_vertex, write_graph_
 from runmap.paths.terrain import enrich_graph_terrain
 from runmap.regions import PROCESSING_HALO_M, find_region, list_regions
 from runmap.routing.baseline import generate_anchor_loops, write_route_outputs
-from runmap.routing.atomic_regions import build_atomic_region_inventory, write_atomic_region_outputs
-from runmap.routing.microcycles import build_microcycle_partition, write_microcycle_outputs
-from runmap.routing.cycle_catalog import (
-    generate_cycle_catalog,
-    write_cycle_catalog_outputs,
-)
-from runmap.routing.face_search import generate_face_region_loops, write_face_route_outputs
 from runmap.routing.search import GraphIndex
-from runmap.routing.topology import prepare_topology, write_topology_outputs
 from runmap.sources.mml import Bounds, coverage_url, download_elevation
 from runmap.sources.osm import download_highways, highway_query
 
@@ -265,28 +257,6 @@ def routes_command(argv):
         "baseline", help="Generate anchor-based diverse-path loop alternatives"
     )
     baseline.add_argument("experiment_id")
-    topology_parser = subparsers.add_parser(
-        "topology", help="Analyze cyclic topology and enumerate test-area faces"
-    )
-    topology_parser.add_argument("experiment_id")
-    face_parser = subparsers.add_parser(
-        "faces", help="Generate loops from connected planar face regions"
-    )
-    face_parser.add_argument("experiment_id")
-    catalog_parser = subparsers.add_parser(
-        "catalog", help="Precompute reusable running cycles at several scales"
-    )
-    catalog_parser.add_argument("experiment_id")
-    atomic_parser = subparsers.add_parser(
-        "atomic", help="Inventory disjoint profile atomic regions and render classifications"
-    )
-    atomic_parser.add_argument("experiment_id")
-    atomic_parser.add_argument("--plot", type=Path)
-    microcycle_parser = subparsers.add_parser(
-        "microcycles", help="Repair atomic regions into a disjoint microcycle partition"
-    )
-    microcycle_parser.add_argument("experiment_id")
-    microcycle_parser.add_argument("--plot", type=Path)
     args = parser.parse_args(argv)
     experiment = find_experiment(args.experiments, args.experiment_id)
     graph_path = args.graph_root / experiment.id / "graph.json"
@@ -299,191 +269,12 @@ def routes_command(argv):
                 "run paths prepare again"
             )
         index = GraphIndex(graph)
-        if args.command == "topology":
-            result = prepare_topology(
-                index, experiment.topology["face_test_bounds_epsg3067"]
-            )
-            outputs = write_topology_outputs(
-                index, result, args.graph_root / experiment.id / "topology"
-            )
-        elif args.command in {"faces", "catalog", "atomic", "microcycles"}:
-            topology_path = args.graph_root / experiment.id / "topology" / "topology.json"
-            topology = json.loads(topology_path.read_text())
-            if args.command == "microcycles":
-                from runmap.experiments.plot_microcycle_partition import plot_microcycle_partition
-
-                inventory = build_atomic_region_inventory(
-                    index, topology, experiment.topology.get("face_search", {}),
-                    experiment.topology.get("atomic_regions", {}),
-                )
-                write_atomic_region_outputs(index, inventory, args.output_root / experiment.id)
-                result = build_microcycle_partition(
-                    index, inventory, experiment.topology.get("microcycle_partition", {})
-                )
-                outputs = write_microcycle_outputs(index, result, args.output_root / experiment.id)
-                outputs["plot"] = args.plot or Path("artifacts") / f"{experiment.id}-microcycle-partition.png"
-                outputs["repairs_plot"] = outputs["plot"].with_name(outputs["plot"].stem + "-repairs.png")
-                result["timings_seconds"]["rendering"] = plot_microcycle_partition(
-                    index, inventory, result, outputs["plot"], outputs["repairs_plot"]
-                )
-                result["timings_seconds"]["atomic_inventory"] = inventory["timings_seconds"]["total"]
-                result["timings_seconds"]["total"] = round(
-                    result["timings_seconds"]["total"] + result["timings_seconds"]["rendering"]
-                    + result["timings_seconds"]["atomic_inventory"], 6
-                )
-                write_microcycle_outputs(index, result, args.output_root / experiment.id)
-            elif args.command == "atomic":
-                from runmap.experiments.plot_atomic_regions import plot_atomic_regions
-
-                result = build_atomic_region_inventory(
-                    index, topology, experiment.topology.get("face_search", {}),
-                    experiment.topology.get("atomic_regions", {}),
-                )
-                outputs = write_atomic_region_outputs(
-                    index, result, args.output_root / experiment.id
-                )
-                outputs["plot"] = args.plot or Path("artifacts") / f"{experiment.id}-atomic-regions.png"
-                result["timings_seconds"]["rendering"] = plot_atomic_regions(
-                    index, result, outputs["plot"]
-                )
-                result["timings_seconds"]["total"] = round(
-                    result["timings_seconds"]["total"] + result["timings_seconds"]["rendering"], 6
-                )
-                write_atomic_region_outputs(index, result, args.output_root / experiment.id)
-            elif args.command == "catalog":
-                result = generate_cycle_catalog(
-                    index,
-                    topology,
-                    experiment.topology.get("face_search", {}),
-                    experiment.topology.get("cycle_catalog", {}),
-                )
-                if not result["cycles"]:
-                    parser.error("Cycle preprocessing produced no usable cycles")
-                outputs = write_cycle_catalog_outputs(
-                    index, result, args.output_root / experiment.id
-                )
-            else:
-                result = generate_face_region_loops(
-                    index,
-                    topology,
-                    experiment.request,
-                    experiment.topology.get("face_search", {}),
-                )
-                if not result["alternatives"]:
-                    parser.error("Face-region search produced no usable route alternatives")
-                outputs = write_face_route_outputs(
-                    index, result, args.output_root / experiment.id
-                )
-        else:
-            result = generate_anchor_loops(index, experiment.request, experiment.baseline)
-            if not result["alternatives"]:
-                parser.error("Baseline search produced no route alternatives")
-            outputs = write_route_outputs(
-                index, result, args.output_root / experiment.id
-            )
+        result = generate_anchor_loops(index, experiment.request, experiment.baseline)
+        if not result["alternatives"]:
+            parser.error("Baseline search produced no route alternatives")
+        outputs = write_route_outputs(index, result, args.output_root / experiment.id)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         parser.exit(1, f"Route generation failed: {exc}\n")
-    if args.command == "topology":
-        summary = result["summary"]
-        print(
-            f"Topology: {summary['bridge_segment_count']} bridges, "
-            f"{summary['core_segment_count']} 2-core segments, "
-            f"{summary['cyclic_component_count']} cyclic components"
-        )
-        print(
-            f"Face test: {summary['face_test_segment_count']} segments, "
-            f"{summary['bounded_face_count']} bounded faces, "
-            f"{summary['connector_corridor_count']} grade-separated connectors"
-        )
-        print(f"Face GeoJSON: {outputs['faces']}")
-        return
-    if args.command == "microcycles":
-        summary = result["summary"]
-        print(f"Microcycle partition: {summary['atomic_region_count']} atoms -> "
-              f"{summary['active_region_count']} active regions; {summary['classification_counts']}")
-        print(f"Repairs: {summary['merged_count']} merges; {summary['repaired_count']} repaired microcycles; "
-              f"{summary['merge_attempt_count']} neighbor comparisons")
-        print(f"Verified partition and merge tree; {summary['shared_interface_count']} runnable interfaces")
-        print(f"Merge rejections: {result['merge_rejection_summary']}")
-        print(f"Partition: {outputs['partition']}")
-        print(f"Classification map: {outputs['plot']}")
-        print(f"Repair comparison: {outputs['repairs_plot']}")
-        return
-    if args.command == "atomic":
-        summary = result["summary"]
-        counts = summary["classification_counts"]
-        print(f"Atomic inventory: {summary['base_face_count']} base faces -> "
-              f"{summary['atomic_region_count']} regions; {counts}")
-        print(f"Verified partition and incidences; {summary['shared_interface_count']} runnable interfaces")
-        print(f"Hole filling: {summary['filled_hole_count']} holes; "
-              f"{summary['absorbed_profile_region_count']} enclosed profile regions absorbed")
-        print(f"Rejections: {result['rejection_summary']}")
-        print(f"Inventory: {outputs['inventory']}")
-        print(f"Atomic GeoJSON: {outputs['geojson']}")
-        print(f"Classification map: {outputs['plot']}")
-        return
-    if args.command == "faces":
-        if result.get("profile_summary"):
-            profile = result["profile_summary"]
-            print(
-                f"Profile topology: {profile['base_face_count']} base faces -> "
-                f"{profile['superface_count']} usable superfaces; "
-                f"{profile['dissolved_separator_count']} separators dissolved"
-            )
-        print(
-            f"Evaluated {result['evaluated_candidate_count']} usable face-region "
-            f"boundaries from {len(result['seed_face_ids'])} seeds; "
-            f"{result['feasible_candidate_count']} satisfy all hard constraints; "
-            f"{result['runtime_seconds']:.1f} s"
-        )
-        print(
-            f"Growth: {result['expanded_growth_state_count']} beam states, "
-            f"{result['proposed_growth_chunk_count']} face chunks proposed"
-        )
-        for alternative in result["alternatives"]:
-            metrics = alternative["metrics"]
-            shape = alternative["shape_metrics"]
-            print(
-                f"{alternative['id']}: {metrics['distance_m'] / 1000:.2f} km, "
-                f"{metrics['ascent_m']:.1f} m ascent, "
-                f"{metrics['repeated_fraction'] * 100:.1f}% repeated, "
-                f"{metrics['stair_distance_m']:.0f} m stairs, "
-                f"{shape['concave_turn_count']} concave turns, "
-                f"{shape['maximum_turn_degrees']:.0f}° maximum turn, "
-                f"{alternative['face_count']} faces, "
-                f"feasible={alternative['feasible']}"
-            )
-        print(f"Route GeoJSON: {outputs['geojson']}")
-        return
-    if args.command == "catalog":
-        print(
-            f"Cycle catalog: {result['generated_cycle_count']} generated, "
-            f"{result['selected_cycle_count']} selected from "
-            f"{len(result['seed_face_ids'])} access-ordered seeds; "
-            f"{result['runtime_seconds']:.1f} s"
-        )
-        print(
-            f"Growth: {result['multiband_traversal_count']} multiband traversals, "
-            f"{result['expanded_growth_state_count']} expanded states, "
-            f"{result['pruned_growth_state_count']} pruned states, "
-            f"{result['duplicate_growth_state_count']} duplicate proposals"
-        )
-        for band in result["band_summary"]:
-            print(
-                f"{band['target_cycle_length_m'] / 1000:.1f} km band: "
-                f"{band['generated_cycle_count']} generated, "
-                f"{band['selected_cycle_count']} selected"
-            )
-        composition = result.get("composition")
-        if composition is not None:
-            print(
-                f"Composition: {composition['composition_count']} envelopes "
-                f"from {len(composition['root_candidate_ids'])} roots; "
-                f"levels {composition['level_summary']}"
-            )
-            print(f"Composition GeoJSON: {outputs['compositions']}")
-        print(f"Catalog GeoJSON: {outputs['geojson']}")
-        return
     print(
         f"Evaluated {result['evaluated_candidate_count']} routes through "
         f"{result['anchor_count']} anchors; "

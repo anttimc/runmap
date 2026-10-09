@@ -210,7 +210,7 @@ class PathGraphTests(unittest.TestCase):
 class RoutingExperimentTests(unittest.TestCase):
     def test_loads_checked_experiment(self):
         document = {
-            "schema_version": 1,
+            "schema_version": 2,
             "id": "test-loop",
             "title": "Test",
             "bounds_epsg3067": [370000, 6675000, 375000, 6680000],
@@ -231,9 +231,6 @@ class RoutingExperimentTests(unittest.TestCase):
             "route_boundaries": [
                 {"osm_ref": "1", "behavior": "do-not-cross", "name": "Ring I"}
             ],
-            "topology": {
-                "face_test_bounds_epsg3067": [370000, 6675000, 375000, 6680000]
-            },
         }
         with TemporaryDirectory() as directory:
             path = Path(directory) / "test-loop.json"
@@ -244,7 +241,7 @@ class RoutingExperimentTests(unittest.TestCase):
         self.assertEqual(experiment.terrain["wavelength_m"], 40)
         self.assertEqual(experiment.baseline["anchor_count"], 8)
         self.assertEqual(experiment.route_boundaries[0]["osm_ref"], "1")
-        self.assertEqual(experiment.topology["face_test_bounds_epsg3067"][0], 370000)
+        self.assertEqual(experiment.schema_version, 2)
 
     def test_overpass_query_uses_explicit_bounds(self):
         query = highway_query((60.1, 24.7, 60.3, 24.9), ("1",))

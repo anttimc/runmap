@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 
 
-EXPERIMENT_SCHEMA_VERSION = 1
+EXPERIMENT_SCHEMA_VERSION = 2
 _ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _OSM_REF = re.compile(r"^[A-Za-z0-9-]+$")
 
@@ -32,7 +32,6 @@ class RoutingExperiment:
     terrain: dict
     baseline: dict
     route_boundaries: tuple
-    topology: dict
     area_note: str
     config_digest: str
 
@@ -43,7 +42,7 @@ def load_experiment(path):
     document = json.loads(path.read_text())
     required = {
         "schema_version", "id", "title", "bounds_epsg3067", "start",
-        "request", "terrain", "baseline", "route_boundaries", "topology",
+        "request", "terrain", "baseline", "route_boundaries",
     }
     missing = required - document.keys()
     if missing:
@@ -118,17 +117,6 @@ def load_experiment(path):
             raise ValueError("Route-boundary OSM refs must be simple identifiers")
         if boundary.get("behavior") != "do-not-cross":
             raise ValueError("Unsupported route-boundary behavior")
-    topology = document["topology"]
-    if not isinstance(topology, dict):
-        raise ValueError("topology must be an object")
-    face_bounds = topology.get("face_test_bounds_epsg3067")
-    if not isinstance(face_bounds, list) or len(face_bounds) != 4 or any(
-        not isinstance(value, (int, float)) or not math.isfinite(value)
-        for value in face_bounds
-    ):
-        raise ValueError("topology.face_test_bounds_epsg3067 must contain four numbers")
-    if face_bounds[2] <= face_bounds[0] or face_bounds[3] <= face_bounds[1]:
-        raise ValueError("Topology face-test bounds must have positive area")
     canonical = json.dumps(document, sort_keys=True, separators=(",", ":")).encode()
     return RoutingExperiment(
         schema_version=document["schema_version"],
@@ -145,7 +133,6 @@ def load_experiment(path):
         terrain=dict(terrain),
         baseline=dict(baseline),
         route_boundaries=tuple(dict(boundary) for boundary in route_boundaries),
-        topology=dict(topology),
         area_note=str(document.get("area_note", "")),
         config_digest=hashlib.sha256(canonical).hexdigest(),
     )
