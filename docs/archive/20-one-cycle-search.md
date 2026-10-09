@@ -1,5 +1,10 @@
 # 20. Start-local one-cycle search
 
+> **Archived 2026-10-09 — not an implementation plan.** Superseded by the
+> [map-first plan](../22-map-first-running-plan.md). Status statements and commands
+> below describe the historical experiment. Its cycle-specific code was removed;
+> see [archive recovery instructions](README.md).
+
 > **Status: superseded.** The exact one-cycle formulation and deterministic
 > beam search are retained as reference material, not as the active catalog
 > roadmap. The replacement plan builds a disjoint rooted region hierarchy; see

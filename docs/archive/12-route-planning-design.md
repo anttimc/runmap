@@ -1,5 +1,10 @@
 # 12. Route-planning design
 
+> **Archived 2026-10-09 — not an implementation plan.** Superseded by the
+> [map-first plan](../22-map-first-running-plan.md). Status statements and commands
+> below describe the historical experiment. Its cycle-specific code was removed;
+> see [archive recovery instructions](README.md).
+
 ## Purpose
 
 Route planning serves two related but different running goals:
@@ -186,7 +191,7 @@ defined without depending on a routing implementation.
 **Evaluation gate:** complete for the first bounded experiment. The prepared
 graph, start snap, path-class distribution, connectivity, and terrain coverage
 were inspected; measured limitations are recorded in the
-[path-graph prototype](13-path-graph-prototype.md).
+[path-graph prototype](../13-path-graph-prototype.md).
 
 ### 3. Implement the diverse-path baseline
 
@@ -199,7 +204,7 @@ were inspected; measured limitations are recorded in the
 **Evaluation gate:** complete for the first bounded experiment. Synthetic path
 pairs use a distinct return when one exists, and the real anchor search found
 feasible 10 km loops without repeated traversal at the start. See the
-[diverse-path baseline](14-diverse-route-baseline.md).
+[diverse-path baseline](../14-diverse-route-baseline.md).
 
 ### 4. Prepare cyclic topology
 

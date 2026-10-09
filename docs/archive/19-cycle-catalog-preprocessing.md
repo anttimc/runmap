@@ -1,5 +1,10 @@
 # 19. Start-local cycle-catalog preprocessing
 
+> **Archived 2026-10-09 — not an implementation plan.** Superseded by the
+> [map-first plan](../22-map-first-running-plan.md). Status statements and commands
+> below describe the historical experiment. Its cycle-specific code was removed;
+> see [archive recovery instructions](README.md).
+
 > **Status: superseded.** This document describes the first overlapping,
 > length-banded catalog prototype. It remains useful as an implementation and
 > evaluation record, but its remaining roadmap is inactive. Continue with

@@ -3,10 +3,10 @@
 ## Scope
 
 The first path graph supports the flat 10 km loop experiment defined in the
-[route-planning design](12-route-planning-design.md). Its preparation rectangle
+[historical route-planning experiment](archive/12-route-planning-design.md). Its preparation rectangle
 is `E 373000–380000`, `N 6673000–6682000` in EPSG:3067. This covers the
-Leppävaara/Kilo test neighborhood with context around its edges. The topology
-study uses its smaller configured bounds; Ring I is not a route boundary.
+Leppävaara/Kilo test neighborhood with context around its edges. Ring I is not a route boundary. The historical topology study is archived;
+this graph now supports the [map-first plan](22-map-first-running-plan.md).
 
 Ruusutorpan koulu is identified by its public address, Leppävaarankatu 24, and
 an approximate landmark coordinate. Preparation snaps that coordinate to the
@@ -53,8 +53,7 @@ permission.
 
 Outdoor `highway=pedestrian` and `highway=footway` areas are represented by
 their perimeters in this linear graph. This deliberately approximates a
-runner's freedom to cross a plaza, but it preserves the area's connectivity and
-lets it divide planar topology. Indoor, level-specific, vehicle, and service
+runner's freedom to cross a plaza, but it preserves the area's boundary connectivity. Indoor, level-specific, vehicle, and service
 areas remain excluded. A later area-routing model can add direct interior
 crossings between entrance points.
 
@@ -126,3 +125,12 @@ Step 2 provides a usable shared graph and measured limitations. The implemented
 
 OpenStreetMap data is © OpenStreetMap contributors and available under the
 [ODbL](https://www.openstreetmap.org/copyright).
+
+
+## Current configuration
+
+Routing experiment schema 2 removes the retired topology settings. Rebuild
+prepared graphs with the commands above after this change: configuration
+digests intentionally invalidate the old graph. Cached OSM inputs can be reused.
+Path-gradient UI delivery and reachability are planned in M4; this document
+records the existing preparation prototype.

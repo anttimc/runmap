@@ -1,5 +1,10 @@
 # 16. Face-region loop search
 
+> **Archived 2026-10-09 — not an implementation plan.** Superseded by the
+> [map-first plan](../22-map-first-running-plan.md). Status statements and commands
+> below describe the historical experiment. Its cycle-specific code was removed;
+> see [archive recovery instructions](README.md).
+
 ## Purpose
 
 Step 5 tests whether bounded planar faces are useful construction units for

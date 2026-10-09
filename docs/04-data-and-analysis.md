@@ -4,7 +4,11 @@
 
 ### OpenStreetMap
 
-Initially use OSM as map context. Later use its geometry and connectivity to identify candidate runnable paths. Preserve access, surface, steps, bridge, and tunnel information where available. Missing attributes do not establish access or surface quality. Area-specific selection rules remain open.
+OSM supplies map context and the existing candidate pedestrian graph. M4 exposes
+that graph through path-gradient inspection and start-based exploration. Preserve
+access, surface, steps, bridge, and tunnel information where available. Missing
+attributes do not establish access or surface quality. See the
+[M4 implementation plan](23-m4-path-exploration.md) for the shared query policy.
 
 ### Open elevation
 
@@ -17,6 +21,12 @@ The dataset is CC BY 4.0. Record the provider, dataset name, acquisition date, l
 Source: [Elevation model 2 m and licence](https://www.maanmittauslaitos.fi/en/maps-and-spatial-data/datasets-and-interfaces/product-descriptions/elevation-model-2-m).
 
 ## Intermediate storage
+
+The table below records format options from the initial design, not mandatory
+M4 dependencies. The working terrain products are two-band UInt16 magnitude/
+bearing COGs, and the experimental path graph is JSON/GeoJSON. M4 initially adds
+file-backed interval measurements with graph/version identity; absolute smoothed
+elevations, GeoPackage, and Parquet are not prerequisites.
 
 | Stage | Initial format | Notes |
 | --- | --- | --- |
@@ -37,9 +47,14 @@ References: [GDAL COG](https://gdal.org/en/stable/drivers/raster/cog.html), [PMT
 
 ## Analysis choices
 
-The first experiment is elevation-surface smoothing followed by terrain-gradient magnitude and direction. Compare against raw gradients. Details and proposed PDE formulation are in the [Leppävaara experiment](06-leppavaara-terrain.md); the final smoother is not selected.
+The working method is spectral thin-plate smoothing with a default 40 m
+half-amplitude wavelength (D19), followed by terrain-gradient calculation.
+The [Leppävaara experiment](06-leppavaara-terrain.md) records the original
+comparison. M4 initially projects the prepared gradient onto paths and retains
+ordered intervals, including estimated relative terrain-height change.
 
-The following path/route questions are deferred:
+The following questions guide path analysis. M4 working choices and the remaining
+deferrals are specified in the [implementation plan](23-m4-path-exploration.md):
 
 - Meaning of flatness and hilliness: local grade, sustained grade, total ascent, elevation range, or a combination.
 - Sampling interval and interpolation method.

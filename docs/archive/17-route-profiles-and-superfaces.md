@@ -1,5 +1,10 @@
 # 17. Route profiles, superfaces, and route shape
 
+> **Archived 2026-10-09 — not an implementation plan.** Superseded by the
+> [map-first plan](../22-map-first-running-plan.md). Status statements and commands
+> below describe the historical experiment. Its cycle-specific code was removed;
+> see [archive recovery instructions](README.md).
+
 ## Purpose
 
 The first step-6 slices remove unsuitable route choices before face search and

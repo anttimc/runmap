@@ -1,5 +1,10 @@
 # 18. Cycle-catalog route search
 
+> **Archived 2026-10-09 — not an implementation plan.** Superseded by the
+> [map-first plan](../22-map-first-running-plan.md). Status statements and commands
+> below describe the historical experiment. Its cycle-specific code was removed;
+> see [archive recovery instructions](README.md).
+
 > **Status: superseded.** This document records the standalone-cycle catalog
 > experiment and is retained for its design history and measurements. Do not
 > implement its remaining steps. The active cycle-search plan is

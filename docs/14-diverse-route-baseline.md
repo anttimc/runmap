@@ -9,8 +9,9 @@ The first route generator is a general-graph baseline for both planning modes:
 - for an environment-first loop, choose distributed intermediate anchors and
   apply the same outbound/return search.
 
-This provides a useful route generator before face-cycle search and a concrete
-comparison for deciding whether the extra topology is worthwhile.
+This is the retained general-graph starting point for the
+[map-first plan](22-map-first-running-plan.md). Guided assembly precedes further
+automatic route generation.
 
 ## Search model
 
@@ -100,6 +101,7 @@ the method's limitations: anchor choice determines broad route shape, several
 cost settings can converge on nearly the same loop, and path quality beyond
 stairs is not yet scored.
 
-Step 3 is complete. Step 4 can now analyze bridges, the 2-core,
-biconnected/cyclic components, and planar face traversal for comparison with
-this baseline.
+The baseline experiment is complete. Its fixed distance/repetition thresholds
+are evaluation settings, not universal product constraints. Surface/access
+profile integration and UI guidance remain planned. The old cyclic-topology
+follow-up is archived; continue with [path exploration](22-map-first-running-plan.md).

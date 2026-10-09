@@ -58,6 +58,18 @@ Leppävaara, Espoo: a terrain map showing gradient magnitude and direction, sele
 
 This is the first step toward G1 and G2. Terrain slope alone cannot establish the gradient or connectivity of a runnable path.
 
+## Current product sequence
+
+The terrain-map first release is the existing foundation. The active
+[map-first plan](22-map-first-running-plan.md) now prioritizes:
+
+1. An intuitive path-gradient map with inspection and start-based reachability.
+2. Guided route assembly through selected places and retained sections.
+3. Diverse automatic suggestions with terrain and geographic guidance.
+
+The directed path graph supports every stage. Cycles are optional examples,
+not a required partition or preprocessing product.
+
 ## Later possibilities
 
 - Add runnable-path gradients and connected flat-path exploration.

@@ -1,5 +1,10 @@
 # 15. Cyclic topology and half-edge faces
 
+> **Archived 2026-10-09 — not an implementation plan.** Superseded by the
+> [map-first plan](../22-map-first-running-plan.md). Status statements and commands
+> below describe the historical experiment. Its cycle-specific code was removed;
+> see [archive recovery instructions](README.md).
+
 ## Purpose
 
 Step 4 prepares the graph structures needed to compare face-based loop search

@@ -1,7 +1,8 @@
 # 2. Delivery milestones
 
 Status values: planned, active, complete. M0–M2 are complete, M3 is active,
-and later milestones are planned. Completion requires the listed evidence, not
+M4 is the next delivery milestone, and later milestones are planned.
+The [map-first plan](22-map-first-running-plan.md) defines the current product sequence. Completion requires the listed evidence, not
 just implemented code.
 
 ## M0 — Define the first experiment
@@ -66,19 +67,48 @@ Tasks:
 
 Complete when: the user can inspect hill steepness and direction in Leppävaara and compare raw/smoothed results interactively. This establishes terrain exploration; runnable-path suitability is deferred.
 
-## M4 — Refine the tool against real running experience
+## M4 — Explore runnable paths and start-based reachability
 
-Supports: G1–G4. Depends on: M3. Status: planned.
+Supports: G1–G4. Depends on: M3. Status: planned; next delivery milestone.
 
-Tasks:
+1. Display along-path gradient magnitude with direction on inspection.
+2. Inspect sampled profiles, climbs, surfaces, access evidence, and uncertainty.
+3. Select a start and show outward-and-return reachability under shared rules.
+4. Add a minimum return-distance budget that explicitly permits retracing.
+5. Validate familiar corridors, hills, bridges, restrictions, and extract edges;
+   measure viewport and query performance.
 
-1. Compare map classifications with local observations.
-2. Adjust analysis based on measured failures and the user's preferences.
-3. Benchmark cold and cached interactions on the selected deployment class.
-4. Refine zoom-level contour visibility so short hills are not misleadingly hidden.
-5. Document remaining limitations and prepare the next milestone for OSM path extraction and path-gradient analysis.
+Complete when: the runner can locate a promising path or hill, understand its
+terrain, and see how it connects to their start. See the
+[M4 implementation plan](23-m4-path-exploration.md) for delivery slices,
+measurement definitions, interactions, and acceptance checks.
+Existing graph and terrain-enrichment experiments support this work; the UI
+and shared query policy remain to be implemented.
 
-Complete when: the first release satisfies the goal criteria on the selected area and has documented performance and accuracy limitations.
+## M7 — Guided route assembly
+
+Supports: G1, G2, G4. Depends on: M4. Status: planned.
+
+Select destinations and waypoints, compare return paths, inspect distance,
+terrain, and repetition, and keep liked sections while revising the rest.
+Validate full directed walks and explain infeasible requests.
+
+Complete when: a runner can assemble and revise a familiar outing and record
+accepted/rejected examples for later route scoring.
+
+## M8 — Automatic route suggestions
+
+Supports: G1, G2, G4. Depends on: M7. Status: planned.
+
+Extend the retained anchor baseline to generate a few diverse complete routes
+with explicit user guidance and observable tradeoffs. Optional saved or
+generated loops do not require a cycle basis or complete catalogue.
+
+Complete when: suggestions satisfy stated constraints, provide meaningful
+alternatives, and pass local-runner review against M7 examples.
+
+M5 and M6 retain their existing identifiers below; their numbering does not
+place them ahead of M7 or M8 in the product sequence.
 
 ## Optional milestones after the first release
 

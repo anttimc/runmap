@@ -67,7 +67,7 @@ data/           # Local source and generated data; not source-controlled by defa
 
 ## Execution model
 
-1. An explicit preparation command downloads/reads sources and generates terrain derivatives; path profiles follow in a later milestone.
+1. Explicit preparation commands read sources and generate terrain derivatives and an attributed directed path graph; detailed path-profile delivery is the next milestone.
 2. Static map assets serve routine navigation where possible.
 3. The API reads prepared results or calculates a bounded requested profile.
 4. Area-wide rebuilds run as preparation jobs, not long blocking web requests.
@@ -96,3 +96,21 @@ Odin is the preferred candidate for an optional numerical learning experiment; G
 - [FastAPI](https://fastapi.tiangolo.com/)
 - [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/)
 - [Vite](https://vite.dev/guide/)
+
+
+## Map-first routing boundary
+
+The [active plan](22-map-first-running-plan.md) uses the same directed path
+graph for map exploration, return-distance queries, guided route assembly, and
+automatic suggestions. Keep real junctions, pedestrian direction, and bridges/
+tunnels intact; no planar embedding or cycle catalogue is required.
+
+Preparation stores geometry, measurements, uncertainty, and provenance.
+Start-dependent reachability and route requests use those prepared attributes.
+A shared access/surface/stair policy must govern display eligibility and search.
+The retained profile helpers are not yet integrated into the baseline.
+
+Routes are ordered directed walks with complete distance and repetition
+accounting. Optional loop examples are selected routes, not a second network
+representation. Cycle-specific implementations are recorded in the
+[archive](archive/README.md).

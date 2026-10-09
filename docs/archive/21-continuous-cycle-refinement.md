@@ -1,5 +1,10 @@
 # 21. Continuous cycle refinement
 
+> **Archived 2026-10-09 — not an implementation plan.** Superseded by the
+> [map-first plan](../22-map-first-running-plan.md). Status statements and commands
+> below describe the historical experiment. Its cycle-specific code was removed;
+> see [archive recovery instructions](README.md).
+
 ## Status and purpose
 
 This is the active implementation plan for environment-first cycle discovery.

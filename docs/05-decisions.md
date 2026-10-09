@@ -29,6 +29,19 @@ Initial planning record: 2026-09-05.
 | D28 | Use fixed 5 m source-elevation contours, emphasizing each 25 m contour, instead of gradient arrows | Contour orientation shows the gradient axis and spacing shows terrain shape without adding a competing field of symbols; elevation labels can be added later if gradient sign proves necessary |
 | D29 | Expand the public Leppävaara region to the grid-aligned 40 × 40 km bounds `E 360000–400000`, `N 6660000–6700000` | This places Leppävaara near the center and provides roughly 20 km of coverage in every cardinal direction while retaining complete 5 km analysis cores |
 
+## Map-first direction — 2026-10-09
+
+| ID | Decision | Reason |
+| --- | --- | --- |
+| D30 | Prioritize path-gradient exploration, then guided assembly, then automatic suggestions | Deliver useful running information before solving route optimisation |
+| D31 | Use the attributed directed pedestrian graph as the shared foundation | Preserve real bridges, tunnels, and nonplanar connectivity without face repair |
+| D32 | Permit closed walks with explicit repeated distance and access stems | Repetition may be necessary for selected starts and destinations |
+| D33 | Treat cycles as optional overlapping route examples | A complete basis or disjoint partition is not required for exploration or routing |
+| D34 | Archive cycle-first plans and remove their implementation | Keep one active roadmap; Git preserves the experiments |
+
+See the [active plan](22-map-first-running-plan.md) and
+[archive recovery instructions](archive/README.md).
+
 ## Initial implementation defaults
 
 These follow the stack discussion and can be revised with evidence.
@@ -54,7 +67,7 @@ These follow the stack discussion and can be revised with evidence.
 | Q5 | Which baseline machine/browser should performance targets describe? | M2–M3 |
 | Q6 | Refine magnitude colours and contour visibility; decide whether elevation labels or location details are needed to communicate gradient sign. | M3 |
 | Q7 | Which basemap provider and hosting arrangement should be used? | M3; confirm production terms before M5 |
-| Q8 | Is route drawing/import the next feature after path exploration? | M4 |
+| Q8 | Which waypoint and retained-section interactions best support guided route assembly? Import remains optional. | M7 |
 | Q9 | Is Odin or Go experimentation a separate learning goal? | Optional M6 |
 | Q10 | What exact private Jämsä bounds should be configured, and when should public coverage expand beyond the 40 km Leppävaara region? | Later wider-coverage implementation |
 | Q11 | Does the 512 m halo remain sufficient at the longest 100 m hosted wavelength? It passed the 40 m internal-join check to cache quantization. | Before treating every hosted preset as validated |
