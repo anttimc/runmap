@@ -222,13 +222,8 @@ def paths_command(argv):
                 terrain_paths,
                 terrain["wavelength_m"],
                 terrain["sampling_interval_m"],
+                manifest_id=manifest_id,
             )
-            graph["terrain"]["manifest_id"] = manifest_id
-            if graph["terrain"]["valid_fraction"] < 1:
-                parser.error(
-                    "Prepared terrain does not cover every path sample; "
-                    "inspect experiment bounds and derived tiles"
-                )
         outputs = write_graph_outputs(graph, args.data_root / "prepared" / experiment.id)
     except (ValueError, OSError, json.JSONDecodeError) as exc:
         parser.exit(1, f"Path graph preparation failed: {exc}\n")
@@ -243,6 +238,10 @@ def paths_command(argv):
         f"{graph['start_snap']['snap_distance_m']:.1f} m"
     )
     print(f"Inspection GeoJSON: {outputs['geojson']}")
+    if "measurements" in outputs:
+        path = outputs["measurements"]
+        print(f"Terrain measurements: {path} ({path.stat().st_size:,} bytes)")
+        print(f"Terrain valid-length fraction: {graph['terrain']['valid_fraction']:.2%}")
 
 
 def routes_command(argv):

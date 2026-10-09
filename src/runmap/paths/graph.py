@@ -1,9 +1,12 @@
 """Normalize OSM highway ways into an inspectable pedestrian routing graph."""
 
 from collections import Counter, defaultdict, deque
+import hashlib
 import json
 import math
 from pathlib import Path
+
+from runmap.paths.measurements import graph_digest
 
 
 GRAPH_SCHEMA_VERSION = 1
@@ -342,20 +345,55 @@ def graph_geojson(graph):
     }
 
 
+def _json_payload(document):
+    return (json.dumps(document, indent=2, allow_nan=False) + "\n").encode("utf-8")
+
+
+def _publish_payload(path, payload):
+    """Replace one artifact only after its payload has been written."""
+    partial = path.with_suffix(path.suffix + ".part")
+    partial.write_bytes(payload)
+    partial.replace(path)
+
+
+def _publish_measurements(graph, measurements, directory):
+    """Publish an immutable generation and attach its reference to the graph."""
+    document = {**measurements, "graph_digest": graph_digest(graph)}
+    payload = _json_payload(document)
+    checksum = hashlib.sha256(payload).hexdigest()
+    path = directory / f"measurements-{checksum}.json"
+    _publish_payload(path, payload)
+    graph["measurements"] = {
+        "file": path.name,
+        "sha256": checksum,
+        "size_bytes": len(payload),
+    }
+    return path
+
+
+def _graph_output_documents(graph):
+    """List inspection artifacts first and the graph commit point last."""
+    return (
+        ("inspection", "inspection.json", {
+            "summary": graph["summary"], "start_snap": graph.get("start_snap"),
+        }),
+        ("geojson", "segments.geojson", graph_geojson(graph)),
+        ("graph", "graph.json", graph),
+    )
+
+
 def write_graph_outputs(graph, directory):
-    """Atomically write machine-readable graph and map-inspection GeoJSON."""
+    """Publish inspection files and atomically commit the graph/measurement pair."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    outputs = {
-        "graph": (directory / "graph.json", graph),
-        "geojson": (directory / "segments.geojson", graph_geojson(graph)),
-        "inspection": (
-            directory / "inspection.json",
-            {"summary": graph["summary"], "start_snap": graph.get("start_snap")},
-        ),
-    }
-    for path, document in outputs.values():
-        partial = path.with_suffix(path.suffix + ".part")
-        partial.write_text(json.dumps(document, indent=2, allow_nan=False) + "\n")
-        partial.replace(path)
-    return {name: path for name, (path, _) in outputs.items()}
+    graph = dict(graph)
+    measurements = graph.pop("_measurements", None)
+    outputs = {}
+    if measurements is not None:
+        # Older graph readers retain access to their measurement generation.
+        outputs["measurements"] = _publish_measurements(graph, measurements, directory)
+    for name, filename, document in _graph_output_documents(graph):
+        path = directory / filename
+        _publish_payload(path, _json_payload(document))
+        outputs[name] = path
+    return outputs

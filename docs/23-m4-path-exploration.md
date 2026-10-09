@@ -106,10 +106,12 @@ content-addressed `measurements-<sha256>.json` file. `graph.json` references its
 checksum and byte size and is replaced last as the atomic publication point.
 Old measurement generations remain available to readers holding an older graph.
 The measurement document includes a canonical graph digest, schema version,
-source manifest, and method/settings. `MeasurementIndex.load(graph_path)` checks
-both checksum and graph identity and builds an in-memory segment index.
+source manifest, and method/settings. `load_measurements(graph_path)` checks
+both checksum and graph identity and returns a data-only `MeasurementData`
+dataclass with the measurement document and graph lengths indexed by segment ID.
+Validation, loading, and inspection are separate functions.
 
-`MeasurementIndex.inspect(segment_id, reverse=False, start_m=0, end_m=None)`
+`inspect_measurements(data, segment_id, reverse=False, start_m=0, end_m=None)`
 returns ordered intervals, integrated relative profiles, partial ascent/descent,
 and valid-length fraction. Inspection ranges use EPSG:3067 chainage; each interval
 also records graph offsets derived from cumulative geodesic vertex lengths scaled
