@@ -76,7 +76,7 @@ fixed source-elevation contours now show the gradient axis and terrain shape.
 The map now supports along-path gradient colors and click inspection with a
 relative height profile, direction reversal, uphill sections, and explicit
 uncertainty/coverage states. Opt-in outing inclusion now lets you select an
-eligible snapped start, choose a nearby alternative, and inspect which complete
+automatically snapped eligible start and inspect which complete
 path intervals fit a distance budget with retracing allowed. Surface and stair
 policies apply consistently to inspection, snapping, and search; gentler-grade
 emphasis changes display only. Guided routing and automatic suggestions follow. The routing baseline remains a command-line

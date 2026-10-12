@@ -367,7 +367,7 @@ limits serve smaller budgets, and larger requests rebuild insufficient entries.
 Policy indexes reuse loaded topology. Grade-emphasis controls remain client-side.
 
 The frontend adds opt-in outing inclusion, set/clear start, requested/snapped
-markers and visual offset, nearby candidate selection, kilometre budget and snap
+markers and visual offset, automatic nearest eligible snapping, kilometre budget and snap
 radius inputs, avoid-stairs, and a gentler-grade emphasis control. Gradient hues
 remain; opacity distinguishes inclusion/exclusion states. Inspection requests can
 include the same start/budget parameters (`start_segment_id` chooses the snapped

@@ -31,7 +31,6 @@ interface StartResponse {
   status: string;
   requested: [number, number];
   snap: Snap | null;
-  candidates: Snap[];
 }
 interface Interval extends Inclusion {
   interval_index: number;
@@ -271,7 +270,6 @@ export async function startPaths(map: Map): Promise<void> {
   const radius = element<HTMLInputElement>("outing-radius");
   const setStart = element<HTMLButtonElement>("outing-set-start");
   const clearStart = element<HTMLButtonElement>("outing-clear-start");
-  const candidateSelect = element<HTMLSelectElement>("outing-candidate");
   const outingStatus = element("outing-status");
   const setStatus = (message: string, state: string) => { status.textContent = message; status.dataset.state = state; };
   let config: PathConfig;
@@ -315,7 +313,6 @@ export async function startPaths(map: Map): Promise<void> {
   let inspectionSequence = 0;
   let selected: string | undefined;
   let requestedStart: [number, number] | undefined;
-  let preferredSegment: string | undefined;
   let choosingStart = false;
   function chooseStartMode(active: boolean): void {
     choosingStart = active;
@@ -327,26 +324,17 @@ export async function startPaths(map: Map): Promise<void> {
   function showStart(result?: StartResponse): void {
     requestedMarker.remove(); snappedMarker.remove();
     setData(map, "start-offset", empty);
-    candidateSelect.hidden = element("outing-candidate-label").hidden = true;
     clearStart.disabled = !requestedStart;
     element("outing-label").textContent = enabled.checked && requestedStart ? `Within a ${Number(budget.value)} km outing — retracing allowed` : "";
     if (!enabled.checked || !requestedStart) return;
     requestedMarker.setLngLat(requestedStart).addTo(map);
     if (!result) return;
-    candidateSelect.replaceChildren(...result.candidates.map(candidate => {
-      const option = document.createElement("option");
-      option.value = candidate.segment_id;
-      option.textContent = `${candidate.description || candidate.segment_id} · ${candidate.offset_m.toFixed(1)} m offset`;
-      return option;
-    }));
-    candidateSelect.hidden = element("outing-candidate-label").hidden = result.candidates.length < 2;
     outingStatus.dataset.state = result.snap ? "ready" : "failed";
     if (!result.snap) {
-      outingStatus.textContent = `No eligible path within ${radius.value} m${preferredSegment ? " for the chosen candidate" : ""}. Choose another start or nearby eligible path.`;
+      outingStatus.textContent = `No eligible path within ${radius.value} m. Choose another start or increase the snap radius.`;
       return;
     }
     const snap = result.snap;
-    candidateSelect.value = snap.segment_id;
     snappedMarker.setLngLat([snap.longitude, snap.latitude]).addTo(map);
     setData(map, "start-offset", collection([lineFeature([requestedStart, [snap.longitude, snap.latitude]])]));
     outingStatus.textContent = `Requested ${requestedStart[1].toFixed(5)}, ${requestedStart[0].toFixed(5)} → snapped ${snap.latitude.toFixed(5)}, ${snap.longitude.toFixed(5)} · ${snap.offset_m.toFixed(1)} m offset.`;
@@ -354,11 +342,10 @@ export async function startPaths(map: Map): Promise<void> {
   function parameters(): URLSearchParams {
     return new URLSearchParams({ surface: filter.value, avoid_stairs: String(avoidStairs.checked), dataset_id: config.dataset_id });
   }
-  function addOutingParameters(params: URLSearchParams, inspection = false): boolean {
+  function addOutingParameters(params: URLSearchParams): boolean {
     if (!enabled.checked || !requestedStart) return false;
     params.set("longitude", String(requestedStart[0])); params.set("latitude", String(requestedStart[1]));
     params.set("budget_km", budget.value); params.set("radius_m", radius.value);
-    if (preferredSegment) params.set(inspection ? "start_segment_id" : "segment_id", preferredSegment);
     return true;
   }
   async function updateViewport(): Promise<void> {
@@ -397,7 +384,7 @@ export async function startPaths(map: Map): Promise<void> {
     element("path-inspection-content").replaceChildren(text("p", "Loading segment…"));
     const params = parameters();
     params.set("reverse", String(reverse.checked));
-    addOutingParameters(params, true);
+    addOutingParameters(params);
     try {
       const result = await request<Inspection>(`/api/paths/segments/${encodeURIComponent(selected)}?${params}`, inspectionAbort.signal);
       if (sequence !== inspectionSequence) return;
@@ -414,7 +401,7 @@ export async function startPaths(map: Map): Promise<void> {
   function refresh(): void { void updateViewport(); void inspectSelected(); }
   map.on("movestart", () => { viewportAbort?.abort(); viewportSequence++; });
   map.on("moveend", () => { void updateViewport(); });
-  for (const input of [filter, avoidStairs]) input.addEventListener("change", () => { preferredSegment = undefined; refresh(); });
+  for (const input of [filter, avoidStairs]) input.addEventListener("change", () => refresh());
   for (const input of [budget, radius]) input.addEventListener("change", () => { if (input.reportValidity()) refresh(); });
   flatter.addEventListener("change", () => applyPathEmphasis(map, flatter.checked));
   enabled.addEventListener("change", () => {
@@ -424,13 +411,12 @@ export async function startPaths(map: Map): Promise<void> {
   });
   setStart.addEventListener("click", () => chooseStartMode(!choosingStart));
   clearStart.addEventListener("click", () => {
-    requestedStart = undefined; preferredSegment = undefined; enabled.checked = false;
+    requestedStart = undefined; enabled.checked = false;
     chooseStartMode(false); showStart(); outingStatus.textContent = "Choose a start to enable distance highlighting."; refresh();
   });
-  candidateSelect.addEventListener("change", () => { preferredSegment = candidateSelect.value; refresh(); });
   map.on("click", event => {
     if (choosingStart) {
-      requestedStart = [event.lngLat.lng, event.lngLat.lat]; preferredSegment = undefined; enabled.checked = true;
+      requestedStart = [event.lngLat.lng, event.lngLat.lat]; enabled.checked = true;
       chooseStartMode(false); showStart(); outingStatus.textContent = "Snapping to an eligible path…"; refresh(); return;
     }
     const feature = map.queryRenderedFeatures(event.point, { layers: ["path-hit"] })[0];
