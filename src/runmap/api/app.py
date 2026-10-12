@@ -4,6 +4,10 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from hashlib import sha256
+from time import time
+
+from pydantic import BaseModel, Field
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.gzip import GZipMiddleware
@@ -11,6 +15,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from runmap.api.paths import render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
+from runmap.api.path_tiles import PathTileService, render_version as path_render_version, tile_template
 from runmap.api.terrain import TerrainRenderer
 from runmap.api.terrain_tiles import (
     CONTOUR_INTERVAL_M,
@@ -48,6 +53,13 @@ async def lifespan(application):
     try:
         application.state.paths = load_path_data(graph_path)
         application.state.path_status = "ready"
+        application.state.path_tiles = PathTileService(
+            application.state.paths,
+            tile_bytes=int(os.environ.get("RUNMAP_PATH_TILE_CACHE_BYTES", 64 * 1024 ** 2)),
+            snapshot_bytes=int(os.environ.get("RUNMAP_PATH_SNAPSHOT_CACHE_BYTES", 128 * 1024 ** 2)),
+            snapshot_ttl=float(os.environ.get("RUNMAP_PATH_SNAPSHOT_TTL", 900)),
+            tile_ttl=float(os.environ.get("RUNMAP_PATH_TILE_TTL", 900)),
+            preparation_deadline=float(os.environ.get("RUNMAP_PATH_PREPARATION_DEADLINE", 10)))
     except FileNotFoundError:
         logging.getLogger(__name__).info("Path artifacts unavailable: %s", graph_path)
     except (ValueError, OSError, TypeError, KeyError):
@@ -71,7 +83,8 @@ def paths_config(request: Request):
     if data is None:
         return {"status": request.app.state.path_status,
                 "message": "Path analysis is unavailable. Prepare graph measurements locally."}
-    return path_config(data)
+    return {**path_config(data), "tile_template": tile_template(data, "static/{policy}"),
+            "tile_min_zoom": 10, "tile_max_zoom": 16}
 
 
 def _path_data(request, dataset_id):
@@ -83,16 +96,90 @@ def _path_data(request, dataset_id):
     return data
 
 
+class SnapshotRequest(BaseModel):
+    longitude: float
+    latitude: float
+    dataset_id: str
+    budget_km: float = Field(6, gt=0, le=50)
+    radius_m: float = Field(50, gt=0, le=200)
+    surface: str = "all"
+    avoid_stairs: bool = True
+    segment_id: str | None = None
+
+
+def _tile_service(request: Request, dataset_id: str) -> PathTileService:
+    data = _path_data(request, dataset_id)
+    service = getattr(request.app.state, "path_tiles", None)
+    if service is None or service.data is not data:
+        service = PathTileService(data)
+        request.app.state.path_tiles = service
+    return service
+
+
+@app.post("/api/paths/snapshots")
+def prepare_path_snapshot(request: Request, options: SnapshotRequest) -> JSONResponse:
+    service = _tile_service(request, options.dataset_id)
+    try:
+        result = service.prepare(options.longitude, options.latitude, options.budget_km,
+                                 options.surface, options.avoid_stairs, options.radius_m, options.segment_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(504, str(exc)) from exc
+    return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+
+def _path_tile_response(request: Request, service: PathTileService, version: str,
+                        policy: str, variant: str, z: int, x: int, y: int,
+                        snapshot_id: str | None = None) -> Response:
+    if version != path_render_version(service.data):
+        raise HTTPException(404, "Unknown path rendering version")
+    try:
+        snapshot = service.snapshot(snapshot_id) if snapshot_id else None
+        encoded, hit, elapsed = service.tile(snapshot.policy if snapshot else policy, variant, z, x, y, snapshot)
+    except KeyError as exc:
+        raise HTTPException(410, "Exploration snapshot expired; prepare it again") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    lifetime = max(0, int(snapshot.expires_at - time())) if snapshot else 31536000
+    headers = {
+        "Cache-Control": f"private, max-age={lifetime}" if snapshot else "public, max-age=31536000, immutable",
+        "ETag": 'W/"' + sha256(encoded).hexdigest() + '"',
+        "X-Runmap-Compute-Ms": f"{elapsed:.2f}", "X-Runmap-Cache-Hit": str(hit).lower(),
+        "X-Runmap-Tile-Cache-Bytes": str(service.tiles.bytes),
+        "X-Runmap-Snapshot-Cache-Bytes": str(service.snapshots.bytes),
+        "Vary": "Accept-Encoding",
+    }
+    validators = {value.strip().removeprefix("W/") for value in request.headers.get("if-none-match", "").split(",")}
+    if headers["ETag"].removeprefix("W/") in validators or "*" in validators:
+        return Response(status_code=304, headers=headers)
+    return Response(encoded, media_type="application/vnd.mapbox-vector-tile", headers=headers)
+
+
+@app.get("/api/paths/tiles/v{version}/{dataset_id}/static/{policy}/{variant}/{z}/{x}/{y}.mvt")
+def static_path_tile(request: Request, version: str, dataset_id: str, policy: str,
+                     variant: str, z: int, x: int, y: int) -> Response:
+    return _path_tile_response(request, _tile_service(request, dataset_id), version, policy, variant, z, x, y)
+
+
+@app.get("/api/paths/tiles/v{version}/{dataset_id}/snapshots/{snapshot_id}/{variant}/{z}/{x}/{y}.mvt")
+def explored_path_tile(request: Request, version: str, dataset_id: str, snapshot_id: str,
+                       variant: str, z: int, x: int, y: int) -> Response:
+    return _path_tile_response(request, _tile_service(request, dataset_id), version, "", variant, z, x, y, snapshot_id)
+
+
 @app.get("/api/paths/viewport")
 def paths_viewport(
     request: Request,
     west: float, south: float, east: float, north: float,
     zoom: float = Query(..., ge=0, le=24),
     surface: str = "all", dataset_id: str = None, avoid_stairs: bool = True,
+    hide_building_access: bool = True,
 ):
     data = _path_data(request, dataset_id)
     try:
-        result = viewport_paths(data, (west, south, east, north), zoom, surface, avoid_stairs=avoid_stairs)
+        result = viewport_paths(data, (west, south, east, north), zoom, surface, avoid_stairs=avoid_stairs,
+                                hide_building_access=hide_building_access)
         return JSONResponse(render_paths(result))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -101,14 +188,14 @@ def paths_viewport(
 @app.get("/api/paths/segments/{segment_id}")
 def path_inspection(request: Request, segment_id: str, reverse: bool = False,
                     dataset_id: str = None, surface: str = "all", avoid_stairs: bool = True,
-                    longitude: float = None, latitude: float = None,
+                    longitude: float = None, latitude: float = None, hide_building_access: bool = True,
                     budget_km: float = Query(6, gt=0, le=50),
                     radius_m: float = Query(50, gt=0, le=200), start_segment_id: str = None):
     data = _path_data(request, dataset_id)
     if segment_id not in data.segments:
         raise HTTPException(status_code=404, detail="Unknown path segment")
     try:
-        result = inspect_path(data, segment_id, reverse, surface, avoid_stairs)
+        result = inspect_path(data, segment_id, reverse, surface, avoid_stairs, hide_building_access)
         if longitude is not None or latitude is not None:
             if longitude is None or latitude is None:
                 raise ValueError("Both start coordinates are required")
@@ -137,11 +224,11 @@ def path_exploration(request: Request, west: float, south: float, east: float, n
                      budget_km: float = Query(6, gt=0, le=50),
                      surface: str = "all", avoid_stairs: bool = True,
                      radius_m: float = Query(50, gt=0, le=200), segment_id: str = None,
-                     dataset_id: str = None, metric: str = "gradient"):
+                     dataset_id: str = None, metric: str = "gradient", hide_building_access: bool = True):
     data = _path_data(request, dataset_id)
     try:
         result = explore_paths(data, (west, south, east, north), zoom, longitude, latitude,
-                               budget_km, surface, avoid_stairs, radius_m, segment_id)
+                               budget_km, surface, avoid_stairs, radius_m, segment_id, hide_building_access)
         return JSONResponse(render_paths(result, metric))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

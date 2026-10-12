@@ -13,6 +13,9 @@ Numbered filenames are stable references, not a chronological task queue.
 - [Decisions and open questions](05-decisions.md)
 - [Map-first running exploration and planning](22-map-first-running-plan.md)
 - [M4 implementation plan: path gradients and exploration](23-m4-path-exploration.md)
+- [Building-access filtering and path rendering plan](24-building-access-filter.md)
+- [Tiled path rendering plan](25-tiled-path-rendering.md)
+- [Tiled path implementation and measurements](25-tiled-path-results.md)
 
 ## Working system and experiments
 

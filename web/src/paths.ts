@@ -1,4 +1,4 @@
-import { Marker, type GeoJSONSource, type Map, type ExpressionSpecification } from "maplibre-gl";
+import { Marker, type GeoJSONSource, type Map, type ExpressionSpecification, type AddLayerObject } from "maplibre-gl";
 import type { Feature, FeatureCollection, LineString, Point, Polygon } from "geojson";
 
 interface PathConfig {
@@ -8,6 +8,9 @@ interface PathConfig {
   bounds_wgs84: [number, number, number, number];
   method: { wavelength_m: number; sampling_interval_m: number };
   min_zoom: number;
+  tile_template: string;
+  tile_min_zoom: number;
+  tile_max_zoom: number;
   snap_radius_m: number;
   default_budget_km: number;
   importer_notes: string[];
@@ -56,6 +59,8 @@ interface Inspection {
   valid_length_fraction: number;
   totals_complete: boolean;
   surface_class: string;
+  visibility_reason: string | null;
+  hidden_by_building_access: boolean;
   eligible: boolean;
   traversal_permissions: { forward: boolean; backward: boolean };
   eligibility_reason: string | null;
@@ -64,12 +69,16 @@ interface Inspection {
   method: Record<string, unknown>;
   uphill_sections: { start_m: number; length_m: number; gain_m: number; mean_grade_percent: number; peak_grade_percent: number; uncertain: boolean }[];
 }
-interface Viewport extends FeatureCollection<LineString> {
+interface SnapshotResponse {
   status: string;
   dataset_id: string;
-  coverage_limited: boolean;
+  snapshot_id: string;
+  tile_template: string;
+  expires_at: number;
+  preparation_ms: number;
   start?: StartResponse;
-  label?: string;
+  snap?: Snap | null;
+  requested?: [number, number];
 }
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -145,27 +154,28 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
   const before = map.getStyle().layers?.find(layer => layer.type === "symbol")?.id;
   map.addSource("path-coverage", { type: "geojson", data: { type: "Feature", properties: {}, geometry: config.coverage.geometry } });
   map.addLayer({ id: "path-coverage", type: "line", source: "path-coverage", paint: { "line-color": "#536773", "line-width": 1.5, "line-dasharray": [4, 3] } }, before);
-  for (const id of ["path-intervals", "path-selection", "path-hover", "path-arrows"]) {
+  for (const id of ["path-selection", "path-hover", "path-arrows"]) {
     map.addSource(id, { type: "geojson", data: empty });
   }
-  map.addLayer({ id: "path-hit", type: "line", source: "path-intervals", minzoom: config.min_zoom,
+  map.addSource("path-intervals", { type: "vector", tiles: [config.tile_template.replace("{policy}", "all-no-stairs").replace("{variant}", "gradient-hidden")], bounds: config.bounds_wgs84, minzoom: config.tile_min_zoom, maxzoom: config.tile_max_zoom });
+  map.addLayer({ id: "path-hit", type: "line", source: "path-intervals", "source-layer": "paths", minzoom: config.tile_min_zoom,
     paint: { "line-width": 14, "line-opacity": 0 } }, before);
   map.addLayer({ id: "path-selection", type: "line", source: "path-selection",
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": "#142b40", "line-width": 9, "line-opacity": .8 } }, before);
-  map.addLayer({ id: "path-casing", type: "line", source: "path-intervals", minzoom: config.min_zoom,
+  map.addLayer({ id: "path-casing", type: "line", source: "path-intervals", "source-layer": "paths", minzoom: config.tile_min_zoom,
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": "#fffdf5", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1.5, 15, 6] } }, before);
   const gradeColor: ExpressionSpecification = gradientExpression(stops);
-  map.addLayer({ id: "path-grades", type: "line", source: "path-intervals", minzoom: config.min_zoom,
+  map.addLayer({ id: "path-grades", type: "line", source: "path-intervals", "source-layer": "paths", minzoom: config.tile_min_zoom,
     filter: ["==", ["get", "quality"], "terrain_estimate"],
     layout: { "line-cap": "butt", "line-join": "round" },
     paint: { "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1, 15, 3.5], "line-color": gradeColor } }, before);
-  map.addLayer({ id: "path-uncertain", type: "line", source: "path-intervals", minzoom: config.min_zoom,
+  map.addLayer({ id: "path-uncertain", type: "line", source: "path-intervals", "source-layer": "paths", minzoom: config.tile_min_zoom,
     filter: ["!=", ["get", "quality"], "terrain_estimate"],
     paint: { "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1, 15, 3.5], "line-dasharray": [1.5, 1],
       "line-color": ["match", ["get", "quality"], "missing", "#727980", "#8b619e"] } }, before);
-  map.addLayer({ id: "path-stairs", type: "line", source: "path-intervals", minzoom: config.min_zoom,
+  map.addLayer({ id: "path-stairs", type: "line", source: "path-intervals", "source-layer": "paths", minzoom: config.tile_min_zoom,
     filter: ["==", ["get", "stairs"], true],
     paint: { "line-width": 1.5, "line-color": "#182e36", "line-dasharray": [.5, 3] } }, before);
   map.addLayer({ id: "path-hover", type: "line", source: "path-hover",
@@ -265,6 +275,10 @@ function renderInspection(map: Map, result: Inspection): void {
   const tags = result.segment.tags;
   content.replaceChildren(text("h2", tags.name || "Unnamed segment"),
     text("p", `${tags.highway || "path"} · ${result.segment.length_m.toFixed(0)} m · ${result.surface_class} surface`, "segment-subtitle"));
+  if (result.visibility_reason) {
+    const reason = result.visibility_reason === "building_access_driveway" ? "Building-access driveway" : "Dead end leading to a building entrance";
+    content.append(text("p", `${reason}. ${result.hidden_by_building_access ? "Hidden from path colors." : "Shown because the building-access filter is off."}`, "quality-note"));
+  }
   if (!result.eligible) content.append(text("p", `Excluded by current eligibility: ${result.eligibility_reason}. Geometry remains available for inspection.`, "quality-note"));
   if (result.outing_label) content.append(text("p", result.outing_label, "explanation"));
   const stats = text("p", `↑ ${result.ascent_m.toFixed(1)} m   ↓ ${result.descent_m.toFixed(1)} m`, "segment-stats");
@@ -306,6 +320,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   const metric = element<HTMLSelectElement>("path-metric");
   const filter = element<HTMLSelectElement>("path-surface");
   const avoidStairs = element<HTMLInputElement>("path-avoid-stairs");
+  const hideBuildingAccess = element<HTMLInputElement>("path-hide-building-access");
   const flatter = element<HTMLInputElement>("path-flatter");
   const enabled = element<HTMLInputElement>("outing-enabled");
   const budget = element<HTMLInputElement>("outing-budget");
@@ -328,7 +343,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   element("path-importer-notes").replaceChildren(...config.importer_notes.map(note => text("li", note)));
   budget.value = String(config.default_budget_km);
   radius.value = String(config.snap_radius_m);
-  for (const control of [metric, filter, avoidStairs, flatter, enabled, budget, radius, setStart]) control.disabled = false;
+  for (const control of [metric, filter, avoidStairs, hideBuildingAccess, flatter, enabled, budget, radius, setStart]) control.disabled = false;
   addPathLayers(map, config, stops);
   element("path-gradient-ramp").style.background = `linear-gradient(to right, ${stops.map(stop => `${gradientLegendColor(stop)} ${100 * stop.percent / 40}%`).join(", ")})`;
   element("path-gradient-ticks").textContent = stops.map(stop => `${stop.percent}%`).join(" · ");
@@ -354,6 +369,13 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   let viewportAbort: AbortController | undefined;
   let inspectionAbort: AbortController | undefined;
   let viewportSequence = 0;
+  let activeSource = "path-intervals";
+  let sourceGeneration = 0;
+  let snapshotKey = "";
+  let currentSnapshot: SnapshotResponse | undefined;
+  let expiryRetried = false;
+  let preparing = false;
+  let tileFailed = false;
   let inspectionSequence = 0;
   let selected: string | undefined;
   let requestedStart: [number, number] | undefined;
@@ -384,7 +406,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     outingStatus.textContent = `Requested ${requestedStart[1].toFixed(5)}, ${requestedStart[0].toFixed(5)} → snapped ${snap.latitude.toFixed(5)}, ${snap.longitude.toFixed(5)} · ${snap.offset_m.toFixed(1)} m offset.`;
   }
   function parameters(): URLSearchParams {
-    return new URLSearchParams({ surface: filter.value, avoid_stairs: String(avoidStairs.checked), dataset_id: config.dataset_id });
+    return new URLSearchParams({ surface: filter.value, avoid_stairs: String(avoidStairs.checked), hide_building_access: String(hideBuildingAccess.checked), dataset_id: config.dataset_id });
   }
   function addOutingParameters(params: URLSearchParams): boolean {
     if (!enabled.checked || !requestedStart) return false;
@@ -392,33 +414,118 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     params.set("budget_km", budget.value); params.set("radius_m", radius.value);
     return true;
   }
+  function installTiles(template?: string): void {
+    const oldSource = activeSource;
+    activeSource = `path-tiles-${++sourceGeneration}`;
+    map.addSource(activeSource, { type: "vector", tiles: [template || config.tile_template.replace("{policy}", policy()).replace("{variant}", "gradient-hidden")
+      .replace("{z}", "0").replace("{x}", "0").replace("{y}", "0")],
+      bounds: config.bounds_wgs84, minzoom: config.tile_min_zoom, maxzoom: config.tile_max_zoom });
+    const layers = map.getStyle().layers || [];
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      if (!("source" in layer) || layer.source !== oldSource) continue;
+      const before = layers[i + 1]?.id;
+      map.removeLayer(layer.id);
+      map.addLayer({ ...layer, source: activeSource } as AddLayerObject, before);
+    }
+    map.removeSource(oldSource);
+    tileFailed = false;
+  }
+  function variant(): string {
+    return `${metric.value}-${hideBuildingAccess.checked ? "hidden" : "all"}`;
+  }
+  function policy(): string {
+    return `${filter.value}-${avoidStairs.checked ? "no-stairs" : "stairs"}`;
+  }
+  function updateLodLegend(): void {
+    const zoom = Math.floor(map.getZoom());
+    const note = element("path-lod-note");
+    note.hidden = zoom < config.tile_min_zoom || zoom > 14;
+    note.textContent = metric.value === "distance"
+      ? `Zoomed-out distance colors use ${zoom <= 12 ? 250 : 125} m bins. Inspection shows original samples.`
+      : `Zoomed-out grade colors use ${zoom <= 12 ? 2 : 1}% bins, rounded up. Inspection shows original samples.`;
+  }
+  function coverageStatus(): void {
+    updateLodLegend();
+    if (preparing || tileFailed) return;
+    const bounds = map.getBounds();
+    const [w, s, e, n] = config.bounds_wgs84;
+    if (map.getZoom() < config.tile_min_zoom) {
+      setStatus("Zoom in for path colors.", "zoom_in"); context(false);
+    } else if (bounds.getEast() < w || bounds.getWest() > e || bounds.getNorth() < s || bounds.getSouth() > n) {
+      setStatus("Outside prepared path coverage. Basemap paths are context.", "outside_coverage"); context(false);
+    } else {
+      context(true);
+      const crosses = bounds.getWest() < w || bounds.getEast() > e || bounds.getSouth() < s || bounds.getNorth() > n;
+      setStatus(map.isSourceLoaded(activeSource)
+        ? `Click a path to inspect${crosses ? " · view crosses prepared coverage boundary" : ""}`
+        : "Loading path tiles…", map.isSourceLoaded(activeSource) ? "ready" : "loading");
+    }
+  }
   async function updateViewport(): Promise<void> {
+    const params = parameters();
+    const outing = addOutingParameters(params);
+    // Visibility and metric select tile variants; they never invalidate routing.
+    params.delete("hide_building_access");
+    const key = outing ? params.toString() : "";
+    if (outing && key === snapshotKey && preparing) return;
     viewportAbort?.abort();
     viewportAbort = new AbortController();
     const sequence = ++viewportSequence;
-    const bounds = map.getBounds();
-    const params = parameters();
-    for (const [key, value] of Object.entries({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth(), zoom: map.getZoom() })) params.set(key, String(value));
-    const outing = addOutingParameters(params);
-    params.set("metric", metric.value);
-    setStatus(outing ? "Calculating outing inclusion…" : "Loading path measurements…", "loading");
+    if (!outing) {
+      preparing = false; currentSnapshot = undefined; snapshotKey = "";
+      installTiles(config.tile_template.replace("{policy}", policy()).replace("{variant}", variant()));
+      showStart(); coverageStatus(); return;
+    }
+    if (key === snapshotKey && currentSnapshot && currentSnapshot.expires_at * 1000 > Date.now()) {
+      installTiles(currentSnapshot.tile_template.replace("{variant}", variant()));
+      showStart(currentSnapshot.start); coverageStatus(); return;
+    }
+    if (key !== snapshotKey) expiryRetried = false;
+    snapshotKey = key; currentSnapshot = undefined; preparing = true;
+    installTiles(); context(false); showStart();
+    setStatus("Calculating paths from this start…", "loading");
     try {
-      const result = await request<Viewport>(`/api/paths/${outing ? "explore" : "viewport"}?${params}`, viewportAbort.signal);
+      const response = await fetch("/api/paths/snapshots", {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: viewportAbort.signal,
+        body: JSON.stringify({ dataset_id: config.dataset_id, longitude: requestedStart![0], latitude: requestedStart![1],
+          surface: filter.value, avoid_stairs: avoidStairs.checked, budget_km: Number(budget.value), radius_m: Number(radius.value) }),
+      });
+      if (!response.ok) {
+        const error = await response.json() as { detail?: string };
+        throw new Error(error.detail || `Snapshot request failed (${response.status}).`);
+      }
+      const result = await response.json() as SnapshotResponse;
       if (sequence !== viewportSequence) return;
+      preparing = false;
       if (result.dataset_id !== config.dataset_id) throw new Error("Dataset changed — reload the map.");
-      setData(map, "path-intervals", result);
+      if (result.status === "no_eligible_snap") {
+        showStart({ status: result.status, snap: null, requested: requestedStart! });
+        setStatus("Start could not be snapped to an eligible path.", "no_eligible_snap"); return;
+      }
+      currentSnapshot = result;
+      installTiles(result.tile_template.replace("{variant}", variant()));
       showStart(result.start);
-      context(result.status === "ready");
-      if (result.status === "outside_coverage") setStatus("Outside prepared path coverage. Basemap paths are context.", "outside_coverage");
-      else if (result.status === "zoom_in") setStatus("Zoom in for path gradients. Neutral paths remain context.", "zoom_in");
-      else if (result.status === "no_eligible_snap") setStatus("Start could not be snapped to an eligible path.", "no_eligible_snap");
-      else setStatus(`${result.features.length.toLocaleString()} path sections${result.coverage_limited ? " · view crosses prepared coverage boundary" : " · click a path to inspect"}`, "ready");
+      outingStatus.textContent += ` Prepared in ${(result.preparation_ms / 1000).toFixed(2)} s.`;
+      coverageStatus();
     } catch (error) {
       if (sequence !== viewportSequence || (error as Error).name === "AbortError") return;
-      setData(map, "path-intervals", empty); context(false);
+      preparing = false; tileFailed = true; context(false);
       setStatus(`Path request failed. ${(error as Error).message}`, "failed");
     }
   }
+  map.on("sourcedata", event => { if (event.sourceId === activeSource) coverageStatus(); });
+  map.on("error", event => {
+    const error = event.error as Error & { status?: number; url?: string };
+    const sourceId = (event as unknown as { sourceId?: string }).sourceId;
+    const isCurrent = sourceId === activeSource || (currentSnapshot && error.url?.includes(`/snapshots/${currentSnapshot.snapshot_id}/`));
+    if (!isCurrent || preparing) return;
+    if (error.status === 410 && currentSnapshot && !expiryRetried) {
+      expiryRetried = true; currentSnapshot = undefined; void updateViewport(); return;
+    }
+    tileFailed = true;
+    setStatus(`Path tile failed to load. ${error.message}`, "failed");
+  });
   async function inspectSelected(): Promise<void> {
     inspectionAbort?.abort();
     inspectionAbort = new AbortController();
@@ -444,11 +551,11 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     }
   }
   function refresh(): void { updateMetric(); void updateViewport(); void inspectSelected(); }
-  map.on("movestart", () => { viewportAbort?.abort(); viewportSequence++; });
-  map.on("moveend", () => { void updateViewport(); });
-  for (const input of [filter, avoidStairs]) input.addEventListener("change", () => refresh());
+  map.on("moveend", coverageStatus);
+  for (const input of [filter, avoidStairs, hideBuildingAccess]) input.addEventListener("change", () => refresh());
   for (const input of [budget, radius]) input.addEventListener("change", () => { if (input.reportValidity()) refresh(); });
   function updateMetric(): void {
+    updateLodLegend();
     const distance = metric.value === "distance";
     const maximumKm = enabled.checked ? Number(budget.value) : 10;
     renderDistanceLegend(maximumKm);
@@ -460,8 +567,8 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     element("gradient-legend").hidden = distance;
     element("distance-legend").hidden = !distance;
     element("metric-note").textContent = distance
-      ? "Shortest legal network distance from the snapped start to each interval midpoint. Purple colors show paths included within the round-trip outing budget; the color scale spans zero to that budget. Gray: beyond budget, excluded, unreachable, or distance unavailable. Terrain uncertainty remains in inspection."
-      : "Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.";
+      ? "Shortest legal network distance from the snapped start to each interval midpoint. Purple colors show paths included within the forward distance budget; the color scale spans zero to that budget. Gray: beyond budget, excluded, unreachable, or distance unavailable. Terrain uncertainty remains in inspection."
+      : "Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.";
     flatter.disabled = distance;
     applyPathEmphasis(map, !distance && flatter.checked, distance);
   }
@@ -488,7 +595,8 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
       requestedStart = [event.lngLat.lng, event.lngLat.lat]; enabled.checked = true;
       chooseStartMode(false); showStart(); outingStatus.textContent = "Snapping to an eligible path…"; refresh(); return;
     }
-    const feature = map.queryRenderedFeatures(event.point, { layers: ["path-hit"] })[0];
+    const hits = map.queryRenderedFeatures(event.point, { layers: ["path-hit"] });
+    const feature = [...new globalThis.Map(hits.map(hit => [hit.properties.segment_id, hit])).values()][0];
     const id = feature?.properties.segment_id as string | undefined;
     if (!id) return;
     selected = id; reverse.checked = false; void inspectSelected();
@@ -500,5 +608,6 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     inspectionAbort?.abort(); inspectionSequence++; selected = undefined; panel.hidden = true;
     for (const source of ["path-selection", "path-hover", "path-arrows"]) setData(map, source, empty);
   });
+  updateMetric();
   await updateViewport();
 }

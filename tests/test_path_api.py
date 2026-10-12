@@ -7,7 +7,8 @@ import unittest
 from unittest.mock import patch
 
 from runmap.api.app import app, lifespan
-from runmap.api.paths import load_path_data, path_config, viewport_paths, inspect_path, uphill_sections, render_paths
+from runmap.api.paths import (load_path_data, path_config, viewport_paths, inspect_path,
+                              uphill_sections, render_paths, explore_paths, snap_path_start, _build_display_index)
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import graph_digest
 from runmap.routing.profiles import surface_category, exploration_profile
@@ -51,6 +52,45 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual(config["method"]["manifest_id"], "fixture")
         self.assertEqual(config["grade_bands_percent"], [0, 2, 5, 8])
         self.assertEqual(config["coverage"]["kind"], "geometry_envelope")
+
+    def test_building_filter_precedes_interval_work_and_preserves_start(self) -> None:
+        from runmap.routing.search import build_graph_index
+        graph = copy.deepcopy(self.data.graph)
+        graph["segments"][0]["tags"] = {"highway": "service", "service": "driveway"}
+        # A physical self-loop anchors the dangling segment to a surviving core.
+        loop = {**graph["segments"][0], "id": "loop", "to": "1"}
+        graph["segments"].append(loop)
+        graph["arcs"].append({"id": "loop:f", "segment_id": "loop", "from": "1", "to": "1", "length_m": 220})
+        coverage = {"kind": "prepared_extract", "geometry": {"type": "Polygon", "coordinates": [[
+            [24.7, 60.1], [24.9, 60.1], [24.9, 60.3], [24.7, 60.3], [24.7, 60.1]]]}}
+        data = _build_display_index(replace(self.data, graph=graph, routing=build_graph_index(graph),
+                                            coverage=coverage, bounds=(24.7, 60.1, 24.9, 60.3)))
+        self.assertEqual(set(data.building_access), {"s"})
+        bounds = (24.799, 60.199, 24.805, 60.201)
+        for surface in ("all", "surfaced"):
+            for stairs in (True, False):
+                hidden = viewport_paths(data, bounds, 15, surface, max_features=0, avoid_stairs=stairs)
+                self.assertEqual((hidden["status"], hidden["features"]), ("ready", []))
+        restored = viewport_paths(data, bounds, 15, hide_building_access=False)
+        self.assertEqual(len(restored["features"]), 4)
+        self.assertEqual(viewport_paths(data, bounds, 15, max_features=0,
+                                       hide_building_access=False)["reason"], "feature_limit")
+        for metric in ("gradient", "distance"):
+            self.assertFalse(render_paths(viewport_paths(data, bounds, 15), metric)["features"])
+            with patch("runmap.api.paths._interval_state", side_effect=AssertionError("hidden interval evaluated")):
+                result = explore_paths(data, bounds, 15, 24.801, 60.2)
+                self.assertEqual(result["status"], "ready")
+                self.assertFalse(render_paths(result, metric)["features"])
+            result = explore_paths(data, bounds, 15, 24.801, 60.2, hide_building_access=False)
+            self.assertEqual(len(result["features"]), 4)
+            self.assertTrue(result["distance_cache_hit"])
+        self.assertEqual(snap_path_start(data, 24.801, 60.2)["snap"]["segment_id"], "s")
+        inspection = inspect_path(data, "s")
+        self.assertTrue(inspection["eligible"])
+        self.assertTrue(inspection["hidden_by_building_access"])
+        self.assertEqual(inspection["visibility_reason"], "building_access_driveway")
+        self.assertFalse(inspect_path(data, "s", hide_building_access=False)["hidden_by_building_access"])
+        self.assertEqual(path_config(data)["building_access_filter"]["hidden_intervals"], 4)
 
     def test_viewport_returns_complete_intervals_including_crossings(self):
         result = viewport_paths(self.data, (24.8004, 60.1999, 24.8006, 60.2001), 15)
@@ -185,6 +225,24 @@ async def get(url):
 
 
 class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
+    async def test_building_filter_option_on_all_endpoints(self) -> None:
+        from runmap.paths.dead_ends import Classification
+        with TemporaryDirectory() as directory:
+            paths = write_graph_outputs(fixture(), directory)
+            data = load_path_data(paths["graph"])
+            app.state.paths = replace(data, display_cells={}, building_access={
+                "s": Classification("building_access_entrance", "s", "1", 100, ("entrance=yes",))})
+            query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15"
+            for endpoint in (f"viewport?{query}",
+                             f"explore?{query}&longitude=24.801&latitude=60.2&metric=gradient",
+                             f"explore?{query}&longitude=24.801&latitude=60.2&metric=distance"):
+                code, hidden = await get(f"/api/paths/{endpoint}")
+                self.assertEqual((code, hidden["status"], hidden["features"]), (200, "ready", []))
+                _, visible = await get(f"/api/paths/{endpoint}&hide_building_access=false")
+                self.assertEqual({item["properties"]["segment_id"] for item in visible["features"]}, {"s"})
+            self.assertTrue((await get("/api/paths/segments/s"))[1]["hidden_by_building_access"])
+            self.assertFalse((await get("/api/paths/segments/s?hide_building_access=false"))[1]["hidden_by_building_access"])
+
     async def test_api_success_missing_invalid_and_stale_identity(self):
         with TemporaryDirectory() as directory:
             paths = write_graph_outputs(fixture(), directory)

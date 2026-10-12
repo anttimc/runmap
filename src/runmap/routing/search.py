@@ -5,6 +5,7 @@ from collections.abc import Iterable, Mapping, Sequence, Set
 from dataclasses import dataclass, field, replace
 import heapq
 import math
+from time import monotonic
 
 from runmap.routing.types import Arc, Coordinate, EdgeProfile, GraphDocument, Node, RouteMetrics, Segment
 
@@ -252,6 +253,7 @@ def shortest_path(
 def shortest_distances(
     index: GraphData, start: str, maximum: float = math.inf,
     blocked_segments: Set[str] = frozenset(), reverse: bool = False,
+    deadline: float | None = None,
 ) -> dict[str, float]:
     """Calculate distances from a start in the directed graph or its reverse."""
     if start not in index.nodes:
@@ -261,6 +263,8 @@ def shortest_distances(
     distances = {start: 0.0}
     queue = [(0.0, start)]
     while queue:
+        if deadline is not None and monotonic() > deadline:
+            raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
         distance, node_id = heapq.heappop(queue)
         if distance != distances.get(node_id):
             continue
@@ -356,12 +360,15 @@ def route_coordinates(index: GraphData, arc_ids: Iterable[str]) -> list[Coordina
     return coordinates
 
 
-def reachable_nodes(index: GraphData, start: str, reverse: bool = False) -> set[str]:
+def reachable_nodes(index: GraphData, start: str, reverse: bool = False,
+                    deadline: float | None = None) -> set[str]:
     """Connectivity only: distinguish absent connections from bounded distances."""
     if start in index.blocked_nodes:
         return set()
     seen, queue = {start}, [start]
     while queue:
+        if deadline is not None and monotonic() > deadline:
+            raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
         node = queue.pop()
         adjacency = index.incoming if reverse else index.outgoing
         for arc_id in adjacency.get(node, ()):

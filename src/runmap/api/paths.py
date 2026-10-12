@@ -1,7 +1,7 @@
 """File-backed path exploration; requests never import OSM or sample terrain."""
 
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 import json
 import math
 from pathlib import Path
@@ -9,6 +9,8 @@ from pathlib import Path
 from rasterio.warp import transform
 
 from runmap.paths.measurements import MeasurementData, graph_digest, inspect_measurements, load_measurements
+from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
+                                   Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile
 from runmap.routing.search import GraphData, build_graph_index, apply_profile
 from runmap.paths.exploration import (ExplorationCache, Snap, cached_distances, distance_from_start, interval_inclusion, legal_directions, segment_reason, snap_candidates)
@@ -31,6 +33,8 @@ class PathData:
     bounds: tuple
     dataset_id: str
     routing: GraphData
+    display_cells: dict[tuple[int, int], list[int]] = field(default_factory=dict)
+    building_access: dict[str, Classification] = field(default_factory=dict)
     profile_indexes: dict = field(default_factory=dict)
     boundary_intervals: dict = field(default_factory=dict)
     exploration_cache: ExplorationCache = field(default_factory=ExplorationCache)
@@ -138,14 +142,33 @@ def load_path_data(graph_path):
     if not features:
         raise ValueError("Path measurements contain no display intervals")
     coverage, kind = _coverage(graph)
-    return PathData(graph, measurements, segments, tuple(features), dict(cells),
+    data = PathData(graph, measurements, segments, tuple(features), dict(cells),
                     {"geometry": coverage, "kind": kind},
                     _bounds(coverage["coordinates"][0]), graph_digest(graph), build_graph_index(graph))
+    return _build_display_index(data)
+
+
+def _build_display_index(data: PathData) -> PathData:
+    classified = classify_building_access(
+        data.routing, lambda geometry: _near_boundary(data, geometry),
+        data.coverage["kind"] == "prepared_extract")
+    visible = {i for i, feature in enumerate(data.features)
+               if feature["properties"]["segment_id"] not in classified}
+    cells = {cell: [i for i in indexes if i in visible] for cell, indexes in data.cells.items()}
+    return replace(data, building_access=classified, display_cells=cells)
 
 
 def path_config(data):
     return {
         "status": "ready", "dataset_id": data.dataset_id,
+        "building_access_filter": {
+            "default": True, "classifier_version": CLASSIFIER_VERSION,
+            "access_policy": ACCESS_POLICY, "entrance_limit_m": ENTRANCE_LIMIT_M,
+            "cache_identity": [data.dataset_id, ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M],
+            "hidden_segments": len(data.building_access),
+            "hidden_intervals": sum(feature["properties"]["segment_id"] in data.building_access
+                                    for feature in data.features),
+        },
         "coverage": data.coverage, "bounds_wgs84": data.bounds,
         "method": data.measurements.document["method"],
         "initial_view": {
@@ -168,7 +191,19 @@ def path_config(data):
     }
 
 
-def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES, avoid_stairs=True):
+def candidate_path_indexes(data: PathData, bounds: tuple[float, float, float, float],
+                           hide_building_access: bool) -> list[int]:
+    """Query prepared intervals independently of viewport delivery limits."""
+    if not _overlap(bounds, data.bounds):
+        return []
+    clipped = (max(bounds[0], data.bounds[0]), max(bounds[1], data.bounds[1]),
+               min(bounds[2], data.bounds[2]), min(bounds[3], data.bounds[3]))
+    cells = data.display_cells if hide_building_access else data.cells
+    return sorted({i for cell in _cells(clipped) for i in cells.get(cell, ())})
+
+
+def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES, avoid_stairs=True,
+                   hide_building_access: bool = True):
     if len(bounds) != 4 or not all(math.isfinite(value) for value in bounds):
         raise ValueError("Viewport needs four finite WGS84 bounds")
     west, south, east, north = bounds
@@ -188,12 +223,7 @@ def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES,
     area = (east - west) * (north - south) * 111.32 ** 2 * math.cos(math.radians((north + south) / 2))
     if zoom < MIN_ZOOM or area > MAX_AREA_KM2:
         return {**response, "status": "zoom_in", "reason": "zoom" if zoom < MIN_ZOOM else "area"}
-    # Clip the index query to coverage, bounding the number of grid cells visited.
-    clipped = (max(west, data.bounds[0]), max(south, data.bounds[1]),
-               min(east, data.bounds[2]), min(north, data.bounds[3]))
-    candidates = set()
-    for cell in _cells(clipped):
-        candidates.update(data.cells.get(cell, ()))
+    candidates = candidate_path_indexes(data, bounds, hide_building_access)
     policy_index = path_policy_index(data, surface, avoid_stairs)
     features = []
     reasons = {}
@@ -239,12 +269,17 @@ def uphill_sections(intervals):
     return sections
 
 
-def inspect_path(data, segment_id, reverse=False, surface="all", avoid_stairs=True):
+def inspect_path(data, segment_id, reverse=False, surface="all", avoid_stairs=True,
+                 hide_building_access: bool = True):
     result = inspect_measurements(data.measurements, segment_id, reverse=reverse)
     policy_index = path_policy_index(data, surface, avoid_stairs)
     reason = segment_reason(policy_index, segment_id)
     directions = legal_directions(policy_index, segment_id) if reason is None else set()
+    classification = data.building_access.get(segment_id)
     return {**result, "dataset_id": data.dataset_id, "segment": data.segments[segment_id],
+            "visibility_reason": classification.reason if classification else None,
+            "hidden_by_building_access": hide_building_access and classification is not None,
+            "building_access": asdict(classification) if classification else None,
             "traversal_permissions": {"forward": True in directions, "backward": False in directions},
             "eligible": reason is None,
             "eligibility_reason": reason,
@@ -294,7 +329,8 @@ def _near_boundary(data, geometry):
     return False
 
 
-def exploration_context(data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id):
+def exploration_context(data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id,
+                        deadline: float | None = None):
     if not math.isfinite(budget_km) or not 0 < budget_km <= 50:
         raise ValueError("Budget must be greater than zero and at most 50 km")
     snap_response = snap_path_start(data, longitude, latitude, surface, avoid_stairs, radius_m, segment_id)
@@ -302,7 +338,7 @@ def exploration_context(data, longitude, latitude, budget_km, surface, avoid_sta
     if not snap_response["snap"]:
         return index, None, snap_response, False
     snap = Snap(**snap_response["snap"])
-    distances, hit = cached_distances(data.exploration_cache, data.dataset_id, index, snap, budget_km * 1000)
+    distances, hit = cached_distances(data.exploration_cache, data.dataset_id, index, snap, budget_km * 1000, deadline)
     return index, distances, snap_response, hit
 
 
@@ -318,8 +354,9 @@ def _interval_state(data, index, distances, interval, budget_km):
 
 
 def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=6, surface="all",
-                  avoid_stairs=True, radius_m=50, segment_id=None):
-    response = viewport_paths(data, bounds, zoom, surface, avoid_stairs=avoid_stairs)
+                  avoid_stairs=True, radius_m=50, segment_id=None, hide_building_access: bool = True):
+    response = viewport_paths(data, bounds, zoom, surface, avoid_stairs=avoid_stairs,
+                              hide_building_access=hide_building_access)
     index, distances, snap_response, hit = exploration_context(
         data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id)
     response.update(start=snap_response, budget_km=budget_km,

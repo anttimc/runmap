@@ -1,0 +1,1439 @@
+{
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "start": [
+    24.80259,
+    60.21682
+  ],
+  "budget_km": 6,
+  "canvas": [
+    756,
+    469
+  ],
+  "warm_repeats": 3,
+  "methodology": "Local HTTP fetch and JSON parse, then shared GeoJSON setData to sourcedata isSourceLoaded, then two animation frames. Server caches may already be warm. Headless Chrome; initial gradient layer styling retained for source comparisons. Automatic viewport fetching disabled during this isolated measurement.",
+  "viewports": [
+    {
+      "viewport": "urban",
+      "zoom": 11,
+      "mode": "gradient",
+      "bounds": [
+        24.737,
+        60.179,
+        24.877,
+        60.259
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 2001.9000000059605,
+            "fetchAndParseMs": 2171.699999988079,
+            "sourceUpdateMs": 810.8000000119209,
+            "totalToFrameMs": 2995.5999999940395,
+            "features": 195069
+          },
+          "warm": [
+            {
+              "headersMs": 2145,
+              "fetchAndParseMs": 2306.7000000178814,
+              "sourceUpdateMs": 792.7999999821186,
+              "totalToFrameMs": 3116.4000000059605,
+              "features": 195069
+            },
+            {
+              "headersMs": 1979.7000000178814,
+              "fetchAndParseMs": 2131.800000011921,
+              "sourceUpdateMs": 750.6999999880791,
+              "totalToFrameMs": 2900.0999999940395,
+              "features": 195069
+            },
+            {
+              "headersMs": 2348.9000000059605,
+              "fetchAndParseMs": 2489.100000023842,
+              "sourceUpdateMs": 735.1999999880791,
+              "totalToFrameMs": 3232.100000023842,
+              "features": 195069
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 1851,
+            "fetchAndParseMs": 1993.9000000059605,
+            "sourceUpdateMs": 686,
+            "totalToFrameMs": 2700.0999999940395,
+            "features": 179259
+          },
+          "warm": [
+            {
+              "headersMs": 1824.6000000238419,
+              "fetchAndParseMs": 1971.5,
+              "sourceUpdateMs": 675.1000000238419,
+              "totalToFrameMs": 2649.100000023842,
+              "features": 179259
+            },
+            {
+              "headersMs": 1825.699999988079,
+              "fetchAndParseMs": 1958.7999999821186,
+              "sourceUpdateMs": 669.3000000119209,
+              "totalToFrameMs": 2633.5,
+              "features": 179259
+            },
+            {
+              "headersMs": 1795.5999999940395,
+              "fetchAndParseMs": 1935.199999988079,
+              "sourceUpdateMs": 686,
+              "totalToFrameMs": 2633.5999999940395,
+              "features": 179259
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "zoom": 11,
+      "mode": "gradient_explore",
+      "bounds": [
+        24.737,
+        60.179,
+        24.877,
+        60.259
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 3870.2000000178814,
+            "fetchAndParseMs": 4049.5,
+            "sourceUpdateMs": 795.5999999940395,
+            "totalToFrameMs": 4849.9000000059605,
+            "features": 195069
+          },
+          "warm": [
+            {
+              "headersMs": 2746.800000011921,
+              "fetchAndParseMs": 2919.800000011921,
+              "sourceUpdateMs": 753.2999999821186,
+              "totalToFrameMs": 3682.9000000059605,
+              "features": 195069
+            },
+            {
+              "headersMs": 3922.5,
+              "fetchAndParseMs": 4107.0999999940395,
+              "sourceUpdateMs": 769.3000000119209,
+              "totalToFrameMs": 4882.9000000059605,
+              "features": 195069
+            },
+            {
+              "headersMs": 2752.0999999940395,
+              "fetchAndParseMs": 2959,
+              "sourceUpdateMs": 802.0999999940395,
+              "totalToFrameMs": 3766.199999988079,
+              "features": 195069
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 4827.300000011921,
+            "fetchAndParseMs": 5014.700000017881,
+            "sourceUpdateMs": 810.2999999821186,
+            "totalToFrameMs": 5833.4000000059605,
+            "features": 179259
+          },
+          "warm": [
+            {
+              "headersMs": 3286.2000000178814,
+              "fetchAndParseMs": 3436.7000000178814,
+              "sourceUpdateMs": 705.3999999761581,
+              "totalToFrameMs": 4149.700000017881,
+              "features": 179259
+            },
+            {
+              "headersMs": 3048.5,
+              "fetchAndParseMs": 3187.199999988079,
+              "sourceUpdateMs": 706.1999999880791,
+              "totalToFrameMs": 3899.7999999821186,
+              "features": 179259
+            },
+            {
+              "headersMs": 3372.800000011921,
+              "fetchAndParseMs": 3533.2000000178814,
+              "sourceUpdateMs": 733.0999999940395,
+              "totalToFrameMs": 4283.5,
+              "features": 179259
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "zoom": 11,
+      "mode": "distance_explore",
+      "bounds": [
+        24.737,
+        60.179,
+        24.877,
+        60.259
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 3184.0999999940395,
+            "fetchAndParseMs": 3334.800000011921,
+            "sourceUpdateMs": 739,
+            "totalToFrameMs": 4083.0999999940395,
+            "features": 185585
+          },
+          "warm": [
+            {
+              "headersMs": 3560.2000000178814,
+              "fetchAndParseMs": 3731,
+              "sourceUpdateMs": 759.2000000178814,
+              "totalToFrameMs": 4499.9000000059605,
+              "features": 185585
+            },
+            {
+              "headersMs": 3534.800000011921,
+              "fetchAndParseMs": 3694.800000011921,
+              "sourceUpdateMs": 756.0999999940395,
+              "totalToFrameMs": 4466.5,
+              "features": 185585
+            },
+            {
+              "headersMs": 3282.5999999940395,
+              "fetchAndParseMs": 3435.2000000178814,
+              "sourceUpdateMs": 739.5,
+              "totalToFrameMs": 4183,
+              "features": 185585
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 3105.800000011921,
+            "fetchAndParseMs": 3256.600000023842,
+            "sourceUpdateMs": 676.5,
+            "totalToFrameMs": 3949.800000011921,
+            "features": 170122
+          },
+          "warm": [
+            {
+              "headersMs": 3031.0999999940395,
+              "fetchAndParseMs": 3169.0999999940395,
+              "sourceUpdateMs": 682.0999999940395,
+              "totalToFrameMs": 3866.5,
+              "features": 170122
+            },
+            {
+              "headersMs": 2994,
+              "fetchAndParseMs": 3135.9000000059605,
+              "sourceUpdateMs": 676.5999999940395,
+              "totalToFrameMs": 3815.9000000059605,
+              "features": 170122
+            },
+            {
+              "headersMs": 3001.4000000059605,
+              "fetchAndParseMs": 3133.9000000059605,
+              "sourceUpdateMs": 673.9000000059605,
+              "totalToFrameMs": 3817.199999988079,
+              "features": 170122
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "zoom": 13,
+      "mode": "gradient",
+      "bounds": [
+        24.782,
+        60.206,
+        24.831999999999997,
+        60.232
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 397.30000001192093,
+            "fetchAndParseMs": 429.60000002384186,
+            "sourceUpdateMs": 547,
+            "totalToFrameMs": 998.1000000238419,
+            "features": 42862
+          },
+          "warm": [
+            {
+              "headersMs": 1248.7999999821186,
+              "fetchAndParseMs": 1279.0999999940395,
+              "sourceUpdateMs": 152.19999998807907,
+              "totalToFrameMs": 1451.3999999761581,
+              "features": 42862
+            },
+            {
+              "headersMs": 326.2000000178814,
+              "fetchAndParseMs": 356.30000001192093,
+              "sourceUpdateMs": 153,
+              "totalToFrameMs": 515.6000000238419,
+              "features": 42862
+            },
+            {
+              "headersMs": 329,
+              "fetchAndParseMs": 359,
+              "sourceUpdateMs": 159.5,
+              "totalToFrameMs": 533.5999999940395,
+              "features": 42862
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 294,
+            "fetchAndParseMs": 320.69999998807907,
+            "sourceUpdateMs": 147,
+            "totalToFrameMs": 482.7999999821186,
+            "features": 40402
+          },
+          "warm": [
+            {
+              "headersMs": 772,
+              "fetchAndParseMs": 797.2000000178814,
+              "sourceUpdateMs": 142.7999999821186,
+              "totalToFrameMs": 949.6000000238419,
+              "features": 40402
+            },
+            {
+              "headersMs": 302.59999999403954,
+              "fetchAndParseMs": 328.59999999403954,
+              "sourceUpdateMs": 148,
+              "totalToFrameMs": 484,
+              "features": 40402
+            },
+            {
+              "headersMs": 302.5,
+              "fetchAndParseMs": 331,
+              "sourceUpdateMs": 170.69999998807907,
+              "totalToFrameMs": 516.8999999761581,
+              "features": 40402
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "zoom": 13,
+      "mode": "gradient_explore",
+      "bounds": [
+        24.782,
+        60.206,
+        24.831999999999997,
+        60.232
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 981.5,
+            "fetchAndParseMs": 1009.9000000059605,
+            "sourceUpdateMs": 160.59999999403954,
+            "totalToFrameMs": 1183.2000000178814,
+            "features": 42862
+          },
+          "warm": [
+            {
+              "headersMs": 509,
+              "fetchAndParseMs": 537.2999999821186,
+              "sourceUpdateMs": 160.10000002384186,
+              "totalToFrameMs": 698.9000000059605,
+              "features": 42862
+            },
+            {
+              "headersMs": 1014.7999999821186,
+              "fetchAndParseMs": 1042.8999999761581,
+              "sourceUpdateMs": 156.80000001192093,
+              "totalToFrameMs": 1217.7999999821186,
+              "features": 42862
+            },
+            {
+              "headersMs": 488.60000002384186,
+              "fetchAndParseMs": 516.8000000119209,
+              "sourceUpdateMs": 154.80000001192093,
+              "totalToFrameMs": 682.7000000178814,
+              "features": 42862
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 939.6999999880791,
+            "fetchAndParseMs": 967.3000000119209,
+            "sourceUpdateMs": 155.19999998807907,
+            "totalToFrameMs": 1133.699999988079,
+            "features": 40402
+          },
+          "warm": [
+            {
+              "headersMs": 498.7000000178814,
+              "fetchAndParseMs": 527.3000000119209,
+              "sourceUpdateMs": 157.19999998807907,
+              "totalToFrameMs": 699.9000000059605,
+              "features": 40402
+            },
+            {
+              "headersMs": 939.5999999940395,
+              "fetchAndParseMs": 966.0999999940395,
+              "sourceUpdateMs": 151,
+              "totalToFrameMs": 1133.300000011921,
+              "features": 40402
+            },
+            {
+              "headersMs": 940.2999999821186,
+              "fetchAndParseMs": 967.5999999940395,
+              "sourceUpdateMs": 152,
+              "totalToFrameMs": 1133.0999999940395,
+              "features": 40402
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "zoom": 13,
+      "mode": "distance_explore",
+      "bounds": [
+        24.782,
+        60.206,
+        24.831999999999997,
+        60.232
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 499.5,
+            "fetchAndParseMs": 527.5,
+            "sourceUpdateMs": 157.19999998807907,
+            "totalToFrameMs": 699.9000000059605,
+            "features": 41307
+          },
+          "warm": [
+            {
+              "headersMs": 960,
+              "fetchAndParseMs": 986.9000000059605,
+              "sourceUpdateMs": 151.19999998807907,
+              "totalToFrameMs": 1150.199999988079,
+              "features": 41307
+            },
+            {
+              "headersMs": 501.7000000178814,
+              "fetchAndParseMs": 528.4000000059605,
+              "sourceUpdateMs": 156.5,
+              "totalToFrameMs": 699.9000000059605,
+              "features": 41307
+            },
+            {
+              "headersMs": 500.09999999403954,
+              "fetchAndParseMs": 526.8000000119209,
+              "sourceUpdateMs": 156.7999999821186,
+              "totalToFrameMs": 700.0999999940395,
+              "features": 41307
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 898.0999999940395,
+            "fetchAndParseMs": 923.8000000119209,
+            "sourceUpdateMs": 142.90000000596046,
+            "totalToFrameMs": 1083.2000000178814,
+            "features": 38876
+          },
+          "warm": [
+            {
+              "headersMs": 457.5,
+              "fetchAndParseMs": 482.7999999821186,
+              "sourceUpdateMs": 146.40000000596046,
+              "totalToFrameMs": 632.6999999880791,
+              "features": 38876
+            },
+            {
+              "headersMs": 954,
+              "fetchAndParseMs": 979.8000000119209,
+              "sourceUpdateMs": 145.2999999821186,
+              "totalToFrameMs": 1133.800000011921,
+              "features": 38876
+            },
+            {
+              "headersMs": 458.5,
+              "fetchAndParseMs": 484.69999998807907,
+              "sourceUpdateMs": 144.2000000178814,
+              "totalToFrameMs": 632.6999999880791,
+              "features": 38876
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "zoom": 15,
+      "mode": "gradient",
+      "bounds": [
+        24.799,
+        60.215,
+        24.814999999999998,
+        60.223
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 529.3000000119209,
+            "fetchAndParseMs": 533.4000000059605,
+            "sourceUpdateMs": 19.099999994039536,
+            "totalToFrameMs": 565.7000000178814,
+            "features": 6189
+          },
+          "warm": [
+            {
+              "headersMs": 46.5,
+              "fetchAndParseMs": 51.19999998807907,
+              "sourceUpdateMs": 19.900000005960464,
+              "totalToFrameMs": 100.19999998807907,
+              "features": 6189
+            },
+            {
+              "headersMs": 40.599999994039536,
+              "fetchAndParseMs": 44.80000001192093,
+              "sourceUpdateMs": 19.69999998807907,
+              "totalToFrameMs": 83.19999998807907,
+              "features": 6189
+            },
+            {
+              "headersMs": 40.5,
+              "fetchAndParseMs": 44.900000005960464,
+              "sourceUpdateMs": 20,
+              "totalToFrameMs": 83.40000000596046,
+              "features": 6189
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 43.900000005960464,
+            "fetchAndParseMs": 48,
+            "sourceUpdateMs": 19.400000005960464,
+            "totalToFrameMs": 98.59999999403954,
+            "features": 5944
+          },
+          "warm": [
+            {
+              "headersMs": 39.5,
+              "fetchAndParseMs": 43.5,
+              "sourceUpdateMs": 18.30000001192093,
+              "totalToFrameMs": 84.10000002384186,
+              "features": 5944
+            },
+            {
+              "headersMs": 39.599999994039536,
+              "fetchAndParseMs": 43.79999998211861,
+              "sourceUpdateMs": 19,
+              "totalToFrameMs": 83.5,
+              "features": 5944
+            },
+            {
+              "headersMs": 43.5,
+              "fetchAndParseMs": 47.5,
+              "sourceUpdateMs": 19,
+              "totalToFrameMs": 83.19999998807907,
+              "features": 5944
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "zoom": 15,
+      "mode": "gradient_explore",
+      "bounds": [
+        24.799,
+        60.215,
+        24.814999999999998,
+        60.223
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 70.19999998807907,
+            "fetchAndParseMs": 74.69999998807907,
+            "sourceUpdateMs": 20.200000017881393,
+            "totalToFrameMs": 99.40000000596046,
+            "features": 6189
+          },
+          "warm": [
+            {
+              "headersMs": 77.7999999821186,
+              "fetchAndParseMs": 82.69999998807907,
+              "sourceUpdateMs": 22.200000017881393,
+              "totalToFrameMs": 117.19999998807907,
+              "features": 6189
+            },
+            {
+              "headersMs": 74.90000000596046,
+              "fetchAndParseMs": 79.59999999403954,
+              "sourceUpdateMs": 21.400000005960464,
+              "totalToFrameMs": 116.7000000178814,
+              "features": 6189
+            },
+            {
+              "headersMs": 73.19999998807907,
+              "fetchAndParseMs": 77.89999997615814,
+              "sourceUpdateMs": 21.5,
+              "totalToFrameMs": 116.69999998807907,
+              "features": 6189
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 68.19999998807907,
+            "fetchAndParseMs": 72.5,
+            "sourceUpdateMs": 19.80000001192093,
+            "totalToFrameMs": 99.80000001192093,
+            "features": 5944
+          },
+          "warm": [
+            {
+              "headersMs": 68.39999997615814,
+              "fetchAndParseMs": 72.89999997615814,
+              "sourceUpdateMs": 21.30000001192093,
+              "totalToFrameMs": 99.7999999821186,
+              "features": 5944
+            },
+            {
+              "headersMs": 91.90000000596046,
+              "fetchAndParseMs": 95.90000000596046,
+              "sourceUpdateMs": 22.599999994039536,
+              "totalToFrameMs": 133.59999999403954,
+              "features": 5944
+            },
+            {
+              "headersMs": 72.2000000178814,
+              "fetchAndParseMs": 77,
+              "sourceUpdateMs": 21.30000001192093,
+              "totalToFrameMs": 99.10000002384186,
+              "features": 5944
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "zoom": 15,
+      "mode": "distance_explore",
+      "bounds": [
+        24.799,
+        60.215,
+        24.814999999999998,
+        60.223
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 76.7999999821186,
+            "fetchAndParseMs": 81.39999997615814,
+            "sourceUpdateMs": 20.80000001192093,
+            "totalToFrameMs": 117.69999998807907,
+            "features": 5940
+          },
+          "warm": [
+            {
+              "headersMs": 70,
+              "fetchAndParseMs": 75.69999998807907,
+              "sourceUpdateMs": 20.900000005960464,
+              "totalToFrameMs": 99.19999998807907,
+              "features": 5940
+            },
+            {
+              "headersMs": 71.60000002384186,
+              "fetchAndParseMs": 76.2000000178814,
+              "sourceUpdateMs": 20.900000005960464,
+              "totalToFrameMs": 100.10000002384186,
+              "features": 5940
+            },
+            {
+              "headersMs": 552.8999999761581,
+              "fetchAndParseMs": 557.1999999880791,
+              "sourceUpdateMs": 19.099999994039536,
+              "totalToFrameMs": 583.6999999880791,
+              "features": 5940
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 66.90000000596046,
+            "fetchAndParseMs": 71.2000000178814,
+            "sourceUpdateMs": 18.5,
+            "totalToFrameMs": 100.09999999403954,
+            "features": 5699
+          },
+          "warm": [
+            {
+              "headersMs": 71.7000000178814,
+              "fetchAndParseMs": 76.2000000178814,
+              "sourceUpdateMs": 19.799999982118607,
+              "totalToFrameMs": 99.30000001192093,
+              "features": 5699
+            },
+            {
+              "headersMs": 68.09999999403954,
+              "fetchAndParseMs": 72.30000001192093,
+              "sourceUpdateMs": 19.099999994039536,
+              "totalToFrameMs": 100.69999998807907,
+              "features": 5699
+            },
+            {
+              "headersMs": 66.60000002384186,
+              "fetchAndParseMs": 74.60000002384186,
+              "sourceUpdateMs": 19.19999998807907,
+              "totalToFrameMs": 99.60000002384186,
+              "features": 5699
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 11,
+      "mode": "gradient",
+      "bounds": [
+        24.701,
+        60.202,
+        24.841,
+        60.282
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 1667.699999988079,
+            "fetchAndParseMs": 1820.5999999940395,
+            "sourceUpdateMs": 678.4000000059605,
+            "totalToFrameMs": 2515.4000000059605,
+            "features": 176264
+          },
+          "warm": [
+            {
+              "headersMs": 1785.699999988079,
+              "fetchAndParseMs": 1932.699999988079,
+              "sourceUpdateMs": 669.8000000119209,
+              "totalToFrameMs": 2616,
+              "features": 176264
+            },
+            {
+              "headersMs": 1849.5999999940395,
+              "fetchAndParseMs": 1992.0999999940395,
+              "sourceUpdateMs": 740.6999999880791,
+              "totalToFrameMs": 2749.5999999940395,
+              "features": 176264
+            },
+            {
+              "headersMs": 1761.5,
+              "fetchAndParseMs": 1908.9000000059605,
+              "sourceUpdateMs": 661.1999999880791,
+              "totalToFrameMs": 2583.0999999940395,
+              "features": 176264
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 1650.7000000178814,
+            "fetchAndParseMs": 1780.6000000238419,
+            "sourceUpdateMs": 618.1999999880791,
+            "totalToFrameMs": 2416.800000011921,
+            "features": 161935
+          },
+          "warm": [
+            {
+              "headersMs": 1684.5,
+              "fetchAndParseMs": 1821.5999999940395,
+              "sourceUpdateMs": 655.5,
+              "totalToFrameMs": 2482.9000000059605,
+              "features": 161935
+            },
+            {
+              "headersMs": 1839.7999999821186,
+              "fetchAndParseMs": 1979.2999999821186,
+              "sourceUpdateMs": 631.3000000119209,
+              "totalToFrameMs": 2616.5999999940395,
+              "features": 161935
+            },
+            {
+              "headersMs": 2241.0999999940395,
+              "fetchAndParseMs": 2365,
+              "sourceUpdateMs": 634.0999999940395,
+              "totalToFrameMs": 3016.9000000059605,
+              "features": 161935
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 11,
+      "mode": "gradient_explore",
+      "bounds": [
+        24.701,
+        60.202,
+        24.841,
+        60.282
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 2691.800000011921,
+            "fetchAndParseMs": 2870.9000000059605,
+            "sourceUpdateMs": 701,
+            "totalToFrameMs": 3583.0999999940395,
+            "features": 176264
+          },
+          "warm": [
+            {
+              "headersMs": 3091.5999999940395,
+              "fetchAndParseMs": 3236,
+              "sourceUpdateMs": 704.0999999940395,
+              "totalToFrameMs": 3949.9000000059605,
+              "features": 176264
+            },
+            {
+              "headersMs": 3180.5,
+              "fetchAndParseMs": 3343.699999988079,
+              "sourceUpdateMs": 714.3000000119209,
+              "totalToFrameMs": 4065.699999988079,
+              "features": 176264
+            },
+            {
+              "headersMs": 3100.300000011921,
+              "fetchAndParseMs": 3251.4000000059605,
+              "sourceUpdateMs": 704.5999999940395,
+              "totalToFrameMs": 3967.300000011921,
+              "features": 176264
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 2920,
+            "fetchAndParseMs": 3047.5,
+            "sourceUpdateMs": 654.9000000059605,
+            "totalToFrameMs": 3716.5,
+            "features": 161935
+          },
+          "warm": [
+            {
+              "headersMs": 3072.699999988079,
+              "fetchAndParseMs": 3210.5999999940395,
+              "sourceUpdateMs": 639.5,
+              "totalToFrameMs": 3866.5,
+              "features": 161935
+            },
+            {
+              "headersMs": 2970.4000000059605,
+              "fetchAndParseMs": 3105.4000000059605,
+              "sourceUpdateMs": 691.4000000059605,
+              "totalToFrameMs": 3799,
+              "features": 161935
+            },
+            {
+              "headersMs": 4070,
+              "fetchAndParseMs": 4225.800000011921,
+              "sourceUpdateMs": 739,
+              "totalToFrameMs": 4966.300000011921,
+              "features": 161935
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 11,
+      "mode": "distance_explore",
+      "bounds": [
+        24.701,
+        60.202,
+        24.841,
+        60.282
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 4915.5999999940395,
+            "fetchAndParseMs": 5106.199999988079,
+            "sourceUpdateMs": 681.5999999940395,
+            "totalToFrameMs": 5800.5,
+            "features": 157061
+          },
+          "warm": [
+            {
+              "headersMs": 3321.5999999940395,
+              "fetchAndParseMs": 3460.899999976158,
+              "sourceUpdateMs": 702,
+              "totalToFrameMs": 4168.899999976158,
+              "features": 157061
+            },
+            {
+              "headersMs": 3480.9000000059605,
+              "fetchAndParseMs": 3690.4000000059605,
+              "sourceUpdateMs": 786.3000000119209,
+              "totalToFrameMs": 4480.700000017881,
+              "features": 157061
+            },
+            {
+              "headersMs": 5910.5,
+              "fetchAndParseMs": 6073.4000000059605,
+              "sourceUpdateMs": 711.5999999940395,
+              "totalToFrameMs": 6799.5,
+              "features": 157061
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 2975.5,
+            "fetchAndParseMs": 3082.7999999821186,
+            "sourceUpdateMs": 576.8000000119209,
+            "totalToFrameMs": 3666.699999988079,
+            "features": 143648
+          },
+          "warm": [
+            {
+              "headersMs": 3126.0999999940395,
+              "fetchAndParseMs": 3234.9000000059605,
+              "sourceUpdateMs": 593.4000000059605,
+              "totalToFrameMs": 3833.9000000059605,
+              "features": 143648
+            },
+            {
+              "headersMs": 3381.4000000059605,
+              "fetchAndParseMs": 3533.4000000059605,
+              "sourceUpdateMs": 648.1999999880791,
+              "totalToFrameMs": 4216.0999999940395,
+              "features": 143648
+            },
+            {
+              "headersMs": 6372.200000017881,
+              "fetchAndParseMs": 6527.5,
+              "sourceUpdateMs": 744.2000000178814,
+              "totalToFrameMs": 7283.700000017881,
+              "features": 143648
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 13,
+      "mode": "gradient",
+      "bounds": [
+        24.746000000000002,
+        60.229,
+        24.796,
+        60.254999999999995
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 276.69999998807907,
+            "fetchAndParseMs": 300.59999999403954,
+            "sourceUpdateMs": 910.0999999940395,
+            "totalToFrameMs": 1230,
+            "features": 30234
+          },
+          "warm": [
+            {
+              "headersMs": 306.90000000596046,
+              "fetchAndParseMs": 331.19999998807907,
+              "sourceUpdateMs": 119.60000002384186,
+              "totalToFrameMs": 483.80000001192093,
+              "features": 30234
+            },
+            {
+              "headersMs": 240.39999997615814,
+              "fetchAndParseMs": 264.09999999403954,
+              "sourceUpdateMs": 110.2999999821186,
+              "totalToFrameMs": 400.2999999821186,
+              "features": 30234
+            },
+            {
+              "headersMs": 234.30000001192093,
+              "fetchAndParseMs": 255,
+              "sourceUpdateMs": 109.2000000178814,
+              "totalToFrameMs": 365.09999999403954,
+              "features": 30234
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 220.7000000178814,
+            "fetchAndParseMs": 239.90000000596046,
+            "sourceUpdateMs": 98.7000000178814,
+            "totalToFrameMs": 350.60000002384186,
+            "features": 26715
+          },
+          "warm": [
+            {
+              "headersMs": 901.6999999880791,
+              "fetchAndParseMs": 920.1999999880791,
+              "sourceUpdateMs": 105.90000000596046,
+              "totalToFrameMs": 1033.0999999940395,
+              "features": 26715
+            },
+            {
+              "headersMs": 207.69999998807907,
+              "fetchAndParseMs": 225.09999999403954,
+              "sourceUpdateMs": 92.80000001192093,
+              "totalToFrameMs": 333.59999999403954,
+              "features": 26715
+            },
+            {
+              "headersMs": 210.80000001192093,
+              "fetchAndParseMs": 228.40000000596046,
+              "sourceUpdateMs": 91.09999999403954,
+              "totalToFrameMs": 333.30000001192093,
+              "features": 26715
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 13,
+      "mode": "gradient_explore",
+      "bounds": [
+        24.746000000000002,
+        60.229,
+        24.796,
+        60.254999999999995
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 390.89999997615814,
+            "fetchAndParseMs": 415.2999999821186,
+            "sourceUpdateMs": 114.7000000178814,
+            "totalToFrameMs": 532.5,
+            "features": 30234
+          },
+          "warm": [
+            {
+              "headersMs": 835.5999999940395,
+              "fetchAndParseMs": 855.9000000059605,
+              "sourceUpdateMs": 108.69999998807907,
+              "totalToFrameMs": 966.4000000059605,
+              "features": 30234
+            },
+            {
+              "headersMs": 371.59999999403954,
+              "fetchAndParseMs": 391.19999998807907,
+              "sourceUpdateMs": 119.59999999403954,
+              "totalToFrameMs": 517.2999999821186,
+              "features": 30234
+            },
+            {
+              "headersMs": 933.2000000178814,
+              "fetchAndParseMs": 953.8000000119209,
+              "sourceUpdateMs": 129.7999999821186,
+              "totalToFrameMs": 1100.300000011921,
+              "features": 30234
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 333.5,
+            "fetchAndParseMs": 351.59999999403954,
+            "sourceUpdateMs": 99.69999998807907,
+            "totalToFrameMs": 466.59999999403954,
+            "features": 26715
+          },
+          "warm": [
+            {
+              "headersMs": 318.80000001192093,
+              "fetchAndParseMs": 337.30000001192093,
+              "sourceUpdateMs": 96.39999997615814,
+              "totalToFrameMs": 450,
+              "features": 26715
+            },
+            {
+              "headersMs": 336.19999998807907,
+              "fetchAndParseMs": 354.90000000596046,
+              "sourceUpdateMs": 93.7999999821186,
+              "totalToFrameMs": 466.59999999403954,
+              "features": 26715
+            },
+            {
+              "headersMs": 799.7000000178814,
+              "fetchAndParseMs": 817.9000000059605,
+              "sourceUpdateMs": 94.5,
+              "totalToFrameMs": 916,
+              "features": 26715
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 13,
+      "mode": "distance_explore",
+      "bounds": [
+        24.746000000000002,
+        60.229,
+        24.796,
+        60.254999999999995
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 361.59999999403954,
+            "fetchAndParseMs": 380.90000000596046,
+            "sourceUpdateMs": 104.09999999403954,
+            "totalToFrameMs": 500.59999999403954,
+            "features": 29002
+          },
+          "warm": [
+            {
+              "headersMs": 953.6000000238419,
+              "fetchAndParseMs": 973.6000000238419,
+              "sourceUpdateMs": 102.09999999403954,
+              "totalToFrameMs": 1083,
+              "features": 29002
+            },
+            {
+              "headersMs": 355.40000000596046,
+              "fetchAndParseMs": 374.30000001192093,
+              "sourceUpdateMs": 120.40000000596046,
+              "totalToFrameMs": 499.80000001192093,
+              "features": 29002
+            },
+            {
+              "headersMs": 366.30000001192093,
+              "fetchAndParseMs": 386.40000000596046,
+              "sourceUpdateMs": 101.59999999403954,
+              "totalToFrameMs": 500.5,
+              "features": 29002
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 1021.0999999940395,
+            "fetchAndParseMs": 1038.0999999940395,
+            "sourceUpdateMs": 93.59999999403954,
+            "totalToFrameMs": 1149.9000000059605,
+            "features": 25660
+          },
+          "warm": [
+            {
+              "headersMs": 300.09999999403954,
+              "fetchAndParseMs": 318,
+              "sourceUpdateMs": 93.5,
+              "totalToFrameMs": 416.09999999403954,
+              "features": 25660
+            },
+            {
+              "headersMs": 328,
+              "fetchAndParseMs": 345.90000000596046,
+              "sourceUpdateMs": 93.2999999821186,
+              "totalToFrameMs": 450.5,
+              "features": 25660
+            },
+            {
+              "headersMs": 886.9000000059605,
+              "fetchAndParseMs": 903.5999999940395,
+              "sourceUpdateMs": 87.7000000178814,
+              "totalToFrameMs": 1000,
+              "features": 25660
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 15,
+      "mode": "gradient",
+      "bounds": [
+        24.763,
+        60.238,
+        24.779,
+        60.245999999999995
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 40.80000001192093,
+            "fetchAndParseMs": 43.70000001788139,
+            "sourceUpdateMs": 12,
+            "totalToFrameMs": 83.09999999403954,
+            "features": 3353
+          },
+          "warm": [
+            {
+              "headersMs": 27,
+              "fetchAndParseMs": 29.5,
+              "sourceUpdateMs": 10.600000023841858,
+              "totalToFrameMs": 67.2000000178814,
+              "features": 3353
+            },
+            {
+              "headersMs": 26.799999982118607,
+              "fetchAndParseMs": 29.299999982118607,
+              "sourceUpdateMs": 11.100000023841858,
+              "totalToFrameMs": 65.7999999821186,
+              "features": 3353
+            },
+            {
+              "headersMs": 27,
+              "fetchAndParseMs": 29.600000023841858,
+              "sourceUpdateMs": 10.5,
+              "totalToFrameMs": 66.60000002384186,
+              "features": 3353
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 23.599999994039536,
+            "fetchAndParseMs": 25.599999994039536,
+            "sourceUpdateMs": 9.099999994039536,
+            "totalToFrameMs": 66.5,
+            "features": 2888
+          },
+          "warm": [
+            {
+              "headersMs": 23.099999994039536,
+              "fetchAndParseMs": 25.400000005960464,
+              "sourceUpdateMs": 9.399999976158142,
+              "totalToFrameMs": 66.7999999821186,
+              "features": 2888
+            },
+            {
+              "headersMs": 23.600000023841858,
+              "fetchAndParseMs": 25.80000001192093,
+              "sourceUpdateMs": 9.099999994039536,
+              "totalToFrameMs": 66.7000000178814,
+              "features": 2888
+            },
+            {
+              "headersMs": 23.900000005960464,
+              "fetchAndParseMs": 26.19999998807907,
+              "sourceUpdateMs": 9.5,
+              "totalToFrameMs": 66.2999999821186,
+              "features": 2888
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 15,
+      "mode": "gradient_explore",
+      "bounds": [
+        24.763,
+        60.238,
+        24.779,
+        60.245999999999995
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 46.80000001192093,
+            "fetchAndParseMs": 49.5,
+            "sourceUpdateMs": 11.200000017881393,
+            "totalToFrameMs": 66.5,
+            "features": 3353
+          },
+          "warm": [
+            {
+              "headersMs": 48,
+              "fetchAndParseMs": 50.70000001788139,
+              "sourceUpdateMs": 11.699999988079071,
+              "totalToFrameMs": 83.7000000178814,
+              "features": 3353
+            },
+            {
+              "headersMs": 46.5,
+              "fetchAndParseMs": 49,
+              "sourceUpdateMs": 11.599999994039536,
+              "totalToFrameMs": 82.59999999403954,
+              "features": 3353
+            },
+            {
+              "headersMs": 46.19999998807907,
+              "fetchAndParseMs": 49,
+              "sourceUpdateMs": 11.800000011920929,
+              "totalToFrameMs": 83.30000001192093,
+              "features": 3353
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 40.099999994039536,
+            "fetchAndParseMs": 42.5,
+            "sourceUpdateMs": 9.699999988079071,
+            "totalToFrameMs": 84,
+            "features": 2888
+          },
+          "warm": [
+            {
+              "headersMs": 37,
+              "fetchAndParseMs": 39.5,
+              "sourceUpdateMs": 9.5,
+              "totalToFrameMs": 66.69999998807907,
+              "features": 2888
+            },
+            {
+              "headersMs": 37.80000001192093,
+              "fetchAndParseMs": 40.20000001788139,
+              "sourceUpdateMs": 9.399999976158142,
+              "totalToFrameMs": 50.30000001192093,
+              "features": 2888
+            },
+            {
+              "headersMs": 41.19999998807907,
+              "fetchAndParseMs": 43.5,
+              "sourceUpdateMs": 10.099999994039536,
+              "totalToFrameMs": 66.40000000596046,
+              "features": 2888
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "zoom": 15,
+      "mode": "distance_explore",
+      "bounds": [
+        24.763,
+        60.238,
+        24.779,
+        60.245999999999995
+      ],
+      "runs": [
+        {
+          "hide_building_access": false,
+          "first": {
+            "headersMs": 52,
+            "fetchAndParseMs": 54.5,
+            "sourceUpdateMs": 13.5,
+            "totalToFrameMs": 82.2999999821186,
+            "features": 3305
+          },
+          "warm": [
+            {
+              "headersMs": 47.80000001192093,
+              "fetchAndParseMs": 50.20000001788139,
+              "sourceUpdateMs": 12.199999988079071,
+              "totalToFrameMs": 84.40000000596046,
+              "features": 3305
+            },
+            {
+              "headersMs": 45.80000001192093,
+              "fetchAndParseMs": 48.19999998807907,
+              "sourceUpdateMs": 13.200000017881393,
+              "totalToFrameMs": 83.30000001192093,
+              "features": 3305
+            },
+            {
+              "headersMs": 45.5,
+              "fetchAndParseMs": 48,
+              "sourceUpdateMs": 11.5,
+              "totalToFrameMs": 66.39999997615814,
+              "features": 3305
+            }
+          ]
+        },
+        {
+          "hide_building_access": true,
+          "first": {
+            "headersMs": 44.5,
+            "fetchAndParseMs": 46.5,
+            "sourceUpdateMs": 10.400000005960464,
+            "totalToFrameMs": 66.90000000596046,
+            "features": 2840
+          },
+          "warm": [
+            {
+              "headersMs": 41.70000001788139,
+              "fetchAndParseMs": 44,
+              "sourceUpdateMs": 10.400000005960464,
+              "totalToFrameMs": 83.40000000596046,
+              "features": 2840
+            },
+            {
+              "headersMs": 38.80000001192093,
+              "fetchAndParseMs": 41.19999998807907,
+              "sourceUpdateMs": 9.900000005960464,
+              "totalToFrameMs": 66.59999999403954,
+              "features": 2840
+            },
+            {
+              "headersMs": 39.599999994039536,
+              "fetchAndParseMs": 41.900000005960464,
+              "sourceUpdateMs": 10,
+              "totalToFrameMs": 83.40000000596046,
+              "features": 2840
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 """Eligible edge snapping and budgeted outing inclusion over prepared topology."""
 
 from collections import ChainMap, OrderedDict
+from concurrent.futures import Future
+from time import monotonic
 from dataclasses import dataclass, field, replace
 import math
 from threading import RLock
@@ -37,6 +39,7 @@ class ExplorationCache:
     entries: OrderedDict = field(default_factory=OrderedDict)
     lock: object = field(default_factory=RLock)
     capacity: int = 8
+    pending: dict[tuple, Future[DistanceData]] = field(default_factory=dict)
 
 
 def segment_reason(index, segment_id):
@@ -147,27 +150,47 @@ def legal_directions(index, segment_id):
     return index.direction_cache[segment_id]
 
 
-def distance_data(index: GraphData, snap: Snap, maximum_m: float) -> DistanceData:
+def distance_data(index: GraphData, snap: Snap, maximum_m: float, deadline: float | None = None) -> DistanceData:
     graph, start = split_start_graph(index, snap)
     return DistanceData(snap, maximum_m,
-                        shortest_distances(graph, start, maximum_m),
-                        reachable_nodes(graph, start))
+                        shortest_distances(graph, start, maximum_m, deadline=deadline),
+                        reachable_nodes(graph, start, deadline=deadline))
 
 
-def cached_distances(cache, dataset_id, index, snap, maximum_m):
+def cached_distances(cache: ExplorationCache, dataset_id: str, index: GraphData, snap: Snap,
+                     maximum_m: float, deadline: float | None = None) -> tuple[DistanceData, bool]:
     key = (dataset_id, index.profile["id"], snap.segment_id, snap.graph_offset_m)
-    # Serialize creation for one bounded cache, preventing duplicate large searches.
+    pending_key = (*key, maximum_m)
     with cache.lock:
         existing = cache.entries.get(key)
         if existing and existing.maximum_m >= maximum_m:
             cache.entries.move_to_end(key)
             return existing, True
-        result = distance_data(index, snap, maximum_m)
-        cache.entries[key] = result
-        cache.entries.move_to_end(key)
-        while len(cache.entries) > cache.capacity:
-            cache.entries.popitem(last=False)
+        future = cache.pending.get(pending_key)
+        owner = future is None
+        if future is None:
+            future = Future()
+            cache.pending[pending_key] = future
+    if not owner:
+        timeout = max(0, deadline - monotonic()) if deadline is not None else None
+        return future.result(timeout=timeout), True
+    try:
+        result = distance_data(index, snap, maximum_m, deadline)
+        with cache.lock:
+            existing = cache.entries.get(key)
+            if existing is None or existing.maximum_m < maximum_m:
+                cache.entries[key] = result
+            cache.entries.move_to_end(key)
+            while len(cache.entries) > cache.capacity:
+                cache.entries.popitem(last=False)
+            future.set_result(result)
         return result, False
+    except BaseException as exc:
+        future.set_exception(exc)
+        raise
+    finally:
+        with cache.lock:
+            cache.pending.pop(pending_key, None)
 
 
 def _point_distance(index: GraphData, distances: dict[str, float], connected: set[str],

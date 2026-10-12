@@ -1,0 +1,860 @@
+{
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "graph_path": "data/paths/prepared/leppavaara-flat-10k/graph.json",
+  "machine": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "processor": "arm64",
+  "start": [
+    24.80259,
+    60.21682
+  ],
+  "budget_km": 6,
+  "surface": "all",
+  "avoid_stairs": true,
+  "warm_repeats": 10,
+  "timing_scope": "In-process API query, rendering coalescence, and JSONResponse serialization; no HTTP/browser timing.",
+  "unfiltered_load_seconds": 4.353706791996956,
+  "classification_and_display_index_seconds": 0.424909708002815,
+  "additional_retained_bytes_tracemalloc": 3801109,
+  "additional_peak_bytes_tracemalloc": 22258871,
+  "policy": {
+    "default": true,
+    "classifier_version": "building-access-v1",
+    "access_policy": "public:all:stairs-0",
+    "entrance_limit_m": 150.0,
+    "cache_identity": [
+      "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+      "public:all:stairs-0",
+      "building-access-v1",
+      150.0
+    ],
+    "hidden_segments": 6097,
+    "hidden_intervals": 20410
+  },
+  "reason_counts": {
+    "building_access_driveway": 4930,
+    "building_access_entrance": 1167
+  },
+  "hidden_examples": [
+    {
+      "segment_id": "w1001726096p1",
+      "reason": "building_access_entrance",
+      "branch_length_m": 7.148,
+      "tags": {
+        "highway": "footway",
+        "surface": "fine_gravel"
+      },
+      "geometry": [
+        [
+          24.8271832,
+          60.18505
+        ],
+        [
+          24.8272279,
+          60.185051
+        ],
+        [
+          24.8273045,
+          60.1850332
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1001935091p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 13.581,
+      "tags": {
+        "highway": "footway"
+      },
+      "geometry": [
+        [
+          24.7370125,
+          60.2134545
+        ],
+        [
+          24.7372538,
+          60.2134779
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1002529264p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 6.082,
+      "tags": {
+        "highway": "footway"
+      },
+      "geometry": [
+        [
+          24.7747873,
+          60.2285057
+        ],
+        [
+          24.7746934,
+          60.2284771
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1002529265p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 4.87,
+      "tags": {
+        "highway": "footway",
+        "lit": "yes"
+      },
+      "geometry": [
+        [
+          24.7743507,
+          60.2288735
+        ],
+        [
+          24.7742764,
+          60.2288499
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1002529266p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 5.479,
+      "tags": {
+        "highway": "footway",
+        "lit": "yes"
+      },
+      "geometry": [
+        [
+          24.7745676,
+          60.2286908
+        ],
+        [
+          24.7744842,
+          60.2286641
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1002529267p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 4.288,
+      "tags": {
+        "highway": "footway",
+        "lit": "yes"
+      },
+      "geometry": [
+        [
+          24.7735222,
+          60.2290604
+        ],
+        [
+          24.7735627,
+          60.2290275
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1002529268p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 4.787,
+      "tags": {
+        "highway": "footway"
+      },
+      "geometry": [
+        [
+          24.7731479,
+          60.2289568
+        ],
+        [
+          24.7731919,
+          60.2289197
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1002529269p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 5.994,
+      "tags": {
+        "highway": "footway"
+      },
+      "geometry": [
+        [
+          24.7730749,
+          60.2286077
+        ],
+        [
+          24.772982,
+          60.2285798
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1002529270p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 6.104,
+      "tags": {
+        "highway": "footway"
+      },
+      "geometry": [
+        [
+          24.7732869,
+          60.2284241
+        ],
+        [
+          24.7731891,
+          60.2283985
+        ]
+      ]
+    },
+    {
+      "segment_id": "w1002529271p0",
+      "reason": "building_access_entrance",
+      "branch_length_m": 6.201,
+      "tags": {
+        "highway": "footway"
+      },
+      "geometry": [
+        [
+          24.7735023,
+          60.2282374
+        ],
+        [
+          24.7734054,
+          60.2282092
+        ]
+      ]
+    }
+  ],
+  "viewports": [
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.737,
+        60.179,
+        24.877,
+        60.259
+      ],
+      "zoom": 11,
+      "mode": "gradient",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 220374,
+          "returned_intervals": 195069,
+          "rendered_features": 195069,
+          "vertices": 390138,
+          "response_bytes": 57625782,
+          "cold_ms": 1843.6660000006668,
+          "warm_median_ms": 1712.5630005029961,
+          "warm_p95_ms": 2357.991625001887
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 204013,
+          "returned_intervals": 179259,
+          "rendered_features": 179259,
+          "vertices": 358518,
+          "response_bytes": 52943032,
+          "cold_ms": 2178.329417016357,
+          "warm_median_ms": 1643.848687002901,
+          "warm_p95_ms": 2264.2236670071725
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.737,
+        60.179,
+        24.877,
+        60.259
+      ],
+      "zoom": 11,
+      "mode": "gradient_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 220374,
+          "returned_intervals": 195069,
+          "rendered_features": 195069,
+          "vertices": 390138,
+          "response_bytes": 63320768,
+          "cold_ms": 3552.0895840018056,
+          "warm_median_ms": 3094.9854375066934,
+          "warm_p95_ms": 3543.4896670049056
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 204013,
+          "returned_intervals": 179259,
+          "rendered_features": 179259,
+          "vertices": 358518,
+          "response_bytes": 58177018,
+          "cold_ms": 4016.9113329902757,
+          "warm_median_ms": 2834.62616649922,
+          "warm_p95_ms": 2899.164833012037
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.737,
+        60.179,
+        24.877,
+        60.259
+      ],
+      "zoom": 11,
+      "mode": "distance_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 220374,
+          "returned_intervals": 195069,
+          "rendered_features": 185585,
+          "vertices": 380654,
+          "response_bytes": 61886306,
+          "cold_ms": 3938.8265830057207,
+          "warm_median_ms": 3031.9841665041167,
+          "warm_p95_ms": 4216.754167020554
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 204013,
+          "returned_intervals": 179259,
+          "rendered_features": 170122,
+          "vertices": 349381,
+          "response_bytes": 56728668,
+          "cold_ms": 3874.01970801875,
+          "warm_median_ms": 2894.9078130099224,
+          "warm_p95_ms": 3096.198708022712
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.782,
+        60.206,
+        24.831999999999997,
+        60.232
+      ],
+      "zoom": 13,
+      "mode": "gradient",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 53723,
+          "returned_intervals": 42862,
+          "rendered_features": 42862,
+          "vertices": 85724,
+          "response_bytes": 12648412,
+          "cold_ms": 360.83191601210274,
+          "warm_median_ms": 230.2790000103414,
+          "warm_p95_ms": 868.029666977236
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 50667,
+          "returned_intervals": 40402,
+          "rendered_features": 40402,
+          "vertices": 80804,
+          "response_bytes": 11920042,
+          "cold_ms": 340.4819589923136,
+          "warm_median_ms": 241.61587499838788,
+          "warm_p95_ms": 899.5717499929015
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.782,
+        60.206,
+        24.831999999999997,
+        60.232
+      ],
+      "zoom": 13,
+      "mode": "gradient_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 53723,
+          "returned_intervals": 42862,
+          "rendered_features": 42862,
+          "vertices": 85724,
+          "response_bytes": 13897590,
+          "cold_ms": 1843.8851249811705,
+          "warm_median_ms": 746.9397709937766,
+          "warm_p95_ms": 1141.4040829986334
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 50667,
+          "returned_intervals": 40402,
+          "rendered_features": 40402,
+          "vertices": 80804,
+          "response_bytes": 13097700,
+          "cold_ms": 894.7151250031311,
+          "warm_median_ms": 865.1160209992668,
+          "warm_p95_ms": 1170.3907919873018
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.782,
+        60.206,
+        24.831999999999997,
+        60.232
+      ],
+      "zoom": 13,
+      "mode": "distance_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 53723,
+          "returned_intervals": 42862,
+          "rendered_features": 41307,
+          "vertices": 84169,
+          "response_bytes": 13752262,
+          "cold_ms": 950.621666997904,
+          "warm_median_ms": 654.5615205104696,
+          "warm_p95_ms": 924.8247499926947
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 50667,
+          "returned_intervals": 40402,
+          "rendered_features": 38876,
+          "vertices": 79278,
+          "response_bytes": 12942138,
+          "cold_ms": 1414.7241250029765,
+          "warm_median_ms": 606.2996870023198,
+          "warm_p95_ms": 900.7118330046069
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.799,
+        60.215,
+        24.814999999999998,
+        60.223
+      ],
+      "zoom": 15,
+      "mode": "gradient",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 7658,
+          "returned_intervals": 6189,
+          "rendered_features": 6189,
+          "vertices": 12378,
+          "response_bytes": 1821817,
+          "cold_ms": 142.35366700449958,
+          "warm_median_ms": 27.956895995885134,
+          "warm_p95_ms": 28.609583008801565
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 7389,
+          "returned_intervals": 5944,
+          "rendered_features": 5944,
+          "vertices": 11888,
+          "response_bytes": 1749843,
+          "cold_ms": 141.03966701077297,
+          "warm_median_ms": 27.197562507353723,
+          "warm_p95_ms": 28.63741701003164
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.799,
+        60.215,
+        24.814999999999998,
+        60.223
+      ],
+      "zoom": 15,
+      "mode": "gradient_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 7658,
+          "returned_intervals": 6189,
+          "rendered_features": 6189,
+          "vertices": 12378,
+          "response_bytes": 2004613,
+          "cold_ms": 457.6922080013901,
+          "warm_median_ms": 53.43629201524891,
+          "warm_p95_ms": 548.511500004679
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 7389,
+          "returned_intervals": 5944,
+          "rendered_features": 5944,
+          "vertices": 11888,
+          "response_bytes": 1925504,
+          "cold_ms": 453.98533300613053,
+          "warm_median_ms": 51.3786460069241,
+          "warm_p95_ms": 541.884249978466
+        }
+      ]
+    },
+    {
+      "viewport": "urban",
+      "bounds": [
+        24.799,
+        60.215,
+        24.814999999999998,
+        60.223
+      ],
+      "zoom": 15,
+      "mode": "distance_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 7658,
+          "returned_intervals": 6189,
+          "rendered_features": 5940,
+          "vertices": 12129,
+          "response_bytes": 1974210,
+          "cold_ms": 457.11433299584314,
+          "warm_median_ms": 53.19066598895006,
+          "warm_p95_ms": 543.9602500118781
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 7389,
+          "returned_intervals": 5944,
+          "rendered_features": 5699,
+          "vertices": 11643,
+          "response_bytes": 1894494,
+          "cold_ms": 453.47087501431815,
+          "warm_median_ms": 51.608958005090244,
+          "warm_p95_ms": 563.8248340110295
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.701,
+        60.202,
+        24.841,
+        60.282
+      ],
+      "zoom": 11,
+      "mode": "gradient",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 193639,
+          "returned_intervals": 176264,
+          "rendered_features": 176264,
+          "vertices": 352528,
+          "response_bytes": 52057468,
+          "cold_ms": 1607.636958011426,
+          "warm_median_ms": 1376.1270420072833,
+          "warm_p95_ms": 1964.2496249871328
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 178936,
+          "returned_intervals": 161935,
+          "rendered_features": 161935,
+          "vertices": 323870,
+          "response_bytes": 47821394,
+          "cold_ms": 1990.8050829835702,
+          "warm_median_ms": 1319.8932705126936,
+          "warm_p95_ms": 1344.796082994435
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.701,
+        60.202,
+        24.841,
+        60.282
+      ],
+      "zoom": 11,
+      "mode": "gradient_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 193639,
+          "returned_intervals": 176264,
+          "rendered_features": 176264,
+          "vertices": 352528,
+          "response_bytes": 57277039,
+          "cold_ms": 3797.595000010915,
+          "warm_median_ms": 2749.183895502938,
+          "warm_p95_ms": 2830.9812500083353
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 178936,
+          "returned_intervals": 161935,
+          "rendered_features": 161935,
+          "vertices": 323870,
+          "response_bytes": 52618424,
+          "cold_ms": 3593.152874993393,
+          "warm_median_ms": 2329.4399374863133,
+          "warm_p95_ms": 2687.594042014098
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.701,
+        60.202,
+        24.841,
+        60.282
+      ],
+      "zoom": 11,
+      "mode": "distance_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 193639,
+          "returned_intervals": 176264,
+          "rendered_features": 157061,
+          "vertices": 333325,
+          "response_bytes": 52698092,
+          "cold_ms": 3724.022625014186,
+          "warm_median_ms": 2665.180333482567,
+          "warm_p95_ms": 2755.0465840031393
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 178936,
+          "returned_intervals": 161935,
+          "rendered_features": 143648,
+          "vertices": 305583,
+          "response_bytes": 48215237,
+          "cold_ms": 3514.335084008053,
+          "warm_median_ms": 2301.182686991524,
+          "warm_p95_ms": 2664.265833009267
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.746000000000002,
+        60.229,
+        24.796,
+        60.254999999999995
+      ],
+      "zoom": 13,
+      "mode": "gradient",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 39636,
+          "returned_intervals": 30234,
+          "rendered_features": 30234,
+          "vertices": 60468,
+          "response_bytes": 8943339,
+          "cold_ms": 275.0181659939699,
+          "warm_median_ms": 143.85958350612782,
+          "warm_p95_ms": 667.0232079923153
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 35729,
+          "returned_intervals": 26715,
+          "rendered_features": 26715,
+          "vertices": 53430,
+          "response_bytes": 7905165,
+          "cold_ms": 255.51504199393094,
+          "warm_median_ms": 128.68039550085086,
+          "warm_p95_ms": 647.0101249869913
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.746000000000002,
+        60.229,
+        24.796,
+        60.254999999999995
+      ],
+      "zoom": 13,
+      "mode": "gradient_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 39636,
+          "returned_intervals": 30234,
+          "rendered_features": 30234,
+          "vertices": 60468,
+          "response_bytes": 9829330,
+          "cold_ms": 1296.7282920144498,
+          "warm_median_ms": 265.3306254942436,
+          "warm_p95_ms": 795.4244159918744
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 35729,
+          "returned_intervals": 26715,
+          "rendered_features": 26715,
+          "vertices": 53430,
+          "response_bytes": 8687915,
+          "cold_ms": 722.9445840057451,
+          "warm_median_ms": 240.11510449054185,
+          "warm_p95_ms": 757.7741249988321
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.746000000000002,
+        60.229,
+        24.796,
+        60.254999999999995
+      ],
+      "zoom": 13,
+      "mode": "distance_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 39636,
+          "returned_intervals": 30234,
+          "rendered_features": 29002,
+          "vertices": 59236,
+          "response_bytes": 9676817,
+          "cold_ms": 1405.2357079926878,
+          "warm_median_ms": 360.8498539979337,
+          "warm_p95_ms": 1083.2615420222282
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 35729,
+          "returned_intervals": 26715,
+          "rendered_features": 25660,
+          "vertices": 52375,
+          "response_bytes": 8563751,
+          "cold_ms": 727.9861250135582,
+          "warm_median_ms": 263.83177100797184,
+          "warm_p95_ms": 898.2212500122841
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.763,
+        60.238,
+        24.779,
+        60.245999999999995
+      ],
+      "zoom": 15,
+      "mode": "gradient",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 7470,
+          "returned_intervals": 3353,
+          "rendered_features": 3353,
+          "vertices": 6706,
+          "response_bytes": 992117,
+          "cold_ms": 147.32774998992682,
+          "warm_median_ms": 22.477146005257964,
+          "warm_p95_ms": 627.849333017366
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 6129,
+          "returned_intervals": 2888,
+          "rendered_features": 2888,
+          "vertices": 5776,
+          "response_bytes": 854581,
+          "cold_ms": 143.11874998384155,
+          "warm_median_ms": 21.486541503691114,
+          "warm_p95_ms": 30.138291011098772
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.763,
+        60.238,
+        24.779,
+        60.245999999999995
+      ],
+      "zoom": 15,
+      "mode": "gradient_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 7470,
+          "returned_intervals": 3353,
+          "rendered_features": 3353,
+          "vertices": 6706,
+          "response_bytes": 1092094,
+          "cold_ms": 522.9678750038147,
+          "warm_median_ms": 40.00977049872745,
+          "warm_p95_ms": 44.2532500019297
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 6129,
+          "returned_intervals": 2888,
+          "rendered_features": 2888,
+          "vertices": 5776,
+          "response_bytes": 941073,
+          "cold_ms": 501.33041600929573,
+          "warm_median_ms": 34.04116698948201,
+          "warm_p95_ms": 848.4467920206953
+        }
+      ]
+    },
+    {
+      "viewport": "forest",
+      "bounds": [
+        24.763,
+        60.238,
+        24.779,
+        60.245999999999995
+      ],
+      "zoom": 15,
+      "mode": "distance_explore",
+      "runs": [
+        {
+          "hide_building_access": false,
+          "candidate_intervals": 7470,
+          "returned_intervals": 3353,
+          "rendered_features": 3305,
+          "vertices": 6658,
+          "response_bytes": 1102095,
+          "cold_ms": 521.1312080209609,
+          "warm_median_ms": 40.24187500181142,
+          "warm_p95_ms": 45.32466598902829
+        },
+        {
+          "hide_building_access": true,
+          "candidate_intervals": 6129,
+          "returned_intervals": 2888,
+          "rendered_features": 2840,
+          "vertices": 5728,
+          "response_bytes": 947569,
+          "cold_ms": 535.0165830168407,
+          "warm_median_ms": 33.726958485203795,
+          "warm_p95_ms": 36.70954200788401
+        }
+      ]
+    }
+  ]
+}

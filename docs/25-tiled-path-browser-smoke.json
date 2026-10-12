@@ -1,0 +1,15 @@
+{
+  "loading": "Calculating paths from this start…",
+  "start": "Requested 60.21472, 24.80344 → snapped 60.21472, 24.80344 · 0.0 m offset. Prepared in 2.42 s.",
+  "prepared": 1,
+  "after": 1,
+  "expiryRecovered": true,
+  "expiryRequests": 1,
+  "expiryRetryProtected": true,
+  "latest": "Requested 60.24200, 24.77100 → snapped 60.24202, 24.77066 · 19.1 m offset. Prepared in 2.28 s.",
+  "cleared": "/api/paths/tiles/v1-b785913cb0a48000040d955cf3ad03c3/b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d/static/all-no-stairs/distance-hidden/{z}/{x}/{y}.mvt",
+  "legacyRequests": [],
+  "errors": [],
+  "source": "path-tiles-12",
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+}
