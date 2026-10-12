@@ -20,6 +20,12 @@ class Node(TypedDict):
     highway: NotRequired[str]
 
 
+class StartSnap(Node):
+    snap_distance_m: float
+    physical_degree: int
+    incident_segments: list[str]
+
+
 Segment = TypedDict("Segment", {
     "id": str, "osm_way_id": str, "from": str, "to": str,
     "length_m": float, "geometry": list[Coordinate], "tags": Tags,
@@ -125,6 +131,7 @@ class GraphDocument(TypedDict):
     summary: NotRequired[GraphSummary]
     terrain: NotRequired[TerrainMetadata]
     _measurements: NotRequired[MeasurementDocument]
+    start_snap: NotRequired[StartSnap]
 
 
 class EdgeProfile(TypedDict, total=False):

@@ -57,4 +57,11 @@ Keep docstrings short and focused on purpose and rationale throughout.
   All 82 tests pass in the rebuilt project .venv on Python 3.14.6, resolving the
   earlier dependency limitations. A further 100 deterministic terrain comparisons
   against the committed implementation produce identical outputs.
-- Items 4–9 pending.
+- Item 4 complete: candidate generation, assessment, pure ranking, and alternative
+  selection use focused typed functions. Internal ranking records are separate
+  from published candidate dictionaries. Constraint precision, generation order,
+  deduplication, anchor diversity, and fallback selection are preserved.
+  All 85 tests pass using uv in the project environment, including three new
+  ranking/selection regression tests. Another 150 deterministic comparisons
+  against the committed baseline implementation produce identical results.
+- Items 5–9 pending.
