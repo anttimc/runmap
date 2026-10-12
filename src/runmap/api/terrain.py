@@ -25,21 +25,12 @@ SLOPE_COLORS = np.array([
     [238, 150, 75],
     [209, 73, 91],
 ], dtype=np.uint8)
-# Retain the existing piecewise-linear colour ramp, but use a deliberately
-# small number of samples from it in the display PNG.  This gives the terrain
-# a banded, contour-map appearance without quantising the analysis raster.
-SLOPE_COLOR_BANDS = 6
 SLOPE_OPAQUE_AT_PERCENT = 15.0
 
 
 def slope_palette():
     """Return the display palette sampled from the shared continuous ramp."""
-    values = np.linspace(0, SLOPE_STOPS_PERCENT[-1], SLOPE_COLOR_BANDS)
-    colors = np.stack([
-        np.interp(values, SLOPE_STOPS_PERCENT, SLOPE_COLORS[:, channel])
-        for channel in range(3)
-    ], axis=1).round().astype(np.uint8)
-    return values, colors
+    return SLOPE_STOPS_PERCENT, SLOPE_COLORS
 
 
 def slope_opacity(slope_percent):
@@ -49,7 +40,7 @@ def slope_opacity(slope_percent):
 
 
 def slope_legend():
-    """Return the discrete palette advertised to the map UI."""
+    """Return the continuous ramp stops advertised to the map UI."""
     values, colors = slope_palette()
     opacities = slope_opacity(values)
     return [
@@ -66,12 +57,10 @@ def colorize_slope_png(slope_percent):
     """Encode slopes using sampled ramp colours and a transparent nodata entry."""
     palette = np.zeros((256, 3), dtype=np.uint8)
     palette_values = np.linspace(0, SLOPE_STOPS_PERCENT[-1], 255)
-    _, colors = slope_palette()
-    color_bins = np.minimum(
-        (palette_values * SLOPE_COLOR_BANDS / SLOPE_STOPS_PERCENT[-1]).astype(np.intp),
-        SLOPE_COLOR_BANDS - 1,
-    )
-    palette[1:] = colors[color_bins]
+    palette[1:] = np.stack([
+        np.interp(palette_values, SLOPE_STOPS_PERCENT, SLOPE_COLORS[:, channel])
+        for channel in range(3)
+    ], axis=1).round().astype(np.uint8)
     finite = np.isfinite(slope_percent)
     indices = np.zeros(slope_percent.shape, dtype=np.uint8)
     clipped = np.clip(slope_percent[finite], 0, SLOPE_STOPS_PERCENT[-1])

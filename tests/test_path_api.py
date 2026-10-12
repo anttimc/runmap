@@ -69,8 +69,10 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual(legal_directions(changed, "s"), set())
         self.assertEqual(legal_directions(index, "s"), {True})
 
-    def test_render_merges_equal_bands_without_changing_measurements(self):
+    def test_render_merges_equal_grades_without_changing_measurements(self):
         response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
+        response["features"][0]["properties"]["grade_percent"] = 2
+        response["features"][1]["properties"]["grade_percent"] = 2
         before = copy.deepcopy(response)
         rendered = render_paths(response)
         self.assertEqual(rendered["status"], "ready")
@@ -91,13 +93,21 @@ class PathQueryTests(unittest.TestCase):
         second["properties"]["segment_id"] = "other"
         self.assertEqual(len(render_paths(response)["features"]), 4)
 
-    def test_distance_render_preserves_distance_band_boundaries(self):
+    def test_render_preserves_distinct_grades_within_old_bands(self):
+        response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
+        response["features"][0]["properties"]["grade_percent"] = 2.1
+        response["features"][1]["properties"]["grade_percent"] = 2.9
+        rendered = render_paths(response)
+        self.assertEqual([feature["properties"]["grade_percent"]
+                          for feature in rendered["features"][:2]], [2.1, 2.9])
+
+    def test_distance_render_preserves_exact_distances(self):
         response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
         for feature, distance in zip(response["features"], [999, 1000, 2000, None]):
             feature["properties"]["distance_from_start_m"] = distance
         rendered = render_paths(response, "distance")
-        self.assertEqual([f["properties"]["distance_band_m"] for f in rendered["features"]],
-                         [0, 1000, 2000, None])
+        self.assertEqual([f["properties"]["distance_from_start_m"] for f in rendered["features"]],
+                         [999, 1000, 2000, None])
         self.assertNotIn("grade_percent", rendered["features"][0]["properties"])
         with self.assertRaises(ValueError):
             render_paths(response, "unknown")

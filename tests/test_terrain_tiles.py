@@ -64,7 +64,7 @@ class TerrainTileTests(unittest.TestCase):
 
     def test_config_advertises_versioned_raster_tiles_and_presets(self):
         config = self.service.config()
-        self.assertIn("/api/regions/area/terrain/v5/", config["terrain_tiles"]["template"])
+        self.assertIn("/api/regions/area/terrain/v6/", config["terrain_tiles"]["template"])
         self.assertIn("/test-manifest/", config["terrain_tiles"]["template"])
         self.assertEqual(config["smoothing"]["values"], [0, 20, 40, 60, 80, 100])
         self.assertIn("/contours/v2/", config["contour_tiles"]["template"])

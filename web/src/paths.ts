@@ -73,7 +73,45 @@ interface Viewport extends FeatureCollection<LineString> {
 }
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
-const colors = ["#087f8c", "#c09223", "#d45f2e", "#ae2849"];
+interface ColorStop { percent: number; color: string }
+const distanceStops = [
+  { fraction: 0, color: "#eee5ff" },
+  { fraction: .1, color: "#c4a3f5" },
+  { fraction: .2, color: "#9861db" },
+  { fraction: .5, color: "#6324a1" },
+  { fraction: 1, color: "#260b40" },
+];
+
+function distanceExpression(maximumM: number): ExpressionSpecification {
+  return ["case", ["any", ["!=", ["get", "inclusion_state"], "included"],
+    ["==", ["get", "distance_from_start_m"], null]], "#727980",
+    ["interpolate", ["linear"], ["coalesce", ["get", "distance_from_start_m"], 0],
+      ...distanceStops.flatMap(stop => [stop.fraction * maximumM, stop.color])]] as ExpressionSpecification;
+}
+
+function renderDistanceLegend(maximumKm: number): void {
+  element("distance-ramp").style.background = `linear-gradient(to right, ${distanceStops.map(stop => `${stop.color} ${100 * stop.fraction}%`).join(", ")})`;
+  const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
+  element("distance-ticks").textContent = distanceStops
+    .map(stop => formatter.format(stop.fraction * maximumKm)).join(" · ") + " km";
+}
+
+function gradientOpacity(): ExpressionSpecification {
+  return ["interpolate", ["linear"], ["abs", ["coalesce", ["get", "grade_percent"], 0]],
+    0, .2, 2, .5, 5, 1];
+}
+
+function gradientLegendColor(stop: ColorStop): string {
+  const opacity = stop.percent <= 2
+    ? .2 + .3 * stop.percent / 2
+    : Math.min(1, .5 + .5 * (stop.percent - 2) / 3);
+  return `color-mix(in srgb, ${stop.color} ${100 * opacity}%, transparent)`;
+}
+
+function gradientExpression(stops: ColorStop[]): ExpressionSpecification {
+  return ["interpolate", ["linear"], ["abs", ["coalesce", ["get", "grade_percent"], 0]],
+    ...stops.flatMap(stop => [stop.percent, stop.color])] as ExpressionSpecification;
+}
 const contextLayers = ["runner-path-casing", "runner-paths-maintained", "runner-paths-unmaintained", "runner-pedestrian-roads"];
 
 function element<T extends HTMLElement>(id: string): T {
@@ -103,7 +141,7 @@ function reliable(interval: Interval): boolean {
   return interval.valid && !interval.quality_flags.some(flag => flag === "bridge" || flag === "tunnel");
 }
 
-function addPathLayers(map: Map, config: PathConfig): void {
+function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
   const before = map.getStyle().layers?.find(layer => layer.type === "symbol")?.id;
   map.addSource("path-coverage", { type: "geojson", data: { type: "Feature", properties: {}, geometry: config.coverage.geometry } });
   map.addLayer({ id: "path-coverage", type: "line", source: "path-coverage", paint: { "line-color": "#536773", "line-width": 1.5, "line-dasharray": [4, 3] } }, before);
@@ -118,7 +156,7 @@ function addPathLayers(map: Map, config: PathConfig): void {
   map.addLayer({ id: "path-casing", type: "line", source: "path-intervals", minzoom: config.min_zoom,
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": "#fffdf5", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1.5, 15, 6] } }, before);
-  const gradeColor: ExpressionSpecification = ["step", ["abs", ["coalesce", ["get", "grade_percent"], 0]], colors[0], 2, colors[1], 5, colors[2], 8, colors[3]];
+  const gradeColor: ExpressionSpecification = gradientExpression(stops);
   map.addLayer({ id: "path-grades", type: "line", source: "path-intervals", minzoom: config.min_zoom,
     filter: ["==", ["get", "quality"], "terrain_estimate"],
     layout: { "line-cap": "butt", "line-join": "round" },
@@ -213,12 +251,13 @@ function inclusionText(interval: Inclusion): string {
   return ` · ${reason}${minimum}${outward}${interval.coverage_limited ? " · coverage limited" : ""}`;
 }
 
-function applyPathEmphasis(map: Map, flatter: boolean): void {
+function applyPathEmphasis(map: Map, flatter: boolean, distance = false): void {
   const alpha: ExpressionSpecification = ["case", ["==", ["get", "eligible"], false], .08,
     ["match", ["coalesce", ["get", "inclusion_state"], ""], "beyond_budget", .30, "no_connection", .12, "excluded", .08, 1]];
   const opacity: ExpressionSpecification = ["*", alpha, flatter
     ? ["case", ["all", ["==", ["get", "quality"], "terrain_estimate"], [">=", ["abs", ["coalesce", ["get", "grade_percent"], 0]], 2]], .45, 1] : 1];
   for (const layer of ["path-casing", "path-grades", "path-uncertain", "path-stairs"]) map.setPaintProperty(layer, "line-opacity", opacity);
+  map.setPaintProperty("path-grades", "line-opacity", distance ? opacity : ["*", opacity, gradientOpacity()]);
 }
 
 function renderInspection(map: Map, result: Inspection): void {
@@ -260,7 +299,7 @@ function renderInspection(map: Map, result: Inspection): void {
   content.append(details);
 }
 
-export async function startPaths(map: Map): Promise<void> {
+export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   const status = element("path-status");
   const panel = element("path-inspection");
   const reverse = element<HTMLInputElement>("path-reverse");
@@ -290,7 +329,9 @@ export async function startPaths(map: Map): Promise<void> {
   budget.value = String(config.default_budget_km);
   radius.value = String(config.snap_radius_m);
   for (const control of [metric, filter, avoidStairs, flatter, enabled, budget, radius, setStart]) control.disabled = false;
-  addPathLayers(map, config);
+  addPathLayers(map, config, stops);
+  element("path-gradient-ramp").style.background = `linear-gradient(to right, ${stops.map(stop => `${gradientLegendColor(stop)} ${100 * stop.percent / 40}%`).join(", ")})`;
+  element("path-gradient-ticks").textContent = stops.map(stop => `${stop.percent}%`).join(" · ");
   applyPathEmphasis(map, flatter.checked);
   map.addSource("start-offset", { type: "geojson", data: empty });
   map.addLayer({ id: "start-offset", type: "line", source: "start-offset",
@@ -402,25 +443,27 @@ export async function startPaths(map: Map): Promise<void> {
       element("path-inspection-content").replaceChildren(text("p", `Inspection failed. ${(error as Error).message}`));
     }
   }
-  function refresh(): void { void updateViewport(); void inspectSelected(); }
+  function refresh(): void { updateMetric(); void updateViewport(); void inspectSelected(); }
   map.on("movestart", () => { viewportAbort?.abort(); viewportSequence++; });
   map.on("moveend", () => { void updateViewport(); });
   for (const input of [filter, avoidStairs]) input.addEventListener("change", () => refresh());
   for (const input of [budget, radius]) input.addEventListener("change", () => { if (input.reportValidity()) refresh(); });
   function updateMetric(): void {
     const distance = metric.value === "distance";
-    const gradeColor: ExpressionSpecification = ["step", ["abs", ["coalesce", ["get", "grade_percent"], 0]], colors[0], 2, colors[1], 5, colors[2], 8, colors[3]];
+    const maximumKm = enabled.checked ? Number(budget.value) : 10;
+    renderDistanceLegend(maximumKm);
+    const gradeColor: ExpressionSpecification = gradientExpression(stops);
     map.setPaintProperty("path-grades", "line-color", distance
-      ? ["case", ["==", ["get", "distance_band_m"], null], "#727980", ["step", ["coalesce", ["get", "distance_band_m"], 0], colors[0], 1000, colors[1], 2000, colors[2], 5000, colors[3]]] : gradeColor);
+      ? distanceExpression(maximumKm * 1000) : gradeColor);
     map.setFilter("path-grades", distance ? null : ["==", ["get", "quality"], "terrain_estimate"]);
     map.setFilter("path-uncertain", distance ? ["==", ["get", "quality"], "hidden"] : ["!=", ["get", "quality"], "terrain_estimate"]);
     element("gradient-legend").hidden = distance;
     element("distance-legend").hidden = !distance;
     element("metric-note").textContent = distance
-      ? "Shortest legal network distance from the snapped start to each interval midpoint. Gray: excluded, unreachable, or beyond the outing search limit. Faintness still shows round-trip outing inclusion. Terrain uncertainty remains in inspection."
+      ? "Shortest legal network distance from the snapped start to each interval midpoint. Purple colors show paths included within the round-trip outing budget; the color scale spans zero to that budget. Gray: beyond budget, excluded, unreachable, or distance unavailable. Terrain uncertainty remains in inspection."
       : "Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.";
     flatter.disabled = distance;
-    applyPathEmphasis(map, !distance && flatter.checked);
+    applyPathEmphasis(map, !distance && flatter.checked, distance);
   }
   metric.addEventListener("change", () => {
     if (metric.value === "distance") {
@@ -429,15 +472,15 @@ export async function startPaths(map: Map): Promise<void> {
     }
     updateMetric(); showStart(); refresh();
   });
-  flatter.addEventListener("change", () => applyPathEmphasis(map, flatter.checked));
+  flatter.addEventListener("change", () => applyPathEmphasis(map, flatter.checked, metric.value === "distance"));
   enabled.addEventListener("change", () => {
     if (enabled.checked && !requestedStart) chooseStartMode(true);
-    else if (!enabled.checked) { chooseStartMode(false); metric.value = "gradient"; updateMetric(); }
+    else if (!enabled.checked) chooseStartMode(false);
     showStart(); refresh();
   });
   setStart.addEventListener("click", () => chooseStartMode(!choosingStart));
   clearStart.addEventListener("click", () => {
-    requestedStart = undefined; enabled.checked = false; metric.value = "gradient"; updateMetric();
+    requestedStart = undefined; enabled.checked = false;
     chooseStartMode(false); showStart(); outingStatus.textContent = "Choose a start to enable distance highlighting."; refresh();
   });
   map.on("click", event => {

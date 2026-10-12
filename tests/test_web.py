@@ -7,7 +7,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 from rasterio.warp import transform
 
-from runmap.api.terrain import SLOPE_COLOR_BANDS, colorize_slope_png, slope_opacity, TerrainRenderer
+from runmap.api.terrain import colorize_slope_png, slope_opacity, TerrainRenderer
 
 
 class TerrainRendererTests(unittest.TestCase):
@@ -36,14 +36,14 @@ class TerrainRendererTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.renderer.render_png(101)
 
-    def test_slope_png_uses_sampled_colours_and_smooth_low_slope_transparency(self):
+    def test_slope_png_uses_continuous_colours_and_smooth_low_slope_transparency(self):
         slopes = np.linspace(0, 40, 121, dtype=np.float64).reshape(1, -1)
         image = Image.open(BytesIO(colorize_slope_png(slopes)))
 
         palette = np.asarray(image.getpalette(), dtype=np.uint8).reshape(-1, 3)
         used_colours = {tuple(palette[index]) for index in set(image.getdata())}
         transparency = image.info["transparency"]
-        self.assertEqual(len(used_colours), SLOPE_COLOR_BANDS)
+        self.assertGreater(len(used_colours), 100)
         self.assertEqual(transparency[1], 0)
         self.assertEqual(transparency[1 + round(254 * 15 / 40)], 255)
         self.assertAlmostEqual(float(slope_opacity(7.5)), 0.5)

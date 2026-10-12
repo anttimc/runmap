@@ -57,7 +57,7 @@ Endpoints:
 
 - `GET /api/config` — region, manifest, bounds, preset values, legend, and XYZ
   tile template.
-- `GET /api/regions/{region_id}/terrain/v5/{manifest_id}/w{wavelength_m}/{z}/{x}/{y}.png`
+- `GET /api/regions/{region_id}/terrain/v6/{manifest_id}/w{wavelength_m}/{z}/{x}/{y}.png`
   — versioned 256 × 256 slope-magnitude tile for zooms 8–15.
 - `GET /api/regions/{region_id}/contours/v2/{manifest_id}/{z}/{x}/{y}.mvt` —
   versioned source-elevation vector contour tile for zooms 12–15.

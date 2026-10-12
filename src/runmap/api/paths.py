@@ -352,7 +352,7 @@ def inspect_outing(data, result, longitude, latitude, budget_km=6, surface="all"
 
 
 def render_paths(response, metric="gradient"):
-    """Coalesce contiguous equal-style intervals; inspection retains exact samples.
+    """Coalesce contiguous equal-value intervals; inspection retains exact samples.
 
     Keep segment boundaries and outing-state transitions, including disconnected
     and excluded portions. Only properties consumed by map styling are shipped.
@@ -365,16 +365,14 @@ def render_paths(response, metric="gradient"):
     for feature in response["features"]:
         source = feature["properties"]
         grade = abs(source["grade_percent"] or 0)
-        grade_color = 0 if grade < 2 else 2 if grade < 5 else 5 if grade < 8 else 8
         properties = {key: source[key] for key in (
             "segment_id", "quality", "stairs", "eligible", "inclusion_state"
         ) if key in source}
         if metric == "distance":
             distance = source.get("distance_from_start_m")
-            properties["distance_band_m"] = (None if distance is None else
-                0 if distance < 1000 else 1000 if distance < 2000 else 2000 if distance < 5000 else 5000)
+            properties["distance_from_start_m"] = distance
         else:
-            properties["grade_percent"] = grade_color
+            properties["grade_percent"] = grade
         key = tuple(properties.items())
         coordinates = feature["geometry"]["coordinates"]
         interval = source["interval_index"]

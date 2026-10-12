@@ -213,3 +213,8 @@ button { border: 1px solid #b9c3c0; border-radius: 5px; background: #fffdf8; pad
 .info-popover h2 { margin: 0; font-size: 1rem; }
 .info-popover .explanation, .info-popover li { font-size: .82rem; line-height: 1.55; }
 .info-popover ul { padding-left: 18px; }
+
+.continuous-key { grid-column: 1 / -1; width: 100%; }
+.continuous-ramp { height: 12px; border-radius: 4px; margin-bottom: 5px; }
+
+.legend-labels { position: relative; min-width: 30px; }

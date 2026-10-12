@@ -415,13 +415,11 @@ function setStatus(message: string, kind: "ready" | "busy" | "error" = "ready"):
 }
 
 function renderLegend(stops: MapConfig["slope_legend"]): void {
-  const bands = stops.map((stop, index) => {
-    const lower = (100 * index) / stops.length;
-    const upper = (100 * (index + 1)) / stops.length;
+  const colors = stops.map(stop => {
     const color = `color-mix(in srgb, ${stop.color} ${100 * stop.opacity}%, transparent)`;
-    return `${color} ${lower}%, ${color} ${upper}%`;
+    return `${color} ${100 * stop.percent / 40}%`;
   });
-  legendBar.style.background = `linear-gradient(to top, ${bands.join(", ")})`;
+  legendBar.style.background = `linear-gradient(to top, ${colors.join(", ")})`;
   legendLabels.replaceChildren(
     ...stops
       .slice()
@@ -429,6 +427,9 @@ function renderLegend(stops: MapConfig["slope_legend"]): void {
       .map((stop) => {
         const label = document.createElement("span");
         label.textContent = `${stop.percent}%`;
+        label.style.position = "absolute";
+        label.style.bottom = `${100 * stop.percent / 40}%`;
+        label.style.transform = "translateY(50%)";
         return label;
       }),
   );
@@ -568,7 +569,7 @@ async function start(): Promise<void> {
     wavelengthInput.disabled = false;
     opacityInput.disabled = false;
     setStatus("Loading overlay…", "busy");
-    void startPaths(map);
+    void startPaths(map, config.slope_legend);
   });
 
   wavelengthInput.addEventListener("input", scheduleTerrainUpdate);

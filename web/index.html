@@ -48,21 +48,15 @@
           </details>
           <div class="info-heading network-help"><span>Prepared network</span><button type="button" class="info-button" popovertarget="network-help" aria-label="About prepared network limitations">i</button></div><div id="network-help" class="info-popover" popover role="dialog" aria-labelledby="network-help-title"><div class="heading-row"><h2 id="network-help-title">Prepared network limitations</h2><button type="button" popovertarget="network-help" popovertargetaction="hide" aria-label="Close Prepared network limitations help">Close</button></div><ul id="path-importer-notes"></ul></div>
           <div id="gradient-legend" class="gradient-legend" aria-label="Along-path gradient magnitude bands">
-            <span><i style="background:#087f8c"></i>0–2%</span>
-            <span><i style="background:#c09223"></i>2–5%</span>
-            <span><i style="background:#d45f2e"></i>5–8%</span>
-            <span><i style="background:#ae2849"></i>8%+</span>
+            <div class="continuous-key"><div id="path-gradient-ramp" class="continuous-ramp"></div><div id="path-gradient-ticks"></div></div>
             <span><i class="uncertain"></i>Bridge / tunnel ground estimate</span>
             <span><i class="missing"></i>Missing terrain</span>
             <span><i class="stairs"></i>Stairs (over grade color)</span>
             <span><i class="coverage"></i>Prepared coverage boundary</span>
           </div>
           <div id="distance-legend" class="gradient-legend" hidden aria-label="Network distance from start">
-            <span><i style="background:#087f8c"></i>0–1 km</span>
-            <span><i style="background:#c09223"></i>1–2 km</span>
-            <span><i style="background:#d45f2e"></i>2–5 km</span>
-            <span><i style="background:#ae2849"></i>5 km+</span>
-            <span><i style="background:#727980"></i>Distance unavailable</span>
+            <div class="continuous-key"><div id="distance-ramp" class="continuous-ramp"></div><div id="distance-ticks">0 · 1 · 2 · 5 · 10 km</div></div>
+            <span><i style="background:#727980"></i>Outside outing / distance unavailable</span>
           </div>
         </div>
         <details class="terrain-controls">
