@@ -43,4 +43,12 @@ Keep docstrings short and focused on purpose and rationale throughout.
   The seven existing routing tests pass under Python 3.14, and search annotation
   resolution passes. Exploration tests are blocked by missing FastAPI in that
   interpreter; the existing virtual environment uses unsupported Python 3.9.
-- Items 2–9 pending.
+- Item 2 complete: graph construction delegates boundary collection, way
+  filtering, junction detection, section splitting, segment/arc construction,
+  and summary generation to typed helpers. Internal graph parts use a data-only
+  dataclass; serialized graph summaries have a precise TypedDict schema.
+  Seven routing tests pass. Six existing topology tests pass in isolation,
+  excluding unrelated raster imports; 300 deterministic comparisons against
+  the committed implementation produce identical graphs. The full graph test
+  module remains unverified because Python 3.14 lacks Rasterio.
+- Items 3–9 pending.

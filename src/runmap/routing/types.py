@@ -15,6 +15,9 @@ class Node(TypedDict):
     barrier: NotRequired[str]
     access: NotRequired[str]
     foot: NotRequired[str]
+    entrance: NotRequired[str]
+    crossing: NotRequired[str]
+    highway: NotRequired[str]
 
 
 Segment = TypedDict("Segment", {
@@ -55,6 +58,29 @@ class GraphSource(TypedDict, total=False):
     experiment_config_digest: str
 
 
+class GraphSummary(TypedDict):
+    source_node_count: int
+    source_way_count: int
+    selected_way_count: int
+    rejected_way_counts: dict[str, int]
+    node_count: int
+    segment_count: int
+    arc_count: int
+    physical_length_km: float
+    component_count: int
+    largest_component_nodes: int
+    highway_segment_counts: dict[str, int]
+    missing_surface_segments: int
+    bridge_segments: int
+    tunnel_segments: int
+    stair_segments: int
+    pedestrian_area_boundary_segments: int
+    pedestrian_oneway_segments: int
+    barrier_nodes: int
+    route_boundary_way_count: int
+    terrain_valid_fraction: NotRequired[float]
+
+
 class GraphDocument(TypedDict):
     nodes: list[Node]
     segments: list[Segment]
@@ -62,6 +88,7 @@ class GraphDocument(TypedDict):
     schema_version: NotRequired[int]
     source: NotRequired[GraphSource]
     route_boundaries: NotRequired[list[Boundary]]
+    summary: NotRequired[GraphSummary]
 
 
 class EdgeProfile(TypedDict, total=False):
