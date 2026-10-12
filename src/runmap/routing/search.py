@@ -1,14 +1,17 @@
 """Shortest-path primitives and diverse outbound/return path pairs."""
 
 from collections import Counter, defaultdict
+from collections.abc import Iterable, Mapping, Sequence, Set
 from dataclasses import dataclass, field, replace
 import heapq
 import math
 
+from runmap.routing.types import Arc, Coordinate, EdgeProfile, GraphDocument, Node, RouteMetrics, Segment
+
 from runmap.routing.profiles import (arc_direction_allowed, classify_segments, exploration_profile, pedestrian_access_reason)
 
 
-def _is_grade_separated(segment):
+def _is_grade_separated(segment: Segment) -> bool:
     tags = segment.get("tags", {})
     bridge = str(tags.get("bridge", "")).lower()
     tunnel = str(tags.get("tunnel", "")).lower()
@@ -20,14 +23,17 @@ def _is_grade_separated(segment):
     )
 
 
-def _orientation(first, second, third):
+def _orientation(first: Sequence[float], second: Sequence[float], third: Sequence[float]) -> float:
     return (
         (second[0] - first[0]) * (third[1] - first[1])
         - (second[1] - first[1]) * (third[0] - first[0])
     )
 
 
-def _line_segments_intersect(first, second, third, fourth):
+def _line_segments_intersect(
+    first: Sequence[float], second: Sequence[float],
+    third: Sequence[float], fourth: Sequence[float],
+) -> bool:
     if (
         max(first[0], second[0]) < min(third[0], fourth[0])
         or max(third[0], fourth[0]) < min(first[0], second[0])
@@ -46,7 +52,9 @@ def _line_segments_intersect(first, second, third, fourth):
     ):
         return True
 
-    def on_segment(first_point, second_point, point):
+    def on_segment(
+        first_point: Sequence[float], second_point: Sequence[float], point: Sequence[float],
+    ) -> bool:
         return (
             min(first_point[0], second_point[0]) - epsilon
             <= point[0]
@@ -64,7 +72,7 @@ def _line_segments_intersect(first, second, third, fourth):
     )
 
 
-def _boundary_blocked_segments(graph):
+def _boundary_blocked_segments(graph: GraphDocument) -> set[str]:
     bucket_size = 0.002
     boundary_buckets = defaultdict(list)
     boundary_edges = []
@@ -124,34 +132,34 @@ class CostModel:
     ascent_cost_per_m: float = 0.0
     stairs_multiplier: float = 1.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.ascent_cost_per_m < 0 or self.stairs_multiplier < 1:
             raise ValueError("Route cost parameters must be non-negative")
 
 
 @dataclass(frozen=True)
 class PathResult:
-    arc_ids: tuple
+    arc_ids: tuple[str, ...]
     cost: float
 
 
 @dataclass(frozen=True)
 class GraphData:
-    document: dict
-    nodes: dict
-    segments: dict
-    arcs: dict
-    outgoing: dict
-    incoming: dict
-    degree: dict
-    blocked_nodes: set
-    boundary_blocked_segments: set
-    ineligible_segments: dict
-    profile: dict
-    direction_cache: dict = field(default_factory=dict)
+    document: GraphDocument
+    nodes: Mapping[str, Node]
+    segments: Mapping[str, Segment]
+    arcs: Mapping[str, Arc]
+    outgoing: Mapping[str, list[str]]
+    incoming: Mapping[str, list[str]]
+    degree: Mapping[str, int]
+    blocked_nodes: set[str]
+    boundary_blocked_segments: set[str]
+    ineligible_segments: dict[str, str]
+    profile: EdgeProfile
+    direction_cache: dict[str, frozenset[bool]] = field(default_factory=dict)
 
 
-def build_graph_index(graph, profile=None):
+def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) -> GraphData:
     profile = profile or exploration_profile(avoid_stairs=False)
     nodes = {node["id"]: node for node in graph["nodes"]}
     segments = {segment["id"]: segment for segment in graph["segments"]}
@@ -170,7 +178,7 @@ def build_graph_index(graph, profile=None):
     return index
 
 
-def arc_usable(index, arc, blocked_segments=frozenset()):
+def arc_usable(index: GraphData, arc: Arc, blocked_segments: Set[str] = frozenset()) -> bool:
     return (arc["segment_id"] not in index.boundary_blocked_segments
             and arc["segment_id"] not in index.ineligible_segments
             and arc["segment_id"] not in blocked_segments
@@ -178,7 +186,10 @@ def arc_usable(index, arc, blocked_segments=frozenset()):
             and arc_direction_allowed(index.segments[arc["segment_id"]], arc, index.profile))
 
 
-def _arc_cost(index, arc, model, overlap_segments, overlap_factor):
+def _arc_cost(
+    index: GraphData, arc: Arc, model: CostModel,
+    overlap_segments: Set[str], overlap_factor: float,
+) -> float:
     segment = index.segments[arc["segment_id"]]
     cost = float(arc["length_m"])
     if segment["tags"].get("highway") == "steps":
@@ -190,14 +201,14 @@ def _arc_cost(index, arc, model, overlap_segments, overlap_factor):
 
 
 def shortest_path(
-    index,
-    start,
-    destination,
-    model=None,
-    overlap_segments=frozenset(),
-    overlap_factor=1.0,
-    blocked_segments=frozenset(),
-):
+    index: GraphData,
+    start: str,
+    destination: str,
+    model: CostModel | None = None,
+    overlap_segments: Set[str] = frozenset(),
+    overlap_factor: float = 1.0,
+    blocked_segments: Set[str] = frozenset(),
+) -> PathResult | None:
     """Find one least-cost directed path with optional segment reuse penalty."""
     if start not in index.nodes or destination not in index.nodes:
         raise ValueError("Route endpoint is not in the graph")
@@ -239,8 +250,9 @@ def shortest_path(
 
 
 def shortest_distances(
-    index, start, maximum=math.inf, blocked_segments=frozenset(), reverse=False
-):
+    index: GraphData, start: str, maximum: float = math.inf,
+    blocked_segments: Set[str] = frozenset(), reverse: bool = False,
+) -> dict[str, float]:
     """Calculate distances from a start in the directed graph or its reverse."""
     if start not in index.nodes:
         raise ValueError("Route start is not in the graph")
@@ -270,7 +282,9 @@ def shortest_distances(
     return distances
 
 
-def diverse_path_pair(index, start, destination, model, overlap_factor):
+def diverse_path_pair(
+    index: GraphData, start: str, destination: str, model: CostModel, overlap_factor: float,
+) -> tuple[PathResult, PathResult] | None:
     """Find an outbound path and a return path penalizing outbound segments."""
     outbound = shortest_path(index, start, destination, model)
     if outbound is None:
@@ -289,7 +303,7 @@ def diverse_path_pair(index, start, destination, model, overlap_factor):
     return outbound, returning
 
 
-def route_metrics(index, arc_ids):
+def route_metrics(index: GraphData, arc_ids: Iterable[str]) -> RouteMetrics:
     """Summarize a closed-walk candidate without hiding repeated traversal."""
     arcs = [index.arcs[arc_id] for arc_id in arc_ids]
     counts = Counter(arc["segment_id"] for arc in arcs)
@@ -328,7 +342,7 @@ def route_metrics(index, arc_ids):
     }
 
 
-def route_coordinates(index, arc_ids):
+def route_coordinates(index: GraphData, arc_ids: Iterable[str]) -> list[Coordinate]:
     coordinates = []
     for arc_id in arc_ids:
         arc = index.arcs[arc_id]
@@ -342,7 +356,7 @@ def route_coordinates(index, arc_ids):
     return coordinates
 
 
-def reachable_nodes(index, start, reverse=False):
+def reachable_nodes(index: GraphData, start: str, reverse: bool = False) -> set[str]:
     """Connectivity only: distinguish absent connections from bounded distances."""
     if start in index.blocked_nodes:
         return set()
@@ -359,7 +373,7 @@ def reachable_nodes(index, start, reverse=False):
     return seen
 
 
-def apply_profile(index, profile):
+def apply_profile(index: GraphData, profile: EdgeProfile) -> GraphData:
     """Reuse topology while applying the same policy to nodes and physical segments."""
     result = replace(index, profile=profile, direction_cache={}, ineligible_segments={}, blocked_nodes={
         node_id for node_id, node in index.nodes.items() if pedestrian_access_reason(node, profile)
