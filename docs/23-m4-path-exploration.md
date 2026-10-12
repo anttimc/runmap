@@ -201,7 +201,7 @@ explicit CLI action; requests only read the loaded dataset.
   provenance. Inspection direction does not change traversal permission.
 
 Viewport responses carry `ready`, `zoom_in`, or `outside_coverage`. Gradients
-require zoom 14+, at most 100 km² and 25,000 features; excess requests return no
+require zoom 11+, at most 2,500 km² and 500,000 measurement intervals; excess requests return no
 features with an explicit reason, never a truncated subset. Bounds crossing the
 prepared polygon carry `coverage_limited`. Complete intervals may extend a short
 distance beyond the viewport/coverage edge. An optional `dataset_id` parameter
@@ -421,3 +421,35 @@ the exploration outcome, with remaining limitations documented.
 Do not begin route generation to compensate for an unclear exploration map.
 If the local review needs longer inspection stretches or absolute elevation,
 scope that increment explicitly before expanding the graph or adding routing UI.
+
+
+### Path display performance follow-up
+
+Colored paths now render from zoom 11 (previously 14), with line widths scaled
+for overview views. Viewport safety limits are 2,500 km² and 500,000 measurement
+intervals; exceeding a limit still gives an explicit zoom-in response.
+
+The map response merges contiguous intervals on the same physical segment when
+their grade color band, quality, stair marking, eligibility and outing state
+match. Budget transitions and segment identities are preserved. Exact signed
+measurements and inclusion details remain in segment inspection. The viewport
+response contains display grade-band representatives rather than exact grades.
+The original interval count is reported as `measurement_interval_count`.
+
+Profiling identified repeated direction/access evaluation per interval, repeated
+coverage-boundary tests, large per-interval JSON objects, and FastAPI's recursive
+encoding pass. Direction results are cached per policy (reset on policy change),
+coverage-boundary results per immutable measurement interval, and eligibility per
+segment within a viewport. Map endpoints use a compact JSONResponse directly.
+
+Local prepared-data measurements, warm 6 km outing, bounds
+(24.79, 60.21, 24.81, 60.22): compute plus JSON encoding fell from approximately
+0.61 s to 0.10 s; 6,988 interval features became 3,457 display sections, and
+uncompressed response size fell from 5.13 MB to 1.18 MB. These are local backend
+measurements, not browser frame-rate claims. A wider zoom-11 query with 98,904
+intervals produced 47,348 sections / 16.28 MB and took about 1.71 s warm including
+compaction and encoding. Wider views remain more expensive; tiled delivery and
+zoom-dependent geometry simplification are potential further improvements.
+
+Browser verification confirmed colored paths and outing opacity at zoom 11,
+with no browser errors. All 80 automated tests and the frontend build pass.

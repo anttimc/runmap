@@ -116,15 +116,15 @@ function addPathLayers(map: Map, config: PathConfig): void {
     paint: { "line-color": "#142b40", "line-width": 9, "line-opacity": .8 } }, before);
   map.addLayer({ id: "path-casing", type: "line", source: "path-intervals", minzoom: config.min_zoom,
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#fffdf5", "line-width": 6 } }, before);
+    paint: { "line-color": "#fffdf5", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1.5, 15, 6] } }, before);
   const gradeColor: ExpressionSpecification = ["step", ["abs", ["coalesce", ["get", "grade_percent"], 0]], colors[0], 2, colors[1], 5, colors[2], 8, colors[3]];
   map.addLayer({ id: "path-grades", type: "line", source: "path-intervals", minzoom: config.min_zoom,
     filter: ["==", ["get", "quality"], "terrain_estimate"],
     layout: { "line-cap": "butt", "line-join": "round" },
-    paint: { "line-width": 3.5, "line-color": gradeColor } }, before);
+    paint: { "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1, 15, 3.5], "line-color": gradeColor } }, before);
   map.addLayer({ id: "path-uncertain", type: "line", source: "path-intervals", minzoom: config.min_zoom,
     filter: ["!=", ["get", "quality"], "terrain_estimate"],
-    paint: { "line-width": 3.5, "line-dasharray": [1.5, 1],
+    paint: { "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1, 15, 3.5], "line-dasharray": [1.5, 1],
       "line-color": ["match", ["get", "quality"], "missing", "#727980", "#8b619e"] } }, before);
   map.addLayer({ id: "path-stairs", type: "line", source: "path-intervals", minzoom: config.min_zoom,
     filter: ["==", ["get", "stairs"], true],
@@ -367,7 +367,7 @@ export async function startPaths(map: Map): Promise<void> {
       if (result.status === "outside_coverage") setStatus("Outside prepared path coverage. Basemap paths are context.", "outside_coverage");
       else if (result.status === "zoom_in") setStatus("Zoom in for path gradients. Neutral paths remain context.", "zoom_in");
       else if (result.status === "no_eligible_snap") setStatus("Start could not be snapped to an eligible path.", "no_eligible_snap");
-      else setStatus(`${result.features.length.toLocaleString()} intervals${result.coverage_limited ? " · view crosses prepared coverage boundary" : " · click a path to inspect"}`, "ready");
+      else setStatus(`${result.features.length.toLocaleString()} path sections${result.coverage_limited ? " · view crosses prepared coverage boundary" : " · click a path to inspect"}`, "ready");
     } catch (error) {
       if (sequence !== viewportSequence || (error as Error).name === "AbortError") return;
       setData(map, "path-intervals", empty); context(false);

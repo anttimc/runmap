@@ -7,10 +7,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from runmap.api.paths import inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
+from runmap.api.paths import render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
 from runmap.api.terrain import TerrainRenderer
 from runmap.api.terrain_tiles import (
     CONTOUR_INTERVAL_M,
@@ -92,7 +92,8 @@ def paths_viewport(
 ):
     data = _path_data(request, dataset_id)
     try:
-        return viewport_paths(data, (west, south, east, north), zoom, surface, avoid_stairs=avoid_stairs)
+        result = viewport_paths(data, (west, south, east, north), zoom, surface, avoid_stairs=avoid_stairs)
+        return JSONResponse(render_paths(result))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -139,8 +140,9 @@ def path_exploration(request: Request, west: float, south: float, east: float, n
                      dataset_id: str = None):
     data = _path_data(request, dataset_id)
     try:
-        return explore_paths(data, (west, south, east, north), zoom, longitude, latitude,
-                             budget_km, surface, avoid_stairs, radius_m, segment_id)
+        result = explore_paths(data, (west, south, east, north), zoom, longitude, latitude,
+                               budget_km, surface, avoid_stairs, radius_m, segment_id)
+        return JSONResponse(render_paths(result))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

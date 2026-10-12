@@ -136,6 +136,8 @@ def split_start_graph(index, snap):
 
 
 def legal_directions(index, segment_id):
+    if segment_id in index.direction_cache:
+        return index.direction_cache[segment_id]
     segment = index.segments[segment_id]
     result = set()
     for node in {segment["from"], segment["to"]}:
@@ -143,7 +145,8 @@ def legal_directions(index, segment_id):
             arc = index.arcs[arc_id]
             if arc["segment_id"] == segment_id and arc_usable(index, arc):
                 result.add(arc_forward(segment, arc))
-    return result
+    index.direction_cache[segment_id] = frozenset(result)
+    return index.direction_cache[segment_id]
 
 
 def distance_data(index, snap, maximum_m):

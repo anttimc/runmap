@@ -7,10 +7,12 @@ import unittest
 from unittest.mock import patch
 
 from runmap.api.app import app, lifespan
-from runmap.api.paths import load_path_data, path_config, viewport_paths, inspect_path, uphill_sections
+from runmap.api.paths import load_path_data, path_config, viewport_paths, inspect_path, uphill_sections, render_paths
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import graph_digest
-from runmap.routing.profiles import surface_category
+from runmap.routing.profiles import surface_category, exploration_profile
+from runmap.routing.search import apply_profile
+from runmap.paths.exploration import legal_directions
 
 
 def fixture():
@@ -59,9 +61,39 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual(result["features"][0]["properties"]["surface_class"], "gravel")
         self.assertTrue(result["coverage_limited"])
 
+    def test_direction_cache_is_reset_for_new_policy(self):
+        index = self.data.routing
+        self.assertEqual(legal_directions(index, "s"), {True})
+        changed = apply_profile(index, {**exploration_profile(), "forbidden_surfaces": ["gravel"]})
+        self.assertIsNot(index.direction_cache, changed.direction_cache)
+        self.assertEqual(legal_directions(changed, "s"), set())
+        self.assertEqual(legal_directions(index, "s"), {True})
+
+    def test_render_merges_equal_bands_without_changing_measurements(self):
+        response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
+        before = copy.deepcopy(response)
+        rendered = render_paths(response)
+        self.assertEqual(rendered["status"], "ready")
+        self.assertEqual(rendered["measurement_interval_count"], 4)
+        self.assertEqual(len(rendered["features"]), 3)
+        first = rendered["features"][0]
+        self.assertEqual(first["geometry"]["coordinates"], self.graph["segments"][0]["geometry"][:3])
+        self.assertEqual(first["properties"]["grade_percent"], 2)
+        self.assertEqual(response, before)
+
+    def test_render_preserves_budget_transitions_and_segment_boundaries(self):
+        response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
+        first, second = response["features"][:2]
+        first["properties"]["inclusion_state"] = "included"
+        second["properties"]["inclusion_state"] = "beyond_budget"
+        self.assertEqual(len(render_paths(response)["features"]), 4)
+        second["properties"]["inclusion_state"] = "included"
+        second["properties"]["segment_id"] = "other"
+        self.assertEqual(len(render_paths(response)["features"]), 4)
+
     def test_zoom_area_feature_limit_and_outside_are_explicit(self):
         bounds = (24.79, 60.19, 24.81, 60.21)
-        self.assertEqual(viewport_paths(self.data, bounds, 13)["status"], "zoom_in")
+        self.assertEqual(viewport_paths(self.data, bounds, 10)["status"], "zoom_in")
         result = viewport_paths(self.data, bounds, 15, max_features=1)
         self.assertEqual(result["reason"], "feature_limit")
         self.assertEqual(result["features"], [])

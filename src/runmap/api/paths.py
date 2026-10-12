@@ -14,9 +14,9 @@ from runmap.routing.search import GraphData, build_graph_index, apply_profile
 from runmap.paths.exploration import (ExplorationCache, Snap, cached_distances, interval_inclusion, legal_directions, segment_reason, snap_candidates)
 
 
-MIN_ZOOM = 14
-MAX_AREA_KM2 = 100
-MAX_FEATURES = 25000
+MIN_ZOOM = 11
+MAX_AREA_KM2 = 2500
+MAX_FEATURES = 500000
 CELL_DEGREES = 0.005
 
 
@@ -32,6 +32,7 @@ class PathData:
     dataset_id: str
     routing: GraphData
     profile_indexes: dict = field(default_factory=dict)
+    boundary_intervals: dict = field(default_factory=dict)
     exploration_cache: ExplorationCache = field(default_factory=ExplorationCache)
     cell_degrees: float = CELL_DEGREES
 
@@ -195,9 +196,13 @@ def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES,
         candidates.update(data.cells.get(cell, ()))
     policy_index = path_policy_index(data, surface, avoid_stairs)
     features = []
+    reasons = {}
     for index in sorted(candidates):
         feature = data.features[index]
-        reason = segment_reason(policy_index, feature["properties"]["segment_id"])
+        segment_id = feature["properties"]["segment_id"]
+        if segment_id not in reasons:
+            reasons[segment_id] = segment_reason(policy_index, segment_id)
+        reason = reasons[segment_id]
         # Keep stair and surface exclusions as inspectable contextual geometry.
         feature = {**feature, "properties": {**feature["properties"],
                    "eligibility_reason": reason, "eligible": reason is None}}
@@ -302,9 +307,12 @@ def exploration_context(data, longitude, latitude, budget_km, surface, avoid_sta
 
 
 def _interval_state(data, index, distances, interval, budget_km):
+    key = (interval["segment_id"], interval["interval_index"])
+    if key not in data.boundary_intervals:
+        data.boundary_intervals[key] = _near_boundary(data, interval["geometry"])
     return {**interval_inclusion(index, distances, interval["segment_id"],
                                 interval["graph_start_m"], interval["graph_end_m"], budget_km * 1000),
-            "coverage_limited": _near_boundary(data, interval["geometry"])}
+            "coverage_limited": data.boundary_intervals[key]}
 
 
 def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=6, surface="all",
@@ -339,3 +347,34 @@ def inspect_outing(data, result, longitude, latitude, budget_km=6, surface="all"
     result["intervals"] = [{**interval, **_interval_state(data, index, distances, original[interval["interval_index"]], budget_km)}
                            for interval in result["intervals"]]
     return result
+
+
+def render_paths(response):
+    """Coalesce contiguous equal-style intervals; inspection retains exact samples.
+
+    Keep segment boundaries and outing-state transitions, including disconnected
+    and excluded portions. Only properties consumed by map styling are shipped.
+    """
+    features = []
+    previous_key = None
+    previous_interval = None
+    for feature in response["features"]:
+        source = feature["properties"]
+        grade = abs(source["grade_percent"] or 0)
+        grade_color = 0 if grade < 2 else 2 if grade < 5 else 5 if grade < 8 else 8
+        properties = {key: source[key] for key in (
+            "segment_id", "quality", "stairs", "eligible", "inclusion_state"
+        ) if key in source}
+        properties["grade_percent"] = grade_color
+        key = tuple(properties.items())
+        coordinates = feature["geometry"]["coordinates"]
+        interval = source["interval_index"]
+        if (features and key == previous_key and interval == previous_interval + 1
+                and features[-1]["geometry"]["coordinates"][-1] == coordinates[0]):
+            features[-1]["geometry"]["coordinates"].extend(coordinates[1:])
+        else:
+            features.append({"type": "Feature", "id": feature["id"],
+                             "geometry": {"type": "LineString", "coordinates": list(coordinates)},
+                             "properties": properties})
+        previous_key, previous_interval = key, interval
+    return {**response, "features": features, "measurement_interval_count": len(response["features"])}

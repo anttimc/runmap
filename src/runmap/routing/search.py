@@ -1,7 +1,7 @@
 """Shortest-path primitives and diverse outbound/return path pairs."""
 
 from collections import Counter, defaultdict
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 import heapq
 import math
 
@@ -148,6 +148,7 @@ class GraphData:
     boundary_blocked_segments: set
     ineligible_segments: dict
     profile: dict
+    direction_cache: dict = field(default_factory=dict)
 
 
 def build_graph_index(graph, profile=None):
@@ -360,7 +361,7 @@ def reachable_nodes(index, start, reverse=False):
 
 def apply_profile(index, profile):
     """Reuse topology while applying the same policy to nodes and physical segments."""
-    result = replace(index, profile=profile, ineligible_segments={}, blocked_nodes={
+    result = replace(index, profile=profile, direction_cache={}, ineligible_segments={}, blocked_nodes={
         node_id for node_id, node in index.nodes.items() if pedestrian_access_reason(node, profile)
     })
     result.ineligible_segments.update(classify_segments(result, profile))
