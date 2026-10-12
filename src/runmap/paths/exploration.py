@@ -8,7 +8,7 @@ from threading import RLock
 from rasterio.warp import transform
 
 from runmap.routing.profiles import arc_forward
-from runmap.routing.search import arc_usable, shortest_distances, reachable_nodes
+from runmap.routing.search import GraphData, arc_usable, shortest_distances, reachable_nodes
 
 
 VIRTUAL_START = "@snapped-start"
@@ -28,10 +28,8 @@ class Snap:
 class DistanceData:
     snap: Snap
     maximum_m: float
-    outward: dict
-    returning: dict
-    outward_connected: set
-    return_connected: set
+    outward: dict[str, float]
+    outward_connected: set[str]
 
 
 @dataclass
@@ -149,12 +147,11 @@ def legal_directions(index, segment_id):
     return index.direction_cache[segment_id]
 
 
-def distance_data(index, snap, maximum_m):
+def distance_data(index: GraphData, snap: Snap, maximum_m: float) -> DistanceData:
     graph, start = split_start_graph(index, snap)
     return DistanceData(snap, maximum_m,
                         shortest_distances(graph, start, maximum_m),
-                        shortest_distances(graph, start, maximum_m, reverse=True),
-                        reachable_nodes(graph, start), reachable_nodes(graph, start, reverse=True))
+                        reachable_nodes(graph, start))
 
 
 def cached_distances(cache, dataset_id, index, snap, maximum_m):
@@ -173,7 +170,8 @@ def cached_distances(cache, dataset_id, index, snap, maximum_m):
         return result, False
 
 
-def _point_distance(index, distances, connected, snap, segment_id, offset, returning=False):
+def _point_distance(index: GraphData, distances: dict[str, float], connected: set[str],
+                    snap: Snap, segment_id: str, offset: float) -> tuple[float, bool]:
     segment = index.segments[segment_id]
     length = segment["length_m"]
     choices, possible = [], False
@@ -186,8 +184,6 @@ def _point_distance(index, distances, connected, snap, segment_id, offset, retur
         for forward in legal_directions(index, segment_id):
             delta = offset - position
             can_travel = delta >= -1e-8 if forward else delta <= 1e-8
-            if returning:
-                can_travel = delta <= 1e-8 if forward else delta >= -1e-8
             if not can_travel:
                 continue
             # Endpoint snaps use the actual node in Dijkstra, but this equivalent
@@ -211,18 +207,14 @@ def interval_inclusion(index, distances, segment_id, start_m, end_m, budget_m):
         a, b = (start_m, end_m) if forward else (end_m, start_m)
         outward, outward_possible = _point_distance(index, distances.outward, distances.outward_connected,
                                                      distances.snap, segment_id, a)
-        returning, return_possible = _point_distance(index, distances.returning, distances.return_connected,
-                                                      distances.snap, segment_id, b, returning=True)
         # A point minimum beyond the search radius is not numerically resolved:
         # an unvisited anchor could improve it while still exceeding the budget.
         if outward > distances.maximum_m:
             outward = math.inf
-        if returning > distances.maximum_m:
-            returning = math.inf
-        total = outward + abs(end_m - start_m) + returning
+        total = outward + abs(b - a)
         results.append({"direction": "forward" if forward else "backward",
                         "minimum_inclusion_m": total if math.isfinite(total) else None,
-                        "connected": outward_possible and return_possible})
+                        "connected": outward_possible})
     finite = [item["minimum_inclusion_m"] for item in results if item["minimum_inclusion_m"] is not None]
     minimum = min(finite, default=None)
     connected = any(item["connected"] for item in results)

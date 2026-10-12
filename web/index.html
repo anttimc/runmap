@@ -30,16 +30,16 @@
             <option value="all">All prepared candidate paths</option>
             <option value="surfaced">Paved / gravel surface tags</option>
           </select>
-          <label class="contour-toggle"><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid stairs for snapping and outings</label>
+          <label class="contour-toggle"><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid stairs for snapping and exploration</label>
           <label class="contour-toggle"><input id="path-flatter" type="checkbox" disabled /> Emphasize grades below 2%</label>
           <details class="outing-controls" open>
             <summary>Explore from a start</summary>
-            <div class="info-heading"><label class="contour-toggle"><input id="outing-enabled" type="checkbox" disabled /> Show outing inclusion</label><button type="button" class="info-button" popovertarget="outing-help" aria-label="About outing inclusion">i</button></div><div id="outing-help" class="info-popover" popover role="dialog" aria-labelledby="outing-help-title"><div class="heading-row"><h2 id="outing-help-title">Outing inclusion</h2><button type="button" popovertarget="outing-help" popovertargetaction="hide" aria-label="Close Outing inclusion help">Close</button></div>            <p class="explanation">Full emphasis: within budget. Faint: beyond budget. Very faint: no connection in prepared data or excluded by your filters. Each whole interval fits some outing; all highlighted paths may not fit one outing. Retracing is allowed.</p>            <p class="explanation">The snap offset is visual, not a validated access route. Prepared coverage can omit shorter or return connections. Partial intervals at the budget boundary remain conservatively unhighlighted.</p></div>
+            <div class="info-heading"><label class="contour-toggle"><input id="outing-enabled" type="checkbox" disabled /> Show reachable paths</label><button type="button" class="info-button" popovertarget="outing-help" aria-label="About reachable paths">i</button></div><div id="outing-help" class="info-popover" popover role="dialog" aria-labelledby="outing-help-title"><div class="heading-row"><h2 id="outing-help-title">Reachable paths</h2><button type="button" popovertarget="outing-help" popovertargetaction="hide" aria-label="Close Reachable paths help">Close</button></div>            <p class="explanation">Full emphasis: within budget. Faint: beyond budget. Very faint: no connection in prepared data or excluded by your filters. Each whole interval is reachable within the forward distance budget. Return distance is not included.</p>            <p class="explanation">The snap offset is visual, not a validated access route. Prepared coverage can omit shorter connections. Partial intervals at the budget boundary remain conservatively unhighlighted.</p></div>
             <div class="heading-row outing-actions">
               <button id="outing-set-start" type="button" disabled>Set start on map</button>
               <button id="outing-clear-start" type="button" disabled>Clear start</button>
             </div>
-            <label class="control-label" for="outing-budget">Outing budget (km)</label>
+            <label class="control-label" for="outing-budget">Forward distance budget (km)</label>
             <input id="outing-budget" type="number" min="0.1" max="50" step="0.1" value="6" disabled />
             <label class="control-label" for="outing-radius">Maximum snap offset (m)</label>
             <input id="outing-radius" type="number" min="1" max="200" step="1" value="50" disabled />
@@ -56,7 +56,7 @@
           </div>
           <div id="distance-legend" class="gradient-legend" hidden aria-label="Network distance from start">
             <div class="continuous-key"><div id="distance-ramp" class="continuous-ramp"></div><div id="distance-ticks">0 · 1 · 2 · 5 · 10 km</div></div>
-            <span><i style="background:#727980"></i>Outside outing / distance unavailable</span>
+            <span><i style="background:#727980"></i>Beyond budget / distance unavailable</span>
           </div>
         </div>
         <details class="terrain-controls">

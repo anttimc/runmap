@@ -37,10 +37,10 @@ class InclusionTests(unittest.TestCase):
     def test_dead_end_partial_long_edge_exact_budget_and_monotonicity(self):
         index = build_graph_index(graph([("long", "a", "b", 1000)]))
         distances = distance_data(index, snap("long", 100), 500)
-        self.assertEqual(interval_inclusion(index, distances, "long", 100, 250, 300)["minimum_inclusion_m"], 300)
-        self.assertEqual(interval_inclusion(index, distances, "long", 100, 250, 300)["inclusion_state"], "included")
-        self.assertEqual(interval_inclusion(index, distances, "long", 100, 250, 299)["inclusion_state"], "beyond_budget")
-        self.assertEqual(interval_inclusion(index, distances, "long", 40, 160, 240)["minimum_inclusion_m"], 240)
+        self.assertEqual(interval_inclusion(index, distances, "long", 100, 250, 150)["minimum_inclusion_m"], 150)
+        self.assertEqual(interval_inclusion(index, distances, "long", 100, 250, 150)["inclusion_state"], "included")
+        self.assertEqual(interval_inclusion(index, distances, "long", 100, 250, 149)["inclusion_state"], "beyond_budget")
+        self.assertEqual(interval_inclusion(index, distances, "long", 40, 160, 240)["minimum_inclusion_m"], 180)
         previous = set()
         for budget in (50, 100, 200, 500, 2000):
             distances = distance_data(index, snap("long", 100), budget)
@@ -53,7 +53,7 @@ class InclusionTests(unittest.TestCase):
                                          ("bc", "b", "c", 100), ("ca", "c", "a", 100),
                                          ("other", "x", "y", 10)]))
         distances = distance_data(index, snap("stem", 0), 1000)
-        self.assertEqual(interval_inclusion(index, distances, "bc", 0, 100, 500)["minimum_inclusion_m"], 500)
+        self.assertEqual(interval_inclusion(index, distances, "bc", 0, 100, 500)["minimum_inclusion_m"], 300)
         self.assertEqual(interval_inclusion(index, distances, "other", 0, 10, 1000)["inclusion_state"], "no_connection")
 
     def test_one_way_branch_and_one_way_interior_with_return_cycle(self):
@@ -61,15 +61,15 @@ class InclusionTests(unittest.TestCase):
         document["arcs"] = [arc for arc in document["arcs"] if arc["id"] != "branch:b"]
         index = build_graph_index(document)
         distances = distance_data(index, snap("stem", 0), 1000)
-        self.assertEqual(interval_inclusion(index, distances, "branch", 0, 10, 1000)["inclusion_state"], "no_connection")
+        self.assertEqual(interval_inclusion(index, distances, "branch", 0, 10, 1000)["inclusion_state"], "included")
         distances = distance_data(index, snap("branch", 50), 1000)
-        self.assertEqual(interval_inclusion(index, distances, "branch", 60, 70, 1000)["inclusion_state"], "no_connection")
+        self.assertEqual(interval_inclusion(index, distances, "branch", 60, 70, 1000)["inclusion_state"], "included")
         document = graph([("ab", "a", "b", 100), ("bc", "b", "c", 100), ("ca", "c", "a", 100)])
         document["arcs"] = [arc for arc in document["arcs"] if arc["id"].endswith(":f")]
         index = build_graph_index(document)
         distances = distance_data(index, snap("ab", 50), 300)
-        self.assertEqual(interval_inclusion(index, distances, "ab", 60, 70, 300)["minimum_inclusion_m"], 300)
-        self.assertEqual(interval_inclusion(index, distances, "ab", 40, 60, 600)["minimum_inclusion_m"], 600)
+        self.assertEqual(interval_inclusion(index, distances, "ab", 60, 70, 300)["minimum_inclusion_m"], 20)
+        self.assertEqual(interval_inclusion(index, distances, "ab", 40, 60, 600)["minimum_inclusion_m"], 310)
 
     def test_closed_segment_and_explicit_backward_permission(self):
         document = graph([("loop", "a", "a", 100)])
@@ -79,8 +79,8 @@ class InclusionTests(unittest.TestCase):
         self.assertEqual(shortest_distances(split, start)["a"], 30)
         self.assertEqual(shortest_distances(split, start, reverse=True)["a"], 70)
         distances = distance_data(index, snap("loop", 30), 100)
-        self.assertEqual(interval_inclusion(index, distances, "loop", 10, 20, 100)["minimum_inclusion_m"], 100)
-        self.assertEqual(interval_inclusion(index, distances, "loop", 20, 40, 200)["minimum_inclusion_m"], 200)
+        self.assertEqual(interval_inclusion(index, distances, "loop", 10, 20, 100)["minimum_inclusion_m"], 20)
+        self.assertEqual(interval_inclusion(index, distances, "loop", 20, 40, 200)["minimum_inclusion_m"], 110)
 
     def test_restricted_nodes_have_no_destination_or_start_exception(self):
         document = graph([("ab", "a", "b", 100)])
@@ -179,7 +179,7 @@ class SnapTests(unittest.TestCase):
         bounds = (24.799, 60.199, 24.805, 60.201)
         result = explore_paths(data, bounds, 15, 24.802, 60.2, .1)
         self.assertFalse(result["distance_cache_hit"])
-        self.assertIn("retracing allowed", result["label"])
+        self.assertIn("km of the start", result["label"])
         result = explore_paths(data, (24.801, 60.199, 24.803, 60.201), 15, 24.802, 60.2, .05)
         self.assertTrue(result["distance_cache_hit"])
         self.assertEqual({f["properties"]["inclusion_state"] for f in result["features"]}, {"beyond_budget"})

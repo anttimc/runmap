@@ -323,8 +323,8 @@ def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=6, surface=
     index, distances, snap_response, hit = exploration_context(
         data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id)
     response.update(start=snap_response, budget_km=budget_km,
-                    label=f"Within a {budget_km:g} km outing — retracing allowed",
-                    semantics="Each entire highlighted interval can occur on some outing; highlighted paths need not fit together in one outing.")
+                    label=f"Within {budget_km:g} km of the start",
+                    semantics="Each entire highlighted interval is reachable within the forward distance budget; no return distance is included.")
     if distances is None:
         return {**response, "status": "no_eligible_snap", "features": []}
     features = []
@@ -342,7 +342,7 @@ def inspect_outing(data, result, longitude, latitude, budget_km=6, surface="all"
     index, distances, snap_response, _ = exploration_context(
         data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, start_segment_id)
     result = {**result, "start": snap_response, "budget_km": budget_km,
-              "outing_label": f"Within a {budget_km:g} km outing — retracing allowed"}
+              "outing_label": f"Within {budget_km:g} km of the start"}
     if distances is None:
         return result
     original = data.measurements.document["segments"][result["segment_id"]]
