@@ -64,4 +64,10 @@ Keep docstrings short and focused on purpose and rationale throughout.
   All 85 tests pass using uv in the project environment, including three new
   ranking/selection regression tests. Another 150 deterministic comparisons
   against the committed baseline implementation produce identical results.
-- Items 5–9 pending.
+- Item 5 complete: CLI parser builders are separate from execution. Path options
+  use a data-only dataclass; source loading, cache verification, graph preparation,
+  terrain attachment, route graph validation, and reporting use typed helpers.
+  Region preparation and legacy crop configuration loading also have focused
+  helpers. Command flags, defaults, output messages, and error boundaries remain
+  unchanged. All 90 tests pass using uv, including five new CLI regression tests.
+- Items 6–9 pending.
