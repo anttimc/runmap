@@ -81,6 +81,40 @@ class GraphSummary(TypedDict):
     terrain_valid_fraction: NotRequired[float]
 
 
+class Measurement(TypedDict):
+    segment_id: str
+    interval_index: int
+    start_m: float
+    end_m: float
+    graph_start_m: float
+    graph_end_m: float
+    geometry: list[Coordinate]
+    grade_percent: float | None
+    height_change_m: float | None
+    valid: bool
+    quality_flags: list[str]
+
+
+class TerrainMetadata(TypedDict):
+    schema_version: int
+    manifest_id: str | None
+    source: str
+    wavelength_m: int
+    sampling_interval_m: float
+    method: str
+    chainage_crs: str
+    graph_chainage: str
+    profile_kind: str
+    valid_fraction: float
+
+
+class MeasurementDocument(TypedDict):
+    schema_version: int
+    method: TerrainMetadata
+    segments: dict[str, list[Measurement]]
+    graph_digest: NotRequired[str]
+
+
 class GraphDocument(TypedDict):
     nodes: list[Node]
     segments: list[Segment]
@@ -89,6 +123,8 @@ class GraphDocument(TypedDict):
     source: NotRequired[GraphSource]
     route_boundaries: NotRequired[list[Boundary]]
     summary: NotRequired[GraphSummary]
+    terrain: NotRequired[TerrainMetadata]
+    _measurements: NotRequired[MeasurementDocument]
 
 
 class EdgeProfile(TypedDict, total=False):

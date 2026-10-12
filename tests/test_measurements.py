@@ -15,7 +15,7 @@ from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import (
     build_measurement_data, graph_digest, inspect_measurements, load_measurements,
 )
-from runmap.paths.terrain import enrich_graph_terrain, _sample_gradients
+from runmap.paths.terrain import TerrainSample, enrich_graph_terrain, _sample_gradients
 
 
 def graph(points, tags=None):
@@ -53,7 +53,7 @@ class MeasurementTests(unittest.TestCase):
     def test_climb_descent_reversal_partial_and_gaps(self):
         g = graph([(375000, 6675100), (375040, 6675100)],
                   {"bridge": "yes", "tunnel": "yes", "highway": "steps", "area": "yes"})
-        index = enrich(g, lambda i, r: (.1, 90 if r[6] < 20 else 270),
+        index = enrich(g, lambda i, r: (.1, 90 if r.start_m < 20 else 270),
                        lambda i: i != 1)
         forward = inspect_measurements(index, "s")
         reverse = inspect_measurements(index, "s", reverse=True)
@@ -100,7 +100,11 @@ class MeasurementTests(unittest.TestCase):
                     ds.write(np.full((2, 2), 1000, dtype="uint16"), 1)
                     ds.write(np.full((2, 2), 9000, dtype="uint16"), 2)
                 paths.append(path)
-            records = [("s", x, 6675105) for x in (375019, 375020, 375039, 375041)]
+            records = [TerrainSample(
+                segment_id="s", east=x, north=6675105, length_m=10,
+                direction_east=1, direction_north=0, start_m=0, end_m=10,
+                graph_start_m=0, graph_end_m=10, start=(x - 5, 6675105), end=(x + 5, 6675105),
+            ) for x in (375019, 375020, 375039, 375041)]
             values, valid = _sample_gradients(paths, records)
             self.assertEqual(valid.tolist(), [True, True, True, False])
             np.testing.assert_allclose(values[:3], [[.1, 90]] * 3)

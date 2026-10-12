@@ -51,4 +51,10 @@ Keep docstrings short and focused on purpose and rationale throughout.
   excluding unrelated raster imports; 300 deterministic comparisons against
   the committed implementation produce identical graphs. The full graph test
   module remains unverified because Python 3.14 lacks Rasterio.
-- Items 3–9 pending.
+- Item 3 complete: terrain samples use a data-only dataclass with named fields.
+  Sampling, quality flags, measurement construction, totals, segment/arc updates,
+  and metadata have focused typed helpers. Measurement tests use the named records.
+  All 82 tests pass in the rebuilt project .venv on Python 3.14.6, resolving the
+  earlier dependency limitations. A further 100 deterministic terrain comparisons
+  against the committed implementation produce identical outputs.
+- Items 4–9 pending.
