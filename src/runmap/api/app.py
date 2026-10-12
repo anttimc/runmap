@@ -137,12 +137,12 @@ def path_exploration(request: Request, west: float, south: float, east: float, n
                      budget_km: float = Query(6, gt=0, le=50),
                      surface: str = "all", avoid_stairs: bool = True,
                      radius_m: float = Query(50, gt=0, le=200), segment_id: str = None,
-                     dataset_id: str = None):
+                     dataset_id: str = None, metric: str = "gradient"):
     data = _path_data(request, dataset_id)
     try:
         result = explore_paths(data, (west, south, east, north), zoom, longitude, latitude,
                                budget_km, surface, avoid_stairs, radius_m, segment_id)
-        return JSONResponse(render_paths(result))
+        return JSONResponse(render_paths(result, metric))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

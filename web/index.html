@@ -23,6 +23,11 @@
         <div class="path-controls">
           <p id="path-status" class="explanation" role="status">Loading path configuration…</p>
           <p id="path-settings" class="explanation"></p>
+          <label class="control-label" for="path-metric">Color paths by</label>
+          <select id="path-metric" disabled>
+            <option value="gradient">Slope gradient</option>
+            <option value="distance">Distance from start</option>
+          </select>
           <label class="control-label" for="path-surface">Surface evidence</label>
           <select id="path-surface" disabled>
             <option value="all">All prepared candidate paths</option>
@@ -48,7 +53,7 @@
             <p class="explanation">The snap offset is visual, not a validated access route. Prepared coverage can omit shorter or return connections. Partial intervals at the budget boundary remain conservatively unhighlighted.</p>
           </details>
           <details class="importer-notes"><summary>Prepared network limitations</summary><ul id="path-importer-notes"></ul></details>
-          <div class="gradient-legend" aria-label="Along-path gradient magnitude bands">
+          <div id="gradient-legend" class="gradient-legend" aria-label="Along-path gradient magnitude bands">
             <span><i style="background:#087f8c"></i>0–2%</span>
             <span><i style="background:#c09223"></i>2–5%</span>
             <span><i style="background:#d45f2e"></i>5–8%</span>
@@ -58,7 +63,14 @@
             <span><i class="stairs"></i>Stairs (over grade color)</span>
             <span><i class="coverage"></i>Prepared coverage boundary</span>
           </div>
-          <p class="explanation">Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.</p>
+          <div id="distance-legend" class="gradient-legend" hidden aria-label="Network distance from start">
+            <span><i style="background:#087f8c"></i>0–1 km</span>
+            <span><i style="background:#c09223"></i>1–2 km</span>
+            <span><i style="background:#d45f2e"></i>2–5 km</span>
+            <span><i style="background:#ae2849"></i>5 km+</span>
+            <span><i style="background:#727980"></i>Distance unavailable</span>
+          </div>
+          <p id="metric-note" class="explanation">Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.</p>
         </div>
         <details class="terrain-controls">
           <summary>Terrain background</summary>

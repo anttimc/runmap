@@ -18,6 +18,7 @@ interface Inclusion {
   inclusion_reason?: string;
   minimum_inclusion_m?: number | null;
   coverage_limited?: boolean;
+  distance_from_start_m?: number | null;
 }
 interface Snap {
   segment_id: string;
@@ -208,7 +209,8 @@ function inclusionText(interval: Inclusion): string {
     : interval.inclusion_state === "no_connection" ? "no connection in prepared data"
     : interval.inclusion_state === "excluded" ? `excluded: ${interval.inclusion_reason}` : "beyond budget";
   const minimum = interval.minimum_inclusion_m == null ? "" : ` · minimum outing ${(interval.minimum_inclusion_m / 1000).toFixed(3)} km`;
-  return ` · ${reason}${minimum}${interval.coverage_limited ? " · coverage limited" : ""}`;
+  const outward = interval.distance_from_start_m == null ? "" : ` · from start ${(interval.distance_from_start_m / 1000).toFixed(3)} km`;
+  return ` · ${reason}${minimum}${outward}${interval.coverage_limited ? " · coverage limited" : ""}`;
 }
 
 function applyPathEmphasis(map: Map, flatter: boolean): void {
@@ -262,6 +264,7 @@ export async function startPaths(map: Map): Promise<void> {
   const status = element("path-status");
   const panel = element("path-inspection");
   const reverse = element<HTMLInputElement>("path-reverse");
+  const metric = element<HTMLSelectElement>("path-metric");
   const filter = element<HTMLSelectElement>("path-surface");
   const avoidStairs = element<HTMLInputElement>("path-avoid-stairs");
   const flatter = element<HTMLInputElement>("path-flatter");
@@ -286,7 +289,7 @@ export async function startPaths(map: Map): Promise<void> {
   element("path-importer-notes").replaceChildren(...config.importer_notes.map(note => text("li", note)));
   budget.value = String(config.default_budget_km);
   radius.value = String(config.snap_radius_m);
-  for (const control of [filter, avoidStairs, flatter, enabled, budget, radius, setStart]) control.disabled = false;
+  for (const control of [metric, filter, avoidStairs, flatter, enabled, budget, radius, setStart]) control.disabled = false;
   addPathLayers(map, config);
   applyPathEmphasis(map, flatter.checked);
   map.addSource("start-offset", { type: "geojson", data: empty });
@@ -356,6 +359,7 @@ export async function startPaths(map: Map): Promise<void> {
     const params = parameters();
     for (const [key, value] of Object.entries({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth(), zoom: map.getZoom() })) params.set(key, String(value));
     const outing = addOutingParameters(params);
+    params.set("metric", metric.value);
     setStatus(outing ? "Calculating outing inclusion…" : "Loading path measurements…", "loading");
     try {
       const result = await request<Viewport>(`/api/paths/${outing ? "explore" : "viewport"}?${params}`, viewportAbort.signal);
@@ -403,15 +407,37 @@ export async function startPaths(map: Map): Promise<void> {
   map.on("moveend", () => { void updateViewport(); });
   for (const input of [filter, avoidStairs]) input.addEventListener("change", () => refresh());
   for (const input of [budget, radius]) input.addEventListener("change", () => { if (input.reportValidity()) refresh(); });
+  function updateMetric(): void {
+    const distance = metric.value === "distance";
+    const gradeColor: ExpressionSpecification = ["step", ["abs", ["coalesce", ["get", "grade_percent"], 0]], colors[0], 2, colors[1], 5, colors[2], 8, colors[3]];
+    map.setPaintProperty("path-grades", "line-color", distance
+      ? ["case", ["==", ["get", "distance_band_m"], null], "#727980", ["step", ["coalesce", ["get", "distance_band_m"], 0], colors[0], 1000, colors[1], 2000, colors[2], 5000, colors[3]]] : gradeColor);
+    map.setFilter("path-grades", distance ? null : ["==", ["get", "quality"], "terrain_estimate"]);
+    map.setFilter("path-uncertain", distance ? ["==", ["get", "quality"], "hidden"] : ["!=", ["get", "quality"], "terrain_estimate"]);
+    element("gradient-legend").hidden = distance;
+    element("distance-legend").hidden = !distance;
+    element("metric-note").textContent = distance
+      ? "Shortest legal network distance from the snapped start to each interval midpoint. Gray: excluded, unreachable, or beyond the outing search limit. Faintness still shows round-trip outing inclusion. Terrain uncertainty remains in inspection."
+      : "Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.";
+    flatter.disabled = distance;
+    applyPathEmphasis(map, !distance && flatter.checked);
+  }
+  metric.addEventListener("change", () => {
+    if (metric.value === "distance") {
+      enabled.checked = true;
+      if (!requestedStart) chooseStartMode(true);
+    }
+    updateMetric(); showStart(); refresh();
+  });
   flatter.addEventListener("change", () => applyPathEmphasis(map, flatter.checked));
   enabled.addEventListener("change", () => {
     if (enabled.checked && !requestedStart) chooseStartMode(true);
-    else if (!enabled.checked) chooseStartMode(false);
+    else if (!enabled.checked) { chooseStartMode(false); metric.value = "gradient"; updateMetric(); }
     showStart(); refresh();
   });
   setStart.addEventListener("click", () => chooseStartMode(!choosingStart));
   clearStart.addEventListener("click", () => {
-    requestedStart = undefined; enabled.checked = false;
+    requestedStart = undefined; enabled.checked = false; metric.value = "gradient"; updateMetric();
     chooseStartMode(false); showStart(); outingStatus.textContent = "Choose a start to enable distance highlighting."; refresh();
   });
   map.on("click", event => {

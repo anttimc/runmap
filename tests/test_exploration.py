@@ -8,7 +8,7 @@ from test_path_api import fixture
 from runmap.api.paths import load_path_data, snap_path_start, explore_paths, path_policy_index
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.exploration import (Snap, ExplorationCache, distance_data, interval_inclusion,
-                                     split_start_graph, cached_distances)
+                                     split_start_graph, cached_distances, distance_from_start)
 from runmap.routing.search import build_graph_index, shortest_path, shortest_distances
 from runmap.routing.profiles import exploration_profile
 
@@ -24,6 +24,16 @@ def snap(segment, offset):
 
 
 class InclusionTests(unittest.TestCase):
+    def test_outward_distance_is_network_distance_not_round_trip(self):
+        index = build_graph_index(graph([("stem", "a", "b", 100), ("branch", "b", "c", 300),
+                                         ("other", "x", "y", 10)]))
+        distances = distance_data(index, snap("stem", 40), 200)
+        self.assertEqual(distance_from_start(index, distances, "stem", 40), 0)
+        self.assertEqual(distance_from_start(index, distances, "stem", 10), 30)
+        self.assertEqual(distance_from_start(index, distances, "branch", 100), 160)
+        self.assertIsNone(distance_from_start(index, distances, "branch", 250))
+        self.assertIsNone(distance_from_start(index, distances, "other", 5))
+
     def test_dead_end_partial_long_edge_exact_budget_and_monotonicity(self):
         index = build_graph_index(graph([("long", "a", "b", 1000)]))
         distances = distance_data(index, snap("long", 100), 500)

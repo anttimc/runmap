@@ -232,3 +232,12 @@ def interval_inclusion(index, distances, segment_id, start_m, end_m, budget_m):
                                  "no_connection": "no_connection_in_prepared_data"}[state],
             "minimum_inclusion_m": minimum, "distance_lower_bound_m": budget_m if minimum is None and connected else None,
             "directions": results}
+
+
+def distance_from_start(index, distances, segment_id, offset_m):
+    """Shortest legal outward distance to a point, within the cached search bound."""
+    if segment_reason(index, segment_id):
+        return None
+    value, _ = _point_distance(index, distances.outward, distances.outward_connected,
+                               distances.snap, segment_id, offset_m)
+    return value if math.isfinite(value) and value <= distances.maximum_m else None

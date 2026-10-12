@@ -11,7 +11,7 @@ from rasterio.warp import transform
 from runmap.paths.measurements import MeasurementData, graph_digest, inspect_measurements, load_measurements
 from runmap.routing.profiles import surface_category, exploration_profile
 from runmap.routing.search import GraphData, build_graph_index, apply_profile
-from runmap.paths.exploration import (ExplorationCache, Snap, cached_distances, interval_inclusion, legal_directions, segment_reason, snap_candidates)
+from runmap.paths.exploration import (ExplorationCache, Snap, cached_distances, distance_from_start, interval_inclusion, legal_directions, segment_reason, snap_candidates)
 
 
 MIN_ZOOM = 11
@@ -312,7 +312,9 @@ def _interval_state(data, index, distances, interval, budget_km):
         data.boundary_intervals[key] = _near_boundary(data, interval["geometry"])
     return {**interval_inclusion(index, distances, interval["segment_id"],
                                 interval["graph_start_m"], interval["graph_end_m"], budget_km * 1000),
-            "coverage_limited": data.boundary_intervals[key]}
+            "coverage_limited": data.boundary_intervals[key],
+            "distance_from_start_m": distance_from_start(index, distances, interval["segment_id"],
+                (interval["graph_start_m"] + interval["graph_end_m"]) / 2)}
 
 
 def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=6, surface="all",
@@ -349,12 +351,14 @@ def inspect_outing(data, result, longitude, latitude, budget_km=6, surface="all"
     return result
 
 
-def render_paths(response):
+def render_paths(response, metric="gradient"):
     """Coalesce contiguous equal-style intervals; inspection retains exact samples.
 
     Keep segment boundaries and outing-state transitions, including disconnected
     and excluded portions. Only properties consumed by map styling are shipped.
     """
+    if metric not in {"gradient", "distance"}:
+        raise ValueError("Unknown path display metric")
     features = []
     previous_key = None
     previous_interval = None
@@ -365,7 +369,12 @@ def render_paths(response):
         properties = {key: source[key] for key in (
             "segment_id", "quality", "stairs", "eligible", "inclusion_state"
         ) if key in source}
-        properties["grade_percent"] = grade_color
+        if metric == "distance":
+            distance = source.get("distance_from_start_m")
+            properties["distance_band_m"] = (None if distance is None else
+                0 if distance < 1000 else 1000 if distance < 2000 else 2000 if distance < 5000 else 5000)
+        else:
+            properties["grade_percent"] = grade_color
         key = tuple(properties.items())
         coordinates = feature["geometry"]["coordinates"]
         interval = source["interval_index"]

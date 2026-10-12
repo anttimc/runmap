@@ -91,6 +91,17 @@ class PathQueryTests(unittest.TestCase):
         second["properties"]["segment_id"] = "other"
         self.assertEqual(len(render_paths(response)["features"]), 4)
 
+    def test_distance_render_preserves_distance_band_boundaries(self):
+        response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
+        for feature, distance in zip(response["features"], [999, 1000, 2000, None]):
+            feature["properties"]["distance_from_start_m"] = distance
+        rendered = render_paths(response, "distance")
+        self.assertEqual([f["properties"]["distance_band_m"] for f in rendered["features"]],
+                         [0, 1000, 2000, None])
+        self.assertNotIn("grade_percent", rendered["features"][0]["properties"])
+        with self.assertRaises(ValueError):
+            render_paths(response, "unknown")
+
     def test_zoom_area_feature_limit_and_outside_are_explicit(self):
         bounds = (24.79, 60.19, 24.81, 60.21)
         self.assertEqual(viewport_paths(self.data, bounds, 10)["status"], "zoom_in")

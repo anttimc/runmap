@@ -453,3 +453,20 @@ zoom-dependent geometry simplification are potential further improvements.
 
 Browser verification confirmed colored paths and outing opacity at zoom 11,
 with no browser errors. All 80 automated tests and the frontend build pass.
+
+
+### Optional distance colors
+
+“Color paths by” switches between the default slope gradient and shortest legal
+outward network distance from the snapped start. Selecting distance enables
+outing exploration and requests a start when none is set. Colors use 0–1, 1–2,
+2–5 and 5+ km bands evaluated at each measurement interval's graph midpoint.
+They reuse cached outward Dijkstra distances; this is not straight-line distance
+or minimum round-trip outing length. The existing outing opacity remains active.
+Gray distances are unavailable (excluded, unreachable or outside the bounded
+outing search). They must not be interpreted as zero distance. Distance colors
+remain valid for bridge/tunnel paths and paths missing terrain; terrain quality
+remains visible in inspection. Grade emphasis is disabled in distance mode.
+Clearing the start or turning off outing inclusion restores gradient display.
+Inspection retains exact signed grades and adds outward midpoint distance when
+resolved. Map compaction preserves distance-band and outing-state boundaries.
