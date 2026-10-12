@@ -10,7 +10,6 @@
   <body>
     <main id="app">
       <div id="map" aria-label="Interactive Leppävaara terrain map"></div>
-
       <section class="controls" aria-labelledby="controls-title">
         <div class="heading-row">
           <div>
@@ -19,26 +18,23 @@
           </div>
           <span id="status" class="status" role="status">Starting…</span>
         </div>
-
         <div class="path-controls">
           <p id="path-status" class="explanation" role="status">Loading path configuration…</p>
-          <p id="path-settings" class="explanation"></p>
-          <label class="control-label" for="path-metric">Color paths by</label>
+          <div class="info-heading"><label class="control-label" for="path-metric">Color paths by</label><button type="button" class="info-button" popovertarget="metric-help" aria-label="About path colors">i</button></div><div id="metric-help" class="info-popover" popover role="dialog" aria-labelledby="metric-help-title"><div class="heading-row"><h2 id="metric-help-title">Path colors</h2><button type="button" popovertarget="metric-help" popovertargetaction="hide" aria-label="Close Path colors help">Close</button></div>          <p id="metric-note" class="explanation">Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.</p>          <p id="path-settings" class="explanation"></p></div>
           <select id="path-metric" disabled>
             <option value="gradient">Slope gradient</option>
             <option value="distance">Distance from start</option>
           </select>
-          <label class="control-label" for="path-surface">Surface evidence</label>
+          <div class="info-heading"><label class="control-label" for="path-surface">Surface evidence</label><button type="button" class="info-button" popovertarget="surface-help" aria-label="About surface evidence">i</button></div><div id="surface-help" class="info-popover" popover role="dialog" aria-labelledby="surface-help-title"><div class="heading-row"><h2 id="surface-help-title">Surface evidence</h2><button type="button" popovertarget="surface-help" popovertargetaction="hide" aria-label="Close Surface evidence help">Close</button></div>          <p class="explanation">Material tags do not prove maintenance. Unknown surfaces remain explicit; stairs stay visible.</p></div>
           <select id="path-surface" disabled>
             <option value="all">All prepared candidate paths</option>
             <option value="surfaced">Paved / gravel surface tags</option>
           </select>
-          <p class="explanation">Material tags do not prove maintenance. Unknown surfaces remain explicit; stairs stay visible.</p>
           <label class="contour-toggle"><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid stairs for snapping and outings</label>
           <label class="contour-toggle"><input id="path-flatter" type="checkbox" disabled /> Emphasize grades below 2%</label>
           <details class="outing-controls" open>
             <summary>Explore from a start</summary>
-            <label class="contour-toggle"><input id="outing-enabled" type="checkbox" disabled /> Show outing inclusion</label>
+            <div class="info-heading"><label class="contour-toggle"><input id="outing-enabled" type="checkbox" disabled /> Show outing inclusion</label><button type="button" class="info-button" popovertarget="outing-help" aria-label="About outing inclusion">i</button></div><div id="outing-help" class="info-popover" popover role="dialog" aria-labelledby="outing-help-title"><div class="heading-row"><h2 id="outing-help-title">Outing inclusion</h2><button type="button" popovertarget="outing-help" popovertargetaction="hide" aria-label="Close Outing inclusion help">Close</button></div>            <p class="explanation">Full emphasis: within budget. Faint: beyond budget. Very faint: no connection in prepared data or excluded by your filters. Each whole interval fits some outing; all highlighted paths may not fit one outing. Retracing is allowed.</p>            <p class="explanation">The snap offset is visual, not a validated access route. Prepared coverage can omit shorter or return connections. Partial intervals at the budget boundary remain conservatively unhighlighted.</p></div>
             <div class="heading-row outing-actions">
               <button id="outing-set-start" type="button" disabled>Set start on map</button>
               <button id="outing-clear-start" type="button" disabled>Clear start</button>
@@ -49,10 +45,8 @@
             <input id="outing-radius" type="number" min="1" max="200" step="1" value="50" disabled />
             <p id="outing-status" class="explanation" role="status">Choose a start to enable distance highlighting.</p>
             <p id="outing-label" class="explanation"></p>
-            <p class="explanation">Full emphasis: within budget. Faint: beyond budget. Very faint: no connection in prepared data or excluded by your filters. Each whole interval fits some outing; all highlighted paths may not fit one outing. Retracing is allowed.</p>
-            <p class="explanation">The snap offset is visual, not a validated access route. Prepared coverage can omit shorter or return connections. Partial intervals at the budget boundary remain conservatively unhighlighted.</p>
           </details>
-          <details class="importer-notes"><summary>Prepared network limitations</summary><ul id="path-importer-notes"></ul></details>
+          <div class="info-heading network-help"><span>Prepared network</span><button type="button" class="info-button" popovertarget="network-help" aria-label="About prepared network limitations">i</button></div><div id="network-help" class="info-popover" popover role="dialog" aria-labelledby="network-help-title"><div class="heading-row"><h2 id="network-help-title">Prepared network limitations</h2><button type="button" popovertarget="network-help" popovertargetaction="hide" aria-label="Close Prepared network limitations help">Close</button></div><ul id="path-importer-notes"></ul></div>
           <div id="gradient-legend" class="gradient-legend" aria-label="Along-path gradient magnitude bands">
             <span><i style="background:#087f8c"></i>0–2%</span>
             <span><i style="background:#c09223"></i>2–5%</span>
@@ -70,17 +64,15 @@
             <span><i style="background:#ae2849"></i>5 km+</span>
             <span><i style="background:#727980"></i>Distance unavailable</span>
           </div>
-          <p id="metric-note" class="explanation">Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.</p>
         </div>
         <details class="terrain-controls">
-          <summary>Terrain background</summary>
+          <summary>Terrain background</summary><div class="info-heading"><span>Background settings</span><button type="button" class="info-button" popovertarget="terrain-help" aria-label="About terrain background">i</button></div><div id="terrain-help" class="info-popover" popover role="dialog" aria-labelledby="terrain-help-title"><div class="heading-row"><h2 id="terrain-help-title">Terrain background</h2><button type="button" popovertarget="terrain-help" popovertargetaction="hide" aria-label="Close Terrain background help">Close</button></div>          <p class="explanation">Changes the terrain background only. Path measurements keep their fixed preparation settings.</p></div>
           <label class="control-label" for="wavelength">
             <span>Background smoothing</span>
             <output id="wavelength-value" for="wavelength">40 m</output>
           </label>
           <input id="wavelength" type="range" min="0" max="100" step="2" value="40" disabled />
           <div class="range-notes"><span>Raw</span><span>Broader smoothing</span></div>
-          <p class="explanation">Changes the terrain background only. Path measurements keep their fixed preparation settings.</p>
           <label class="control-label" for="opacity">
             <span>Background opacity</span>
             <output id="opacity-value" for="opacity">25%</output>

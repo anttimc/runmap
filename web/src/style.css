@@ -200,3 +200,16 @@ button { border: 1px solid #b9c3c0; border-radius: 5px; background: #fffdf8; pad
 .importer-notes ul { padding-left: 16px; font-size: .72rem; color: #596568; line-height: 1.45; }
 #outing-status[data-state="failed"] { color: #962d36; }
 #outing-set-start[aria-pressed="true"] { background: #d4e9e5; }
+
+.info-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.info-heading .control-label, .info-heading .contour-toggle { flex: 1; }
+.info-heading .info-button { flex: 0 0 auto; margin-top: 8px; }
+.info-button { width: 25px; height: 25px; padding: 0; border-radius: 50%; font-size: .8rem; font-weight: 650; color: #087f8c; }
+.info-button:hover { background: #e1efec; }
+.info-button:focus-visible { outline: 2px solid #087f8c; outline-offset: 3px; }
+.network-help { margin-top: 12px; font-size: .78rem; color: #526369; }
+.info-popover { width: min(380px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; box-sizing: border-box; padding: 20px; border: 1px solid #b9c3c0; border-radius: 12px; background: #faf9f5; color: #243b42; box-shadow: 0 12px 40px rgb(25 38 43 / 25%); }
+.info-popover::backdrop { background: rgb(25 38 43 / 12%); }
+.info-popover h2 { margin: 0; font-size: 1rem; }
+.info-popover .explanation, .info-popover li { font-size: .82rem; line-height: 1.55; }
+.info-popover ul { padding-left: 18px; }
