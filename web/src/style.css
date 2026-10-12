@@ -6,6 +6,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html, body, #app, #map {
   width: 100%;
@@ -147,3 +148,55 @@ input[type="range"]:disabled { cursor: wait; opacity: 0.45; }
   .legend { display: none; }
   .control-label { margin-top: 14px; }
 }
+
+.controls { max-height: calc(100dvh - 36px); overflow-y: auto; }
+.path-controls { margin-top: 16px; border-top: 1px solid #d6d8d3; padding-top: 4px; }
+.path-controls .control-label { margin: 14px 0 6px; }
+select { width: 100%; padding: 8px; border: 1px solid #b9c3c0; border-radius: 6px; background: #fffdf8; color: inherit; }
+.gradient-legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px 6px; margin-top: 16px; font-size: .72rem; }
+.gradient-legend span { display: flex; align-items: center; gap: 6px; }
+.gradient-legend span:nth-child(n+5) { grid-column: 1 / -1; }
+.gradient-legend i { display: inline-block; flex-shrink: 0; width: 23px; height: 4px; border-radius: 1px; }
+.gradient-legend .uncertain { background: repeating-linear-gradient(to right, #8b619e 0 5px, transparent 5px 8px); }
+.gradient-legend .missing { background: repeating-linear-gradient(to right, #727980 0 5px, transparent 5px 8px); }
+.gradient-legend .stairs { background: repeating-linear-gradient(to right, #182e36 0 2px, transparent 2px 6px); }
+.gradient-legend .coverage { border-top: 2px dashed #536773; }
+#path-status { min-height: 2.7em; }
+#path-status[data-state="failed"] { color: #962d36; }
+#path-status[data-state="loading"] { color: #856613; }
+.terrain-controls { margin-top: 18px; border-top: 1px solid #d6d8d3; padding-top: 14px; }
+summary { cursor: pointer; font-size: .82rem; font-weight: 650; }
+.contour-toggle { display: block; font-size: .8rem; margin-top: 12px; }
+.inspection-panel { position: absolute; z-index: 3; right: 18px; top: 18px; width: min(400px, calc(100vw - 36px)); max-height: calc(100dvh - 130px); overflow-y: auto; padding: 20px; border-radius: 16px; background: rgb(250 249 245 / 97%); box-shadow: 0 12px 40px rgb(25 38 43 / 22%); }
+.inspection-panel[hidden] { display: none; }
+.inspection-panel .heading-row { font-size: .75rem; margin-bottom: 18px; }
+.inspection-panel h2 { margin: 0; font-size: 1.15rem; }
+.inspection-panel h3 { margin: 20px 0 8px; font-size: .82rem; }
+.inspection-panel p { line-height: 1.5; }
+.segment-subtitle, .evidence, .inspection-panel li { font-size: .78rem; color: #526369; }
+.segment-stats { font-size: 1.3rem; margin: 12px 0 0; font-variant-numeric: tabular-nums; }
+.quality-note { padding: 10px; background: #eee6f2; border-radius: 6px; color: #664774; font-size: .74rem; }
+.sample-readout { min-height: 2.8em; font-size: .76rem; font-variant-numeric: tabular-nums; color: #076b7a; }
+.inspection-panel svg { width: 100%; height: auto; overflow: visible; margin-top: 8px; }
+.inspection-panel svg text { font-size: 9px; fill: #596568; }
+.inspection-panel svg rect:focus { outline: 2px solid #087f8c; }
+.inspection-panel ul { padding-left: 18px; }
+.inspection-panel li { margin-bottom: 7px; }
+.inspection-panel details { margin-top: 20px; }
+.inspection-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .65rem; }
+button { border: 1px solid #b9c3c0; border-radius: 5px; background: #fffdf8; padding: 6px 9px; cursor: pointer; color: inherit; }
+@media (max-width: 900px) {
+  .controls { width: min(320px, calc(100vw - 20px)); }
+  .inspection-panel { width: min(360px, calc(100vw - 20px)); top: auto; bottom: 40px; right: 10px; max-height: 52dvh; }
+}
+@media (max-width: 600px) {
+  .controls { max-height: 38dvh; padding: 12px; }
+  .inspection-panel { max-height: 49dvh; padding: 14px; }
+}
+.outing-controls, .importer-notes { margin-top: 16px; }
+.outing-actions { margin-top: 12px; }
+.outing-controls .control-label { margin: 10px 0 5px; }
+.outing-controls input[type="number"] { width: 100%; padding: 6px; border: 1px solid #b9c3c0; border-radius: 5px; color: inherit; background: #fffdf8; }
+.importer-notes ul { padding-left: 16px; font-size: .72rem; color: #596568; line-height: 1.45; }
+#outing-status[data-state="failed"] { color: #962d36; }
+#outing-set-start[aria-pressed="true"] { background: #d4e9e5; }

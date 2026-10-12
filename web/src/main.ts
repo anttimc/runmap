@@ -11,6 +11,7 @@ import {
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./style.css";
+import { startPaths } from "./paths";
 
 // MapLibre derives its worker URL from import.meta.url by default. After Vite
 // bundles the library that resolves beside our app bundle, where the worker is
@@ -567,12 +568,19 @@ async function start(): Promise<void> {
     wavelengthInput.disabled = false;
     opacityInput.disabled = false;
     setStatus("Loading overlay…", "busy");
+    void startPaths(map);
   });
 
   wavelengthInput.addEventListener("input", scheduleTerrainUpdate);
   wavelengthInput.addEventListener("change", () => {
     window.clearTimeout(debounceTimer);
     updateTerrain(Number(wavelengthInput.value));
+  });
+  element<HTMLInputElement>("contours-visible").addEventListener("change", event => {
+    const visible = (event.target as HTMLInputElement).checked;
+    for (const id of ["elevation-contours-minor", "elevation-contours-index"]) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    }
   });
   opacityInput.addEventListener("input", () => {
     const opacity = Number(opacityInput.value);

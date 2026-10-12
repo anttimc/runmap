@@ -73,9 +73,27 @@ hosting design](docs/11-region-and-hosting-design.md).
 The active study area is **Leppävaara, Espoo, Finland**. Terrain-gradient
 magnitude, smoothing comparisons, and the first interactive map are working;
 fixed source-elevation contours now show the gradient axis and terrain shape.
-The next milestone adds along-path gradient inspection and start-based
-reachability; guided routing and automatic suggestions follow. The path graph
-and routing baseline exist as command-line experiments, not UI features yet.
+The map now supports along-path gradient colors and click inspection with a
+relative height profile, direction reversal, uphill sections, and explicit
+uncertainty/coverage states. Opt-in outing inclusion now lets you select an
+eligible snapped start, choose a nearby alternative, and inspect which complete
+path intervals fit a distance budget with retracing allowed. Surface and stair
+policies apply consistently to inspection, snapping, and search; gentler-grade
+emphasis changes display only. Guided routing and automatic suggestions follow. The routing baseline remains a command-line
+experiment.
+
+Path analysis uses optional, explicitly prepared local graph measurements. To
+refresh an existing extract without downloading OSM data:
+
+```sh
+PYTHONPATH=src .venv/bin/python -m runmap.cli paths prepare leppavaara-flat-10k --input data/paths/raw/leppavaara-flat-10k/osm-network-boundaries-101.json
+```
+
+The default API graph is `data/paths/prepared/leppavaara-flat-10k/graph.json`;
+set `RUNMAP_PATH_GRAPH` to select another prepared dataset, then restart the
+backend. Missing path artifacts leave the terrain map available. Path settings
+remain fixed at preparation time; the terrain-background slider changes only
+the background. See [M4 delivery details](docs/23-m4-path-exploration.md).
 
 ## Keeping the plan useful
 

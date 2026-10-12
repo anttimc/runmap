@@ -1,7 +1,7 @@
 # 2. Delivery milestones
 
 Status values: planned, active, complete. M0–M2 are complete, M3 is active,
-M4 is the next delivery milestone, and later milestones are planned.
+M4 is active with M4.1–M4.4 implemented and M4.5 pending; later milestones are planned.
 The [map-first plan](22-map-first-running-plan.md) defines the current product sequence. Completion requires the listed evidence, not
 just implemented code.
 
@@ -69,7 +69,7 @@ Complete when: the user can inspect hill steepness and direction in Leppävaara 
 
 ## M4 — Explore runnable paths and start-based reachability
 
-Supports: G1–G4. Depends on: M3. Status: planned; next delivery milestone.
+Supports: G1–G4. Depends on: M3. Status: active; M4.1–M4.4 implemented, M4.5 pending.
 
 1. Display along-path gradient magnitude with direction on inspection.
 2. Inspect sampled profiles, climbs, surfaces, access evidence, and uncertainty.
@@ -82,8 +82,8 @@ Complete when: the runner can locate a promising path or hill, understand its
 terrain, and see how it connects to their start. See the
 [M4 implementation plan](23-m4-path-exploration.md) for delivery slices,
 measurement definitions, interactions, and acceptance checks.
-Existing graph and terrain-enrichment experiments support this work; the UI
-and shared query policy remain to be implemented.
+The gradient UI, shared eligibility, edge snapping, and budgeted interval
+inclusion are implemented. Local fixture review and the performance gate remain.
 
 ## M7 — Guided route assembly
 

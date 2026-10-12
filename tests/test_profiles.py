@@ -1,7 +1,7 @@
 import unittest
 
 from runmap.routing.profiles import classify_segments, forbidden_reason
-from runmap.routing.search import GraphIndex
+from runmap.routing.search import build_graph_index
 
 
 STRICT_ACCESS = {"forbidden_access_values": [
@@ -28,7 +28,7 @@ class PedestrianAccessProfileTests(unittest.TestCase):
         self.assertEqual(forbidden_reason({"tags": {"access": " Destination "}}, STRICT_ACCESS), "access:destination")
 
     def test_restricted_gate_blocks_incident_segments_with_pedestrian_override(self):
-        index = GraphIndex({
+        index = build_graph_index({
             "nodes": [{"id": node_id} for node_id in ("a", "b", "c", "e")],
             "segments": [
                 {"id": segment_id, "from": first, "to": second, "tags": {}}

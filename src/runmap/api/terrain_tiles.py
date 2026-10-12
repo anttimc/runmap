@@ -365,7 +365,8 @@ def _encode_mvt(features):
     for key in keys:
         layer.extend(_field(3, 2, key.encode()))
     for kind, value in values:
-        encoded = _field(4, 0, value) if kind == "int" else _field(7, 0, int(value))
+        # Protobuf int64 uses a two's-complement varint for negative elevations.
+        encoded = _field(4, 0, value & ((1 << 64) - 1)) if kind == "int" else _field(7, 0, int(value))
         layer.extend(_field(4, 2, encoded))
     layer.extend(_field(5, 0, CONTOUR_EXTENT))
     layer.extend(_field(15, 0, 2))

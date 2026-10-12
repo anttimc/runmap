@@ -1,8 +1,9 @@
 # 23. M4 — Path gradients and start-based exploration
 
-Status: M4.1 implemented; M4.2–M4.5 planned, updated 2026-10-09. This is the delivery plan
-for M4 in the [map-first roadmap](22-map-first-running-plan.md). No M4 UI or API
-implementation is claimed by this document.
+Status: M4.1–M4.4 implemented; M4.5 pending, updated 2026-10-12. This is the delivery plan
+for M4 in the [map-first roadmap](22-map-first-running-plan.md). Measurement
+preservation, gradient map/inspection, and start-based outing inclusion are
+implemented. Local review and the performance gate remain pending.
 
 ## Outcome and scope
 
@@ -143,7 +144,7 @@ Initial API responsibilities, with route names settled during implementation:
 | Path configuration | Coverage, dataset identity, method/settings, legend, available filters |
 | Viewport and zoom | Bounded short-interval GeoJSON with IDs, grade, quality, and surface class |
 | Segment ID | Full ordered measurements, relative profile, summaries, tags, and provenance |
-| Start, profile, budget, viewport | Snap result and visible interval inclusion states with reasons |
+| Start, profile, budget, viewport (M4.3–M4.4) | Snap result and visible interval inclusion states with reasons |
 
 Use a spatial index for viewport lookup. Bound request area and feature count;
 an oversized view gets an explicit zoom-in/coverage response, never silently
@@ -179,6 +180,54 @@ and make loading, unavailable, outside-coverage, and failed states distinct.
 Acceptance: familiar hills and flat corridors are recognisable; a climb/descent
 segment does not appear flat; clicking and reversing inspection gives coherent
 map/chart output; panning outside path coverage never implies no paths exist.
+
+### M4.2 implementation notes
+
+The optional service loads `RUNMAP_PATH_GRAPH` at startup (default:
+`data/paths/prepared/leppavaara-flat-10k/graph.json`). Missing artifacts or an old
+graph without measurements report `unavailable`; corrupt/mismatched artifacts
+report `failed`. Both leave the terrain service usable. Preparation remains an
+explicit CLI action; requests only read the loaded dataset.
+
+- `GET /api/paths/config`: status, dataset digest, coverage polygon, fixed
+  measurement settings, trial grade bands, surface-filter choices, and initial
+  view around the prepared start.
+- `GET /api/paths/viewport?west=…&south=…&east=…&north=…&zoom=…`: complete
+  intersecting intervals, looked up through an in-memory spatial grid. Optional
+  `surface=surfaced` selects explicit paved/gravel material tags; unknown tags
+  remain `unknown`, without maintenance inference.
+- `GET /api/paths/segments/{id}?reverse=true`: full ordered inspection, relative
+  profile, ascent/descent and valid-length fraction, uphill sections, tags, and
+  provenance. Inspection direction does not change traversal permission.
+
+Viewport responses carry `ready`, `zoom_in`, or `outside_coverage`. Gradients
+require zoom 14+, at most 100 km² and 25,000 features; excess requests return no
+features with an explicit reason, never a truncated subset. Bounds crossing the
+prepared polygon carry `coverage_limited`. Complete intervals may extend a short
+distance beyond the viewport/coverage edge. An optional `dataset_id` parameter
+rejects stale clients with HTTP 409. JSON responses support gzip.
+
+The frontend shows client-side magnitude colors, distinct missing/bridge/tunnel
+styles, stair markings, coverage boundaries, and a whole-segment selection.
+Profile hover or keyboard focus highlights an interval and shows signed grade;
+selected reliable nonzero samples get uphill arrows. Missing profile runs reset
+to zero. Consecutive positive samples form segment-local uphill sections, without
+noise thresholds or gap merging. Basemap paths remain faint context within active
+analysis coverage, and normal context at wide zooms or outside coverage. Terrain
+background opacity, smoothing, and contours are independent controls. Viewport
+and inspection requests are canceled and sequence-checked as selections change.
+
+Validation: numerical/query and ASGI endpoint tests cover complete interval
+delivery, query limits, rotated coverage corners, reversed profiles, missing
+samples, uncertainty, surface unknowns, stale identities, and optional-service
+startup. A local Chrome check at Ruusutorpan koulu verified rendering, click
+inspection, chart linking, reversal, surface filtering, overview status, and
+390 px controls, plus panning outside coverage. Browser review also exposed
+and fixed signed int64 encoding of negative contour elevations at overview zoom.
+At zoom 15 in a 1440 × 1000 viewport, the first view delivered
+11,992 intervals (8,882 with the surface filter). The prepared local measurement
+file is 162,381,868 bytes for 69,707 segments, with 100% valid sampled length.
+These are initial observations, not the M4.5 performance/review gate.
 
 ## M4.3 — Unify eligibility and start selection
 
@@ -259,6 +308,83 @@ Acceptance: a stem to a loop, pure dead end, one-way outward-only branch,
 disconnected component, restricted gate, partial long edge, and exact-budget
 boundary have analytically checked inclusion distances. Increasing the budget
 cannot reduce inclusion under the same graph and profile.
+
+### M4.3–M4.4 implementation notes
+
+The normalized public pedestrian policy now supplies display eligibility, segment
+inspection, snapping, bounded forward/reverse search, connectivity checks, and
+the baseline. It normalizes tags, honors explicit pedestrian directions and
+pedestrian overrides of generic access, and blocks restricted tagged nodes at
+both arc ends. There is no destination exception. Public exploration excludes
+`no`, `private`, `destination`, `customers`, `permit`, and `delivery` access unless
+an explicit permitted pedestrian tag overrides generic access. The importer is
+unchanged: cycleways still require explicit pedestrian permission; pedestrian
+areas still use perimeters; paths rejected on import cannot be restored by filters.
+The prepared graph's explicit do-not-cross boundaries remain enforced and carry
+the reason `prepared_route_boundary`.
+
+The surface policy uses explicit paved/gravel tags, leaving other/unknown surfaces
+as contextual geometry. Stairs default to avoided for snapping and inclusion,
+with geometry retained. Terrain confidence never removes a connection. The
+baseline applies the same policy helpers; its existing default stair penalty and
+ascent/overlap ranking remain separate cost settings. Graph data now uses a
+data-only dataclass and module-level construction/filtering functions.
+
+`GET /api/paths/snap?longitude=…&latitude=…` returns the nearest eligible physical
+segment, projected and graph offsets, requested/snapped coordinates, offset, and
+up to eight nearest alternative segments (plus an explicitly selected candidate,
+if necessary). `radius_m` defaults to 50 and is editable up to 200 m. An optional
+`segment_id` selects an eligible nearby alternative; it never falls back to a
+larger component. No candidate gives `no_eligible_snap`, rather than a distant
+snap. Spatial lookup uses the prepared interval index; the interval's stored
+EPSG:3067-to-graph offset mapping also determines the start's graph chainage.
+
+`GET /api/paths/explore` takes the viewport parameters plus start coordinates,
+`budget_km` (default 6, bounded to 50), surface/stair policy, optional snap radius,
+and optional selected start segment. A temporary graph overlay splits the start
+segment into legal directed partial arcs. Exact endpoint starts retain their
+original junction. Neither the graph nor its persisted measurements is modified.
+Two bounded distance-only Dijkstra searches supply outward/return distances.
+Separate unweighted connectivity traversals over the prepared graph distinguish
+missing connections from distances outside the bounded search. Neither operation
+uses grade as a cost, and viewport changes do not restrict the searched graph.
+
+Each displayed interval evaluates outward access to its actual start, complete
+interval traversal, and return from its actual end, in every legal direction.
+The snapped start is an additional anchor on its segment, so interior turns and
+partial long edges work without per-interval graph searches. Responses preserve
+minimum inclusion distance when resolved, legal-direction results, and the states
+`included`, `beyond_budget`, `no_connection`, or `excluded`, with reasons. When a
+point minimum is outside the bounded search, the exact outing minimum is null;
+a beyond-budget lower bound accompanies it. It is not labeled disconnected.
+The whole interval must fit; a budget threshold inside it is conservative.
+Intervals within 100 m of the extract boundary or outside it carry
+`coverage_limited`. Coverage can omit a better connection even away from this band.
+
+An eight-entry cache keys dataset, normalized eligibility policy, physical start
+segment and exact mapped offset. Each entry records its search limit; larger
+limits serve smaller budgets, and larger requests rebuild insufficient entries.
+Policy indexes reuse loaded topology. Grade-emphasis controls remain client-side.
+
+The frontend adds opt-in outing inclusion, set/clear start, requested/snapped
+markers and visual offset, nearby candidate selection, kilometre budget and snap
+radius inputs, avoid-stairs, and a gentler-grade emphasis control. Gradient hues
+remain; opacity distinguishes inclusion/exclusion states. Inspection requests can
+include the same start/budget parameters (`start_segment_id` chooses the snapped
+alternative) and return interval inclusion values throughout the full selected
+segment, including reversed inspection. Client cancellation and sequence checks
+protect viewport and inspection updates during start/profile/budget changes.
+
+Validation covers stems to loops, dead ends, outward-only branches, directed
+cycles and closed segments, disconnected components, restricted nodes, interior
+and endpoint starts, partial long edges, exact budgets, monotonicity, larger-limit
+cache reuse, parallel paths, bridge crossings, and missing-terrain snapping.
+Browser checks verified nearest and alternative starts, signed profile/inclusion
+readouts, rapid budget updates, profile changes, snap rejection, clear-start,
+client-only grade emphasis, and 390 px controls, with no browser errors. A local
+smoke measurement loaded data in 4.69 s and took 1.13 s for the first 6 km query
+and 0.27 s for warm viewport/smaller-budget queries; a larger 8 km search took
+1.03 s. These preliminary observations are not the M4.5 performance gate.
 
 ## M4.5 — Local review and performance gate
 

@@ -52,7 +52,8 @@ size and latency justify them.
 
 ## M4 — Explore path gradients and connections
 
-The next deliverable is an inspectable path map around Ruusutorpan koulu.
+The path map around Ruusutorpan koulu now includes gradient inspection and
+start-based outing inclusion. M4.5 local review and the performance gate remain.
 The [M4 implementation plan](23-m4-path-exploration.md) breaks this into
 measurement preparation, map inspection, shared eligibility, start/budget
 queries, and local evaluation. Its working defaults remain subject to review.

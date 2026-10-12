@@ -4,9 +4,10 @@ import json
 import math
 from pathlib import Path
 
+from runmap.routing.profiles import exploration_profile, effective_edge_profile
 from runmap.routing.search import (
     CostModel,
-    GraphIndex,
+    apply_profile,
     route_coordinates,
     route_metrics,
     shortest_path,
@@ -90,6 +91,10 @@ def rank_candidate(candidate, target, tolerance, maximum_repeated_fraction):
 
 def generate_anchor_loops(index, request, settings):
     """Generate and rank loop alternatives for the first experiment."""
+    policy = exploration_profile(avoid_stairs=False)
+    policy.update(settings.get("edge_profile") or {})
+    policy = effective_edge_profile(policy, settings.get("stairs", {"mode": "penalize"}))
+    index = apply_profile(index, policy)
     start = index.document["start_snap"]["id"]
     target = float(request["target_distance_m"])
     tolerance = float(request["distance_tolerance_m"])

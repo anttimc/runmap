@@ -1,13 +1,11 @@
 """Shortest-path primitives and diverse outbound/return path pairs."""
 
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import heapq
 import math
 
-
-_DENIED = frozenset({"no", "private"})
-_ALLOWED = frozenset({"yes", "designated", "permissive", "official"})
+from runmap.routing.profiles import (arc_direction_allowed, classify_segments, exploration_profile, pedestrian_access_reason)
 
 
 def _is_grade_separated(segment):
@@ -137,30 +135,46 @@ class PathResult:
     cost: float
 
 
-class GraphIndex:
-    """Memory index over the portable prepared-graph document."""
+@dataclass(frozen=True)
+class GraphData:
+    document: dict
+    nodes: dict
+    segments: dict
+    arcs: dict
+    outgoing: dict
+    incoming: dict
+    degree: dict
+    blocked_nodes: set
+    boundary_blocked_segments: set
+    ineligible_segments: dict
+    profile: dict
 
-    def __init__(self, graph):
-        self.document = graph
-        self.nodes = {node["id"]: node for node in graph["nodes"]}
-        self.segments = {segment["id"]: segment for segment in graph["segments"]}
-        self.arcs = {arc["id"]: arc for arc in graph["arcs"]}
-        self.outgoing = defaultdict(list)
-        self.incoming = defaultdict(list)
-        self.degree = Counter()
-        for arc in graph["arcs"]:
-            self.outgoing[arc["from"]].append(arc["id"])
-            self.incoming[arc["to"]].append(arc["id"])
-        for segment in graph["segments"]:
-            self.degree[segment["from"]] += 1
-            self.degree[segment["to"]] += 1
-        self.blocked_nodes = {
-            node["id"] for node in graph["nodes"]
-            if node.get("barrier")
-            and str(node.get("access", "")).lower() in _DENIED
-            and str(node.get("foot", "")).lower() not in _ALLOWED
-        }
-        self.boundary_blocked_segments = _boundary_blocked_segments(graph)
+
+def build_graph_index(graph, profile=None):
+    profile = profile or exploration_profile(avoid_stairs=False)
+    nodes = {node["id"]: node for node in graph["nodes"]}
+    segments = {segment["id"]: segment for segment in graph["segments"]}
+    arcs = {arc["id"]: arc for arc in graph["arcs"]}
+    outgoing, incoming, degree = defaultdict(list), defaultdict(list), Counter()
+    for arc in graph["arcs"]:
+        outgoing[arc["from"]].append(arc["id"])
+        incoming[arc["to"]].append(arc["id"])
+    for segment in graph["segments"]:
+        degree[segment["from"]] += 1
+        degree[segment["to"]] += 1
+    index = GraphData(graph, nodes, segments, arcs, dict(outgoing), dict(incoming), degree,
+                      {node_id for node_id, node in nodes.items() if pedestrian_access_reason(node, profile)},
+                      _boundary_blocked_segments(graph), {}, profile)
+    index.ineligible_segments.update(classify_segments(index, profile))
+    return index
+
+
+def arc_usable(index, arc, blocked_segments=frozenset()):
+    return (arc["segment_id"] not in index.boundary_blocked_segments
+            and arc["segment_id"] not in index.ineligible_segments
+            and arc["segment_id"] not in blocked_segments
+            and arc["from"] not in index.blocked_nodes and arc["to"] not in index.blocked_nodes
+            and arc_direction_allowed(index.segments[arc["segment_id"]], arc, index.profile))
 
 
 def _arc_cost(index, arc, model, overlap_segments, overlap_factor):
@@ -188,6 +202,8 @@ def shortest_path(
         raise ValueError("Route endpoint is not in the graph")
     if overlap_factor < 1:
         raise ValueError("Overlap factor must be at least one")
+    if start in index.blocked_nodes or destination in index.blocked_nodes:
+        return None
     model = model or CostModel()
     distances = {start: 0.0}
     predecessors = {}
@@ -200,12 +216,7 @@ def shortest_path(
             break
         for arc_id in index.outgoing.get(node_id, ()):
             arc = index.arcs[arc_id]
-            if (
-                arc["segment_id"] in index.boundary_blocked_segments
-                or arc["segment_id"] in blocked_segments
-            ):
-                continue
-            if arc["to"] in index.blocked_nodes and arc["to"] != destination:
+            if not arc_usable(index, arc, blocked_segments):
                 continue
             candidate = distance + _arc_cost(
                 index, arc, model, overlap_segments, overlap_factor
@@ -232,6 +243,8 @@ def shortest_distances(
     """Calculate distances from a start in the directed graph or its reverse."""
     if start not in index.nodes:
         raise ValueError("Route start is not in the graph")
+    if start in index.blocked_nodes:
+        return {}
     distances = {start: 0.0}
     queue = [(0.0, start)]
     while queue:
@@ -246,14 +259,9 @@ def shortest_distances(
         )
         for arc_id in arc_ids:
             arc = index.arcs[arc_id]
-            if (
-                arc["segment_id"] in index.boundary_blocked_segments
-                or arc["segment_id"] in blocked_segments
-            ):
+            if not arc_usable(index, arc, blocked_segments):
                 continue
             neighbour = arc["from"] if reverse else arc["to"]
-            if neighbour in index.blocked_nodes:
-                continue
             candidate = distance + float(arc["length_m"])
             if candidate <= maximum and candidate < distances.get(neighbour, math.inf):
                 distances[neighbour] = candidate
@@ -331,3 +339,29 @@ def route_coordinates(index, arc_ids):
             if not coordinates or coordinate != coordinates[-1]:
                 coordinates.append(coordinate)
     return coordinates
+
+
+def reachable_nodes(index, start, reverse=False):
+    """Connectivity only: distinguish absent connections from bounded distances."""
+    if start in index.blocked_nodes:
+        return set()
+    seen, queue = {start}, [start]
+    while queue:
+        node = queue.pop()
+        adjacency = index.incoming if reverse else index.outgoing
+        for arc_id in adjacency.get(node, ()):
+            arc = index.arcs[arc_id]
+            neighbour = arc["from"] if reverse else arc["to"]
+            if neighbour not in seen and arc_usable(index, arc):
+                seen.add(neighbour)
+                queue.append(neighbour)
+    return seen
+
+
+def apply_profile(index, profile):
+    """Reuse topology while applying the same policy to nodes and physical segments."""
+    result = replace(index, profile=profile, ineligible_segments={}, blocked_nodes={
+        node_id for node_id, node in index.nodes.items() if pedestrian_access_reason(node, profile)
+    })
+    result.ineligible_segments.update(classify_segments(result, profile))
+    return result

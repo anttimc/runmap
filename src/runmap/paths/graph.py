@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 
 from runmap.paths.measurements import graph_digest
+from runmap.routing.profiles import pedestrian_directions
 
 
 GRAPH_SCHEMA_VERSION = 1
@@ -73,14 +74,7 @@ def runnable_reason(tags):
 
 def _direction_permissions(tags):
     """Return forward/backward pedestrian permissions for an OSM way."""
-    forward = _tag(tags, "foot:forward") not in _DENIED
-    backward = _tag(tags, "foot:backward") not in _DENIED
-    foot_oneway = _tag(tags, "oneway:foot")
-    if foot_oneway in _TRUE:
-        backward = False
-    elif foot_oneway == "-1":
-        forward = False
-    return forward, backward
+    return pedestrian_directions(tags, {"forbidden_access_values": ["no", "private"]})
 
 
 def _haversine_m(first, second):

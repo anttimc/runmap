@@ -16,7 +16,7 @@ from runmap.paths.graph import build_routing_graph, snap_to_vertex, write_graph_
 from runmap.paths.terrain import enrich_graph_terrain
 from runmap.regions import PROCESSING_HALO_M, find_region, list_regions
 from runmap.routing.baseline import generate_anchor_loops, write_route_outputs
-from runmap.routing.search import GraphIndex
+from runmap.routing.search import build_graph_index
 from runmap.sources.mml import Bounds, coverage_url, download_elevation
 from runmap.sources.osm import download_highways, highway_query
 
@@ -267,7 +267,7 @@ def routes_command(argv):
                 "Prepared graph does not match the current experiment configuration; "
                 "run paths prepare again"
             )
-        index = GraphIndex(graph)
+        index = build_graph_index(graph)
         result = generate_anchor_loops(index, experiment.request, experiment.baseline)
         if not result["alternatives"]:
             parser.error("Baseline search produced no route alternatives")

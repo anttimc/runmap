@@ -3,7 +3,7 @@ import unittest
 from runmap.routing.baseline import generate_anchor_loops
 from runmap.routing.search import (
     CostModel,
-    GraphIndex,
+    build_graph_index,
     diverse_path_pair,
     route_metrics,
     shortest_distances,
@@ -66,7 +66,7 @@ class ShortestPathTests(unittest.TestCase):
             arc for arc in graph["arcs"]
             if arc["id"] in {"sa:f", "bs:f"}
         ]
-        index = GraphIndex(graph)
+        index = build_graph_index(graph)
 
         outward = shortest_distances(index, "s")
         returning = shortest_distances(index, "s", reverse=True)
@@ -83,7 +83,7 @@ class ShortestPathTests(unittest.TestCase):
                 ("flat-2", "a", "d", 60, 0, {"highway": "path"}),
             ],
         )
-        index = GraphIndex(graph)
+        index = build_graph_index(graph)
 
         result = shortest_path(index, "s", "d", CostModel(ascent_cost_per_m=5))
 
@@ -102,7 +102,7 @@ class ShortestPathTests(unittest.TestCase):
                 ("bd", "b", "d", 120, 0, {"highway": "path"}),
             ],
         )
-        index = GraphIndex(graph)
+        index = build_graph_index(graph)
 
         outbound, returning = diverse_path_pair(
             index, "s", "d", CostModel(), overlap_factor=10
@@ -123,7 +123,7 @@ class ShortestPathTests(unittest.TestCase):
             "id": "boundary",
             "geometry": [[24.01, 59.99], [24.01, 60.01]],
         }]
-        index = GraphIndex(graph)
+        index = build_graph_index(graph)
 
         result = shortest_path(index, "s", "d")
 
@@ -142,7 +142,7 @@ class ShortestPathTests(unittest.TestCase):
             "id": "boundary",
             "geometry": [[24.01, 59.99], [24.01, 60.01]],
         }]
-        index = GraphIndex(graph)
+        index = build_graph_index(graph)
 
         result = shortest_path(index, "s", "d")
 
@@ -159,7 +159,7 @@ class ShortestPathTests(unittest.TestCase):
             "id": "boundary",
             "geometry": [[24.01, 59.991], [24.01, 60.009]],
         }]
-        index = GraphIndex(graph)
+        index = build_graph_index(graph)
 
         self.assertIsNone(shortest_path(index, "s", "d"))
         self.assertEqual(index.boundary_blocked_segments, {"around-end"})
@@ -179,7 +179,7 @@ class BaselineLoopTests(unittest.TestCase):
                 ("bd", "b", "d", 2500, 5, {"highway": "path"}),
             ],
         )
-        index = GraphIndex(graph)
+        index = build_graph_index(graph)
         request = {
             "target_distance_m": 10000,
             "distance_tolerance_m": 500,

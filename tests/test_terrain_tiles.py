@@ -128,6 +128,13 @@ class TerrainTileTests(unittest.TestCase):
         self.assertIn(b"elevation", tile)
         self.assertIn(b"index", tile)
 
+    def test_contours_below_zero_encode_signed_int64_elevations(self):
+        _, cols = np.mgrid[0:520, 0:520]
+        tile = _encode_contour_mvt((cols / 20 - 10).astype("float32"))
+        # Value.int_value (field 4) stores -5 and -10 as ten-byte int64 varints.
+        self.assertIn(b"\x20\xfb" + b"\xff" * 8 + b"\x01", tile)
+        self.assertIn(b"\x20\xf6" + b"\xff" * 8 + b"\x01", tile)
+
     def test_rejects_contours_outside_advertised_zoom_range(self):
         with self.assertRaisesRegex(ValueError, "contour tile range"):
             self.service.render_contour_tile(11, 0, 0)
