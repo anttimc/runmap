@@ -1,5 +1,6 @@
 import { Marker, type GeoJSONSource, type Map, type ExpressionSpecification, type AddLayerObject } from "maplibre-gl";
 import type { Feature, FeatureCollection, LineString, Point, Polygon } from "geojson";
+import { turboColors } from "./turbo";
 
 interface PathConfig {
   status: string;
@@ -83,26 +84,31 @@ interface SnapshotResponse {
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
 interface ColorStop { percent: number; color: string }
-const distanceStops = [
-  { fraction: 0, color: "#eee5ff" },
-  { fraction: .1, color: "#c4a3f5" },
-  { fraction: .2, color: "#9861db" },
-  { fraction: .5, color: "#6324a1" },
-  { fraction: 1, color: "#260b40" },
-];
+const distanceBandM = 500;
+
+function distanceBands(maximumM: number): { startM: number; color: string }[] {
+  const count = Math.max(1, Math.ceil(maximumM / distanceBandM));
+  return Array.from({ length: count }, (_, index) => {
+    const colorIndex = count === 1 ? 0 : Math.floor(index * (turboColors.length - 1) / (count - 1));
+    return { startM: index * distanceBandM, color: turboColors[colorIndex] };
+  });
+}
 
 function distanceExpression(maximumM: number): ExpressionSpecification {
+  const bands = distanceBands(maximumM);
   return ["case", ["any", ["!=", ["get", "inclusion_state"], "included"],
     ["==", ["get", "distance_from_start_m"], null]], "#727980",
-    ["interpolate", ["linear"], ["coalesce", ["get", "distance_from_start_m"], 0],
-      ...distanceStops.flatMap(stop => [stop.fraction * maximumM, stop.color])]] as ExpressionSpecification;
+    ["step", ["coalesce", ["get", "distance_from_start_m"], 0], bands[0].color,
+      ...bands.slice(1).flatMap(band => [band.startM, band.color])]] as ExpressionSpecification;
 }
 
 function renderDistanceLegend(maximumKm: number): void {
-  element("distance-ramp").style.background = `linear-gradient(to right, ${distanceStops.map(stop => `${stop.color} ${100 * stop.fraction}%`).join(", ")})`;
+  const maximumM = maximumKm * 1000;
+  const bands = distanceBands(maximumM);
+  element("distance-ramp").style.background = `linear-gradient(to right, ${bands.map(band =>
+    `${band.color} ${100 * band.startM / maximumM}% ${100 * Math.min(band.startM + distanceBandM, maximumM) / maximumM}%`).join(", ")})`;
   const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
-  element("distance-ticks").textContent = distanceStops
-    .map(stop => formatter.format(stop.fraction * maximumKm)).join(" · ") + " km";
+  element("distance-ticks").textContent = `0–${formatter.format(maximumKm)} km · each color = 0.5 km`;
 }
 
 function gradientOpacity(): ExpressionSpecification {
@@ -580,7 +586,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     element("gradient-legend").hidden = distance;
     element("distance-legend").hidden = !distance;
     element("metric-note").textContent = distance
-      ? "Shortest legal network distance from the snapped start to each interval midpoint. Purple colors show paths included within the forward distance budget; the color scale spans zero to that budget. Gray: beyond budget, excluded, unreachable, or distance unavailable. Terrain uncertainty remains in inspection."
+      ? "Shortest legal network distance from the snapped start to each interval midpoint. Turbo colors mark 0.5 km bands (0–0.5, 0.5–1 km, and so on), from purple through blue, green, and yellow to red across the forward distance budget. The final band may be shorter. Gray: beyond budget, excluded, unreachable, or distance unavailable. Terrain uncertainty remains in inspection."
       : "Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.";
     flatter.disabled = distance;
     applyPathEmphasis(map, !distance && flatter.checked, distance);

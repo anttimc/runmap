@@ -48,6 +48,7 @@ class PathQueryTests(unittest.TestCase):
 
     def test_config_identity_and_source_settings(self):
         config = path_config(self.data)
+        self.assertEqual(config["default_budget_km"], 3)
         self.assertEqual(config["dataset_id"], graph_digest(self.graph))
         self.assertEqual(config["method"]["manifest_id"], "fixture")
         self.assertEqual(config["grade_bands_percent"], [0, 2, 5, 8])

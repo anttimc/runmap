@@ -179,7 +179,7 @@ def path_config(data):
         "min_zoom": MIN_ZOOM, "max_area_km2": MAX_AREA_KM2, "max_features": MAX_FEATURES,
         "grade_bands_percent": [0, 2, 5, 8],
         "filters": ["all", "surfaced"],
-        "snap_radius_m": 50, "default_budget_km": 6, "maximum_budget_km": 50,
+        "snap_radius_m": 50, "default_budget_km": 3, "maximum_budget_km": 50,
         "importer_notes": [
             "Cycleways require explicit foot=yes/designated/permissive/official during import.",
             "Pedestrian areas are represented by their mapped perimeters, not area interiors.",
@@ -353,7 +353,7 @@ def _interval_state(data, index, distances, interval, budget_km):
                 (interval["graph_start_m"] + interval["graph_end_m"]) / 2)}
 
 
-def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=6, surface="all",
+def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=3, surface="all",
                   avoid_stairs=True, radius_m=50, segment_id=None, hide_building_access: bool = True):
     response = viewport_paths(data, bounds, zoom, surface, avoid_stairs=avoid_stairs,
                               hide_building_access=hide_building_access)
@@ -374,7 +374,7 @@ def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=6, surface=
             "Whole display intervals are tested conservatively. Exact minima beyond the bounded search may be unavailable; they are beyond budget, not disconnected."}
 
 
-def inspect_outing(data, result, longitude, latitude, budget_km=6, surface="all", avoid_stairs=True,
+def inspect_outing(data, result, longitude, latitude, budget_km=3, surface="all", avoid_stairs=True,
                    radius_m=50, start_segment_id=None):
     index, distances, snap_response, _ = exploration_context(
         data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, start_segment_id)

@@ -100,7 +100,7 @@ class SnapshotRequest(BaseModel):
     longitude: float
     latitude: float
     dataset_id: str
-    budget_km: float = Field(6, gt=0, le=50)
+    budget_km: float = Field(3, gt=0, le=50)
     radius_m: float = Field(50, gt=0, le=200)
     surface: str = "all"
     avoid_stairs: bool = True
@@ -189,7 +189,7 @@ def paths_viewport(
 def path_inspection(request: Request, segment_id: str, reverse: bool = False,
                     dataset_id: str = None, surface: str = "all", avoid_stairs: bool = True,
                     longitude: float = None, latitude: float = None, hide_building_access: bool = True,
-                    budget_km: float = Query(6, gt=0, le=50),
+                    budget_km: float = Query(3, gt=0, le=50),
                     radius_m: float = Query(50, gt=0, le=200), start_segment_id: str = None):
     data = _path_data(request, dataset_id)
     if segment_id not in data.segments:
@@ -221,7 +221,7 @@ def path_start_snap(request: Request, longitude: float, latitude: float,
 @app.get("/api/paths/explore")
 def path_exploration(request: Request, west: float, south: float, east: float, north: float,
                      zoom: float, longitude: float, latitude: float,
-                     budget_km: float = Query(6, gt=0, le=50),
+                     budget_km: float = Query(3, gt=0, le=50),
                      surface: str = "all", avoid_stairs: bool = True,
                      radius_m: float = Query(50, gt=0, le=200), segment_id: str = None,
                      dataset_id: str = None, metric: str = "gradient", hide_building_access: bool = True):
