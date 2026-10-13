@@ -419,17 +419,18 @@ function renderLegend(stops: MapConfig["slope_legend"]): void {
     const color = `color-mix(in srgb, ${stop.color} ${100 * stop.opacity}%, transparent)`;
     return `${color} ${100 * stop.percent / 40}%`;
   });
-  legendBar.style.background = `linear-gradient(to top, ${colors.join(", ")})`;
+  legendBar.style.background = `linear-gradient(to right, ${colors.join(", ")})`;
   legendLabels.replaceChildren(
     ...stops
       .slice()
+      .filter(stop => stop.percent !== 2)
       .reverse()
       .map((stop) => {
         const label = document.createElement("span");
         label.textContent = `${stop.percent}%`;
         label.style.position = "absolute";
-        label.style.bottom = `${100 * stop.percent / 40}%`;
-        label.style.transform = "translateY(50%)";
+        label.style.left = `${100 * stop.percent / 40}%`;
+        label.style.transform = stop.percent === 0 ? "none" : stop.percent === 40 ? "translateX(-100%)" : "translateX(-50%)";
         return label;
       }),
   );

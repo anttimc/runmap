@@ -338,6 +338,8 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   const panel = element("path-inspection");
   const reverse = element<HTMLInputElement>("path-reverse");
   const metric = element<HTMLSelectElement>("path-metric");
+  const gradientMode = element<HTMLButtonElement>("mode-gradient");
+  const distanceMode = element<HTMLButtonElement>("mode-distance");
   const filter = element<HTMLSelectElement>("path-surface");
   const avoidStairs = element<HTMLInputElement>("path-avoid-stairs");
   const hideBuildingAccess = element<HTMLInputElement>("path-hide-building-access");
@@ -363,7 +365,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   element("path-importer-notes").replaceChildren(...config.importer_notes.map(note => text("li", note)));
   budget.value = String(config.default_budget_km);
   radius.value = String(config.snap_radius_m);
-  for (const control of [metric, filter, avoidStairs, hideBuildingAccess, flatter, enabled, budget, radius, setStart]) control.disabled = false;
+  for (const control of [metric, gradientMode, distanceMode, filter, avoidStairs, hideBuildingAccess, flatter, enabled, budget, radius, setStart]) control.disabled = false;
   addPathLayers(map, config, stops);
   renderGradientLegend(stops);
   applyPathEmphasis(map, flatter.checked);
@@ -576,7 +578,15 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   function updateMetric(): void {
     updateLodLegend();
     const distance = metric.value === "distance";
-    const maximumKm = enabled.checked ? Number(budget.value) : 10;
+    const maximumKm = Number(budget.value);
+    gradientMode.setAttribute("aria-pressed", String(!distance));
+    distanceMode.setAttribute("aria-pressed", String(distance));
+    element("distance-controls").hidden = !distance;
+    element("gradient-options").hidden = distance;
+    element("path-legend-title").textContent = distance ? "Distance from start" : "Path gradient";
+    element("mode-description").textContent = distance
+      ? "Choose a start to see network distance in 500 m color bands."
+      : "Compare path steepness. Click a path to inspect its profile.";
     renderDistanceLegend(maximumKm);
     const gradeColor: ExpressionSpecification = gradientExpression(stops);
     map.setPaintProperty("path-grades", "line-color", distance
@@ -592,12 +602,21 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     applyPathEmphasis(map, !distance && flatter.checked, distance);
   }
   metric.addEventListener("change", () => {
-    if (metric.value === "distance") {
-      enabled.checked = true;
+    enabled.checked = metric.value === "distance";
+    if (enabled.checked) {
       if (!requestedStart) chooseStartMode(true);
+    } else {
+      chooseStartMode(false);
     }
     updateMetric(); showStart(); refresh();
   });
+  for (const [button, value] of [[gradientMode, "gradient"], [distanceMode, "distance"]] as const) {
+    button.addEventListener("click", () => {
+      if (metric.value === value) return;
+      metric.value = value;
+      metric.dispatchEvent(new Event("change"));
+    });
+  }
   flatter.addEventListener("change", () => applyPathEmphasis(map, flatter.checked, metric.value === "distance"));
   enabled.addEventListener("change", () => {
     if (enabled.checked && !requestedStart) chooseStartMode(true);
@@ -606,7 +625,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   });
   setStart.addEventListener("click", () => chooseStartMode(!choosingStart));
   clearStart.addEventListener("click", () => {
-    requestedStart = undefined; enabled.checked = false;
+    requestedStart = undefined; enabled.checked = metric.value === "distance";
     chooseStartMode(false); showStart(); outingStatus.textContent = "Choose a start to enable distance highlighting."; refresh();
   });
   map.on("click", event => {

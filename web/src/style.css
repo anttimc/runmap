@@ -145,7 +145,6 @@ input[type="range"]:disabled { cursor: wait; opacity: 0.45; }
 
 @media (max-width: 600px) {
   .controls { top: 10px; left: 10px; width: calc(100vw - 20px); padding: 15px; }
-  .legend { display: none; }
   .control-label { margin-top: 14px; }
 }
 
@@ -222,3 +221,36 @@ button { border: 1px solid #b9c3c0; border-radius: 5px; background: #fffdf8; pad
 #path-gradient-ticks .ramp-tick-last { transform: translateX(-100%); }
 
 .legend-labels { position: relative; min-width: 30px; }
+
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.mode-switch button { text-align: left; padding: 12px; border-radius: 9px; }
+.mode-switch strong, .mode-switch span { display: block; }
+.mode-switch strong { font-size: .9rem; }
+.mode-switch span { margin-top: 4px; font-size: .7rem; line-height: 1.35; }
+.mode-switch button[aria-pressed="true"] { border-color: #087f8c; background: #dceeea; box-shadow: inset 0 0 0 1px #087f8c; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, summary:focus-visible { outline: 2px solid #087f8c; outline-offset: 3px; }
+.section-title { margin: 0; font-size: .84rem; font-weight: 700; }
+.path-settings { margin-top: 16px; border-top: 1px solid #d6d8d3; padding-top: 14px; }
+.path-settings input[type="number"] { width: 100%; padding: 6px; border: 1px solid #b9c3c0; border-radius: 5px; background: #fffdf8; color: inherit; }
+.map-legend { position: absolute; z-index: 2; bottom: 36px; left: 18px; width: min(360px, calc(100vw - 36px)); padding: 16px; border: 1px solid rgb(255 255 255 / 50%); border-radius: 12px; background: rgb(250 249 245 / 96%); box-shadow: 0 8px 28px rgb(25 38 43 / 18%); }
+.map-legend .gradient-legend { grid-template-columns: 1fr; gap: 7px; margin-top: 10px; }
+.map-legend .legend { margin-top: 12px; padding-top: 10px; }
+.map-legend .legend-heading { margin-bottom: 6px; }
+.map-legend .legend-body { display: block; height: auto; }
+.map-legend .legend-bar { width: 100%; height: 8px; }
+.map-legend .legend-labels { display: block; height: 16px; margin-top: 4px; }
+.controls { max-height: calc(100dvh - 360px); }
+@media (max-width: 900px) {
+  .map-legend { width: min(320px, calc(100vw - 20px)); }
+}
+@media (max-width: 600px) {
+  .controls { max-height: calc(100dvh - 330px); }
+  .map-legend { left: 10px; bottom: 32px; padding: 12px; }
+  .inspection-panel { bottom: 340px; max-height: 35dvh; }
+}
+@media (min-width: 601px) and (max-height: 650px) {
+  .controls { max-height: calc(100dvh - 36px); }
+  .map-legend { left: auto; right: 18px; }
+  .inspection-panel { right: auto; left: 18px; top: 18px; bottom: auto; }
+}

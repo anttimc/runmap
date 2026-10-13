@@ -20,11 +20,25 @@
         </div>
         <div class="path-controls">
           <p id="path-status" class="explanation" role="status">Loading path configuration…</p>
-          <div class="info-heading"><label class="control-label" for="path-metric">Color paths by</label><button type="button" class="info-button" popovertarget="metric-help" aria-label="About path colors">i</button></div><div id="metric-help" class="info-popover" popover role="dialog" aria-labelledby="metric-help-title"><div class="heading-row"><h2 id="metric-help-title">Path colors</h2><button type="button" popovertarget="metric-help" popovertargetaction="hide" aria-label="Close Path colors help">Close</button></div>          <p id="metric-note" class="explanation">Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.</p>          <p id="path-settings" class="explanation"></p></div>
-          <select id="path-metric" disabled>
-            <option value="gradient">Slope gradient</option>
-            <option value="distance">Distance from start</option>
-          </select>
+          <div class="mode-switch" role="group" aria-label="Path mode">
+            <button id="mode-gradient" type="button" aria-pressed="true" disabled><strong>Gradient</strong><span>See how steep paths are</span></button>
+            <button id="mode-distance" type="button" aria-pressed="false" disabled><strong>Distance</strong><span>Explore from your start</span></button>
+          </div>
+          <p id="mode-description" class="explanation">Compare path steepness. Click a path to inspect its profile.</p>
+          <div id="distance-controls" class="outing-controls" hidden>
+            <h2 class="section-title">Distance from start</h2>
+            <div class="heading-row outing-actions">
+              <button id="outing-set-start" type="button" disabled>Set start on map</button>
+              <button id="outing-clear-start" type="button" disabled>Clear start</button>
+            </div>
+            <label class="control-label" for="outing-budget">Forward distance budget (km)</label>
+            <input id="outing-budget" type="number" min="0.1" max="50" step="0.1" value="3" disabled />
+            <p id="outing-status" class="explanation" role="status">Choose a start to enable distance highlighting.</p>
+            <p id="outing-label" class="explanation"></p>
+          </div>
+          <details class="path-settings"><summary>Path settings</summary>
+          <div class="info-heading network-help"><span>Prepared network</span><button type="button" class="info-button" popovertarget="network-help" aria-label="About prepared network limitations">i</button></div><div id="network-help" class="info-popover" popover role="dialog" aria-labelledby="network-help-title"><div class="heading-row"><h2 id="network-help-title">Prepared network limitations</h2><button type="button" popovertarget="network-help" popovertargetaction="hide" aria-label="Close Prepared network limitations help">Close</button></div><ul id="path-importer-notes"></ul></div>
+
           <div class="info-heading"><label class="control-label" for="path-surface">Surface evidence</label><button type="button" class="info-button" popovertarget="surface-help" aria-label="About surface evidence">i</button></div><div id="surface-help" class="info-popover" popover role="dialog" aria-labelledby="surface-help-title"><div class="heading-row"><h2 id="surface-help-title">Surface evidence</h2><button type="button" popovertarget="surface-help" popovertargetaction="hide" aria-label="Close Surface evidence help">Close</button></div>          <p class="explanation">Material tags do not prove maintenance. Unknown surfaces remain explicit; stairs stay visible.</p></div>
           <select id="path-surface" disabled>
             <option value="all">All prepared candidate paths</option>
@@ -33,35 +47,17 @@
           <label class="contour-toggle"><input id="path-hide-building-access" type="checkbox" checked disabled aria-describedby="building-access-help" /> Hide building-access dead ends</label>
           <p id="building-access-help" class="explanation">Affects all path colors. Starts can still snap to these paths; the basemap may show them faintly.</p>
           <label class="contour-toggle"><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid stairs for snapping and exploration</label>
-          <label class="contour-toggle"><input id="path-flatter" type="checkbox" disabled /> Emphasize grades below 2%</label>
-          <details class="outing-controls" open>
-            <summary>Explore from a start</summary>
-            <div class="info-heading"><label class="contour-toggle"><input id="outing-enabled" type="checkbox" disabled /> Show reachable paths</label><button type="button" class="info-button" popovertarget="outing-help" aria-label="About reachable paths">i</button></div><div id="outing-help" class="info-popover" popover role="dialog" aria-labelledby="outing-help-title"><div class="heading-row"><h2 id="outing-help-title">Reachable paths</h2><button type="button" popovertarget="outing-help" popovertargetaction="hide" aria-label="Close Reachable paths help">Close</button></div>            <p class="explanation">Full emphasis: within budget. Faint: beyond budget. Very faint: no connection in prepared data or excluded by your filters. Each whole interval is reachable within the forward distance budget. Return distance is not included.</p>            <p class="explanation">The snap offset is visual, not a validated access route. Prepared coverage can omit shorter connections. Partial intervals at the budget boundary remain conservatively unhighlighted.</p></div>
-            <div class="heading-row outing-actions">
-              <button id="outing-set-start" type="button" disabled>Set start on map</button>
-              <button id="outing-clear-start" type="button" disabled>Clear start</button>
-            </div>
-            <label class="control-label" for="outing-budget">Forward distance budget (km)</label>
-            <input id="outing-budget" type="number" min="0.1" max="50" step="0.1" value="3" disabled />
+          <label id="gradient-options" class="contour-toggle"><input id="path-flatter" type="checkbox" disabled /> Emphasize grades below 2%</label>
             <label class="control-label" for="outing-radius">Maximum snap offset (m)</label>
             <input id="outing-radius" type="number" min="1" max="200" step="1" value="50" disabled />
-            <p id="outing-status" class="explanation" role="status">Choose a start to enable distance highlighting.</p>
-            <p id="outing-label" class="explanation"></p>
+            <div class="info-heading" hidden><label class="contour-toggle"><input id="outing-enabled" type="checkbox" disabled /> Show reachable paths</label><button type="button" class="info-button" popovertarget="outing-help" aria-label="About reachable paths">i</button></div><div id="outing-help" class="info-popover" popover role="dialog" aria-labelledby="outing-help-title"><div class="heading-row"><h2 id="outing-help-title">Reachable paths</h2><button type="button" popovertarget="outing-help" popovertargetaction="hide" aria-label="Close Reachable paths help">Close</button></div>            <p class="explanation">Full emphasis: within budget. Faint: beyond budget. Very faint: no connection in prepared data or excluded by your filters. Each whole interval is reachable within the forward distance budget. Return distance is not included.</p>            <p class="explanation">The snap offset is visual, not a validated access route. Prepared coverage can omit shorter connections. Partial intervals at the budget boundary remain conservatively unhighlighted.</p></div>
+          <div class="info-heading"><span>About path colors</span><button type="button" class="info-button" popovertarget="metric-help" aria-label="About path colors">i</button></div><div id="metric-help" class="info-popover" popover role="dialog" aria-labelledby="metric-help-title"><div class="heading-row"><h2 id="metric-help-title">Path colors</h2><button type="button" popovertarget="metric-help" popovertargetaction="hide" aria-label="Close Path colors help">Close</button></div>          <p id="metric-note" class="explanation">Colors show sampled grade magnitude, not universal running categories. Inspection shows signed grade. Paths outside prepared coverage are basemap context.</p>          <p id="path-settings" class="explanation"></p></div>
+          <select id="path-metric" hidden disabled aria-label="Path mode">
+            <option value="gradient">Slope gradient</option>
+            <option value="distance">Distance from start</option>
+          </select>
           </details>
-          <div class="info-heading network-help"><span>Prepared network</span><button type="button" class="info-button" popovertarget="network-help" aria-label="About prepared network limitations">i</button></div><div id="network-help" class="info-popover" popover role="dialog" aria-labelledby="network-help-title"><div class="heading-row"><h2 id="network-help-title">Prepared network limitations</h2><button type="button" popovertarget="network-help" popovertargetaction="hide" aria-label="Close Prepared network limitations help">Close</button></div><ul id="path-importer-notes"></ul></div>
-          <div id="gradient-legend" class="gradient-legend" aria-label="Along-path gradient magnitude bands">
-            <div class="continuous-key"><div id="path-gradient-ramp" class="continuous-ramp"></div><div id="path-gradient-ticks"></div></div>
-            <span><i class="uncertain"></i>Bridge / tunnel ground estimate</span>
-            <span><i class="missing"></i>Missing terrain</span>
-            <span><i class="stairs"></i>Stairs (over grade color)</span>
-            <span><i class="coverage"></i>Prepared coverage boundary</span>
-          </div>
-          <div id="distance-legend" class="gradient-legend" hidden aria-label="Network distance from start">
-            <div class="continuous-key"><div id="distance-ramp" class="continuous-ramp"></div><div id="distance-ticks">0 · 1 · 2 · 5 · 10 km</div></div>
-            <span><i style="background:#727980"></i>Beyond budget / distance unavailable</span>
-          </div>
         </div>
-        <p id="path-lod-note" class="explanation" hidden></p>
         <details class="terrain-controls">
           <summary>Terrain background</summary><div class="info-heading"><span>Background settings</span><button type="button" class="info-button" popovertarget="terrain-help" aria-label="About terrain background">i</button></div><div id="terrain-help" class="info-popover" popover role="dialog" aria-labelledby="terrain-help-title"><div class="heading-row"><h2 id="terrain-help-title">Terrain background</h2><button type="button" popovertarget="terrain-help" popovertargetaction="hide" aria-label="Close Terrain background help">Close</button></div>          <p class="explanation">Changes the terrain background only. Path measurements keep their fixed preparation settings.</p></div>
           <label class="control-label" for="wavelength">
@@ -76,6 +72,24 @@
           </label>
           <input id="opacity" type="range" min="0" max="100" step="1" value="25" disabled />
           <label class="contour-toggle"><input id="contours-visible" type="checkbox" checked /> Elevation contours</label>
+        </details>
+      </section>
+      <aside class="map-legend" aria-label="Map legend">
+        <h2 id="path-legend-title" class="section-title">Path gradient</h2>
+          <div id="gradient-legend" class="gradient-legend" aria-label="Along-path gradient magnitude bands">
+            <div class="continuous-key"><div id="path-gradient-ramp" class="continuous-ramp"></div><div id="path-gradient-ticks"></div></div>
+            <span><i class="uncertain"></i>Bridge / tunnel ground estimate</span>
+            <span><i class="missing"></i>Missing terrain</span>
+            <span><i class="stairs"></i>Stairs (over grade color)</span>
+            <span><i class="coverage"></i>Prepared coverage boundary</span>
+          </div>
+          <div id="distance-legend" class="gradient-legend" hidden aria-label="Network distance from start">
+            <div class="continuous-key"><div id="distance-ramp" class="continuous-ramp"></div><div id="distance-ticks">0–3 km · each color = 0.5 km</div></div>
+            <span><i style="background:#727980"></i>Beyond budget / distance unavailable</span>
+            <span><i class="stairs"></i>Stairs</span>
+            <span><i class="coverage"></i>Prepared coverage boundary</span>
+          </div>
+        <p id="path-lod-note" class="explanation" hidden></p>
           <div class="legend" aria-label="Terrain slope magnitude legend">
             <div class="legend-heading"><span>Terrain slope magnitude</span><span>grade</span></div>
             <div class="legend-body">
@@ -83,8 +97,7 @@
               <div id="legend-labels" class="legend-labels"></div>
             </div>
           </div>
-        </details>
-      </section>
+      </aside>
       <section id="path-inspection" class="inspection-panel" aria-label="Path segment inspection" hidden>
         <div class="heading-row">
           <label><input id="path-reverse" type="checkbox" /> Reverse inspection direction</label>
