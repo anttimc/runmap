@@ -216,5 +216,9 @@ button { border: 1px solid #b9c3c0; border-radius: 5px; background: #fffdf8; pad
 
 .continuous-key { grid-column: 1 / -1; width: 100%; }
 .continuous-ramp { height: 12px; border-radius: 4px; margin-bottom: 5px; }
+#path-gradient-ticks { position: relative; height: 17px; }
+#path-gradient-ticks .ramp-tick { position: absolute; top: 0; display: block; white-space: nowrap; transform: translateX(-50%); }
+#path-gradient-ticks .ramp-tick-first { transform: none; }
+#path-gradient-ticks .ramp-tick-last { transform: translateX(-100%); }
 
 .legend-labels { position: relative; min-width: 30px; }

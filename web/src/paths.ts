@@ -117,6 +117,20 @@ function gradientLegendColor(stop: ColorStop): string {
   return `color-mix(in srgb, ${stop.color} ${100 * opacity}%, transparent)`;
 }
 
+function renderGradientLegend(stops: ColorStop[]): void {
+  const maximum = stops[stops.length - 1].percent;
+  element("path-gradient-ramp").style.background = `linear-gradient(to right, ${stops.map(stop => `${gradientLegendColor(stop)} ${100 * stop.percent / maximum}%`).join(", ")})`;
+  const labeledStops = stops.filter((stop, index) => index === 0 || stop.percent / maximum >= .125);
+  element("path-gradient-ticks").replaceChildren(...labeledStops.map((stop, index) => {
+    const label = text("span", `${stop.percent}%`);
+    label.style.left = `${100 * stop.percent / maximum}%`;
+    label.className = "ramp-tick";
+    if (index === 0) label.classList.add("ramp-tick-first");
+    if (index === labeledStops.length - 1) label.classList.add("ramp-tick-last");
+    return label;
+  }));
+}
+
 function gradientExpression(stops: ColorStop[]): ExpressionSpecification {
   return ["interpolate", ["linear"], ["abs", ["coalesce", ["get", "grade_percent"], 0]],
     ...stops.flatMap(stop => [stop.percent, stop.color])] as ExpressionSpecification;
@@ -345,8 +359,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   radius.value = String(config.snap_radius_m);
   for (const control of [metric, filter, avoidStairs, hideBuildingAccess, flatter, enabled, budget, radius, setStart]) control.disabled = false;
   addPathLayers(map, config, stops);
-  element("path-gradient-ramp").style.background = `linear-gradient(to right, ${stops.map(stop => `${gradientLegendColor(stop)} ${100 * stop.percent / 40}%`).join(", ")})`;
-  element("path-gradient-ticks").textContent = stops.map(stop => `${stop.percent}%`).join(" · ");
+  renderGradientLegend(stops);
   applyPathEmphasis(map, flatter.checked);
   map.addSource("start-offset", { type: "geojson", data: empty });
   map.addLayer({ id: "start-offset", type: "line", source: "start-offset",
