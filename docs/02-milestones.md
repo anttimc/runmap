@@ -100,6 +100,8 @@ M7/M8 without requiring globally optimal route pairs.
 The [first routing UI plan](27-first-routing-ui.md) delivers endpoint selection,
 two-candidate outings, avoidance tuning, and map diagnostics for user feedback.
 It starts with distance costs on the prepared network; running-time costs follow.
+The initial Explore / Plan run map tool is implemented and ready for feedback;
+advanced tuning tools and broader local route review remain.
 
 Complete when: a runner can assemble and revise a familiar outing and record
 accepted/rejected examples for later route scoring.

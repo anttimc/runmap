@@ -142,6 +142,7 @@ class CostModel:
 class PathResult:
     arc_ids: tuple[str, ...]
     cost: float
+    expanded_nodes: int = field(default=0, compare=False)
 
 
 @dataclass(frozen=True)
@@ -211,6 +212,8 @@ def shortest_path(
     blocked_segments: Set[str] = frozenset(),
     *,
     heuristic: Callable[[str, str], float] | None = None,
+    arc_cost: Callable[[Arc], float] | None = None,
+    deadline: float | None = None,
 ) -> PathResult | None:
     """Find a least-cost path; an optional lower-bound heuristic enables A*.
 
@@ -230,19 +233,25 @@ def shortest_path(
     if _remaining_cost(heuristic, destination, destination) != 0:
         raise ValueError("Heuristic must be zero at the destination")
     queue = [(_remaining_cost(heuristic, start, destination), 0.0, start)]
+    expanded = 0
     while queue:
+        if deadline is not None and monotonic() >= deadline:
+            raise TimeoutError("Route search exceeded its deadline")
         _, distance, node_id = heapq.heappop(queue)
         if distance != distances.get(node_id):
             continue
         if node_id == destination:
             break
+        expanded += 1
         for arc_id in index.outgoing.get(node_id, ()):
             arc = index.arcs[arc_id]
             if not arc_usable(index, arc, blocked_segments):
                 continue
-            candidate = distance + _arc_cost(
-                index, arc, model, overlap_segments, overlap_factor
-            )
+            cost = arc_cost(arc) if arc_cost is not None else _arc_cost(
+                index, arc, model, overlap_segments, overlap_factor)
+            if not math.isfinite(cost) or cost < 0:
+                raise ValueError("Arc cost must be finite and non-negative")
+            candidate = distance + cost
             if candidate < distances.get(arc["to"], math.inf):
                 distances[arc["to"]] = candidate
                 predecessors[arc["to"]] = arc_id
@@ -250,7 +259,7 @@ def shortest_path(
                 heapq.heappush(queue, (priority, candidate, arc["to"]))
     if destination not in distances:
         return None
-    return PathResult(_path_arc_ids(index, predecessors, start, destination), distances[destination])
+    return PathResult(_path_arc_ids(index, predecessors, start, destination), distances[destination], expanded)
 
 
 def _remaining_cost(

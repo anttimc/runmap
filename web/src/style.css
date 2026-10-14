@@ -254,3 +254,7 @@ button:focus-visible, summary:focus-visible { outline: 2px solid #087f8c; outlin
   .map-legend { left: auto; right: 18px; }
   .inspection-panel { right: auto; left: 18px; top: 18px; bottom: auto; }
 }
+.run-candidates { display: grid; gap: .5rem; margin: .5rem 0; }
+.run-candidates button { white-space: pre-line; text-align: left; line-height: 1.5; }
+.run-candidates button[aria-pressed="true"] { border-color: #2367c0; background: #edf4ff; }
+#run-controls { margin-top: .8rem; }

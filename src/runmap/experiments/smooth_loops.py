@@ -12,6 +12,8 @@ from time import perf_counter
 import numpy as np
 from scipy.spatial import Delaunay
 
+from runmap.routing.fields import smooth_fields
+
 Point = tuple[float, float]
 Edge = tuple[int, int]
 
@@ -94,12 +96,7 @@ def astar(
 
 
 def penalty_fields(point: Point, home: Point, destination: Point, settings: Settings) -> tuple[float, float]:
-    centre = ((home[0] + destination[0]) / 2, (home[1] + destination[1]) / 2)
-    dx, dy = destination[0] - home[0], destination[1] - home[1]
-    signed_distance = (dx * (point[1] - home[1]) - dy * (point[0] - home[0])) / math.hypot(dx, dy)
-    radial = math.exp(-math.dist(point, centre) ** 2 / (2 * settings.radius ** 2))
-    right = (1 - math.tanh(signed_distance / settings.transition_width)) / 2
-    return radial, right
+    return smooth_fields(point, home, destination, settings.radius, settings.transition_width)
 
 
 def edge_weights(

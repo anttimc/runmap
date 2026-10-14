@@ -16,7 +16,7 @@ Numbered filenames are stable references, not a chronological task queue.
 - [Building-access filtering and path rendering plan](24-building-access-filter.md)
 - [Tiled path rendering plan](25-tiled-path-rendering.md)
 - [Tiled path implementation and measurements](25-tiled-path-results.md)
-- [First UI-driven outing planner](27-first-routing-ui.md)
+- [First UI-driven run planner](27-first-routing-ui.md)
 
 ## Working system and experiments
 

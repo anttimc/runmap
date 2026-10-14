@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from runmap.api.paths import render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
 from runmap.api.path_tiles import PathTileService, render_version as path_render_version, tile_template
 from runmap.api.terrain import TerrainRenderer
+from runmap.api.runs import RunRequest, RunResponse, SettingsRequest, generate_run
 from runmap.api.terrain_tiles import (
     CONTOUR_INTERVAL_M,
     CONTOUR_RENDER_VERSION,
@@ -84,7 +85,9 @@ def paths_config(request: Request):
         return {"status": request.app.state.path_status,
                 "message": "Path analysis is unavailable. Prepare graph measurements locally."}
     return {**path_config(data), "tile_template": tile_template(data, "static/{policy}"),
-            "tile_min_zoom": 10, "tile_max_zoom": 16}
+            "tile_min_zoom": 10, "tile_max_zoom": 16,
+            "run_planner": {"available": True, "defaults": SettingsRequest().model_dump(),
+                            "deadline_s": float(os.environ.get("RUNMAP_RUN_DEADLINE", "15"))}}
 
 
 def _path_data(request, dataset_id):
@@ -105,6 +108,15 @@ class SnapshotRequest(BaseModel):
     surface: str = "all"
     avoid_stairs: bool = True
     segment_id: str | None = None
+
+
+@app.post("/api/paths/run")
+def run_route(request: Request, options: RunRequest) -> RunResponse:
+    data = _path_data(request, options.dataset_id)
+    try:
+        return generate_run(data, options, float(os.environ.get("RUNMAP_RUN_DEADLINE", "15")))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 def _tile_service(request: Request, dataset_id: str) -> PathTileService:

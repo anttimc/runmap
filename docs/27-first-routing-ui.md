@@ -1,13 +1,50 @@
-# First UI-driven outing planner
+# First UI-driven run planner
 
-Status: planned, 2026-10-14. First application slice of M7, using the
+Status: first map feedback version implemented, 2026-10-14; tuning tools and
+broader local review remain. First application slice of M7, using the
 [smooth loop experiment](26-smooth-loop-routing-experiment.md). Prioritize a
 usable map feedback tool before running-time calibration or automatic suggestions.
 This slice can proceed alongside the remaining M4 local review.
 
+## First implementation
+
+The map now has Explore / Plan run modes, shared home and path policy, temporary
+endpoint picking, snap offsets, midpoint/dividing-line and avoidance-circle
+guides, explicit generation/cancellation, candidate switching and Fit run.
+Exploration controls and reachability shading are hidden while planning; path
+inspection remains available. Results survive mode switches, and changing
+settings marks the displayed run as out of date.
+
+`POST /api/paths/run` constructs both side assignments with distance costs on
+the prepared network. It splits both endpoints together (including same-segment
+snaps), preserves directed eligibility, integrates over polylines, and returns
+partial physical traversal references and actual distances separately from cost.
+Field integrals are reused within a request; reuse across requests remains a
+performance follow-up. A* uses a projected-distance bound calibrated against all
+arc lengths. Work runs in synchronous API workers, with two concurrent planners
+and a configurable `RUNMAP_RUN_DEADLINE` (initially 15 seconds). Completed
+candidates survive expiry of the second construction.
+
+Cards show per-leg/total distance, repeated distance counted after the first
+traversal, closest centre approach and enclosure for simple closed geometry.
+Retracing, crossings or a centre on the path get an unclear-enclosure state.
+Equivalent route geometry is labelled, including opposite traversal of the same
+loop. Coverage limitations accompany results. Running time and ascent are not
+yet shown.
+
+Initial local smoke test: the 55,627-node Leppävaara dataset loaded in 4.72 s;
+both assignments for home (24.795, 60.216) and turnaround (24.815, 60.225)
+completed in 0.46–0.51 s and produced a 5.27 km run with zero repeated distance.
+This is one example, not a performance guarantee. The Python suite has 135
+passing tests; frontend typecheck/build and desktop interaction checks pass.
+
+Advanced settings, field/repetition overlays, direction arrows, copied feedback
+records, cross-request integral caching, and broader fixture review remain.
+This version is ready for the first map feedback checkpoint.
+
 ## Outcome
 
-Select home and a turnaround on the existing map, generate a closed outing,
+Select home and a turnaround on the existing map, generate a run returning home,
 and adjust how widely it goes around their midpoint. Compare both side
 assignments and inspect where the network permits or prevents the intended
 shape. A complete route is useful feedback even when it cannot enclose the centre.
@@ -20,7 +57,23 @@ speed models, navigation, GPX export, and editable exclusion areas are later wor
 
 ## Map interaction
 
-Add an opt-in “Plan outing” panel with this sequence:
+Use “Run” in user-facing planner labels: “Plan run”, “Generate run”, and
+“Run A” / “Run B”. Route and candidate remain useful technical terms.
+
+Separate the sidebar into explicit “Explore” and “Plan run” modes. Share the
+map, selected home, and a “Path filters” section for surface and stair policy.
+Explore retains gradient/distance colouring, reachability and its distance
+budget. Plan run replaces those controls with endpoints, avoidance and candidate
+results; hide reachability shading and keep gradient colouring available as
+subdued context beneath the route lines.
+
+Preserve each mode's settings and results when switching. Hide planner overlays
+in Explore and restore them in Plan run. Shared filter changes mark an existing
+run out of date. Keep path inspection available beneath the active tool in both
+modes. Endpoint picking is temporary and has an explicit instruction and Cancel
+action; ordinary clicks inspect paths.
+
+The “Plan run” panel follows this sequence:
 
 1. Set home, reusing the existing selected start when available.
 2. Set turnaround through an explicit map-picking mode. Outside picking modes,
@@ -28,20 +81,36 @@ Add an opt-in “Plan outing” panel with this sequence:
 3. Show requested and snapped locations, snap connectors, midpoint, connecting
    line, and the avoidance-distance circle. Report failed snaps next to the
    affected endpoint. Keep the existing snap-radius and eligibility controls.
-4. Press “Generate outing”. Show progress and allow cancellation. Keep the last
+4. Press “Generate run”. Show progress and allow cancellation. Keep the last
    completed result visible while recomputing, marked as belonging to the
    previous settings. Endpoint or policy changes mark it out of date immediately.
-5. Compare at most two candidate cards; select a card to emphasize its route.
+5. Compare at most two candidate cards labelled “Run A” and “Run B”; select a
+   card to emphasize its route.
    Use orange outbound and blue return lines, start/turnaround markers, and
    sparse direction arrows. Keep route lines legible over gradient colouring;
-   provide a “Fit route” action without resetting the view on every response.
+   provide a “Fit run” action without resetting the view on every response.
 6. Adjust avoidance distance and regenerate. Initially use an explicit button
    rather than issuing searches continuously while dragging a slider.
 
 Show avoidance distance in metres and as a fraction of endpoint separation.
 Explain it as a soft cost contour, not a minimum clearance. Include a separate
 “Centre avoidance off” setting; zero distance otherwise corresponds to strength
-one. Use the experiment's 0.18 ratio only as a provisional starting value.
+one in the mathematical field model. In the application, zero avoidance is an
+explicit shortest out-and-back mode: disable centre, side and reuse penalties,
+return one candidate, and retrace the outbound path when legal. If pedestrian
+directions prevent retracing, find the shortest legal return instead. The
+centre-only checkbox leaves side and reuse preferences active at nonzero values.
+All three preferences now ramp continuously from zero to their full values at
+18% avoidance. For slider fraction `p`, use `t = min(1, p / 0.18)` and
+`ramp = t² * (3 - 2t)`. Effective centre strength is
+`ramp * exp(p² / (2 * radius_ratio²))`; side and reuse strengths are their
+configured values multiplied by `ramp`. This preserves defaults and the former
+mapping at 18% and above, with zero slope at both ends of the ramp. At 1%, the
+default effective strengths are approximately 0.00894, 0.0178 and 0.0357.
+Below 18%, the displayed avoidance distance is a tuning scale rather than the
+exact equal-base-cost contour because the ramp attenuates the field. Route
+choices can still change discretely as the network's preferred corridor changes.
+Use the experiment's 0.18 ratio only as a provisional starting value.
 Set Gaussian scale proportionally to endpoint separation for the initial UI
 (12/80 = 0.15), display its value, and keep it fixed while avoidance is adjusted.
 
@@ -69,7 +138,7 @@ wavefront animation in the standalone experiment initially.
 
 Distinguish failed snapping, coincident snapped endpoints, unreachable legs,
 deadline expiry, unavailable data, and server failure. On expiry retain any
-completed candidate. A finished outing that does not enclose the centre remains
+completed candidate. A finished run that does not enclose the centre remains
 selectable with a clear shape warning. Identify equivalent candidates rather
 than presenting duplicate routes as meaningful alternatives.
 
@@ -113,7 +182,7 @@ numerical tolerance. Measure cold preparation and warm candidate construction.
 
 ### 2. API and first usable map tool
 
-Add a bounded `POST /api/paths/outing` request to the existing optional path
+Add a bounded `POST /api/paths/run` request to the existing optional path
 service. Accept both endpoint selections, policy, settings, and dataset identity;
 return resolved snaps, candidate leg GeoJSON, physical traversal references,
 metrics, per-candidate outcomes, and timing. Reject stale dataset identities.
@@ -124,10 +193,13 @@ deadline must stop work even after browser cancellation; cancelling a browser
 request alone does not stop a Python search. Bound request/response size and
 cache memory. Panning must not change the graph used for routing.
 
-Implement the picking modes, generation button, candidate switch, avoidance
+Implement the Explore/Plan run modes, picking modes, generation button, candidate switch, avoidance
 control, route overlays and clear status states in `web/src/paths.ts` and the
 existing map UI. Cancel obsolete requests and use response sequence checks so
 older results cannot overwrite newer inputs. Reuse existing path inspection.
+During a request, the Generate run button reads “Generating run…”, is disabled,
+and exposes `aria-busy`; restore it on completion, failure or cancellation so
+loading remains visible even when the detailed status is below the scroll fold.
 
 Acceptance: select two points, generate, compare, change avoidance, and regenerate
 without leaving the map. This is the first feedback checkpoint; do not wait for
@@ -142,7 +214,7 @@ Save a small fixture list from user feedback and adjust defaults from those
 examples. Keep data problems separate from algorithm and interaction defects.
 
 Acceptance: the user can explain why a route changes and report an undesirable
-outing reproducibly. All outcomes remain inspectable when the network defeats
+run reproducibly. All outcomes remain inspectable when the network defeats
 the intended enclosure.
 
 ## Verification and completion
@@ -157,7 +229,7 @@ Use the experiment's one-second warm target for both candidates as an initial
 measurement goal. Set a configurable server deadline and report misses; choose
 its initial value after the real-network measurements.
 
-Complete this slice when a runner can generate and inspect outings on the map,
+Complete this slice when a runner can generate and inspect runs on the map,
 tune avoidance, recognize constrained or incomplete results, and provide
 reproducible feedback. Running-time costs follow as a separate increment using
 the same planner interface.

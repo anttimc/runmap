@@ -1,6 +1,7 @@
 import { Marker, type GeoJSONSource, type Map, type ExpressionSpecification, type AddLayerObject } from "maplibre-gl";
 import type { Feature, FeatureCollection, LineString, Point, Polygon } from "geojson";
 import { turboColors } from "./turbo";
+import { startRunPlanner } from "./runs";
 
 interface PathConfig {
   status: string;
@@ -572,6 +573,24 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     }
   }
   function refresh(): void { updateMetric(); void updateViewport(); void inspectSelected(); }
+  let exploreMetric = metric.value;
+  let exploreEnabled = enabled.checked;
+  const runPlanner = startRunPlanner(map, {
+    datasetId: config.dataset_id,
+    getHome: () => requestedStart,
+    setHome: location => { requestedStart = location; },
+    policy: () => ({ surface: filter.value, avoid_stairs: avoidStairs.checked, radius_m: Number(radius.value) }),
+    modeChanged: active => {
+      chooseStartMode(false);
+      if (active) {
+        exploreMetric = metric.value; exploreEnabled = enabled.checked;
+        metric.value = "gradient"; enabled.checked = false;
+      } else {
+        metric.value = exploreMetric; enabled.checked = exploreEnabled;
+      }
+      refresh();
+    },
+  });
   map.on("moveend", coverageStatus);
   for (const input of [filter, avoidStairs, hideBuildingAccess]) input.addEventListener("change", () => refresh());
   for (const input of [budget, radius]) input.addEventListener("change", () => { if (input.reportValidity()) refresh(); });
@@ -600,6 +619,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
       : "Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.";
     flatter.disabled = distance;
     applyPathEmphasis(map, !distance && flatter.checked, distance);
+    if (runPlanner.active()) map.setPaintProperty("path-grades", "line-opacity", .4);
   }
   metric.addEventListener("change", () => {
     enabled.checked = metric.value === "distance";
@@ -629,6 +649,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     chooseStartMode(false); showStart(); outingStatus.textContent = "Choose a start to enable distance highlighting."; refresh();
   });
   map.on("click", event => {
+    if (runPlanner.click([event.lngLat.lng, event.lngLat.lat])) return;
     if (choosingStart) {
       requestedStart = [event.lngLat.lng, event.lngLat.lat]; enabled.checked = true;
       chooseStartMode(false); showStart(); outingStatus.textContent = "Snapping to an eligible path…"; refresh(); return;
@@ -639,8 +660,8 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
     if (!id) return;
     selected = id; reverse.checked = false; void inspectSelected();
   });
-  map.on("mouseenter", "path-hit", () => { map.getCanvas().style.cursor = choosingStart ? "crosshair" : "pointer"; });
-  map.on("mouseleave", "path-hit", () => { map.getCanvas().style.cursor = choosingStart ? "crosshair" : ""; });
+  map.on("mouseenter", "path-hit", () => { map.getCanvas().style.cursor = choosingStart || runPlanner.picking() ? "crosshair" : "pointer"; });
+  map.on("mouseleave", "path-hit", () => { map.getCanvas().style.cursor = choosingStart || runPlanner.picking() ? "crosshair" : ""; });
   reverse.addEventListener("change", () => { void inspectSelected(); });
   element("path-close").addEventListener("click", () => {
     inspectionAbort?.abort(); inspectionSequence++; selected = undefined; panel.hidden = true;

@@ -20,7 +20,12 @@
         </div>
         <div class="path-controls">
           <p id="path-status" class="explanation" role="status">Loading path configuration…</p>
-          <div class="mode-switch" role="group" aria-label="Path mode">
+          <div class="mode-switch" role="group" aria-label="Map tool">
+            <button id="tool-explore" type="button" aria-pressed="true" disabled>Explore</button>
+            <button id="tool-run" type="button" aria-pressed="false" disabled>Plan run</button>
+          </div>
+          <div id="explore-controls">
+          <div class="mode-switch" role="group" aria-label="Path coloring">
             <button id="mode-gradient" type="button" aria-pressed="true" disabled><strong>Gradient</strong><span>See how steep paths are</span></button>
             <button id="mode-distance" type="button" aria-pressed="false" disabled><strong>Distance</strong><span>Explore from your start</span></button>
           </div>
@@ -36,6 +41,27 @@
             <p id="outing-status" class="explanation" role="status">Choose a start to enable distance highlighting.</p>
             <p id="outing-label" class="explanation"></p>
           </div>
+          </div>
+          <section id="run-controls" hidden aria-label="Run planner">
+            <h2 class="section-title">Plan a run to a turnaround and back</h2>
+            <div class="heading-row outing-actions">
+              <button id="run-home" type="button">Set home on map</button>
+              <button id="run-turnaround" type="button">Set turnaround</button>
+              <button id="run-clear" type="button">Clear</button>
+            </div>
+            <p id="run-endpoints" class="explanation"></p>
+            <label class="contour-toggle"><input id="run-centre" type="checkbox" checked /> Centre avoidance</label>
+            <label class="control-label" for="run-avoidance">Avoidance distance <output id="run-avoidance-value"></output></label>
+            <input id="run-avoidance" type="range" min="0" max="0.6" step="0.01" value="0.18" />
+            <p class="explanation">Soft preference: paths may pass closer to the centre. Zero finds the shortest route out and back, retracing where directions permit. Orange: outbound. Blue: return.</p>
+            <div class="heading-row outing-actions">
+              <button id="run-generate" type="button">Generate run</button>
+              <button id="run-cancel" type="button" hidden>Cancel</button>
+              <button id="run-fit" type="button" disabled>Fit run</button>
+            </div>
+            <p id="run-status" class="explanation" role="status">Choose home and a turnaround.</p>
+            <div id="run-candidates" class="run-candidates"></div>
+          </section>
           <details class="path-settings"><summary>Path settings</summary>
           <div class="info-heading network-help"><span>Prepared network</span><button type="button" class="info-button" popovertarget="network-help" aria-label="About prepared network limitations">i</button></div><div id="network-help" class="info-popover" popover role="dialog" aria-labelledby="network-help-title"><div class="heading-row"><h2 id="network-help-title">Prepared network limitations</h2><button type="button" popovertarget="network-help" popovertargetaction="hide" aria-label="Close Prepared network limitations help">Close</button></div><ul id="path-importer-notes"></ul></div>
 
@@ -46,7 +72,7 @@
           </select>
           <label class="contour-toggle"><input id="path-hide-building-access" type="checkbox" checked disabled aria-describedby="building-access-help" /> Hide building-access dead ends</label>
           <p id="building-access-help" class="explanation">Affects all path colors. Starts can still snap to these paths; the basemap may show them faintly.</p>
-          <label class="contour-toggle"><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid stairs for snapping and exploration</label>
+          <label class="contour-toggle"><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid stairs</label>
           <label id="gradient-options" class="contour-toggle"><input id="path-flatter" type="checkbox" disabled /> Emphasize grades below 2%</label>
             <label class="control-label" for="outing-radius">Maximum snap offset (m)</label>
             <input id="outing-radius" type="number" min="1" max="200" step="1" value="50" disabled />

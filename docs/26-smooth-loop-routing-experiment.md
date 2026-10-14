@@ -4,7 +4,7 @@ Status: planned. First experimental slice supporting M7/M8; this does not
 change the map-first delivery order.
 
 Application delivery is described in the
-[first UI-driven outing planner](27-first-routing-ui.md).
+[first UI-driven run planner](27-first-routing-ui.md).
 
 ## Random Delaunay prototype
 
