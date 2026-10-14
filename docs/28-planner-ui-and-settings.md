@@ -51,7 +51,7 @@ changing the shared home in Explore invalidates a run when returning to planning
 Display-only settings leave the run valid.
 
 Legends use compact horizontal ramps with 0/10/20/40% labels, optional symbol
-details, and inline Out/Back keys. Path keys hide below supported zoom or outside
+details, and a selected-run direction key. Path keys hide below supported zoom or outside
 prepared coverage; the terrain key hides at zero opacity. Fit run accounts for
 the panel/sheet and legend. Mobile inspection appears above the sheet and hides
 the legend while open.
@@ -77,6 +77,26 @@ Keep TypeScript, Vite, and MapLibre. Use native HTML controls and focused module
 for state and rendering. A frontend framework migration is outside this work;
 reconsider only if concrete state-management or component-reuse problems remain
 after the layout is simplified.
+
+## Candidate direction and route styling
+
+Clockwise and Counter-clockwise replace the generic Run A / Run B labels.
+Outbound-left/return-right is the clockwise planning preference; the opposite
+assignment is counter-clockwise. These remain separate searches, not an enforced
+reversal. Network constraints, crossings, and retracing can complicate the actual
+orientation; explain that in selected-run details. Exact reverse-coordinate
+retracing is labelled Out and back. Equivalent geometry is labelled as such
+without implying the same traversal direction.
+
+Draw the selected run as one continuous blue line through both legs, with a
+white casing and blue chevrons outlined in white. Space arrows along the line,
+rotate with the map, and disable upright flipping so reverse traversal reverses
+the arrows. Collision handling keeps the view uncluttered. The direction key
+follows the selected candidate, and all route/arrows hide in Explore.
+
+Desktop and mobile browser checks verified both labels against the local
+example's signed winding, one route colour, candidate switching, rendered arrows,
+and the zero-width Out and back case. Frontend typecheck/build passes.
 
 ## Navigation and layout
 
@@ -135,7 +155,7 @@ Preserve that distinction in the settings help.
    Off / Low / Medium / High interaction for hills, traffic lights, busy roads,
    and greenery. Each maps to its own calibrated cost, not a common raw weight.
    Do not add enabled placeholders during the UI-only increment.
-4. Results show selectable Run A / Run B summaries with total distance and
+4. Results show selectable Clockwise / Counter-clockwise summaries with total distance and
    repeated distance. Expand a selected run for per-leg and diagnostic details.
    Keep equivalent-route and incomplete-result states visible.
 5. A fixed footer contains Generate run, its waiting state, and Cancel while
@@ -157,7 +177,8 @@ the active tab. Do not reserve space for hidden layers.
 
 - Gradient paths: one horizontal ramp with a small number of labelled ticks.
 - Distance paths: one horizontal distance ramp with current units/range.
-- Planned run: inline orange Out / blue Back keys beside the result.
+- Planned run: one blue route and inline selected direction key beside the result;
+  arrows on the line show traversal direction for both legs.
 - Terrain shading: a compact separate ramp only while that shading is visible.
 
 Retain a small gradient key if gradient paths are visible beneath a planned run.

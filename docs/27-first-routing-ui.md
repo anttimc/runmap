@@ -47,7 +47,7 @@ completed in 0.46–0.51 s and produced a 5.27 km run with zero repeated distanc
 This is one example, not a performance guarantee. The Python suite has 135
 passing tests; frontend typecheck/build and desktop interaction checks pass.
 
-Advanced settings, field/repetition overlays, direction arrows, copied feedback
+Advanced settings, field/repetition overlays, copied feedback
 records, cross-request integral caching, and broader fixture review remain.
 This version is ready for the first map feedback checkpoint.
 
@@ -66,8 +66,10 @@ speed models, navigation, GPX export, and editable exclusion areas are later wor
 
 ## Map interaction
 
-Use “Run” in user-facing planner labels: “Plan run”, “Generate run”, and
-“Run A” / “Run B”. Route and candidate remain useful technical terms.
+Use “Run” in user-facing planner labels: “Plan run” and “Generate run”. Name
+candidates “Clockwise” and “Counter-clockwise” for their opposite side-planning
+preferences, or “Out and back” when the return exactly retraces the outbound.
+Route and candidate remain useful technical terms.
 
 Separate the sidebar into explicit “Explore” and “Plan run” modes. Share the
 map, selected home, and a “Path filters” section for surface and stair policy.
@@ -93,10 +95,11 @@ The “Plan run” panel follows this sequence:
 4. Press “Generate run”. Show progress and allow cancellation. Keep the last
    completed result visible while recomputing, marked as belonging to the
    previous settings. Endpoint or policy changes mark it out of date immediately.
-5. Compare at most two candidate cards labelled “Run A” and “Run B”; select a
+5. Compare at most two candidate cards labelled “Clockwise” and
+   “Counter-clockwise” (or “Out and back” for exact retracing); select a
    card to emphasize its route.
-   Use orange outbound and blue return lines, start/turnaround markers, and
-   sparse direction arrows. Keep route lines legible over gradient colouring;
+   Use one blue line for the whole run, start/turnaround markers, and sparse
+   arrows following traversal direction. Keep route lines legible over gradient colouring;
    provide a “Fit run” action without resetting the view on every response.
 6. Adjust avoidance distance and regenerate. Initially use an explicit button
    rather than issuing searches continuously while dragging a slider.

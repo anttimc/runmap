@@ -6,6 +6,7 @@ type Location = [number, number];
 interface Snap { longitude: number; latitude: number; offset_m: number }
 interface Leg { coordinates: Location[]; distance_m: number }
 interface Candidate {
+  outbound_left: boolean;
   outbound: Leg; returning: Leg; distance_m: number; repeated_distance_m: number;
   closest_centre_m: number; encloses_centre: boolean | null; equivalent_to: number | null;
 }
@@ -36,6 +37,40 @@ function separation(a: Location, b: Location): number {
     + Math.cos(a[1] * radians) * Math.cos(b[1] * radians) * Math.sin((b[0] - a[0]) * radians / 2) ** 2)));
 }
 
+function candidateName(candidate: Candidate): string {
+  const outbound = candidate.outbound.coordinates;
+  const returning = candidate.returning.coordinates;
+  const retraced = outbound.length === returning.length && outbound.every((point, index) => {
+    const reverse = returning[returning.length - 1 - index];
+    return Math.abs(point[0] - reverse[0]) < 1e-9 && Math.abs(point[1] - reverse[1]) < 1e-9;
+  });
+  return retraced ? "Out and back" : candidate.outbound_left ? "Clockwise" : "Counter-clockwise";
+}
+
+function addRunLayers(map: Map): void {
+  map.addSource("run-geometry", { type: "geojson", data: empty });
+  map.addLayer({ id: "run-guides", type: "line", source: "run-geometry", filter: ["==", ["get", "kind"], "guide"],
+    paint: { "line-color": "#55636a", "line-width": 1.5, "line-dasharray": [3, 3] } });
+  map.addLayer({ id: "run-casing", type: "line", source: "run-geometry", filter: ["==", ["get", "kind"], "route"],
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#fff", "line-width": 8, "line-opacity": .9 } });
+  map.addLayer({ id: "run-route", type: "line", source: "run-geometry", filter: ["==", ["get", "kind"], "route"],
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#2367c0", "line-width": 5 } });
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 32;
+  const context = canvas.getContext("2d")!;
+  context.beginPath(); context.moveTo(11, 7); context.lineTo(21, 16); context.lineTo(11, 25);
+  context.lineJoin = context.lineCap = "round";
+  context.strokeStyle = "#fff"; context.lineWidth = 7; context.stroke();
+  context.strokeStyle = "#2367c0"; context.lineWidth = 3.5; context.stroke();
+  map.addImage("run-direction", context.getImageData(0, 0, 32, 32));
+  map.addLayer({ id: "run-directions", type: "symbol", source: "run-geometry", filter: ["==", ["get", "kind"], "route"],
+    layout: { "symbol-placement": "line", "symbol-spacing": 95, "icon-image": "run-direction",
+      "icon-size": .65, "icon-rotation-alignment": "map", "icon-keep-upright": false,
+      "icon-padding": 8, "symbol-z-order": "source" } });
+}
+
 export function startRunPlanner(map: Map, options: Options): RunControls {
   let active = false;
   let choosing: "home" | "turnaround" | undefined;
@@ -57,13 +92,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   let observedInputs = inputsKey();
   const markers = [new Marker({ color: "#193c38" }), new Marker({ color: "#805523" })];
   markers[0].getElement().title = "Home"; markers[1].getElement().title = "Turnaround";
-  map.addSource("run-geometry", { type: "geojson", data: empty });
-  map.addLayer({ id: "run-guides", type: "line", source: "run-geometry", filter: ["==", ["get", "kind"], "guide"],
-    paint: { "line-color": "#55636a", "line-width": 1.5, "line-dasharray": [3, 3] } });
-  map.addLayer({ id: "run-casing", type: "line", source: "run-geometry", filter: ["!=", ["get", "kind"], "guide"],
-    paint: { "line-color": "#fff", "line-width": 8, "line-opacity": .9 } });
-  map.addLayer({ id: "run-route", type: "line", source: "run-geometry", filter: ["!=", ["get", "kind"], "guide"],
-    paint: { "line-color": ["match", ["get", "kind"], "outbound", "#d56a16", "#2367c0"], "line-width": 5 } });
+  addRunLayers(map);
 
   function draw(): void {
     const home = options.getHome();
@@ -89,7 +118,10 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
         el("run-avoidance-value").textContent = `${Math.round(radius)} m (${Math.round(Number(avoidance.value) * 100)}%)`;
       } else el("run-avoidance-value").textContent = `${Math.round(Number(avoidance.value) * 100)}% of endpoint separation`;
       const candidate = response?.candidates[selected];
-      if (candidate) features.push(line(candidate.outbound.coordinates, "outbound"), line(candidate.returning.coordinates, "return"));
+      if (candidate) {
+        features.push(line([...candidate.outbound.coordinates, ...candidate.returning.coordinates.slice(1)], "route"));
+        el("run-direction-label").textContent = `${candidateName(candidate)} · arrows show travel direction`;
+      }
     }
     (map.getSource("run-geometry") as GeoJSONSource).setData({ type: "FeatureCollection", features });
     for (const [id, location, snap] of [["run-home-value", home, homeSnap], ["run-turnaround-value", turnaround, turnaroundSnap]] as const) {
@@ -157,10 +189,11 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       button.type = "button"; button.setAttribute("aria-pressed", String(index === selected));
       const shape = candidate.encloses_centre === true ? "Encloses centre" : candidate.encloses_centre === false
         ? "Does not enclose centre" : "Retracing or crossings: enclosure unclear";
-      button.textContent = `Run ${index === 0 ? "A" : "B"} · ${(candidate.distance_m / 1000).toFixed(2)} km\n`
-        + `${Math.round(candidate.repeated_distance_m)} m repeated${candidate.equivalent_to !== null ? " · equivalent to Run A" : ""}`;
+      const equivalent = candidate.equivalent_to === null ? undefined : response?.candidates[candidate.equivalent_to];
+      button.textContent = `${candidateName(candidate)} · ${(candidate.distance_m / 1000).toFixed(2)} km\n`
+        + `${Math.round(candidate.repeated_distance_m)} m repeated${equivalent ? " · same route geometry" : ""}`;
       if (index === selected) el("run-detail-content").textContent =
-        `Out ${(candidate.outbound.distance_m / 1000).toFixed(2)} km · back ${(candidate.returning.distance_m / 1000).toFixed(2)} km. ${shape} · closest approach ${Math.round(candidate.closest_centre_m)} m. ${response?.coverage_note ?? ""}`;
+        `Out ${(candidate.outbound.distance_m / 1000).toFixed(2)} km · back ${(candidate.returning.distance_m / 1000).toFixed(2)} km. ${shape} · closest approach ${Math.round(candidate.closest_centre_m)} m. ${candidateName(candidate) !== "Out and back" ? "Clockwise and counter-clockwise describe the planning preference; crossings and retracing may complicate the actual loop. " : ""}${response?.coverage_note ?? ""}`;
       button.addEventListener("click", () => { selected = index; candidates(); draw(); });
       el("run-candidates").append(button);
     });

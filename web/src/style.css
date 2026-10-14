@@ -66,7 +66,7 @@ h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.65r
 .route-key { display: flex; gap: 14px; font-size: .7rem; color: #526369; margin-top: 10px; }
 .route-key span { display: flex; align-items: center; gap: 5px; }
 .route-key i { display: inline-block; width: 17px; height: 4px; border-radius: 2px; }
-.out-key { background: #d56a16; } .back-key { background: #2367c0; }
+.run-key { background: #2367c0; }
 .run-candidates { display: grid; gap: 7px; margin-top: 10px; }
 .run-candidates button { white-space: pre-line; text-align: left; line-height: 1.6; }
 .run-candidates button[aria-pressed="true"] { border-color: #087f8c; background: #e7f0eb; box-shadow: inset 3px 0 #087f8c; }
