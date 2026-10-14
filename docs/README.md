@@ -16,6 +16,7 @@ Numbered filenames are stable references, not a chronological task queue.
 - [Building-access filtering and path rendering plan](24-building-access-filter.md)
 - [Tiled path rendering plan](25-tiled-path-rendering.md)
 - [Tiled path implementation and measurements](25-tiled-path-results.md)
+- [First UI-driven outing planner](27-first-routing-ui.md)
 
 ## Working system and experiments
 
@@ -24,6 +25,7 @@ Numbered filenames are stable references, not a chronological task queue.
 - [Region storage and hosting](11-region-and-hosting-design.md)
 - [Runnable-path graph prototype](13-path-graph-prototype.md)
 - [Diverse-route baseline](14-diverse-route-baseline.md)
+- [Smooth loop routing experiment: first milestone](26-smooth-loop-routing-experiment.md)
 
 ## Terrain reference
 

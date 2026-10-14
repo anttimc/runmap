@@ -93,6 +93,14 @@ Select destinations and waypoints, compare return paths, inspect distance,
 terrain, and repetition, and keep liked sections while revising the rest.
 Validate full directed walks and explain infeasible requests.
 
+The [smooth loop routing experiment](26-smooth-loop-routing-experiment.md)
+defines a first algorithm experiment for tunable two-leg outings, supporting
+M7/M8 without requiring globally optimal route pairs.
+
+The [first routing UI plan](27-first-routing-ui.md) delivers endpoint selection,
+two-candidate outings, avoidance tuning, and map diagnostics for user feedback.
+It starts with distance costs on the prepared network; running-time costs follow.
+
 Complete when: a runner can assemble and revise a familiar outing and record
 accepted/rejected examples for later route scoring.
 

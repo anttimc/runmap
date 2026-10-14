@@ -1,7 +1,7 @@
 """Shortest-path primitives and diverse outbound/return path pairs."""
 
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Mapping, Sequence, Set
+from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from dataclasses import dataclass, field, replace
 import heapq
 import math
@@ -209,8 +209,15 @@ def shortest_path(
     overlap_segments: Set[str] = frozenset(),
     overlap_factor: float = 1.0,
     blocked_segments: Set[str] = frozenset(),
+    *,
+    heuristic: Callable[[str, str], float] | None = None,
 ) -> PathResult | None:
-    """Find one least-cost directed path with optional segment reuse penalty."""
+    """Find a least-cost path; an optional lower-bound heuristic enables A*.
+
+    The heuristic takes node and destination IDs and must be deterministic,
+    finite, non-negative, zero at the destination, and never overestimate the
+    remaining cost under the selected cost model and overlap penalty.
+    """
     if start not in index.nodes or destination not in index.nodes:
         raise ValueError("Route endpoint is not in the graph")
     if overlap_factor < 1:
@@ -219,10 +226,12 @@ def shortest_path(
         return None
     model = model or CostModel()
     distances = {start: 0.0}
-    predecessors = {}
-    queue = [(0.0, start)]
+    predecessors: dict[str, str] = {}
+    if _remaining_cost(heuristic, destination, destination) != 0:
+        raise ValueError("Heuristic must be zero at the destination")
+    queue = [(_remaining_cost(heuristic, start, destination), 0.0, start)]
     while queue:
-        distance, node_id = heapq.heappop(queue)
+        _, distance, node_id = heapq.heappop(queue)
         if distance != distances.get(node_id):
             continue
         if node_id == destination:
@@ -237,9 +246,27 @@ def shortest_path(
             if candidate < distances.get(arc["to"], math.inf):
                 distances[arc["to"]] = candidate
                 predecessors[arc["to"]] = arc_id
-                heapq.heappush(queue, (candidate, arc["to"]))
+                priority = candidate + _remaining_cost(heuristic, arc["to"], destination)
+                heapq.heappush(queue, (priority, candidate, arc["to"]))
     if destination not in distances:
         return None
+    return PathResult(_path_arc_ids(index, predecessors, start, destination), distances[destination])
+
+
+def _remaining_cost(
+    heuristic: Callable[[str, str], float] | None, node_id: str, destination: str,
+) -> float:
+    if heuristic is None:
+        return 0.0
+    estimate = heuristic(node_id, destination)
+    if not math.isfinite(estimate) or estimate < 0:
+        raise ValueError("Heuristic must return finite non-negative costs")
+    return estimate
+
+
+def _path_arc_ids(
+    index: GraphData, predecessors: Mapping[str, str], start: str, destination: str,
+) -> tuple[str, ...]:
     arc_ids = []
     node_id = destination
     while node_id != start:
@@ -247,7 +274,7 @@ def shortest_path(
         arc_ids.append(arc_id)
         node_id = index.arcs[arc_id]["from"]
     arc_ids.reverse()
-    return PathResult(tuple(arc_ids), distances[destination])
+    return tuple(arc_ids)
 
 
 def shortest_distances(

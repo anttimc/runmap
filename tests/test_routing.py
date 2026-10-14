@@ -54,6 +54,43 @@ def graph_document(nodes, edges, start="s"):
 
 
 class ShortestPathTests(unittest.TestCase):
+    def test_heuristic_can_reopen_a_node_with_a_better_path(self) -> None:
+        graph = graph_document(
+            [(node, 24.0, 60.0) for node in ("s", "a", "b", "d")],
+            [
+                ("sa", "s", "a", 3, 0, {"highway": "path"}),
+                ("sb", "s", "b", 1, 0, {"highway": "path"}),
+                ("ba", "b", "a", 1, 0, {"highway": "path"}),
+                ("ad", "a", "d", 3, 0, {"highway": "path"}),
+            ],
+        )
+        index = build_graph_index(graph)
+        estimates = {"s": 5.0, "a": 0.0, "b": 4.0, "d": 0.0}
+
+        def heuristic(node_id: str, destination: str) -> float:
+            self.assertEqual(destination, "d")
+            return estimates[node_id]
+
+        result = shortest_path(index, "s", "d", heuristic=heuristic)
+        self.assertEqual(result, shortest_path(index, "s", "d"))
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result.cost, 5.0)
+        self.assertEqual(result.arc_ids, ("sb:f", "ba:f", "ad:f"))
+
+    def test_invalid_heuristic_is_rejected(self) -> None:
+        index = build_graph_index(graph_document(
+            [("s", 24.0, 60.0), ("d", 24.01, 60.0)],
+            [("sd", "s", "d", 10, 0, {"highway": "path"})],
+        ))
+        for estimate in (-1.0, float("nan"), float("inf"), 1.0):
+            with self.subTest(estimate=estimate):
+                def heuristic(node_id: str, destination: str) -> float:
+                    return estimate
+
+                with self.assertRaises(ValueError):
+                    shortest_path(index, "s", "d", heuristic=heuristic)
+
     def test_reverse_distances_measure_return_reachability(self):
         graph = graph_document(
             [("s", 24.0, 60.0), ("a", 24.01, 60.0), ("b", 24.02, 60.0)],
