@@ -114,6 +114,7 @@ class PathQueryTests(unittest.TestCase):
         response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
         response["features"][0]["properties"]["grade_percent"] = 2
         response["features"][1]["properties"]["grade_percent"] = 2
+        response["features"][1]["properties"]["flat_min_grade_50m"] = 2
         before = copy.deepcopy(response)
         rendered = render_paths(response)
         self.assertEqual(rendered["status"], "ready")

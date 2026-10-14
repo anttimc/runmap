@@ -1,5 +1,6 @@
 import { LngLatBounds, Marker, type GeoJSONSource, type Map } from "maplibre-gl";
 import type { FeatureCollection, Feature, LineString } from "geojson";
+import { mapPadding } from "./layout";
 
 type Location = [number, number];
 interface Snap { longitude: number; latitude: number; offset_m: number }
@@ -48,9 +49,12 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   let snapSequence = 0;
   let homeSnap: Snap | null = null;
   let turnaroundSnap: Snap | null = null;
+  let pickStatus = "";
   const status = el("run-status");
   const avoidance = el<HTMLInputElement>("run-avoidance");
   const centre = el<HTMLInputElement>("run-centre");
+  const inputsKey = (): string => JSON.stringify([options.getHome(), turnaround, options.policy(), avoidance.value, centre.checked]);
+  let observedInputs = inputsKey();
   const markers = [new Marker({ color: "#193c38" }), new Marker({ color: "#805523" })];
   markers[0].getElement().title = "Home"; markers[1].getElement().title = "Turnaround";
   map.addSource("run-geometry", { type: "geojson", data: empty });
@@ -88,21 +92,32 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       if (candidate) features.push(line(candidate.outbound.coordinates, "outbound"), line(candidate.returning.coordinates, "return"));
     }
     (map.getSource("run-geometry") as GeoJSONSource).setData({ type: "FeatureCollection", features });
-    el("run-endpoints").textContent = `Home: ${home ? "selected" : "choose on map"}${homeSnap ? ` · ${homeSnap.offset_m.toFixed(1)} m snap` : ""}. Turnaround: ${turnaround ? "selected" : "choose on map"}${turnaroundSnap ? ` · ${turnaroundSnap.offset_m.toFixed(1)} m snap` : ""}.`;
+    for (const [id, location, snap] of [["run-home-value", home, homeSnap], ["run-turnaround-value", turnaround, turnaroundSnap]] as const) {
+      el(id).textContent = location ? snap ? `Selected · ${snap.offset_m.toFixed(1)} m snap` : "Selected" : "Choose on map";
+    }
     const generateButton = el<HTMLButtonElement>("run-generate");
     generateButton.disabled = generating || !home || !turnaround;
     generateButton.textContent = generating ? "Generating run…" : "Generate run";
     generateButton.setAttribute("aria-busy", String(generating));
     el<HTMLButtonElement>("run-fit").disabled = !response?.candidates.length;
+    el("run-results").hidden = !response?.candidates.length;
   }
   function pick(value?: "home" | "turnaround"): void {
+    const wasPicking = Boolean(choosing);
+    if (value && !wasPicking) pickStatus = status.textContent ?? "";
     choosing = value;
-    el("run-home").textContent = value === "home" ? "Cancel home selection" : "Set home on map";
-    el("run-turnaround").textContent = value === "turnaround" ? "Cancel turnaround selection" : "Set turnaround";
+    el("run-home").textContent = value === "home" ? "Cancel" : options.getHome() ? "Change" : "Set home";
+    el("run-turnaround").textContent = value === "turnaround" ? "Cancel" : turnaround ? "Change" : "Set turnaround";
+    el("run-home").setAttribute("aria-pressed", String(value === "home"));
+    el("run-turnaround").setAttribute("aria-pressed", String(value === "turnaround"));
+    el("run-home").setAttribute("aria-label", value === "home" ? "Cancel home selection" : options.getHome() ? "Change home" : "Set home on map");
+    el("run-turnaround").setAttribute("aria-label", value === "turnaround" ? "Cancel turnaround selection" : turnaround ? "Change turnaround" : "Set turnaround on map");
     map.getCanvas().style.cursor = value ? "crosshair" : "";
     if (value) status.textContent = `Click the map to set ${value}.`;
+    else if (wasPicking) status.textContent = pickStatus;
   }
   function invalidate(): void {
+    observedInputs = inputsKey();
     abort?.abort(); ++sequence;
     generating = false;
     el("run-cancel").hidden = true;
@@ -143,8 +158,9 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       const shape = candidate.encloses_centre === true ? "Encloses centre" : candidate.encloses_centre === false
         ? "Does not enclose centre" : "Retracing or crossings: enclosure unclear";
       button.textContent = `Run ${index === 0 ? "A" : "B"} · ${(candidate.distance_m / 1000).toFixed(2)} km\n`
-        + `Out ${(candidate.outbound.distance_m / 1000).toFixed(2)} / back ${(candidate.returning.distance_m / 1000).toFixed(2)} km · ${Math.round(candidate.repeated_distance_m)} m repeated\n`
-        + `${shape} · closest ${Math.round(candidate.closest_centre_m)} m${candidate.equivalent_to !== null ? " · equivalent to Run A" : ""}`;
+        + `${Math.round(candidate.repeated_distance_m)} m repeated${candidate.equivalent_to !== null ? " · equivalent to Run A" : ""}`;
+      if (index === selected) el("run-detail-content").textContent =
+        `Out ${(candidate.outbound.distance_m / 1000).toFixed(2)} km · back ${(candidate.returning.distance_m / 1000).toFixed(2)} km. ${shape} · closest approach ${Math.round(candidate.closest_centre_m)} m. ${response?.coverage_note ?? ""}`;
       button.addEventListener("click", () => { selected = index; candidates(); draw(); });
       el("run-candidates").append(button);
     });
@@ -171,7 +187,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
         : next.status === "deadline" ? "Search deadline reached. Any completed runs are shown."
         : next.status === "no_eligible_snap" ? `${!next.home ? "Home" : "Turnaround"} could not snap to an eligible path.`
         : "No complete return run connects these points under the current path filters.";
-      status.textContent = `${message} ${next.coverage_note}`;
+      status.textContent = message;
       candidates(); draw();
     } catch (error) {
       if (current === sequence && (error as Error).name !== "AbortError") status.textContent = `Run request failed: ${(error as Error).message}`;
@@ -187,13 +203,22 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       if (active === value) return;
       active = value; pick();
       el("run-controls").hidden = !active; el("explore-controls").hidden = active;
-      el("tool-explore").setAttribute("aria-pressed", String(!active)); el("tool-run").setAttribute("aria-pressed", String(active));
+      el("run-footer").hidden = !active;
+      for (const [tabId, selected] of [["tool-explore", !active], ["tool-run", active]] as const) {
+        el(tabId).setAttribute("aria-selected", String(selected)); el(tabId).tabIndex = selected ? 0 : -1;
+      }
       options.modeChanged(active); draw();
-      if (active) { invalidate(); void snapEndpoints(); }
+      if (active) {
+        if (observedInputs !== inputsKey()) invalidate();
+        void snapEndpoints();
+      }
     });
   }
   el("run-home").addEventListener("click", () => pick(choosing === "home" ? undefined : "home"));
   el("run-turnaround").addEventListener("click", () => pick(choosing === "turnaround" ? undefined : "turnaround"));
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && choosing) pick();
+  });
   el("run-clear").addEventListener("click", () => {
     options.setHome(undefined); turnaround = undefined; response = undefined; homeSnap = turnaroundSnap = null;
     snappingAbort?.abort(); ++snapSequence; pick(); invalidate(); candidates();
@@ -208,10 +233,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     const candidate = response?.candidates[selected]; if (!candidate) return;
     const bounds = new LngLatBounds();
     [...candidate.outbound.coordinates, ...candidate.returning.coordinates].forEach(point => bounds.extend(point));
-    const controls = document.querySelector<HTMLElement>(".controls")!.getBoundingClientRect();
-    const mobile = window.innerWidth < 600;
-    map.fitBounds(bounds, { padding: { left: mobile ? 30 : controls.right + 25,
-      top: mobile ? controls.bottom + 25 : 70, right: 40, bottom: 60 }, maxZoom: 16 });
+    map.fitBounds(bounds, { padding: mapPadding(), maxZoom: 16 });
   });
   return { active: () => active, picking: () => Boolean(choosing), click: location => {
     if (!active || !choosing) return false;

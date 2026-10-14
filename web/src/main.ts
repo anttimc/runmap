@@ -10,6 +10,7 @@ import {
 } from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { startLayout } from "./layout";
 import "./style.css";
 import { startPaths } from "./paths";
 
@@ -423,7 +424,7 @@ function renderLegend(stops: MapConfig["slope_legend"]): void {
   legendLabels.replaceChildren(
     ...stops
       .slice()
-      .filter(stop => stop.percent !== 2)
+      .filter(stop => stop.percent === 0 || stop.percent >= 10)
       .reverse()
       .map((stop) => {
         const label = document.createElement("span");
@@ -454,6 +455,7 @@ function scheduleTerrainUpdate(): void {
 }
 
 async function start(): Promise<void> {
+  startLayout();
   const response = await fetch("/api/config");
   if (!response.ok) throw new Error(`Configuration request failed (${response.status})`);
   const config = (await response.json()) as MapConfig;

@@ -9,6 +9,7 @@ from pathlib import Path
 from rasterio.warp import transform
 
 from runmap.paths.measurements import MeasurementData, graph_digest, inspect_measurements, load_measurements
+from runmap.paths.flat import GradeInterval, flat_run_thresholds
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                                    Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile
@@ -121,7 +122,13 @@ def load_path_data(graph_path):
     cells = defaultdict(list)
     for segment_id, intervals in measurements.document["segments"].items():
         category = surface_category(segments[segment_id])
-        for interval in intervals:
+        flat_thresholds = flat_run_thresholds([
+            GradeInterval(item["start_m"], item["end_m"], item["grade_percent"]
+                          if item["valid"] and not {"bridge", "tunnel", "stairs"}.intersection(item["quality_flags"])
+                          else None)
+            for item in intervals
+        ])
+        for interval, flat_threshold in zip(intervals, flat_thresholds):
             flags = interval["quality_flags"]
             quality = "missing" if not interval["valid"] else (
                 "uncertain" if "bridge" in flags or "tunnel" in flags else "terrain_estimate")
@@ -133,6 +140,7 @@ def load_path_data(graph_path):
                     "grade_percent": interval["grade_percent"], "quality": quality,
                     "quality_flags": flags, "surface_class": category,
                     "stairs": "stairs" in flags,
+                    "flat_min_grade_50m": flat_threshold,
                 },
             }
             feature_index = len(features)
@@ -410,6 +418,8 @@ def render_paths(response, metric="gradient"):
             properties["distance_from_start_m"] = distance
         else:
             properties["grade_percent"] = grade
+            if source.get("flat_min_grade_50m") is not None:
+                properties["flat_min_grade_50m"] = source["flat_min_grade_50m"]
         key = tuple(properties.items())
         coordinates = feature["geometry"]["coordinates"]
         interval = source["interval_index"]

@@ -17,6 +17,8 @@ Numbered filenames are stable references, not a chronological task queue.
 - [Tiled path rendering plan](25-tiled-path-rendering.md)
 - [Tiled path implementation and measurements](25-tiled-path-results.md)
 - [First UI-driven run planner](27-first-routing-ui.md)
+- [Planner UI and settings improvements](28-planner-ui-and-settings.md)
+- [Run routing preferences](29-routing-preferences.md)
 
 ## Working system and experiments
 

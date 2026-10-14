@@ -6,6 +6,15 @@ broader local review remain. First application slice of M7, using the
 usable map feedback tool before running-time calibration or automatic suggestions.
 This slice can proceed alongside the remaining M4 local review.
 
+The first feature set is accepted for further UI work. Follow-up plans cover
+[UI layout and settings ownership](28-planner-ui-and-settings.md) and
+[routing preferences](29-routing-preferences.md). The UI plan refines the layout
+below; the preference plan extends the cost model without requiring running-time
+calibration first.
+The UI layout checkpoint is now implemented: tab navigation, separate settings,
+compact legends, persistent planner actions, and a mobile bottom sheet. See the
+UI plan for verification and remaining preference integration.
+
 ## First implementation
 
 The map now has Explore / Plan run modes, shared home and path policy, temporary

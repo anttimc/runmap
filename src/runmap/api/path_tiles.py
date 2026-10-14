@@ -20,7 +20,7 @@ from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, 
 from runmap.paths.dead_ends import ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M
 from runmap.paths.exploration import segment_reason
 
-RENDER_VERSION = 1
+RENDER_VERSION = 2
 ALGORITHM_VERSION = 1
 MIN_ZOOM = 10
 MAX_ZOOM = 16
@@ -175,6 +175,8 @@ def display_runs(data: PathData, indexes: list[int], policy: str, variant: str,
             properties["inclusion_state"] = STATES[int(snapshot.state[i])]
             properties["coverage_limited"] = bool(snapshot.boundary[i])
         if metric == "gradient":
+            if source.get("flat_min_grade_50m") is not None:
+                properties["flat_min_grade_50m"] = source["flat_min_grade_50m"]
             grade = source["grade_percent"]
             if grade is not None and source["quality"] == "terrain_estimate":
                 properties["grade_percent"] = math.ceil(abs(grade) / grade_bin) * grade_bin if grade_bin else abs(grade)

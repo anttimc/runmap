@@ -84,6 +84,11 @@ class PathTileTests(unittest.TestCase):
         self.data.features[0]["properties"]["grade_percent"] = 2.1
         self.data.features[1]["properties"]["grade_percent"] = 3.9
         runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", "gradient-all", 11, None)
+        # Different minimum thresholds must survive coalescing even if grade bins match.
+        self.assertEqual(len(runs), 4)
+        self.assertNotEqual(runs[0].properties["flat_min_grade_50m"], runs[1].properties["flat_min_grade_50m"])
+        self.data.features[0]["properties"]["flat_min_grade_50m"] = 4
+        runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", "gradient-all", 11, None)
         self.assertEqual(len(runs), 3)
         self.assertEqual(runs[0].properties["grade_percent"], 4)
         self.assertEqual(len(runs[0].coordinates), 3)
@@ -93,6 +98,36 @@ class PathTileTests(unittest.TestCase):
         runs = display_runs(self.data, [0, 1], "all-no-stairs", "gradient-all", 11, snapshot)
         self.assertEqual(len(runs), 2)
         self.assertNotEqual(runs[0].properties["inclusion_state"], runs[1].properties["inclusion_state"])
+
+    def test_flat_length_features_use_full_samples_before_tile_selection_and_bins(self) -> None:
+        graph = fixture()
+        intervals = graph["_measurements"]["segments"]["s"]
+        for index, interval in enumerate(intervals):
+            interval.update(start_m=index * 25, end_m=(index + 1) * 25)
+        intervals[0]["grade_percent"] = -2.1
+        intervals[1]["grade_percent"] = 2.1
+        with TemporaryDirectory() as directory:
+            data = load_path_data(write_graph_outputs(graph, directory)["graph"])
+        for zoom in (11, 15):
+            # Selecting only the first 25 m interval must retain its full-run qualification.
+            run = display_runs(data, [0], "all-stairs", "gradient-all", zoom, None)[0]
+            self.assertEqual(run.properties["flat_min_grade_50m"], 2.5)
+        self.assertNotIn("flat_min_grade_50m", display_runs(data, [3], "all-stairs", "gradient-all", 15, None)[0].properties)
+        x, y = xyz(24.8, 60.2, 15)
+        decoded = mapbox_vector_tile.decode(encode_tile(data, "all-stairs", "gradient-all", 15, x, y))["paths"]
+        self.assertIn(2.5, [f["properties"].get("flat_min_grade_50m") for f in decoded["features"]])
+
+    def test_uncertain_and_stair_samples_cannot_join_flat_runs(self) -> None:
+        for flags in (["bridge"], ["tunnel"], ["stairs"]):
+            graph = fixture()
+            intervals = graph["_measurements"]["segments"]["s"]
+            for index, interval in enumerate(intervals):
+                interval.update(start_m=index * 20, end_m=(index + 1) * 20,
+                                valid=True, grade_percent=1, quality_flags=[])
+            intervals[1]["quality_flags"] = flags
+            with TemporaryDirectory() as directory:
+                data = load_path_data(write_graph_outputs(graph, directory)["graph"])
+            self.assertTrue(all(feature["properties"]["flat_min_grade_50m"] is None for feature in data.features))
 
     def test_buffered_neighbors_keep_shared_segment_and_seam(self) -> None:
         from runmap.api.paths import _cells

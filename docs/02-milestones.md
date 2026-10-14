@@ -103,6 +103,16 @@ It starts with distance costs on the prepared network; running-time costs follow
 The initial Explore / Plan run map tool is implemented and ready for feedback;
 advanced tuning tools and broader local route review remain.
 
+The accepted first feature set is followed by
+[UI and settings improvements](28-planner-ui-and-settings.md): explicit tabs,
+settings ownership, persistent planner actions, responsive layout, and compact
+legends. A separate [routing preferences plan](29-routing-preferences.md) covers
+hills, traffic lights, busy-road exposure, and green surroundings, with data
+audits, soft costs, and observable tradeoffs. Deliver the UI checkpoint first;
+enable preference controls as their routing support becomes available. The UI
+checkpoint is implemented and checked on desktop and mobile viewport sizes;
+routing preferences remain planned.
+
 Complete when: a runner can assemble and revise a familiar outing and record
 accepted/rejected examples for later route scoring.
 

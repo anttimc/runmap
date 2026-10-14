@@ -127,7 +127,7 @@ function gradientLegendColor(stop: ColorStop): string {
 function renderGradientLegend(stops: ColorStop[]): void {
   const maximum = stops[stops.length - 1].percent;
   element("path-gradient-ramp").style.background = `linear-gradient(to right, ${stops.map(stop => `${gradientLegendColor(stop)} ${100 * stop.percent / maximum}%`).join(", ")})`;
-  const labeledStops = stops.filter((stop, index) => index === 0 || stop.percent / maximum >= .125);
+  const labeledStops = stops.filter((stop, index) => index === 0 || stop.percent / maximum >= .25);
   element("path-gradient-ticks").replaceChildren(...labeledStops.map((stop, index) => {
     const label = text("span", `${stop.percent}%`);
     label.style.left = `${100 * stop.percent / maximum}%`;
@@ -282,13 +282,25 @@ function inclusionText(interval: Inclusion): string {
   return ` · ${reason}${minimum}${outward}${interval.coverage_limited ? " · coverage limited" : ""}`;
 }
 
-function applyPathEmphasis(map: Map, flatter: boolean, distance = false): void {
+function pathWidth(scale: ExpressionSpecification, casing = false): ExpressionSpecification {
+  return ["interpolate", ["linear"], ["zoom"],
+    11, ["*", casing ? 1.5 : 1, scale], 15, ["*", casing ? 6 : 3.5, scale]];
+}
+
+function applyPathEmphasis(map: Map, highlightFlat: boolean, threshold: number, distance = false): void {
   const alpha: ExpressionSpecification = ["case", ["==", ["get", "eligible"], false], .08,
     ["match", ["coalesce", ["get", "inclusion_state"], ""], "beyond_budget", .30, "no_connection", .12, "excluded", .08, 1]];
-  const opacity: ExpressionSpecification = ["*", alpha, flatter
-    ? ["case", ["all", ["==", ["get", "quality"], "terrain_estimate"], [">=", ["abs", ["coalesce", ["get", "grade_percent"], 0]], 2]], .45, 1] : 1];
-  for (const layer of ["path-casing", "path-grades", "path-uncertain", "path-stairs"]) map.setPaintProperty(layer, "line-opacity", opacity);
-  map.setPaintProperty("path-grades", "line-opacity", distance ? opacity : ["*", opacity, gradientOpacity()]);
+  const measured: ExpressionSpecification = ["all", ["==", ["get", "quality"], "terrain_estimate"], ["!=", ["get", "grade_percent"], null]];
+  const flat: ExpressionSpecification = ["all", measured, ["has", "flat_min_grade_50m"],
+    ["<=", ["coalesce", ["get", "flat_min_grade_50m"], 11], threshold]];
+  for (const layer of ["path-casing", "path-uncertain", "path-stairs"]) map.setPaintProperty(layer, "line-opacity", alpha);
+  const gradeOpacity: ExpressionSpecification = highlightFlat
+    ? ["case", flat, .8, gradientOpacity()] : gradientOpacity();
+  map.setPaintProperty("path-grades", "line-opacity", distance ? alpha : ["*", alpha, gradeOpacity]);
+  if (highlightFlat) map.setPaintProperty("path-casing", "line-opacity", ["*", alpha, ["case", flat, .8, 1]]);
+  const scale: ExpressionSpecification = highlightFlat ? ["case", flat, 1.5, 1] : ["literal", 1];
+  map.setPaintProperty("path-grades", "line-width", pathWidth(scale));
+  map.setPaintProperty("path-casing", "line-width", pathWidth(scale, true));
 }
 
 function renderInspection(map: Map, result: Inspection): void {
@@ -345,6 +357,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   const avoidStairs = element<HTMLInputElement>("path-avoid-stairs");
   const hideBuildingAccess = element<HTMLInputElement>("path-hide-building-access");
   const flatter = element<HTMLInputElement>("path-flatter");
+  const flatThreshold = element<HTMLInputElement>("path-flat-threshold");
   const enabled = element<HTMLInputElement>("outing-enabled");
   const budget = element<HTMLInputElement>("outing-budget");
   const radius = element<HTMLInputElement>("outing-radius");
@@ -366,10 +379,10 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   element("path-importer-notes").replaceChildren(...config.importer_notes.map(note => text("li", note)));
   budget.value = String(config.default_budget_km);
   radius.value = String(config.snap_radius_m);
-  for (const control of [metric, gradientMode, distanceMode, filter, avoidStairs, hideBuildingAccess, flatter, enabled, budget, radius, setStart]) control.disabled = false;
+  for (const control of [metric, gradientMode, distanceMode, filter, avoidStairs, hideBuildingAccess, flatter, flatThreshold, enabled, budget, radius, setStart]) control.disabled = false;
   addPathLayers(map, config, stops);
   renderGradientLegend(stops);
-  applyPathEmphasis(map, flatter.checked);
+  applyPathEmphasis(map, flatter.checked, Number(flatThreshold.value));
   map.addSource("start-offset", { type: "geojson", data: empty });
   map.addLayer({ id: "start-offset", type: "line", source: "start-offset",
     paint: { "line-color": "#142b40", "line-width": 2, "line-dasharray": [2, 2] } });
@@ -469,6 +482,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   }
   function coverageStatus(): void {
     updateLodLegend();
+    updateLegendVisibility();
     if (preparing || tileFailed) return;
     const bounds = map.getBounds();
     const [w, s, e, n] = config.bounds_wgs84;
@@ -597,14 +611,21 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   function updateMetric(): void {
     updateLodLegend();
     const distance = metric.value === "distance";
+    const highlightFlat = !distance && !runPlanner.active() && flatter.checked;
+    const threshold = Number(flatThreshold.value);
     const maximumKm = Number(budget.value);
     gradientMode.setAttribute("aria-pressed", String(!distance));
     distanceMode.setAttribute("aria-pressed", String(distance));
     element("distance-controls").hidden = !distance;
     element("gradient-options").hidden = distance;
-    element("path-legend-title").textContent = distance ? "Distance from start" : "Path gradient";
+    element("flat-threshold-controls").hidden = !flatter.checked;
+    element("path-flat-threshold-value").textContent = `${threshold}%`;
+    element("path-legend-title").textContent = distance ? "Distance from start"
+      : highlightFlat ? `Path gradient · flat ≤${threshold}%` : "Path gradient";
+    renderGradientLegend(stops);
     element("mode-description").textContent = distance
       ? "Choose a start to see network distance in 500 m color bands."
+      : highlightFlat ? `Flat stretches of at least 50 m, with grades up to ${threshold}%, are highlighted.`
       : "Compare path steepness. Click a path to inspect its profile.";
     renderDistanceLegend(maximumKm);
     const gradeColor: ExpressionSpecification = gradientExpression(stops);
@@ -612,14 +633,23 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
       ? distanceExpression(maximumKm * 1000) : gradeColor);
     map.setFilter("path-grades", distance ? null : ["==", ["get", "quality"], "terrain_estimate"]);
     map.setFilter("path-uncertain", distance ? ["==", ["get", "quality"], "hidden"] : ["!=", ["get", "quality"], "terrain_estimate"]);
-    element("gradient-legend").hidden = distance;
-    element("distance-legend").hidden = !distance;
+    updateLegendVisibility();
     element("metric-note").textContent = distance
       ? "Shortest legal network distance from the snapped start to each interval midpoint. Turbo colors mark 0.5 km bands (0–0.5, 0.5–1 km, and so on), from purple through blue, green, and yellow to red across the forward distance budget. The final band may be shorter. Gray: beyond budget, excluded, unreachable, or distance unavailable. Terrain uncertainty remains in inspection."
-      : "Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.";
+      : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use 80% opacity and thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
     flatter.disabled = distance;
-    applyPathEmphasis(map, !distance && flatter.checked, distance);
+    flatThreshold.disabled = distance;
+    applyPathEmphasis(map, highlightFlat, threshold, distance);
     if (runPlanner.active()) map.setPaintProperty("path-grades", "line-opacity", .4);
+  }
+  function updateLegendVisibility(): void {
+    const bounds = map.getBounds();
+    const [west, south, east, north] = config.bounds_wgs84;
+    const visible = map.getZoom() >= config.tile_min_zoom && bounds.getEast() >= west
+      && bounds.getWest() <= east && bounds.getNorth() >= south && bounds.getSouth() <= north;
+    element("path-legend-title").hidden = !visible;
+    element("gradient-legend").hidden = !visible || metric.value === "distance";
+    element("distance-legend").hidden = !visible || metric.value !== "distance";
   }
   metric.addEventListener("change", () => {
     enabled.checked = metric.value === "distance";
@@ -637,7 +667,8 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
       metric.dispatchEvent(new Event("change"));
     });
   }
-  flatter.addEventListener("change", () => applyPathEmphasis(map, flatter.checked, metric.value === "distance"));
+  flatter.addEventListener("change", updateMetric);
+  flatThreshold.addEventListener("input", updateMetric);
   enabled.addEventListener("change", () => {
     if (enabled.checked && !requestedStart) chooseStartMode(true);
     else if (!enabled.checked) chooseStartMode(false);
