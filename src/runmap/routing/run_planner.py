@@ -9,9 +9,12 @@ from typing import Literal
 from collections.abc import Callable
 
 from runmap.paths.exploration import Snap, legal_directions, segment_reason
-from runmap.routing.cost_preparation import build_request_cost_data, penalty_strengths, validate_settings
-from runmap.routing.cost_types import LegCostContext, RequestCostCache
-from runmap.routing.costs import arc_cost
+from runmap.routing.cost_preparation import (
+    build_request_cost_data, penalty_strengths, resolve_traversal, validate_settings,
+)
+from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
+from runmap.routing.cost_settings import resolve_preferences
+from runmap.routing.costs import arc_cost, path_cost_breakdown
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points, slice_geometry
 from runmap.routing.run_types import (
@@ -108,14 +111,17 @@ def distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[st
 
 
 def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettings,
-             deadline: float | None = None) -> RunResult:
+             deadline: float | None = None, *,
+             preferences: PreferenceSettings = PreferenceSettings()) -> RunResult:
     """Construct both side assignments, retaining completed runs on deadline expiry."""
     started = monotonic()
     validate_settings(settings)
+    resolve_preferences(preferences)
     overlay = endpoint_overlay(index, home, turnaround, deadline)
     graph = overlay.graph
     heuristic = distance_heuristic(graph, deadline)
-    cost_data = build_request_cost_data(graph, home, turnaround, settings)
+    cost_data = build_request_cost_data(graph, home, turnaround, settings,
+                                       parts=overlay.parts, preferences=preferences)
     cost_cache = RequestCostCache()
     out_and_back = cost_data.distance_only
 
@@ -123,19 +129,21 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
     outcomes: list[Literal["complete", "unreachable", "deadline"]] = []
     for left in ((True,) if out_and_back else (True, False)):
         try:
+            outbound_context = LegCostContext(left)
             outbound = shortest_path(graph, overlay.home, overlay.turnaround,
                                      arc_cost=partial(arc_cost, data=cost_data, cache=cost_cache,
-                                                      leg=LegCostContext(left), deadline=deadline),
+                                                      leg=outbound_context, deadline=deadline),
                                      heuristic=heuristic, deadline=deadline)
             if outbound is None:
                 outcomes.append("unreachable")
                 continue
             used = frozenset(graph.arcs[a]["segment_id"] for a in outbound.arc_ids)
+            return_context = LegCostContext(not left, used)
             returning = reverse_path(graph, outbound) if out_and_back else None
             if returning is None:
                 returning = shortest_path(graph, overlay.turnaround, overlay.home,
                                       arc_cost=partial(arc_cost, data=cost_data, cache=cost_cache,
-                                                       leg=LegCostContext(not left, used), deadline=deadline),
+                                                       leg=return_context, deadline=deadline),
                                       heuristic=heuristic, deadline=deadline)
             if returning is None:
                 outcomes.append("unreachable")
@@ -143,11 +151,18 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
             counts = Counter(graph.arcs[a]["segment_id"] for a in outbound.arc_ids + returning.arc_ids)
             repeated = sum(graph.segments[s]["length_m"] * (count - 1) for s, count in counts.items())
             distance = sum(graph.arcs[a]["length_m"] for a in outbound.arc_ids + returning.arc_ids)
-            candidates.append(RunCandidate(left, outbound, returning, distance, repeated))
+            candidates.append(RunCandidate(
+                left, outbound, returning, distance, repeated,
+                path_cost_breakdown(outbound.arc_ids, cost_data, cost_cache, outbound_context),
+                path_cost_breakdown(returning.arc_ids, cost_data, cost_cache, return_context),
+                tuple(resolve_traversal(cost_data, graph.arcs[a]) for a in outbound.arc_ids),
+                tuple(resolve_traversal(cost_data, graph.arcs[a]) for a in returning.arc_ids),
+            ))
             outcomes.append("complete")
         except TimeoutError:
             outcomes.append("deadline")
-    return RunResult(overlay, tuple(candidates), tuple(outcomes), monotonic() - started)
+    return RunResult(overlay, tuple(candidates), tuple(outcomes), monotonic() - started,
+                     cost_data.preferences)
 
 
 def reverse_path(graph: GraphData, path: PathResult) -> PathResult | None:

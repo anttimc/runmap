@@ -1,13 +1,19 @@
 """Prepare request geometry and share lazy shape integration between searches."""
 
 import math
+from collections.abc import Mapping
 
 from runmap.paths.exploration import Snap
-from runmap.routing.cost_types import RequestCostCache, RequestCostData, ShapeFeatures, ShapeStrengths
+from runmap.routing.cost_types import (
+    PhysicalPart, PreferenceSettings, RequestCostCache, RequestCostData, ShapeFeatures,
+    ShapeStrengths, TraversalRef,
+)
+from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.fields import integrate_fields
 from runmap.routing.geometry import projected_points
 from runmap.routing.run_types import RunSettings
+from runmap.routing.profiles import arc_forward
 from runmap.routing.search import GraphData
 from runmap.routing.types import Arc
 
@@ -42,7 +48,9 @@ def penalty_strengths(settings: RunSettings) -> tuple[float, float, float]:
 
 
 def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
-                            settings: RunSettings) -> RequestCostData:
+                            settings: RunSettings, *,
+                            parts: Mapping[str, PhysicalPart] | None = None,
+                            preferences: PreferenceSettings = PreferenceSettings()) -> RequestCostData:
     home_point, destination = projected_points([[home.longitude, home.latitude],
                                                 [turnaround.longitude, turnaround.latitude]])
     separation = math.dist(home_point, destination)
@@ -53,8 +61,19 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
         graph, home_point, destination, separation * settings.radius_ratio,
         separation * settings.transition_ratio,
         min(5.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4),
-        strengths, settings.avoidance_ratio == 0,
+        strengths, settings.avoidance_ratio == 0, parts if parts is not None else {},
+        resolve_preferences(preferences),
     )
+
+
+def resolve_traversal(data: RequestCostData, arc: Arc) -> TraversalRef:
+    """Keep physical chainage ascending and traversal direction explicit."""
+    segment = data.graph.segments[arc["segment_id"]]
+    part = data.parts.get(segment["id"])
+    return TraversalRef(part.segment_id if part else segment["id"],
+                        part.start_m if part else 0.0,
+                        part.end_m if part else segment["length_m"],
+                        not arc_forward(segment, arc))
 
 
 def ensure_arc_features(data: RequestCostData, cache: RequestCostCache,

@@ -12,7 +12,14 @@ from shapely.geometry import LineString, Point, Polygon
 from runmap.api.paths import PathData, path_policy_index
 from runmap.paths.exploration import Snap, snap_candidates
 from runmap.routing.run_planner import RunSettings, plan_run, projected_points
-from runmap.routing.profiles import arc_forward
+from runmap.routing.cost_preparation import resolve_shape_strengths
+from runmap.routing.cost_settings import (
+    COST_MODEL_VERSION, COST_UNITS, preference_capabilities, resolve_preferences,
+)
+from runmap.routing.cost_types import (
+    CostBreakdown, PreferenceCapabilities, PreferenceLevel, PreferenceObservations, PreferenceSettings,
+    PreferenceWeightTables, ResolvedPreferences, ShapeStrengths,
+)
 from runmap.routing.search import route_coordinates
 
 RUN_SLOTS = BoundedSemaphore(2)
@@ -35,12 +42,41 @@ class SettingsRequest(BaseModel):
     reuse_strength: float = Field(4, ge=0, le=100)
 
 
+class PreferencesRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    hills: PreferenceLevel = "off"
+    signals: PreferenceLevel = "off"
+    busy_roads: PreferenceLevel = "off"
+    greenery: PreferenceLevel = "off"
+
+
+class CostConfigurationResponse(BaseModel):
+    model_version: str = COST_MODEL_VERSION
+    units: str = COST_UNITS
+    shape_settings: SettingsRequest
+    shape_strengths: ShapeStrengths
+    preferences: ResolvedPreferences
+    capabilities: PreferenceCapabilities
+
+
+class PlannerConfiguration(BaseModel):
+    available: bool = True
+    defaults: SettingsRequest = Field(default_factory=SettingsRequest)
+    preference_defaults: PreferencesRequest = Field(default_factory=PreferencesRequest)
+    cost_model_version: str = COST_MODEL_VERSION
+    cost_units: str = COST_UNITS
+    preference_capabilities: PreferenceCapabilities = Field(default_factory=preference_capabilities)
+    preference_weight_tables: PreferenceWeightTables = Field(default_factory=PreferenceWeightTables)
+    deadline_s: float
+
+
 class RunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     dataset_id: str = Field(max_length=100)
     home: EndpointRequest
     turnaround: EndpointRequest
     settings: SettingsRequest = Field(default_factory=SettingsRequest)
+    preferences: PreferencesRequest = Field(default_factory=PreferencesRequest)
     radius_m: float = Field(50, gt=0, le=200)
     surface: Literal["all", "surfaced"] = "all"
     avoid_stairs: bool = True
@@ -56,6 +92,8 @@ class LegResponse(BaseModel):
     coordinates: list[list[float]]
     distance_m: float
     cost: float
+    cost_breakdown: CostBreakdown
+    observations: PreferenceObservations = Field(default_factory=PreferenceObservations)
     expanded_nodes: int
     traversals: list[TraversalResponse] = Field(default_factory=list)
 
@@ -73,6 +111,7 @@ class CandidateResponse(BaseModel):
 
 class RunResponse(BaseModel):
     dataset_id: str
+    cost_model: CostConfigurationResponse
     status: Literal["complete", "unreachable", "deadline", "no_eligible_snap"]
     home: Snap | None = None
     turnaround: Snap | None = None
@@ -96,16 +135,23 @@ def generate_run(data: PathData, options: RunRequest, timeout_s: float = 15) -> 
 
 def _generate_run(data: PathData, options: RunRequest, deadline: float) -> RunResponse:
     started = monotonic()
+    settings = RunSettings(**options.settings.model_dump())
+    preferences = PreferenceSettings(**options.preferences.model_dump())
+    cost_model = CostConfigurationResponse(
+        shape_settings=options.settings, shape_strengths=resolve_shape_strengths(settings),
+        preferences=resolve_preferences(preferences), capabilities=preference_capabilities(),
+    )
     index = path_policy_index(data, options.surface, options.avoid_stairs)
     home, _ = snap_candidates(data, index, options.home.longitude, options.home.latitude,
                               options.radius_m, options.home.segment_id)
     turnaround, _ = snap_candidates(data, index, options.turnaround.longitude, options.turnaround.latitude,
                                     options.radius_m, options.turnaround.segment_id)
-    response = RunResponse(dataset_id=data.dataset_id, status="no_eligible_snap", home=home, turnaround=turnaround)
+    response = RunResponse(dataset_id=data.dataset_id, cost_model=cost_model,
+                           status="no_eligible_snap", home=home, turnaround=turnaround)
     if home is None or turnaround is None:
         return response
     try:
-        result = plan_run(index, home, turnaround, RunSettings(**options.settings.model_dump()), deadline)
+        result = plan_run(index, home, turnaround, settings, deadline, preferences=preferences)
     except TimeoutError:
         return response.model_copy(update={"status": "deadline", "elapsed_s": monotonic() - started})
     graph = result.overlay.graph
@@ -114,22 +160,20 @@ def _generate_run(data: PathData, options: RunRequest, deadline: float) -> RunRe
     for candidate in result.candidates:
         legs = [LegResponse(coordinates=[list(p) for p in route_coordinates(graph, leg.arc_ids)],
                             distance_m=sum(graph.arcs[a]["length_m"] for a in leg.arc_ids),
-                            cost=leg.cost, expanded_nodes=leg.expanded_nodes)
-                for leg in (candidate.outbound, candidate.returning)]
+                            cost=leg.cost, expanded_nodes=leg.expanded_nodes, cost_breakdown=costs)
+                for leg, costs in ((candidate.outbound, candidate.outbound_costs),
+                                   (candidate.returning, candidate.returning_costs))]
         points = projected_points(legs[0].coordinates + legs[1].coordinates[1:])
         line = LineString(points)
         simple = line.is_simple and line.is_ring
         closest = line.distance(centre)
         enclosed = Polygon(points).contains(centre) if simple and closest > .01 else None
-        for leg_response, leg in zip(legs, (candidate.outbound, candidate.returning)):
-            for arc_id in leg.arc_ids:
-                arc = graph.arcs[arc_id]
-                segment = graph.segments[arc["segment_id"]]
-                part = result.overlay.parts.get(segment["id"])
-                start, end = (part.start_m, part.end_m) if part else (0.0, segment["length_m"])
-                if not arc_forward(segment, arc):
+        for leg_response, traversals in zip(legs, (candidate.outbound_traversals, candidate.returning_traversals)):
+            for traversal in traversals:
+                start, end = traversal.graph_start_m, traversal.graph_end_m
+                if traversal.reverse:
                     start, end = end, start
-                leg_response.traversals.append(TraversalResponse(segment_id=part.segment_id if part else segment["id"],
+                leg_response.traversals.append(TraversalResponse(segment_id=traversal.segment_id,
                                                                  start_m=start, end_m=end))
         equivalent = next((i for i, prior in enumerate(response.candidates)
                            if abs(prior.distance_m - candidate.distance_m) < .01

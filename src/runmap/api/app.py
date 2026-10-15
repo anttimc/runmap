@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from runmap.api.paths import render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
 from runmap.api.path_tiles import PathTileService, render_version as path_render_version, tile_template
 from runmap.api.terrain import TerrainRenderer
-from runmap.api.runs import RunRequest, RunResponse, SettingsRequest, generate_run
+from runmap.api.runs import PlannerConfiguration, RunRequest, RunResponse, generate_run
 from runmap.api.terrain_tiles import (
     CONTOUR_INTERVAL_M,
     CONTOUR_RENDER_VERSION,
@@ -86,8 +86,8 @@ def paths_config(request: Request):
                 "message": "Path analysis is unavailable. Prepare graph measurements locally."}
     return {**path_config(data), "tile_template": tile_template(data, "static/{policy}"),
             "tile_min_zoom": 10, "tile_max_zoom": 16,
-            "run_planner": {"available": True, "defaults": SettingsRequest().model_dump(),
-                            "deadline_s": float(os.environ.get("RUNMAP_RUN_DEADLINE", "15"))}}
+            "run_planner": PlannerConfiguration(
+                deadline_s=float(os.environ.get("RUNMAP_RUN_DEADLINE", "15"))).model_dump()}
 
 
 def _path_data(request, dataset_id):

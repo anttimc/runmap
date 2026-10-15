@@ -1,6 +1,7 @@
 # Run routing preferences
 
-Status: audit started, 2026-10-15; routing implementation remains planned. Extends the distance-based
+Status: existing-data audit and preference cost contracts implemented, 2026-10-15;
+preference routing algorithms remain planned. Extends the distance-based
 [first run planner](27-first-routing-ui.md), using the controls described in the
 [UI and settings plan](28-planner-ui-and-settings.md).
 
@@ -11,9 +12,10 @@ busy-road and green preferences require complete buffered context acquisition.
 Context fixtures and local runner validation remain open parts of the audit.
 
 The [cost architecture plan](31-routing-cost-architecture.md) specifies the next
-increment: extract the current planner closure into explicit request data/cache,
-module-level preparation and evaluation, and a bound A* callback before adding
-preference features and diagnostics.
+increments. Shape-cost extraction, explicit request data/cache, typed preference
+settings, capability validation, traversal references, and per-leg diagnostics
+are implemented. All four preferences currently support only Off; the next
+algorithm increment is hill avoidance.
 
 ## Outcome
 

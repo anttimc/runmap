@@ -1,6 +1,6 @@
 # Modular routing cost architecture
 
-Status: step 1 implemented, 2026-10-15; preference contracts and algorithms
+Status: steps 1–2 implemented, 2026-10-15; preference algorithms
 remain planned. Refines the cost-composition
 slice of [routing preferences](29-routing-preferences.md), using the
 [data audit](30-routing-preferences-audit.md). This document specifies the
@@ -31,6 +31,64 @@ skipping integration at zero width. Another 120 fixed-seed comparisons against
 the saved original implementation cover a small graph with alternative routes,
 20 endpoint pairs, and six shape settings: candidate arcs, leg costs, expanded
 states, distances, repeated distances, and overlay geometry match exactly.
+
+## Step 2 implementation
+
+`cost_settings` now resolves typed Off / Low / Medium / High settings through
+separately versioned preference weight tables and explicit capability records.
+All tables currently define Off = 0; other weights remain null until calibrated.
+All four capabilities currently support only Off, with a reason and null feature
+version/coverage. Non-Off requests fail before snapping or searching, including
+with zero loop width. Malformed levels and unknown preference fields are rejected
+by the API schema. The domain resolver also validates levels and weight tables.
+
+`costs` composes explicit shape and preference contributions, validates finite
+nonnegative components and `total >= physical length`, and constructs selected
+leg breakdowns using the same component functions. Return explanations use the
+actual outbound-used set fixed for that search. Breakdown objects are allocated
+only for selected paths. Diagnostics read already cached shape features rather
+than repeating integration.
+
+Selected traversals now carry original segment IDs, ascending graph-chainage
+spans, and a separate reverse flag. The API retains its existing directional
+start/end traversal representation when serializing these references. Ordinary
+unsplit arcs resolve lazily without copying the graph. Direction uses the shared
+`arc_forward` helper, including its canonical arc suffix handling for self-loops.
+
+API additions are backward compatible for existing requests:
+
+- `POST /api/paths/run` accepts a top-level `preferences` object with `hills`,
+  `signals`, `busy_roads`, and `greenery`; each defaults to `"off"`. Unsupported
+  non-Off requests return HTTP 400, while malformed levels/unknown fields fail
+  request schema validation.
+- `/api/paths/config` adds preference defaults, capability records, weight tables,
+  model version, and units under `run_planner`.
+- Run responses include `cost_model` with version `distance-preferences-v1`,
+  `equivalent_metres` units, resolved shape settings/strengths, preference settings,
+  weights, table versions, and capabilities. Metadata is present for missing-snap,
+  unreachable, and deadline results too.
+- Each selected leg adds `cost_breakdown`: physical distance plus centre, side,
+  reuse, hills, signals, busy-road, non-green contributions and total. Raw
+  `observations` are a separate typed record. Unavailable ascent/descent, signal
+  passages, and environmental observations/coverage serialize as null, while
+  disabled preference costs are zero.
+
+No new feature artifacts are loaded for Off requests and no preference controls
+are enabled. Dataset versioning remains unchanged. The new feature observations
+and non-Off algorithms are reserved for subsequent delivery slices.
+
+Verification: all 162 Python tests pass. The suite covers preference/weight validation, unsupported
+capabilities before work, additive API serialization, preserved reuse contexts,
+physical split/reverse references, finite/lower-bound costs, and A* versus
+Dijkstra on an alternative-route fixture. The frontend typecheck/build passes.
+The 120 original fixed-seed comparisons still match old routing outputs exactly;
+new leg totals agree with their search costs.
+
+One local Leppävaara smoke comparison, home `(24.795, 60.216)` and turnaround
+`(24.815, 60.225)`, completed both assignments with identical paths, search
+expansion counts, and 5,273.998 m distance. Planning took 0.359 s with the saved
+original implementation and 0.378 s with the new contracts/diagnostics, excluding
+dataset loading. This single observation is not a latency guarantee.
 
 ## Current closure and intended separation
 

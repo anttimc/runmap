@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from runmap.routing.search import GraphData, PathResult
+from runmap.routing.cost_types import CostBreakdown, PhysicalPart, ResolvedPreferences, TraversalRef
 
 
 @dataclass(frozen=True)
@@ -14,13 +15,6 @@ class RunSettings:
     transition_ratio: float = 0.05
     side_strength: float = 2.0
     reuse_strength: float = 4.0
-
-
-@dataclass(frozen=True)
-class PhysicalPart:
-    segment_id: str
-    start_m: float
-    end_m: float
 
 
 @dataclass(frozen=True)
@@ -38,6 +32,10 @@ class RunCandidate:
     returning: PathResult
     distance_m: float
     repeated_distance_m: float
+    outbound_costs: CostBreakdown
+    returning_costs: CostBreakdown
+    outbound_traversals: tuple[TraversalRef, ...]
+    returning_traversals: tuple[TraversalRef, ...]
 
 
 @dataclass(frozen=True)
@@ -46,3 +44,4 @@ class RunResult:
     candidates: tuple[RunCandidate, ...]
     outcomes: tuple[Literal["complete", "unreachable", "deadline"], ...]
     elapsed_s: float
+    preferences: ResolvedPreferences

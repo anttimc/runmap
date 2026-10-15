@@ -8,8 +8,8 @@ from collections.abc import Callable
 
 from test_routing import graph_document
 from runmap.paths.exploration import Snap
-from runmap.routing.cost_preparation import build_request_cost_data
-from runmap.routing.cost_types import LegCostContext, RequestCostCache
+from runmap.routing.cost_preparation import build_request_cost_data, resolve_traversal
+from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
 from runmap.routing.costs import arc_cost
 from runmap.routing.fields import integrate_fields
 from runmap.routing.run_planner import (RunSettings, endpoint_overlay, plan_run,
@@ -180,3 +180,41 @@ class RunPlannerTests(unittest.TestCase):
             result = plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5),
                               RunSettings(avoidance_ratio=0))
         self.assertEqual(result.outcomes, ("complete",))
+
+    def test_selected_leg_breakdowns_retain_the_original_reuse_context(self) -> None:
+        for width in (0, .18):
+            result = plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5),
+                              RunSettings(avoidance_ratio=width))
+            for candidate in result.candidates:
+                self.assertEqual(candidate.outbound_costs.reuse, 0)
+                self.assertEqual(candidate.returning_costs.reuse > 0, width > 0)
+                for path, costs in ((candidate.outbound, candidate.outbound_costs),
+                                    (candidate.returning, candidate.returning_costs)):
+                    self.assertAlmostEqual(path.cost, costs.total)
+                    self.assertGreaterEqual(costs.total, costs.distance_m)
+                    self.assertEqual((costs.hills, costs.signals, costs.busy_roads, costs.non_green), (0, 0, 0, 0))
+
+    def test_split_references_preserve_physical_spans_and_reverse_direction(self) -> None:
+        home, turnaround = self.snap("ab", .2), self.snap("ab", .8)
+        overlay = endpoint_overlay(self.index, home, turnaround)
+        data = build_request_cost_data(overlay.graph, home, turnaround, RunSettings(), parts=overlay.parts)
+        path = shortest_path(overlay.graph, overlay.home, overlay.turnaround)
+        assert path is not None
+        arc = overlay.graph.arcs[path.arc_ids[0]]
+        forward = resolve_traversal(data, arc)
+        reverse = resolve_traversal(data, overlay.graph.arcs[arc["id"][:-1] + "b"])
+        self.assertEqual(forward.segment_id, "ab")
+        self.assertAlmostEqual(forward.graph_start_m, 110)
+        self.assertAlmostEqual(forward.graph_end_m, 440)
+        self.assertFalse(forward.reverse)
+        self.assertTrue(reverse.reverse)
+        self.assertEqual((forward.graph_start_m, forward.graph_end_m), (reverse.graph_start_m, reverse.graph_end_m))
+        unsplit = resolve_traversal(data, overlay.graph.arcs["bc:b"])
+        self.assertEqual((unsplit.segment_id, unsplit.graph_start_m, unsplit.graph_end_m, unsplit.reverse),
+                         ("bc", 0, 1100, True))
+
+    def test_unsupported_preferences_rejected_before_overlay_or_search(self) -> None:
+        with patch("runmap.routing.run_planner.endpoint_overlay", side_effect=AssertionError):
+            with self.assertRaisesRegex(ValueError, "Unsupported hills"):
+                plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5), RunSettings(),
+                          preferences=PreferenceSettings(hills="low"))
