@@ -1,8 +1,19 @@
 # Run routing preferences
 
-Status: planned, 2026-10-14. Extends the distance-based
+Status: audit started, 2026-10-15; routing implementation remains planned. Extends the distance-based
 [first run planner](27-first-routing-ui.md), using the controls described in the
 [UI and settings plan](28-planner-ui-and-settings.md).
+
+The [local data audit](30-routing-preferences-audit.md) records reproducible
+counts and 13 source-derived fixtures. Existing terrain supports the first
+hill-cost increment. Signal tag retention and passage attribution need work;
+busy-road and green preferences require complete buffered context acquisition.
+Context fixtures and local runner validation remain open parts of the audit.
+
+The [cost architecture plan](31-routing-cost-architecture.md) specifies the next
+increment: extract the current planner closure into explicit request data/cache,
+module-level preparation and evaluation, and a bound A* callback before adding
+preference features and diagnostics.
 
 ## Outcome
 

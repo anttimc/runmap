@@ -1,0 +1,1752 @@
+{
+  "audit_schema_version": 1,
+  "graph_path": "data/paths/prepared/leppavaara-flat-10k/graph.json",
+  "graph_sha256": "6a8b61db10ffc7650b26ff4757583a6c3ea3c92cd516ef882188265febf295de",
+  "graph_digest": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "graph_schema_version": 1,
+  "preparation_code_sha256_at_audit": {
+    "src/runmap/sources/osm.py": "89b01027811efaf28aac8e39949ad84ed963fe3ca70217b993746fe0aa00b540",
+    "src/runmap/paths/graph.py": "7f6e82d2de983175ce78fdaead08d4a681d235ec61eb80f61ec05426c317c3f1",
+    "src/runmap/paths/terrain.py": "027e040ef6f9ca18afbe60bc633c3501008bb298aded390a50cba5456b1dcc76"
+  },
+  "preparation_code_note": "Current code identity; graph does not record the preparing Git revision.",
+  "source": {
+    "experiment_id": "leppavaara-flat-10k",
+    "experiment_config_digest": "5cadb447172475c5231da2a5a5aa9e3bd121a60791caa7831b0fd1062c56a1ea",
+    "osm": {
+      "source_path": "data/paths/raw/leppavaara-flat-10k/osm-network-boundaries-101.json",
+      "sha256": "017d294b1e6dc1d0461d62fda45e79278b0835ea62522d2362bd68877d055d18",
+      "bytes": 21520968,
+      "bounds_wgs84": [
+        60.174081431443355,
+        24.705123019840382,
+        60.2569525183575,
+        24.836830575046296
+      ]
+    }
+  },
+  "source_provenance": {
+    "schema_version": 1,
+    "provider": "OpenStreetMap contributors via Overpass API",
+    "licence": "ODbL 1.0",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "retrieved_at": "2026-10-06T12:31:09.863680+00:00",
+    "bounds_wgs84": [
+      60.174081431443355,
+      24.705123019840382,
+      60.2569525183575,
+      24.836830575046296
+    ],
+    "query": "[out:json][timeout:180];(way[\"highway\"~\"^(cycleway|footway|living_street|path|pedestrian|residential|service|steps|track|unclassified)$\"](60.1740814,24.7051230,60.2569525,24.8368306);way[\"highway\"][\"ref\"~\"^(101)$\"](60.1740814,24.7051230,60.2569525,24.8368306););out body;>;out body qt;",
+    "sha256": "017d294b1e6dc1d0461d62fda45e79278b0835ea62522d2362bd68877d055d18",
+    "bytes": 21520968
+  },
+  "source_snapshot": {
+    "timestamp_osm_base": "2026-10-06T12:28:50Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "source_element_counts": {
+    "way": 33160,
+    "node": 140786
+  },
+  "measurements": {
+    "file": "measurements-f9c66304ce52a40de4fffe340ad8031a427f35afa68e4c552007fdb27de5c537.json",
+    "sha256": "f9c66304ce52a40de4fffe340ad8031a427f35afa68e4c552007fdb27de5c537",
+    "size_bytes": 162381868
+  },
+  "graph_summary": {
+    "source_node_count": 140786,
+    "source_way_count": 33160,
+    "selected_way_count": 30423,
+    "rejected_way_counts": {
+      "access_denied": 651,
+      "area_geometry": 80,
+      "cycleway_without_foot_permission": 141,
+      "enclosed_service": 89,
+      "foot_denied": 57,
+      "indoor": 390,
+      "level_geometry": 113,
+      "not_in_service": 1,
+      "parking_aisle": 1114,
+      "unsupported_highway": 101
+    },
+    "node_count": 55627,
+    "segment_count": 69707,
+    "arc_count": 139414,
+    "physical_length_km": 2036.809,
+    "component_count": 398,
+    "largest_component_nodes": 54394,
+    "highway_segment_counts": {
+      "cycleway": 14775,
+      "footway": 13794,
+      "living_street": 171,
+      "path": 9879,
+      "pedestrian": 1388,
+      "residential": 9327,
+      "service": 18363,
+      "steps": 844,
+      "track": 368,
+      "unclassified": 798
+    },
+    "missing_surface_segments": 24718,
+    "bridge_segments": 310,
+    "tunnel_segments": 125,
+    "stair_segments": 844,
+    "pedestrian_area_boundary_segments": 1336,
+    "pedestrian_oneway_segments": 0,
+    "barrier_nodes": 709,
+    "route_boundary_way_count": 0,
+    "terrain_valid_fraction": 1.0
+  },
+  "attribute_retention": {
+    "highway": {
+      "source_node_values": {
+        "bus_stop": 434,
+        "crossing": 3337,
+        "elevator": 64,
+        "give_way": 272,
+        "mini_roundabout": 1,
+        "motorway_junction": 12,
+        "passing_place": 3,
+        "speed_camera": 11,
+        "stop": 31,
+        "street_lamp": 1,
+        "traffic_signals": 89,
+        "trailhead": 1,
+        "turning_circle": 364,
+        "turning_loop": 1
+      },
+      "source_way_values": {
+        "cycleway": 4445,
+        "footway": 7904,
+        "living_street": 39,
+        "motorway": 8,
+        "path": 5611,
+        "pedestrian": 242,
+        "residential": 1717,
+        "service": 11694,
+        "steps": 936,
+        "track": 187,
+        "trunk": 91,
+        "trunk_link": 2,
+        "unclassified": 284
+      },
+      "source_nodes_in_graph": 4506,
+      "prepared_nodes_retaining_tag": 4506,
+      "source_ways_in_graph": 30423,
+      "prepared_ways_retaining_tag": 30423
+    },
+    "crossing": {
+      "source_node_values": {
+        "id": 1,
+        "informal": 18,
+        "marked": 723,
+        "no": 3,
+        "traffic_signals": 464,
+        "uncontrolled": 1471,
+        "uncontrolled;marked": 1,
+        "unmarked": 71,
+        "zebra": 19
+      },
+      "source_way_values": {
+        "informal": 1,
+        "marked": 20,
+        "traffic_signals": 20,
+        "uncontrolled": 57,
+        "unmarked": 8,
+        "yes": 1,
+        "zebra": 8
+      },
+      "source_nodes_in_graph": 2746,
+      "prepared_nodes_retaining_tag": 2746,
+      "source_ways_in_graph": 112,
+      "prepared_ways_retaining_tag": 0
+    },
+    "crossing:signals": {
+      "source_node_values": {
+        "no": 460,
+        "yes": 4
+      },
+      "source_way_values": {
+        "no": 1
+      },
+      "source_nodes_in_graph": 464,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 1,
+      "prepared_ways_retaining_tag": 0
+    },
+    "crossing:island": {
+      "source_node_values": {
+        "no": 1684,
+        "yes": 355
+      },
+      "source_way_values": {
+        "no": 10,
+        "yes": 27
+      },
+      "source_nodes_in_graph": 2027,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 37,
+      "prepared_ways_retaining_tag": 0
+    },
+    "crossing:markings": {
+      "source_node_values": {
+        "dots;zebra": 1,
+        "no": 196,
+        "yes": 1296,
+        "zebra": 119,
+        "zebra:double": 2,
+        "zebra;dots": 3
+      },
+      "source_way_values": {
+        "no": 10,
+        "yes": 27,
+        "zebra": 52
+      },
+      "source_nodes_in_graph": 1611,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 87,
+      "prepared_ways_retaining_tag": 0
+    },
+    "footway": {
+      "source_node_values": {},
+      "source_way_values": {
+        "access_aisle": 1,
+        "crossing": 356,
+        "sidewalk": 424
+      },
+      "source_nodes_in_graph": 0,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 778,
+      "prepared_ways_retaining_tag": 0
+    },
+    "cycleway": {
+      "source_node_values": {},
+      "source_way_values": {
+        "construction": 1,
+        "crossing": 377,
+        "no": 13,
+        "traffic_island": 1
+      },
+      "source_nodes_in_graph": 0,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 387,
+      "prepared_ways_retaining_tag": 0
+    },
+    "traffic_signals:direction": {
+      "source_node_values": {
+        "backward": 7,
+        "forward": 9
+      },
+      "source_way_values": {},
+      "source_nodes_in_graph": 16,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 0,
+      "prepared_ways_retaining_tag": 0
+    },
+    "maxspeed": {
+      "source_node_values": {
+        "10": 1,
+        "60": 2,
+        "70": 9
+      },
+      "source_way_values": {
+        "10": 20,
+        "15": 5,
+        "20": 111,
+        "30": 1306,
+        "40": 246,
+        "50": 56,
+        "60": 34,
+        "70": 66,
+        "80": 3
+      },
+      "source_nodes_in_graph": 1,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 1682,
+      "prepared_ways_retaining_tag": 0
+    },
+    "lanes": {
+      "source_node_values": {},
+      "source_way_values": {
+        "1": 154,
+        "1-2": 1,
+        "1.5": 2,
+        "2": 310,
+        "3": 48,
+        "4": 22,
+        "5": 1
+      },
+      "source_nodes_in_graph": 0,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 389,
+      "prepared_ways_retaining_tag": 0
+    },
+    "bridge": {
+      "source_node_values": {},
+      "source_way_values": {
+        "boardwalk": 20,
+        "yes": 304
+      },
+      "source_nodes_in_graph": 0,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 285,
+      "prepared_ways_retaining_tag": 285
+    },
+    "tunnel": {
+      "source_node_values": {},
+      "source_way_values": {
+        "building_passage": 84,
+        "covered": 4,
+        "passage": 1,
+        "yes": 324
+      },
+      "source_nodes_in_graph": 0,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 108,
+      "prepared_ways_retaining_tag": 108
+    },
+    "layer": {
+      "source_node_values": {
+        "-1": 23,
+        "-2": 1,
+        "0": 2,
+        "1": 13
+      },
+      "source_way_values": {
+        "-1": 320,
+        "-2": 34,
+        "-3": 35,
+        "-4": 22,
+        "0": 10,
+        "1": 374,
+        "2": 4,
+        "5": 22
+      },
+      "source_nodes_in_graph": 20,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 421,
+      "prepared_ways_retaining_tag": 421
+    },
+    "incline": {
+      "source_node_values": {},
+      "source_way_values": {
+        "-14%": 1,
+        "-20%": 2,
+        "-30%": 3,
+        "-6%": 1,
+        "0%": 3,
+        "10%": 2,
+        "10\u00b0": 10,
+        "20%": 1,
+        "25%": 1,
+        "30%": 1,
+        "5%": 1,
+        "7%": 1,
+        "down": 190,
+        "up": 396,
+        "yes": 2
+      },
+      "source_nodes_in_graph": 0,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 538,
+      "prepared_ways_retaining_tag": 0
+    },
+    "railway": {
+      "source_node_values": {
+        "crossing": 1,
+        "level_crossing": 6,
+        "platform": 2,
+        "subway_entrance": 16,
+        "tram_crossing": 100,
+        "tram_level_crossing": 49
+      },
+      "source_way_values": {
+        "abandoned": 1
+      },
+      "source_nodes_in_graph": 159,
+      "prepared_nodes_retaining_tag": 0,
+      "source_ways_in_graph": 1,
+      "prepared_ways_retaining_tag": 0
+    }
+  },
+  "terrain": {
+    "method": {
+      "schema_version": 1,
+      "manifest_id": "leppavaara-98e1c3956d293f61",
+      "source": "spectral-thin-plate terrain gradient",
+      "wavelength_m": 40,
+      "sampling_interval_m": 10.0,
+      "method": "integrated directional derivative of the prepared 2D terrain surface",
+      "chainage_crs": "EPSG:3067",
+      "graph_chainage": "cumulative geodesic vertex lengths scaled to stored segment length",
+      "profile_kind": "estimated terrain height change from each valid run start",
+      "valid_fraction": 1.0
+    },
+    "interval_count": 278839,
+    "sampled_length_m": 2042138.4085982621,
+    "valid_length_m": 2042138.4085982621,
+    "valid_length_fraction": 1.0,
+    "uncertain_bridge_tunnel_or_missing_length_m": 9538.949542391556,
+    "quality_flag_intervals": {
+      "bridge": 977,
+      "pedestrian_area_perimeter": 5162,
+      "stairs": 1274,
+      "tunnel": 294
+    },
+    "quality_flag_length_m": {
+      "bridge": 7396.807056524585,
+      "pedestrian_area_perimeter": 24989.35691652598,
+      "stairs": 6827.219064443883,
+      "tunnel": 2142.142485866971
+    },
+    "intervals_above_20_percent_absolute_grade": 1539,
+    "minimum_signed_grade_percent": -63.38629315065227,
+    "maximum_signed_grade_percent": 56.33466813188637
+  },
+  "signals": {
+    "explicit_crossing_signal_source_nodes": 467,
+    "explicit_crossing_signal_nodes_in_graph": 458,
+    "explicit_crossing_signal_nodes_with_railway_tag": 6,
+    "recognizable_signal_nodes_after_preparation": 455,
+    "lost_signal_evidence_node_ids": [
+      "6581850952",
+      "7748153291",
+      "7748153292"
+    ],
+    "signal_to_signal_segment_count": 186,
+    "signal_to_signal_segment_examples": [
+      "w1001727047p1",
+      "w105745934p1",
+      "w108253895p1",
+      "w1166192779p1",
+      "w1204513649p1",
+      "w1215812656p1",
+      "w123459255p1",
+      "w123459258p1",
+      "w1289080401p1",
+      "w129014504p1"
+    ],
+    "highway_traffic_signals_source_nodes": 89,
+    "event_groups_prepared": false
+  },
+  "context": {
+    "source_highway_way_counts": {
+      "cycleway": 4445,
+      "footway": 7904,
+      "living_street": 39,
+      "motorway": 8,
+      "path": 5611,
+      "pedestrian": 242,
+      "residential": 1717,
+      "service": 11694,
+      "steps": 936,
+      "track": 187,
+      "trunk": 91,
+      "trunk_link": 2,
+      "unclassified": 284
+    },
+    "incidental_context_tag_values": {
+      "natural": {
+        "cave_entrance": 1,
+        "stone": 1,
+        "tree": 1
+      },
+      "landuse": {
+        "recreation_ground": 1
+      },
+      "leisure": {
+        "bleachers": 1,
+        "slipway": 1
+      }
+    },
+    "complete_major_road_context": false,
+    "complete_green_context": false,
+    "context_buffer_m": null,
+    "coverage_note": "Highway-only query plus ref 101; incidental tags do not establish context coverage."
+  },
+  "fixtures": [
+    {
+      "id": "flat-corridor",
+      "review_status": "source-derived; local runner review pending",
+      "segment": {
+        "id": "w33925333p16",
+        "osm_way_id": "33925333",
+        "from": "1137173684",
+        "to": "1137173814",
+        "length_m": 70.572,
+        "geometry": [
+          [
+            24.8040465,
+            60.2173072
+          ],
+          [
+            24.8027748,
+            60.2173688
+          ]
+        ],
+        "tags": {
+          "highway": "cycleway",
+          "surface": "asphalt",
+          "foot": "designated",
+          "bicycle": "designated",
+          "segregated": "no",
+          "lit": "yes"
+        },
+        "forward": true,
+        "backward": true,
+        "ascent_m": 0.793,
+        "descent_m": 0.0,
+        "terrain_sample_count": 8,
+        "terrain_valid_fraction": 1.0,
+        "terrain_totals_complete": true
+      },
+      "source_way": {
+        "type": "way",
+        "id": 33925333,
+        "nodes": [
+          388849247,
+          388982437,
+          3304834850,
+          388982438,
+          1826908845,
+          418338648,
+          1826908581,
+          418338652,
+          388982439,
+          265773693,
+          793710525,
+          793710527,
+          793710523,
+          1826908447,
+          984868814,
+          793710492,
+          9053515663,
+          9053515662,
+          1826908450,
+          7540247722,
+          1137173684,
+          1137173814,
+          386027063
+        ],
+        "tags": {
+          "bicycle": "designated",
+          "foot": "designated",
+          "highway": "cycleway",
+          "lit": "yes",
+          "segregated": "no",
+          "surface": "asphalt"
+        }
+      },
+      "interval_count": 8,
+      "grade_range_percent": [
+        0.5287379006468282,
+        1.7024772871331206
+      ],
+      "quality_flags": []
+    },
+    {
+      "id": "directional-hill",
+      "review_status": "source-derived; local runner review pending",
+      "segment": {
+        "id": "w642719209p1",
+        "osm_way_id": "642719209",
+        "from": "6049951044",
+        "to": "9428585015",
+        "length_m": 107.184,
+        "geometry": [
+          [
+            24.8050071,
+            60.2164463
+          ],
+          [
+            24.8051523,
+            60.216387
+          ],
+          [
+            24.8052924,
+            60.2163645
+          ],
+          [
+            24.805398,
+            60.2163592
+          ],
+          [
+            24.8054928,
+            60.2163774
+          ],
+          [
+            24.8055746,
+            60.2163817
+          ],
+          [
+            24.8056457,
+            60.2163581
+          ],
+          [
+            24.8062124,
+            60.2161205
+          ],
+          [
+            24.8062016,
+            60.2161002
+          ],
+          [
+            24.8060853,
+            60.2160349
+          ],
+          [
+            24.8060487,
+            60.2160285
+          ],
+          [
+            24.8059711,
+            60.2160253
+          ],
+          [
+            24.8058177,
+            60.2160201
+          ]
+        ],
+        "tags": {
+          "highway": "service",
+          "service": "driveway",
+          "surface": "asphalt"
+        },
+        "forward": true,
+        "backward": true,
+        "ascent_m": 4.661,
+        "descent_m": 0.28,
+        "terrain_sample_count": 17,
+        "terrain_valid_fraction": 1.0,
+        "terrain_totals_complete": true
+      },
+      "source_way": {
+        "type": "way",
+        "id": 642719209,
+        "nodes": [
+          6049951043,
+          6049951044,
+          6049951045,
+          6049951046,
+          6049951047,
+          6049951048,
+          6049951049,
+          6049951050,
+          6049951051,
+          6049951052,
+          6049951053,
+          6049951054,
+          6049951055,
+          9428585015
+        ],
+        "tags": {
+          "highway": "service",
+          "service": "driveway",
+          "surface": "asphalt"
+        }
+      },
+      "interval_count": 17,
+      "grade_range_percent": [
+        -3.6902975995082166,
+        14.464746004879537
+      ],
+      "quality_flags": []
+    },
+    {
+      "id": "rolling-path",
+      "review_status": "source-derived; local runner review pending",
+      "segment": {
+        "id": "w575610022p0",
+        "osm_way_id": "575610022",
+        "from": "5522970856",
+        "to": "1137173761",
+        "length_m": 152.491,
+        "geometry": [
+          [
+            24.798366,
+            60.214324
+          ],
+          [
+            24.7985136,
+            60.2141883
+          ],
+          [
+            24.7985606,
+            60.2141343
+          ],
+          [
+            24.7985955,
+            60.2140603
+          ],
+          [
+            24.7986477,
+            60.2139724
+          ],
+          [
+            24.7987095,
+            60.2139011
+          ],
+          [
+            24.7987671,
+            60.2138578
+          ],
+          [
+            24.7988275,
+            60.2138211
+          ],
+          [
+            24.7989213,
+            60.2137859
+          ],
+          [
+            24.7989938,
+            60.2137925
+          ],
+          [
+            24.7990072,
+            60.2138072
+          ],
+          [
+            24.7990107,
+            60.2138177
+          ],
+          [
+            24.7990206,
+            60.2138472
+          ],
+          [
+            24.7990233,
+            60.2138725
+          ],
+          [
+            24.7990608,
+            60.2138991
+          ],
+          [
+            24.7991896,
+            60.2139378
+          ],
+          [
+            24.7992352,
+            60.2139577
+          ],
+          [
+            24.7992673,
+            60.2139844
+          ],
+          [
+            24.7992727,
+            60.2140137
+          ],
+          [
+            24.7992405,
+            60.2140683
+          ],
+          [
+            24.7992271,
+            60.2141136
+          ],
+          [
+            24.7992405,
+            60.2141456
+          ],
+          [
+            24.7992888,
+            60.2141776
+          ],
+          [
+            24.7995087,
+            60.2142415
+          ],
+          [
+            24.7996053,
+            60.2142669
+          ],
+          [
+            24.799635,
+            60.2142892
+          ],
+          [
+            24.7996487,
+            60.2143114
+          ],
+          [
+            24.7996492,
+            60.214344
+          ]
+        ],
+        "tags": {
+          "highway": "cycleway",
+          "surface": "fine_gravel",
+          "foot": "designated",
+          "bicycle": "designated",
+          "lit": "no"
+        },
+        "forward": true,
+        "backward": true,
+        "ascent_m": 4.534,
+        "descent_m": 4.433,
+        "terrain_sample_count": 30,
+        "terrain_valid_fraction": 1.0,
+        "terrain_totals_complete": true
+      },
+      "source_way": {
+        "type": "way",
+        "id": 575610022,
+        "nodes": [
+          5522970856,
+          5522970855,
+          5522970854,
+          5522970853,
+          5522970852,
+          5522970851,
+          5522970850,
+          5522970849,
+          5522970848,
+          5522970847,
+          5522970846,
+          13286734119,
+          5522970845,
+          5522970844,
+          5522970843,
+          5522970842,
+          5522970841,
+          5522970840,
+          5522970839,
+          5522970838,
+          5522970837,
+          5522970836,
+          5522970835,
+          5522970834,
+          5522970833,
+          13114192393,
+          13114192392,
+          1137173761
+        ],
+        "tags": {
+          "bicycle": "designated",
+          "check_date:lit": "2023-06-07",
+          "foot": "designated",
+          "highway": "cycleway",
+          "lit": "no",
+          "surface": "fine_gravel"
+        }
+      },
+      "interval_count": 30,
+      "grade_range_percent": [
+        -8.775764449351332,
+        7.789693068270541
+      ],
+      "quality_flags": []
+    },
+    {
+      "id": "bridge-ground-estimate",
+      "review_status": "source-derived; local runner review pending",
+      "segment": {
+        "id": "w171699102p0",
+        "osm_way_id": "171699102",
+        "from": "1826908289",
+        "to": "1826908274",
+        "length_m": 5.801,
+        "geometry": [
+          [
+            24.8040928,
+            60.2164308
+          ],
+          [
+            24.80414,
+            60.2163842
+          ]
+        ],
+        "tags": {
+          "highway": "footway",
+          "surface": "wood",
+          "bicycle": "yes",
+          "lit": "yes",
+          "bridge": "yes",
+          "layer": "1"
+        },
+        "forward": true,
+        "backward": true,
+        "ascent_m": 0.186,
+        "descent_m": 0.0,
+        "terrain_sample_count": 1,
+        "terrain_valid_fraction": 1.0,
+        "terrain_totals_complete": true
+      },
+      "source_way": {
+        "type": "way",
+        "id": 171699102,
+        "nodes": [
+          1826908289,
+          1826908274
+        ],
+        "tags": {
+          "bicycle": "yes",
+          "bridge": "yes",
+          "highway": "footway",
+          "layer": "1",
+          "lit": "yes",
+          "surface": "wood"
+        }
+      },
+      "interval_count": 1,
+      "grade_range_percent": [
+        3.2050061299349784,
+        3.2050061299349784
+      ],
+      "quality_flags": [
+        "bridge"
+      ]
+    },
+    {
+      "id": "underpass-ground-estimate",
+      "review_status": "source-derived; local runner review pending",
+      "segment": {
+        "id": "w16117809p0",
+        "osm_way_id": "16117809",
+        "from": "162567304",
+        "to": "1137650801",
+        "length_m": 9.319,
+        "geometry": [
+          [
+            24.8065384,
+            60.2147649
+          ],
+          [
+            24.806707,
+            60.2147618
+          ]
+        ],
+        "tags": {
+          "highway": "cycleway",
+          "name": "Ruusutorpanpolku",
+          "surface": "asphalt",
+          "foot": "designated",
+          "bicycle": "designated",
+          "segregated": "no",
+          "lit": "yes",
+          "tunnel": "yes"
+        },
+        "forward": true,
+        "backward": true,
+        "ascent_m": 0.0,
+        "descent_m": 0.612,
+        "terrain_sample_count": 1,
+        "terrain_valid_fraction": 1.0,
+        "terrain_totals_complete": true
+      },
+      "source_way": {
+        "type": "way",
+        "id": 16117809,
+        "nodes": [
+          162567304,
+          1137650801
+        ],
+        "tags": {
+          "bicycle": "designated",
+          "foot": "designated",
+          "highway": "cycleway",
+          "lit": "yes",
+          "maxheight": "3",
+          "name": "Ruusutorpanpolku",
+          "name:fi": "Ruusutorpanpolku",
+          "name:sv": "Rosatorpsstigen",
+          "segregated": "no",
+          "surface": "asphalt",
+          "tunnel": "yes"
+        }
+      },
+      "interval_count": 1,
+      "grade_range_percent": [
+        -6.54938228624129,
+        -6.54938228624129
+      ],
+      "quality_flags": [
+        "tunnel"
+      ]
+    },
+    {
+      "id": "stairs",
+      "review_status": "source-derived; local runner review pending",
+      "segment": {
+        "id": "w1426560342p0",
+        "osm_way_id": "1426560342",
+        "from": "13113962965",
+        "to": "13113962966",
+        "length_m": 13.926,
+        "geometry": [
+          [
+            24.802755,
+            60.21652
+          ],
+          [
+            24.8028666,
+            60.2164077
+          ]
+        ],
+        "tags": {
+          "highway": "steps"
+        },
+        "forward": true,
+        "backward": true,
+        "ascent_m": 2.05,
+        "descent_m": 0.0,
+        "terrain_sample_count": 2,
+        "terrain_valid_fraction": 1.0,
+        "terrain_totals_complete": true
+      },
+      "source_way": {
+        "type": "way",
+        "id": 1426560342,
+        "nodes": [
+          13113962965,
+          13113962966
+        ],
+        "tags": {
+          "highway": "steps"
+        }
+      },
+      "interval_count": 2,
+      "grade_range_percent": [
+        13.929009418535845,
+        15.444445117619141
+      ],
+      "quality_flags": [
+        "stairs"
+      ]
+    },
+    {
+      "id": "missing-surface",
+      "review_status": "source-derived; local runner review pending",
+      "segment": {
+        "id": "w1426560351p0",
+        "osm_way_id": "1426560351",
+        "from": "5022302820",
+        "to": "13113983217",
+        "length_m": 56.026,
+        "geometry": [
+          [
+            24.8021893,
+            60.2167314
+          ],
+          [
+            24.8022417,
+            60.2167364
+          ],
+          [
+            24.8022956,
+            60.2166205
+          ],
+          [
+            24.8022571,
+            60.2166163
+          ],
+          [
+            24.8022941,
+            60.2165428
+          ],
+          [
+            24.8023295,
+            60.2165466
+          ],
+          [
+            24.8023827,
+            60.216425
+          ],
+          [
+            24.8023156,
+            60.2164154
+          ],
+          [
+            24.8021762,
+            60.2164663
+          ]
+        ],
+        "tags": {
+          "highway": "pedestrian",
+          "area": "yes"
+        },
+        "forward": true,
+        "backward": true,
+        "ascent_m": 1.114,
+        "descent_m": 0.868,
+        "terrain_sample_count": 10,
+        "terrain_valid_fraction": 1.0,
+        "terrain_totals_complete": true
+      },
+      "source_way": {
+        "type": "way",
+        "id": 1426560351,
+        "nodes": [
+          5022302820,
+          5022303421,
+          9053515622,
+          9053515623,
+          9053515624,
+          9053515625,
+          13113983215,
+          13113983216,
+          13113983217,
+          13113983214,
+          13113983218,
+          13113983219,
+          13113983220,
+          13113983221,
+          13113983222,
+          13113983223,
+          5022302819,
+          1137173800,
+          316814027,
+          316814030,
+          316814043,
+          1826908302,
+          1826908305,
+          5022302820
+        ],
+        "tags": {
+          "area": "yes",
+          "highway": "pedestrian"
+        }
+      },
+      "interval_count": 10,
+      "grade_range_percent": [
+        -7.77893532413169,
+        10.402796133004
+      ],
+      "quality_flags": [
+        "pedestrian_area_perimeter"
+      ]
+    },
+    {
+      "id": "extreme-grade-review",
+      "review_status": "source-derived; local runner review pending",
+      "segment": {
+        "id": "w1136272384p0",
+        "osm_way_id": "1136272384",
+        "from": "10592298368",
+        "to": "13016718552",
+        "length_m": 1.198,
+        "geometry": [
+          [
+            24.8285872,
+            60.1766544
+          ],
+          [
+            24.8286074,
+            60.1766505
+          ]
+        ],
+        "tags": {
+          "highway": "footway"
+        },
+        "forward": true,
+        "backward": true,
+        "ascent_m": 0.0,
+        "descent_m": 0.762,
+        "terrain_sample_count": 1,
+        "terrain_valid_fraction": 1.0,
+        "terrain_totals_complete": true
+      },
+      "source_way": {
+        "type": "way",
+        "id": 1136272384,
+        "nodes": [
+          10592298368,
+          13016718552,
+          12279051663,
+          12279051644,
+          12279051645,
+          13016718551,
+          13016718550,
+          12279051646,
+          12279051661,
+          12279051647,
+          12279051648
+        ],
+        "tags": {
+          "highway": "footway"
+        }
+      },
+      "interval_count": 1,
+      "grade_range_percent": [
+        -63.38629315065227,
+        -63.38629315065227
+      ],
+      "quality_flags": []
+    },
+    {
+      "id": "multi-node-crossing-near-school",
+      "review_status": "event attribution pending",
+      "source_nodes": [
+        {
+          "type": "node",
+          "id": 1137173762,
+          "lat": 60.2172453,
+          "lon": 24.8027504,
+          "tags": {
+            "button_operated": "yes",
+            "crossing": "traffic_signals",
+            "highway": "crossing",
+            "traffic_signals:sound": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1137173716,
+          "lat": 60.2173122,
+          "lon": 24.8027634,
+          "tags": {
+            "button_operated": "yes",
+            "check_date:traffic_signals:sound": "2023-05-21",
+            "crossing": "traffic_signals",
+            "highway": "crossing",
+            "traffic_signals:sound": "yes"
+          }
+        }
+      ],
+      "prepared_nodes": [
+        {
+          "id": "1137173762",
+          "longitude": 24.8027504,
+          "latitude": 60.2172453,
+          "crossing": "traffic_signals",
+          "highway": "crossing"
+        },
+        {
+          "id": "1137173716",
+          "longitude": 24.8027634,
+          "latitude": 60.2173122,
+          "crossing": "traffic_signals",
+          "highway": "crossing"
+        }
+      ],
+      "incident_segments": [
+        {
+          "id": "w98279693p0",
+          "osm_way_id": "98279693",
+          "from": "1137173772",
+          "to": "1137173762",
+          "length_m": 7.094,
+          "geometry": [
+            [
+              24.802738,
+              60.2171818
+            ],
+            [
+              24.8027504,
+              60.2172453
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "yes",
+            "segregated": "no",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.0,
+          "descent_m": 0.206,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        },
+        {
+          "id": "w98279693p1",
+          "osm_way_id": "98279693",
+          "from": "1137173762",
+          "to": "1137173716",
+          "length_m": 7.474,
+          "geometry": [
+            [
+              24.8027504,
+              60.2172453
+            ],
+            [
+              24.8027634,
+              60.2173122
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "yes",
+            "segregated": "no",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.0,
+          "descent_m": 0.004,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        },
+        {
+          "id": "w98279693p2",
+          "osm_way_id": "98279693",
+          "from": "1137173716",
+          "to": "1137173814",
+          "length_m": 6.325,
+          "geometry": [
+            [
+              24.8027634,
+              60.2173122
+            ],
+            [
+              24.8027748,
+              60.2173688
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "yes",
+            "segregated": "no",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.205,
+          "descent_m": 0.0,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        }
+      ]
+    },
+    {
+      "id": "crossing-with-road-and-path-branches",
+      "review_status": "event attribution pending",
+      "source_nodes": [
+        {
+          "type": "node",
+          "id": 38461548,
+          "lat": 60.2169458,
+          "lon": 24.809202,
+          "tags": {
+            "button_operated": "no",
+            "crossing": "traffic_signals",
+            "crossing:island": "no",
+            "highway": "crossing",
+            "traffic_signals:sound": "yes",
+            "traffic_signals:vibration": "no"
+          }
+        }
+      ],
+      "prepared_nodes": [
+        {
+          "id": "38461548",
+          "longitude": 24.809202,
+          "latitude": 60.2169458,
+          "crossing": "traffic_signals",
+          "highway": "crossing"
+        }
+      ],
+      "incident_segments": [
+        {
+          "id": "w33790904p32",
+          "osm_way_id": "33790904",
+          "from": "1137650550",
+          "to": "38461548",
+          "length_m": 9.812,
+          "geometry": [
+            [
+              24.8090262,
+              60.2169585
+            ],
+            [
+              24.809202,
+              60.2169458
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "designated",
+            "bicycle": "designated",
+            "segregated": "no",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.0,
+          "descent_m": 0.071,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        },
+        {
+          "id": "w33790904p33",
+          "osm_way_id": "33790904",
+          "from": "38461548",
+          "to": "1826908327",
+          "length_m": 10.42,
+          "geometry": [
+            [
+              24.809202,
+              60.2169458
+            ],
+            [
+              24.8093903,
+              60.2169401
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "designated",
+            "bicycle": "designated",
+            "segregated": "no",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.128,
+          "descent_m": 0.0,
+          "terrain_sample_count": 2,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        },
+        {
+          "id": "w784595991p0",
+          "osm_way_id": "784595991",
+          "from": "1137181612",
+          "to": "38461548",
+          "length_m": 7.901,
+          "geometry": [
+            [
+              24.8092214,
+              60.2170162
+            ],
+            [
+              24.809202,
+              60.2169458
+            ]
+          ],
+          "tags": {
+            "highway": "residential",
+            "name": "Numersinkatu",
+            "surface": "asphalt",
+            "bicycle": "use_sidepath",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.057,
+          "descent_m": 0.0,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        },
+        {
+          "id": "w784595991p1",
+          "osm_way_id": "784595991",
+          "from": "38461548",
+          "to": "61686992",
+          "length_m": 45.846,
+          "geometry": [
+            [
+              24.809202,
+              60.2169458
+            ],
+            [
+              24.8090895,
+              60.2165373
+            ]
+          ],
+          "tags": {
+            "highway": "residential",
+            "name": "Numersinkatu",
+            "surface": "asphalt",
+            "bicycle": "use_sidepath",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.425,
+          "descent_m": 0.0,
+          "terrain_sample_count": 5,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        }
+      ]
+    },
+    {
+      "id": "modern-signal-tag-6581850952",
+      "source_nodes": [
+        {
+          "type": "node",
+          "id": 6581850952,
+          "lat": 60.2126795,
+          "lon": 24.8110282,
+          "tags": {
+            "button_operated": "yes",
+            "crossing:island": "no",
+            "crossing:signals": "yes",
+            "highway": "crossing",
+            "traffic_signals:sound": "yes"
+          }
+        }
+      ],
+      "prepared_nodes": [
+        {
+          "id": "6581850952",
+          "longitude": 24.8110282,
+          "latitude": 60.2126795,
+          "highway": "crossing"
+        }
+      ],
+      "incident_segments": [
+        {
+          "id": "w186043459p1",
+          "osm_way_id": "186043459",
+          "from": "1967393318",
+          "to": "6581850952",
+          "length_m": 1.513,
+          "geometry": [
+            [
+              24.8110092,
+              60.2126697
+            ],
+            [
+              24.8110282,
+              60.2126795
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "yes",
+            "segregated": "no",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.0,
+          "descent_m": 0.005,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        },
+        {
+          "id": "w186043459p2",
+          "osm_way_id": "186043459",
+          "from": "6581850952",
+          "to": "9447903434",
+          "length_m": 1.501,
+          "geometry": [
+            [
+              24.8110282,
+              60.2126795
+            ],
+            [
+              24.8110471,
+              60.2126892
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "yes",
+            "segregated": "no",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.001,
+          "descent_m": 0.0,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        }
+      ]
+    },
+    {
+      "id": "modern-signal-tag-7748153291",
+      "source_nodes": [
+        {
+          "type": "node",
+          "id": 7748153291,
+          "lat": 60.2137176,
+          "lon": 24.8101982,
+          "tags": {
+            "crossing:signals": "yes",
+            "railway": "tram_crossing"
+          }
+        }
+      ],
+      "prepared_nodes": [
+        {
+          "id": "7748153291",
+          "longitude": 24.8101982,
+          "latitude": 60.2137176
+        }
+      ],
+      "incident_segments": [
+        {
+          "id": "w33924346p0",
+          "osm_way_id": "33924346",
+          "from": "8366711312",
+          "to": "7748153291",
+          "length_m": 6.199,
+          "geometry": [
+            [
+              24.8100983,
+              60.213743
+            ],
+            [
+              24.8101982,
+              60.2137176
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "designated",
+            "bicycle": "designated",
+            "segregated": "yes",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.0,
+          "descent_m": 0.103,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        },
+        {
+          "id": "w33924346p1",
+          "osm_way_id": "33924346",
+          "from": "7748153291",
+          "to": "7748153292",
+          "length_m": 3.117,
+          "geometry": [
+            [
+              24.8101982,
+              60.2137176
+            ],
+            [
+              24.8102485,
+              60.2137049
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "designated",
+            "bicycle": "designated",
+            "segregated": "yes",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.0,
+          "descent_m": 0.034,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        }
+      ]
+    },
+    {
+      "id": "modern-signal-tag-7748153292",
+      "source_nodes": [
+        {
+          "type": "node",
+          "id": 7748153292,
+          "lat": 60.2137049,
+          "lon": 24.8102485,
+          "tags": {
+            "crossing:signals": "yes",
+            "railway": "tram_crossing"
+          }
+        }
+      ],
+      "prepared_nodes": [
+        {
+          "id": "7748153292",
+          "longitude": 24.8102485,
+          "latitude": 60.2137049
+        }
+      ],
+      "incident_segments": [
+        {
+          "id": "w33924346p1",
+          "osm_way_id": "33924346",
+          "from": "7748153291",
+          "to": "7748153292",
+          "length_m": 3.117,
+          "geometry": [
+            [
+              24.8101982,
+              60.2137176
+            ],
+            [
+              24.8102485,
+              60.2137049
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "designated",
+            "bicycle": "designated",
+            "segregated": "yes",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.0,
+          "descent_m": 0.034,
+          "terrain_sample_count": 1,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        },
+        {
+          "id": "w33924346p2",
+          "osm_way_id": "33924346",
+          "from": "7748153292",
+          "to": "1936040765",
+          "length_m": 10.82,
+          "geometry": [
+            [
+              24.8102485,
+              60.2137049
+            ],
+            [
+              24.8104229,
+              60.2136606
+            ]
+          ],
+          "tags": {
+            "highway": "cycleway",
+            "surface": "asphalt",
+            "foot": "designated",
+            "bicycle": "designated",
+            "segregated": "yes",
+            "lit": "yes"
+          },
+          "forward": true,
+          "backward": true,
+          "ascent_m": 0.0,
+          "descent_m": 0.073,
+          "terrain_sample_count": 2,
+          "terrain_valid_fraction": 1.0,
+          "terrain_totals_complete": true
+        }
+      ]
+    }
+  ],
+  "fixture_gaps": [
+    "missing terrain (none in current sample; synthetic fixture required)",
+    "avoidable/unavoidable signal routes and endpoint passage semantics",
+    "road crossing versus parallel exposure with complete road context",
+    "park, wood, private green land and green/road conflict with polygon context",
+    "buffer boundary coverage"
+  ]
+}

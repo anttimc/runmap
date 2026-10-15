@@ -1,91 +1,24 @@
 """Distance-based two-leg runs over the prepared pedestrian network."""
 
 from collections import ChainMap, Counter
-from dataclasses import dataclass, replace
+from dataclasses import replace
+from functools import partial
 import math
 from time import monotonic
 from typing import Literal
 from collections.abc import Callable
 
-from rasterio.warp import transform
-
 from runmap.paths.exploration import Snap, legal_directions, segment_reason
-from runmap.routing.fields import Point, integrate_fields
+from runmap.routing.cost_preparation import build_request_cost_data, penalty_strengths, validate_settings
+from runmap.routing.cost_types import LegCostContext, RequestCostCache
+from runmap.routing.costs import arc_cost
+from runmap.routing.deadlines import check_deadline
+from runmap.routing.geometry import projected_points, slice_geometry
+from runmap.routing.run_types import (
+    PhysicalPart, RunCandidate, RunOverlay, RunResult, RunSettings,
+)
 from runmap.routing.search import GraphData, PathResult, arc_usable, shortest_path
-from runmap.routing.types import Arc, Coordinate, Node, Segment
-
-
-@dataclass(frozen=True)
-class RunSettings:
-    avoidance_ratio: float = 0.18
-    centre_enabled: bool = True
-    radius_ratio: float = 0.15
-    transition_ratio: float = 0.05
-    side_strength: float = 2.0
-    reuse_strength: float = 4.0
-
-
-@dataclass(frozen=True)
-class PhysicalPart:
-    segment_id: str
-    start_m: float
-    end_m: float
-
-
-@dataclass(frozen=True)
-class RunOverlay:
-    graph: GraphData
-    home: str
-    turnaround: str
-    parts: dict[str, PhysicalPart]
-
-
-@dataclass(frozen=True)
-class RunCandidate:
-    outbound_left: bool
-    outbound: PathResult
-    returning: PathResult
-    distance_m: float
-    repeated_distance_m: float
-
-
-@dataclass(frozen=True)
-class RunResult:
-    overlay: RunOverlay
-    candidates: tuple[RunCandidate, ...]
-    outcomes: tuple[Literal["complete", "unreachable", "deadline"], ...]
-    elapsed_s: float
-
-
-def check_deadline(deadline: float | None) -> None:
-    if deadline is not None and monotonic() >= deadline:
-        raise TimeoutError("Run planning exceeded its deadline")
-
-
-def projected_points(geometry: list[Coordinate]) -> list[Point]:
-    xs, ys = transform("EPSG:4326", "EPSG:3067", *zip(*geometry))
-    return list(zip(xs, ys))
-
-
-def slice_geometry(geometry: list[Coordinate], start: float, end: float) -> list[Coordinate]:
-    """Slice using projected chainage, retaining bends between the cut points."""
-    points = projected_points(geometry)
-    lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]
-    result: list[Point] = []
-    offset = 0.0
-    for first, second, length in zip(points, points[1:], lengths):
-        if length and offset + length >= start and offset <= end:
-            for cut in (max(start, offset), min(end, offset + length)):
-                fraction = (cut - offset) / length
-                point = (first[0] + fraction * (second[0] - first[0]),
-                         first[1] + fraction * (second[1] - first[1]))
-                if not result or point != result[-1]:
-                    result.append(point)
-        offset += length
-    if len(result) < 2:
-        raise ValueError("Endpoint chainage does not span a valid path portion")
-    xs, ys = transform("EPSG:3067", "EPSG:4326", *zip(*result))
-    return [[x, y] for x, y in zip(xs, ys)]
+from runmap.routing.types import Arc, Node, Segment
 
 
 def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
@@ -154,19 +87,6 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
     return RunOverlay(graph, endpoints["home"], endpoints["turnaround"], parts)
 
 
-def validate_settings(settings: RunSettings) -> None:
-    values = (settings.avoidance_ratio, settings.radius_ratio, settings.transition_ratio,
-              settings.side_strength, settings.reuse_strength)
-    if any(not math.isfinite(value) for value in values):
-        raise ValueError("Run settings must be finite")
-    if not (0 <= settings.avoidance_ratio <= 1 and 0.02 <= settings.radius_ratio <= 1
-            and 0.005 <= settings.transition_ratio <= 1
-            and 0 <= settings.side_strength <= 100 and 0 <= settings.reuse_strength <= 100):
-        raise ValueError("Run settings exceed supported ranges")
-    if settings.avoidance_ratio / settings.radius_ratio > 5:
-        raise ValueError("Avoidance distance must not exceed five Gaussian scales")
-
-
 def distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[str, str], float]:
     """Calibrate a geometric lower bound against every directed base length."""
     identifiers = list(graph.nodes)
@@ -187,16 +107,6 @@ def distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[st
     return estimate
 
 
-def penalty_strengths(settings: RunSettings) -> tuple[float, float, float]:
-    """Ease all preferences in together, reaching full strength at 18 percent."""
-    validate_settings(settings)
-    fraction = min(1.0, settings.avoidance_ratio / 0.18)
-    ramp = fraction * fraction * (3 - 2 * fraction)
-    centre = ramp * math.exp((settings.avoidance_ratio / settings.radius_ratio) ** 2 / 2)
-    return (centre if settings.centre_enabled else 0.0,
-            ramp * settings.side_strength, ramp * settings.reuse_strength)
-
-
 def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettings,
              deadline: float | None = None) -> RunResult:
     """Construct both side assignments, retaining completed runs on deadline expiry."""
@@ -205,39 +115,17 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
     overlay = endpoint_overlay(index, home, turnaround, deadline)
     graph = overlay.graph
     heuristic = distance_heuristic(graph, deadline)
-    home_point, destination = projected_points([[home.longitude, home.latitude],
-                                                [turnaround.longitude, turnaround.latitude]])
-    separation = math.dist(home_point, destination)
-    if separation < 0.01:
-        raise ValueError("Home and turnaround must be spatially distinct")
-    out_and_back = settings.avoidance_ratio == 0
-    strength, side_strength, reuse_strength = penalty_strengths(settings)
-    fields: dict[str, tuple[float, float, float]] = {}
-
-    def cost(arc: Arc, right: bool, used: frozenset[str]) -> float:
-        check_deadline(deadline)
-        if out_and_back:
-            return arc["length_m"]
-        segment_id = arc["segment_id"]
-        if segment_id not in fields:
-            points = projected_points(graph.segments[segment_id]["geometry"])
-            fields[segment_id] = integrate_fields(points, home_point, destination,
-                                                  separation * settings.radius_ratio,
-                                                  separation * settings.transition_ratio,
-                                                  min(5.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4),
-                                                  deadline)
-            check_deadline(deadline)
-        radial, right_integral, projected_length = fields[segment_id]
-        side = right_integral if right else projected_length - right_integral
-        return (arc["length_m"] + strength * radial + side_strength * max(0.0, side)
-                + reuse_strength * arc["length_m"] * (segment_id in used))
+    cost_data = build_request_cost_data(graph, home, turnaround, settings)
+    cost_cache = RequestCostCache()
+    out_and_back = cost_data.distance_only
 
     candidates: list[RunCandidate] = []
     outcomes: list[Literal["complete", "unreachable", "deadline"]] = []
     for left in ((True,) if out_and_back else (True, False)):
         try:
             outbound = shortest_path(graph, overlay.home, overlay.turnaround,
-                                     arc_cost=lambda arc: cost(arc, left, frozenset()),
+                                     arc_cost=partial(arc_cost, data=cost_data, cache=cost_cache,
+                                                      leg=LegCostContext(left), deadline=deadline),
                                      heuristic=heuristic, deadline=deadline)
             if outbound is None:
                 outcomes.append("unreachable")
@@ -246,7 +134,8 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
             returning = reverse_path(graph, outbound) if out_and_back else None
             if returning is None:
                 returning = shortest_path(graph, overlay.turnaround, overlay.home,
-                                      arc_cost=lambda arc: cost(arc, not left, used),
+                                      arc_cost=partial(arc_cost, data=cost_data, cache=cost_cache,
+                                                       leg=LegCostContext(not left, used), deadline=deadline),
                                       heuristic=heuristic, deadline=deadline)
             if returning is None:
                 outcomes.append("unreachable")

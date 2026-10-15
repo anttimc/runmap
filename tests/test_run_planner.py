@@ -8,6 +8,9 @@ from collections.abc import Callable
 
 from test_routing import graph_document
 from runmap.paths.exploration import Snap
+from runmap.routing.cost_preparation import build_request_cost_data
+from runmap.routing.cost_types import LegCostContext, RequestCostCache
+from runmap.routing.costs import arc_cost
 from runmap.routing.fields import integrate_fields
 from runmap.routing.run_planner import (RunSettings, endpoint_overlay, plan_run,
                                         projected_points, validate_settings, penalty_strengths)
@@ -139,3 +142,41 @@ class RunPlannerTests(unittest.TestCase):
         second = integrate_fields([(33, 6.6), (100, 20)], (0, 0), (100, 0), 15, 5, .1)
         for total, a, b in zip(whole, first, second):
             self.assertAlmostEqual(total, a + b, places=4)
+
+    def test_shape_integrations_shared_across_candidates_but_not_requests(self) -> None:
+        home, turnaround = self.snap("ab", .2), self.snap("bc", .5)
+        with patch("runmap.routing.cost_preparation.integrate_fields", wraps=integrate_fields) as integrate:
+            result = plan_run(self.index, home, turnaround, RunSettings())
+            self.assertEqual(result.outcomes, ("complete", "complete"))
+            geometries = [tuple(call.args[0]) for call in integrate.call_args_list]
+            self.assertGreater(len(geometries), 0)
+            self.assertEqual(len(geometries), len(set(geometries)))
+            first_count = integrate.call_count
+            plan_run(self.index, home, turnaround, RunSettings())
+            self.assertEqual(integrate.call_count, 2 * first_count)
+
+    def test_leg_contexts_share_features_without_leaking_side_or_reuse(self) -> None:
+        overlay = endpoint_overlay(self.index, self.snap("ab", .2), self.snap("ab", .8))
+        data = build_request_cost_data(overlay.graph, self.snap("ab", .2),
+                                       self.snap("ab", .8), RunSettings())
+        cache = RequestCostCache()
+        arc = overlay.graph.arcs[overlay.graph.outgoing[overlay.home][0]]
+        unused = LegCostContext(True)
+        baseline = arc_cost(arc, data=data, cache=cache, leg=unused, deadline=None)
+        returning = LegCostContext(False, frozenset({arc["segment_id"]}))
+        reused = arc_cost(arc, data=data, cache=cache, leg=returning, deadline=None)
+        self.assertGreater(reused, baseline)
+        self.assertEqual(arc_cost(arc, data=data, cache=cache, leg=unused, deadline=None), baseline)
+        # A different piece of the same original physical segment is not reuse.
+        other_part = next(part for part in overlay.parts if part != arc["segment_id"])
+        disjoint = LegCostContext(True, frozenset({other_part}))
+        self.assertEqual(arc_cost(arc, data=data, cache=cache, leg=disjoint, deadline=None), baseline)
+        with self.assertRaises(TimeoutError):
+            arc_cost(arc, data=data, cache=cache, leg=unused, deadline=monotonic() - 1)
+
+    def test_zero_width_skips_shape_preparation(self) -> None:
+        with patch("runmap.routing.cost_preparation.integrate_fields",
+                   side_effect=AssertionError("Zero-width run must not integrate shape fields")):
+            result = plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5),
+                              RunSettings(avoidance_ratio=0))
+        self.assertEqual(result.outcomes, ("complete",))

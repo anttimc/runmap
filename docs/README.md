@@ -19,6 +19,8 @@ Numbered filenames are stable references, not a chronological task queue.
 - [First UI-driven run planner](27-first-routing-ui.md)
 - [Planner UI and settings improvements](28-planner-ui-and-settings.md)
 - [Run routing preferences](29-routing-preferences.md)
+- [Routing preference data audit](30-routing-preferences-audit.md)
+- [Modular routing cost architecture](31-routing-cost-architecture.md)
 
 ## Working system and experiments
 
