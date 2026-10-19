@@ -21,6 +21,7 @@ from runmap.routing.cost_types import (
     PreferenceWeightTables, ResolvedPreferences, ShapeStrengths,
 )
 from runmap.routing.search import route_coordinates
+from runmap.routing.hill_types import HillModel
 
 RUN_SLOTS = BoundedSemaphore(2)
 
@@ -57,6 +58,7 @@ class CostConfigurationResponse(BaseModel):
     shape_strengths: ShapeStrengths
     preferences: ResolvedPreferences
     capabilities: PreferenceCapabilities
+    hill_model: HillModel | None = None
 
 
 class PlannerConfiguration(BaseModel):
@@ -68,6 +70,7 @@ class PlannerConfiguration(BaseModel):
     preference_capabilities: PreferenceCapabilities = Field(default_factory=preference_capabilities)
     preference_weight_tables: PreferenceWeightTables = Field(default_factory=PreferenceWeightTables)
     deadline_s: float
+    hill_model: HillModel | None = None
 
 
 class RunRequest(BaseModel):
@@ -139,7 +142,8 @@ def _generate_run(data: PathData, options: RunRequest, deadline: float) -> RunRe
     preferences = PreferenceSettings(**options.preferences.model_dump())
     cost_model = CostConfigurationResponse(
         shape_settings=options.settings, shape_strengths=resolve_shape_strengths(settings),
-        preferences=resolve_preferences(preferences), capabilities=preference_capabilities(),
+        preferences=resolve_preferences(preferences, hills=data.hills), capabilities=preference_capabilities(data.hills),
+        hill_model=data.hills.model if data.hills else None,
     )
     index = path_policy_index(data, options.surface, options.avoid_stairs)
     home, _ = snap_candidates(data, index, options.home.longitude, options.home.latitude,
@@ -151,7 +155,7 @@ def _generate_run(data: PathData, options: RunRequest, deadline: float) -> RunRe
     if home is None or turnaround is None:
         return response
     try:
-        result = plan_run(index, home, turnaround, settings, deadline, preferences=preferences)
+        result = plan_run(index, home, turnaround, settings, deadline, preferences=preferences, hills=data.hills)
     except TimeoutError:
         return response.model_copy(update={"status": "deadline", "elapsed_s": monotonic() - started})
     graph = result.overlay.graph
@@ -160,9 +164,10 @@ def _generate_run(data: PathData, options: RunRequest, deadline: float) -> RunRe
     for candidate in result.candidates:
         legs = [LegResponse(coordinates=[list(p) for p in route_coordinates(graph, leg.arc_ids)],
                             distance_m=sum(graph.arcs[a]["length_m"] for a in leg.arc_ids),
-                            cost=leg.cost, expanded_nodes=leg.expanded_nodes, cost_breakdown=costs)
-                for leg, costs in ((candidate.outbound, candidate.outbound_costs),
-                                   (candidate.returning, candidate.returning_costs))]
+                            cost=leg.cost, expanded_nodes=leg.expanded_nodes, cost_breakdown=costs,
+                            observations=observations)
+                for leg, costs, observations in ((candidate.outbound, candidate.outbound_costs, candidate.outbound_observations),
+                                                 (candidate.returning, candidate.returning_costs, candidate.returning_observations))]
         points = projected_points(legs[0].coordinates + legs[1].coordinates[1:])
         line = LineString(points)
         simple = line.is_simple and line.is_ring

@@ -94,7 +94,7 @@ class RunApiTests(unittest.TestCase):
         with patch("runmap.api.runs.snap_candidates", side_effect=AssertionError):
             with self.assertRaisesRegex(ValueError, "Unsupported signals"):
                 generate_run(self.data, options)
-        for preferences in ({"hills": "maximum"}, {"unknown": "low"}):
+        for preferences in ({"hills": "maximum"}, {"hills": "medium"}, {"unknown": "low"}):
             with self.assertRaises(ValidationError):
                 RunRequest.model_validate({**self.options.model_dump(), "preferences": preferences})
 
@@ -105,9 +105,25 @@ class RunApiTests(unittest.TestCase):
         self.assertEqual(implicit.cost_model, explicit.cost_model)
 
     def test_route_returns_http_400_for_unsupported_preference(self) -> None:
-        options = self.options.model_copy(update={"preferences": PreferencesRequest(hills="low")})
+        options = self.options.model_copy(update={"preferences": PreferencesRequest(signals="low")})
         with patch("runmap.api.app._path_data", return_value=self.data):
             with self.assertRaises(HTTPException) as error:
                 run_route(Request({"type": "http"}), options)
         self.assertEqual(error.exception.status_code, 400)
-        self.assertIn("Unsupported hills", error.exception.detail)
+        self.assertIn("Unsupported signals", error.exception.detail)
+
+    def test_hill_preferences_report_uncertainty_and_preserve_zero_width(self) -> None:
+        options = RunRequest.model_validate({**self.options.model_dump(),
+                                             "preferences": {"hills": "high"},
+                                             "settings": {"avoidance_ratio": 0}})
+        result = generate_run(self.data, options)
+        self.assertEqual(result.status, "complete")
+        self.assertEqual(len(result.candidates), 1)
+        self.assertEqual(result.cost_model.preferences.weights.hills, 6.0)
+        self.assertEqual(result.cost_model.capabilities.hills.supported_levels, ("off", "low", "high"))
+        for leg in (result.candidates[0].outbound, result.candidates[0].returning):
+            self.assertGreater(leg.cost_breakdown.hills, 0)
+            self.assertEqual((leg.cost_breakdown.centre, leg.cost_breakdown.side, leg.cost_breakdown.reuse), (0, 0, 0))
+            self.assertGreater(leg.observations.terrain_fallback_distance_m, 0)
+            self.assertLess(leg.observations.terrain_trusted_fraction, 1)
+            self.assertAlmostEqual(leg.cost, leg.cost_breakdown.total)

@@ -1,6 +1,6 @@
 # Modular routing cost architecture
 
-Status: steps 1–2 implemented, 2026-10-15; preference algorithms
+Status: steps 1–3 implemented, 2026-10-15; signal and environmental preference algorithms
 remain planned. Refines the cost-composition
 slice of [routing preferences](29-routing-preferences.md), using the
 [data audit](30-routing-preferences-audit.md). This document specifies the
@@ -34,7 +34,7 @@ states, distances, repeated distances, and overlay geometry match exactly.
 
 ## Step 2 implementation
 
-`cost_settings` now resolves typed Off / Low / Medium / High settings through
+`cost_settings` now resolves typed Off / Low / High settings through
 separately versioned preference weight tables and explicit capability records.
 All tables currently define Off = 0; other weights remain null until calibrated.
 All four capabilities currently support only Off, with a reason and null feature
@@ -90,6 +90,19 @@ expansion counts, and 5,273.998 m distance. Planning took 0.359 s with the saved
 original implementation and 0.378 s with the new contracts/diagnostics, excluding
 dataset loading. This single observation is not a latency guarantee.
 
+## Step 3 implementation
+
+[Hill avoidance](32-hill-routing.md) now prepares signed interval responses from
+the existing terrain artifact and advertises Low / High on supported
+datasets. The current model uses Minetti et al.'s fifth-order running energy fit,
+normalized to its flat value, with a convex uphill adjustment favoring gentler
+climbs and no saturation cap. The hill model, weight calibration, coverage/fallback observations,
+directed request cache, and UI checks are documented there. Zero width now means
+shape penalties are disabled; the internal flag is `shape_disabled`. Hill costs
+stay active and return paths are searched independently. Signals and environmental
+preferences still support only Off. Current verification is recorded in the hill
+document; local runner acceptance remains pending.
+
 ## Current closure and intended separation
 
 Before extraction, `plan_run` defined `cost(arc, right, used)` inside the request. It
@@ -141,7 +154,7 @@ preference levels. Do not use `Any` or broad arbitrary cost-term dictionaries.
 
 | Record | Contents | Lifetime |
 | --- | --- | --- |
-| `PreferenceSettings` | Off / Low / Medium / High for supported preferences | User request |
+| `PreferenceSettings` | Off / Low / High for supported preferences | User request |
 | `CostWeights` | Resolved nonnegative per-preference weights and model version; explicit shape strengths | User request |
 | `TraversalRef` | Original physical segment ID, graph start/end chainage, and traversal direction | Endpoint overlay |
 | `PreparedPreferenceFeatures` | Versioned, chainage-aware terrain/context features and coverage, independent of selected weights | Prepared dataset |
@@ -313,7 +326,7 @@ optimization of complete outings.
    All-Off preserves baseline results and supports existing prepared artifacts.
    Do not add enabled controls for unimplemented features.
 3. **Deliver hills.** Integrate signed interval features, apply the audit's
-   bounded/uncertain-terrain policy, add independent preference costs, and change
+   measurement validation and uncertain-terrain policy, add independent preference costs, and change
    zero-width return handling. Calibrate the level table on recorded local cases.
 4. **Extend with audited signal/context features.** Reuse the composition and
    diagnostic contracts. Introduce stateful transitions only if passage modelling

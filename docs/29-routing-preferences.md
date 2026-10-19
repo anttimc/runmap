@@ -1,7 +1,7 @@
 # Run routing preferences
 
-Status: existing-data audit and preference cost contracts implemented, 2026-10-15;
-preference routing algorithms remain planned. Extends the distance-based
+Status: existing-data audit, preference cost contracts, and hill avoidance implemented,
+2026-10-15; other preference algorithms remain planned. Extends the distance-based
 [first run planner](27-first-routing-ui.md), using the controls described in the
 [UI and settings plan](28-planner-ui-and-settings.md).
 
@@ -14,8 +14,9 @@ Context fixtures and local runner validation remain open parts of the audit.
 The [cost architecture plan](31-routing-cost-architecture.md) specifies the next
 increments. Shape-cost extraction, explicit request data/cache, typed preference
 settings, capability validation, traversal references, and per-leg diagnostics
-are implemented. All four preferences currently support only Off; the next
-algorithm increment is hill avoidance.
+are implemented. [Hill avoidance](32-hill-routing.md) now supports all four levels
+on datasets with prepared terrain. Traffic lights and environmental preferences
+still support only Off; their data/attribution gates remain open.
 
 ## Outcome
 
@@ -24,9 +25,9 @@ less exposure to busy roads, and more green surroundings. Preserve fast,
 reproducible, valid routes and report understandable tradeoffs. Seek useful
 routes, not a globally optimal pair or an exhaustive Pareto frontier.
 
-The current planner uses distance plus centre, side, and reuse penalties. It
-does not yet optimize hills, traffic lights, road exposure, greenery, or running
-time. New preferences remain independent of the loop-shape control.
+The current planner uses distance plus centre, side, reuse, and optional hill
+penalties. It does not yet optimize traffic lights, road exposure, greenery, or
+running time. Hill avoidance remains independent of the loop-shape control.
 
 ## Cost model and constraints
 
@@ -78,11 +79,14 @@ signals, flat ground, quiet roads, or confirmed greenery.
 
 ### Hills
 
-Integrate a nonnegative grade-dependent penalty along measured intervals. Use
-signed grade in traversal direction, with separate uphill and downhill response
-functions; reverse traversal must reverse the grade. Start with simple bounded
-piecewise functions and documented calibration examples. Avoid classifying
-missing terrain as flat or deriving a path cost from only its mean grade.
+Integrate the nonnegative running energy fit from Minetti et al. (2002), Figure 1,
+along measured intervals, with an application adjustment that softens uphill
+excess below 5% and increasingly penalizes steeper climbs. Use signed grade in traversal direction; reverse
+traversal must reverse the grade. Moderate descents cost less than flat ground;
+steep climbs and descents remain distinct without a penalty cap. The formula,
+source, preset scaling, and policy outside the fitted range are documented in
+[hill routing](32-hill-routing.md). Avoid classifying missing terrain as flat or
+deriving a path cost from only its mean grade.
 
 Report estimated ascent/descent and valid-terrain coverage separately from the
 penalty. Treat bridge/tunnel ground estimates as uncertain. Decide an explicit
@@ -168,7 +172,7 @@ the preferred return explicitly. This matters for directional hill costs.
 
 ## UI and diagnostics contract
 
-Expose Off / Low / Medium / High per preference. Define separate versioned
+Expose Off / Low / High per preference. Define separate versioned
 weight tables, starting with Off as the backward-compatible default. Tune Low
 to make modest changes and High to accept larger detours; define examples and
 detour observations rather than promising fixed detour bounds.

@@ -14,7 +14,8 @@ from runmap.routing.cost_preparation import (
 )
 from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
 from runmap.routing.cost_settings import resolve_preferences
-from runmap.routing.costs import arc_cost, path_cost_breakdown
+from runmap.routing.costs import arc_cost, path_cost_breakdown, path_observations
+from runmap.routing.hill_types import HillData
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points, slice_geometry
 from runmap.routing.run_types import (
@@ -112,22 +113,25 @@ def distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[st
 
 def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettings,
              deadline: float | None = None, *,
-             preferences: PreferenceSettings = PreferenceSettings()) -> RunResult:
+             preferences: PreferenceSettings = PreferenceSettings(),
+             hills: HillData | None = None) -> RunResult:
     """Construct both side assignments, retaining completed runs on deadline expiry."""
     started = monotonic()
     validate_settings(settings)
-    resolve_preferences(preferences)
+    resolved = resolve_preferences(preferences, hills=hills)
+    if resolved.weights.hills and hills is not None and hills.graph is not index.document:
+        raise ValueError("Hill features belong to a different prepared graph")
     overlay = endpoint_overlay(index, home, turnaround, deadline)
     graph = overlay.graph
     heuristic = distance_heuristic(graph, deadline)
     cost_data = build_request_cost_data(graph, home, turnaround, settings,
-                                       parts=overlay.parts, preferences=preferences)
+                                       parts=overlay.parts, preferences=preferences, hills=hills)
     cost_cache = RequestCostCache()
-    out_and_back = cost_data.distance_only
+    zero_width = cost_data.shape_disabled
 
     candidates: list[RunCandidate] = []
     outcomes: list[Literal["complete", "unreachable", "deadline"]] = []
-    for left in ((True,) if out_and_back else (True, False)):
+    for left in ((True,) if zero_width else (True, False)):
         try:
             outbound_context = LegCostContext(left)
             outbound = shortest_path(graph, overlay.home, overlay.turnaround,
@@ -139,7 +143,7 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
                 continue
             used = frozenset(graph.arcs[a]["segment_id"] for a in outbound.arc_ids)
             return_context = LegCostContext(not left, used)
-            returning = reverse_path(graph, outbound) if out_and_back else None
+            returning = reverse_path(graph, outbound) if zero_width and cost_data.hills is None else None
             if returning is None:
                 returning = shortest_path(graph, overlay.turnaround, overlay.home,
                                       arc_cost=partial(arc_cost, data=cost_data, cache=cost_cache,
@@ -157,6 +161,8 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
                 path_cost_breakdown(returning.arc_ids, cost_data, cost_cache, return_context),
                 tuple(resolve_traversal(cost_data, graph.arcs[a]) for a in outbound.arc_ids),
                 tuple(resolve_traversal(cost_data, graph.arcs[a]) for a in returning.arc_ids),
+                path_observations(outbound.arc_ids, cost_data, cost_cache),
+                path_observations(returning.arc_ids, cost_data, cost_cache),
             ))
             outcomes.append("complete")
         except TimeoutError:

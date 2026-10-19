@@ -8,6 +8,8 @@ from runmap.routing.cost_types import (
     PhysicalPart, PreferenceSettings, RequestCostCache, RequestCostData, ShapeFeatures,
     ShapeStrengths, TraversalRef,
 )
+from runmap.routing.hill_types import HillData, HillFeatures
+from runmap.routing.hills import traversal_hills
 from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.fields import integrate_fields
@@ -50,19 +52,23 @@ def penalty_strengths(settings: RunSettings) -> tuple[float, float, float]:
 def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
                             settings: RunSettings, *,
                             parts: Mapping[str, PhysicalPart] | None = None,
-                            preferences: PreferenceSettings = PreferenceSettings()) -> RequestCostData:
+                            preferences: PreferenceSettings = PreferenceSettings(),
+                            hills: HillData | None = None) -> RequestCostData:
     home_point, destination = projected_points([[home.longitude, home.latitude],
                                                 [turnaround.longitude, turnaround.latitude]])
     separation = math.dist(home_point, destination)
     if separation < 0.01:
         raise ValueError("Home and turnaround must be spatially distinct")
     strengths = resolve_shape_strengths(settings)
+    resolved = resolve_preferences(preferences, hills=hills)
+    if resolved.weights.hills and hills is not None and hills.graph is not graph.document:
+        raise ValueError("Hill features belong to a different prepared graph")
     return RequestCostData(
         graph, home_point, destination, separation * settings.radius_ratio,
         separation * settings.transition_ratio,
         min(5.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4),
         strengths, settings.avoidance_ratio == 0, parts if parts is not None else {},
-        resolve_preferences(preferences),
+        resolved, hills if resolved.weights.hills else None,
     )
 
 
@@ -88,3 +94,12 @@ def ensure_arc_features(data: RequestCostData, cache: RequestCostCache,
         ))
         check_deadline(deadline)
     return cache.shape_fields[segment_id]
+
+
+def ensure_hill_features(data: RequestCostData, cache: RequestCostCache,
+                         arc: Arc, deadline: float | None) -> HillFeatures:
+    if data.hills is None:
+        return HillFeatures()
+    if arc["id"] not in cache.hill_features:
+        cache.hill_features[arc["id"]] = traversal_hills(data.hills, resolve_traversal(data, arc), deadline)
+    return cache.hill_features[arc["id"]]

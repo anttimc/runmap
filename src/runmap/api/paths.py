@@ -14,6 +14,8 @@ from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_
                                    Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile
 from runmap.routing.search import GraphData, build_graph_index, apply_profile
+from runmap.routing.hill_types import HillData
+from runmap.routing.hills import build_hill_data
 from runmap.paths.exploration import (ExplorationCache, Snap, cached_distances, distance_from_start, interval_inclusion, legal_directions, segment_reason, snap_candidates)
 
 
@@ -40,6 +42,7 @@ class PathData:
     boundary_intervals: dict = field(default_factory=dict)
     exploration_cache: ExplorationCache = field(default_factory=ExplorationCache)
     cell_degrees: float = CELL_DEGREES
+    hills: HillData | None = None
 
 
 def _bounds(coordinates):
@@ -153,7 +156,7 @@ def load_path_data(graph_path):
     data = PathData(graph, measurements, segments, tuple(features), dict(cells),
                     {"geometry": coverage, "kind": kind},
                     _bounds(coverage["coordinates"][0]), graph_digest(graph), build_graph_index(graph))
-    return _build_display_index(data)
+    return _build_display_index(replace(data, hills=build_hill_data(graph, measurements.document)))
 
 
 def _build_display_index(data: PathData) -> PathData:

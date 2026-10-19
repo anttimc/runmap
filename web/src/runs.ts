@@ -4,7 +4,22 @@ import { mapPadding } from "./layout";
 
 type Location = [number, number];
 interface Snap { longitude: number; latitude: number; offset_m: number }
-interface Leg { coordinates: Location[]; distance_m: number }
+type PreferenceLevel = "off" | "low" | "high";
+const hillPresets: { level: PreferenceLevel; label: string; description: string }[] = [
+  { level: "off", label: "Off", description: "No preference for flatter paths." },
+  { level: "low", label: "Low", description: "Prefer gentle climbs, with some allowance for longer routes." },
+  { level: "high", label: "High", description: "Strongly avoid steep climbs, allowing longer, gentler routes." },
+];
+export interface RunPlannerConfiguration {
+  preference_defaults: { hills: PreferenceLevel };
+  preference_capabilities: { hills: { supported_levels: PreferenceLevel[]; unavailable_reason: string | null } };
+}
+interface TerrainObservations {
+  estimated_ascent_m: number | null; estimated_descent_m: number | null;
+  terrain_valid_fraction: number | null; terrain_trusted_fraction: number | null;
+  terrain_fallback_distance_m: number | null;
+}
+interface Leg { coordinates: Location[]; distance_m: number; observations: TerrainObservations }
 interface Candidate {
   outbound_left: boolean;
   outbound: Leg; returning: Leg; distance_m: number; repeated_distance_m: number;
@@ -21,6 +36,7 @@ export interface RunControls {
 }
 interface Options {
   datasetId: string;
+  runPlanner?: RunPlannerConfiguration;
   getHome: () => Location | undefined;
   setHome: (location: Location | undefined) => void;
   policy: () => { surface: string; avoid_stairs: boolean; radius_m: number };
@@ -88,7 +104,29 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   const status = el("run-status");
   const avoidance = el<HTMLInputElement>("run-avoidance");
   const centre = el<HTMLInputElement>("run-centre");
-  const inputsKey = (): string => JSON.stringify([options.getHome(), turnaround, options.policy(), avoidance.value, centre.checked]);
+  const hills = el<HTMLInputElement>("run-hills");
+  const hillCapability = options.runPlanner?.preference_capabilities.hills;
+  const supportedHillLevels = hillCapability?.supported_levels ?? ["off"];
+  const availableHillPresets = hillPresets.filter(preset => supportedHillLevels.includes(preset.level));
+  if (availableHillPresets.length === 0) availableHillPresets.push(hillPresets[0]);
+  hills.max = String(availableHillPresets.length - 1);
+  hills.value = String(Math.max(0, availableHillPresets.findIndex(preset => preset.level === options.runPlanner?.preference_defaults.hills)));
+  hills.disabled = availableHillPresets.length <= 1;
+  el("run-hills-labels").replaceChildren(...availableHillPresets.map(preset => {
+    const label = document.createElement("span");
+    label.textContent = preset.label;
+    return label;
+  }));
+  const hillPreset = (): typeof hillPresets[number] => availableHillPresets[Number(hills.value)];
+  function updateHillPreset(): void {
+    const preset = hillPreset();
+    el("run-hills-value").textContent = preset.label;
+    el("run-hills-description").textContent = preset.description;
+    hills.setAttribute("aria-valuetext", preset.label);
+  }
+  updateHillPreset();
+  el("run-preferences").hidden = hills.disabled;
+  const inputsKey = (): string => JSON.stringify([options.getHome(), turnaround, options.policy(), avoidance.value, centre.checked, hills.value]);
   let observedInputs = inputsKey();
   const markers = [new Marker({ color: "#193c38" }), new Marker({ color: "#805523" })];
   markers[0].getElement().title = "Home"; markers[1].getElement().title = "Turnaround";
@@ -194,9 +232,23 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
         + `${Math.round(candidate.repeated_distance_m)} m repeated${equivalent ? " · same route geometry" : ""}`;
       if (index === selected) el("run-detail-content").textContent =
         `Out ${(candidate.outbound.distance_m / 1000).toFixed(2)} km · back ${(candidate.returning.distance_m / 1000).toFixed(2)} km. ${shape} · closest approach ${Math.round(candidate.closest_centre_m)} m. ${candidateName(candidate) !== "Out and back" ? "Clockwise and counter-clockwise describe the planning preference; crossings and retracing may complicate the actual loop. " : ""}${response?.coverage_note ?? ""}`;
+      if (index === selected) showTerrain(candidate);
       button.addEventListener("click", () => { selected = index; candidates(); draw(); });
       el("run-candidates").append(button);
     });
+  }
+  function showTerrain(candidate: Candidate): void {
+    const observations = [candidate.outbound.observations, candidate.returning.observations];
+    const note = el("run-terrain-note");
+    note.hidden = observations.every(item => item.terrain_valid_fraction === null);
+    if (note.hidden) return;
+    const ascent = observations.reduce((total, item) => total + (item.estimated_ascent_m ?? 0), 0);
+    const descent = observations.reduce((total, item) => total + (item.estimated_descent_m ?? 0), 0);
+    const fallback = observations.reduce((total, item) => total + (item.terrain_fallback_distance_m ?? 0), 0);
+    const hasTerrain = observations.some(item => (item.terrain_valid_fraction ?? 0) > 0);
+    note.textContent = `${hasTerrain ? `Estimated terrain: ↑${Math.round(ascent)} m / ↓${Math.round(descent)} m. ` : "Terrain estimates unavailable. "}`
+      + (fallback > .01 ? `${Math.round(fallback)} m uses a conservative hill penalty because terrain is missing or uncertain. Ascent/descent may be incomplete or based on ground beneath a bridge or tunnel.`
+        : "Terrain estimates cover the selected run; they are not surveyed path elevations.");
   }
   async function generate(): Promise<void> {
     const home = options.getHome();
@@ -210,7 +262,8 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       const result = await fetch("/api/paths/run", { method: "POST", headers: { "Content-Type": "application/json" },
         signal: abort.signal, body: JSON.stringify({ dataset_id: options.datasetId,
           home: { longitude: home[0], latitude: home[1] }, turnaround: { longitude: turnaround[0], latitude: turnaround[1] },
-          ...options.policy(), settings: { avoidance_ratio: Number(avoidance.value), centre_enabled: centre.checked } }) });
+          ...options.policy(), settings: { avoidance_ratio: Number(avoidance.value), centre_enabled: centre.checked },
+          preferences: { hills: hillPreset().level } }) });
       if (!result.ok) { const error = await result.json() as { detail?: string }; throw new Error(error.detail || "Run request failed."); }
       const next = await result.json() as RunResponse;
       if (current !== sequence) return;
@@ -257,6 +310,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     snappingAbort?.abort(); ++snapSequence; pick(); invalidate(); candidates();
   });
   avoidance.addEventListener("input", invalidate); centre.addEventListener("change", invalidate);
+  hills.addEventListener("input", () => { updateHillPreset(); invalidate(); });
   for (const id of ["path-surface", "path-avoid-stairs", "outing-radius"]) el(id).addEventListener("change", () => {
     invalidate(); if (active) void snapEndpoints();
   });

@@ -1,0 +1,127 @@
+{
+  "checks": [
+    {
+      "width": 1280,
+      "height": 900,
+      "initial": {
+        "hidden": false,
+        "level": "off",
+        "levels": [
+          "off",
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "generated": {
+        "status": "complete",
+        "count": 1,
+        "request": {
+          "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+          "home": {
+            "longitude": 24.795,
+            "latitude": 60.216
+          },
+          "turnaround": {
+            "longitude": 24.815,
+            "latitude": 60.225
+          },
+          "surface": "all",
+          "avoid_stairs": true,
+          "radius_m": 50,
+          "settings": {
+            "avoidance_ratio": 0,
+            "centre_enabled": true
+          },
+          "preferences": {
+            "hills": "medium"
+          }
+        },
+        "terrain": "Estimated terrain: ↑57 m / ↓57 m. Terrain estimates cover the selected run; they are not surveyed path elevations.",
+        "noteHidden": false
+      },
+      "stale": {
+        "status": "Displayed run uses previous settings. Generate again to update.",
+        "level": "high",
+        "resultsHidden": false
+      },
+      "cancelled": {
+        "status": "Cancelled. The server stops work at its deadline.",
+        "resultHidden": false,
+        "button": {
+          "x": 37,
+          "y": 826,
+          "width": 312,
+          "height": 39,
+          "top": 826,
+          "right": 349,
+          "bottom": 865,
+          "left": 37
+        },
+        "overflow": false
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "initial": {
+        "hidden": false,
+        "level": "off",
+        "levels": [
+          "off",
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "generated": {
+        "status": "complete",
+        "count": 1,
+        "request": {
+          "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+          "home": {
+            "longitude": 24.795,
+            "latitude": 60.216
+          },
+          "turnaround": {
+            "longitude": 24.815,
+            "latitude": 60.225
+          },
+          "surface": "all",
+          "avoid_stairs": true,
+          "radius_m": 50,
+          "settings": {
+            "avoidance_ratio": 0,
+            "centre_enabled": true
+          },
+          "preferences": {
+            "hills": "medium"
+          }
+        },
+        "terrain": "Estimated terrain: ↑57 m / ↓57 m. Terrain estimates cover the selected run; they are not surveyed path elevations.",
+        "noteHidden": false
+      },
+      "stale": {
+        "status": "Displayed run uses previous settings. Generate again to update.",
+        "level": "high",
+        "resultsHidden": false
+      },
+      "cancelled": {
+        "status": "Cancelled. The server stops work at its deadline.",
+        "resultHidden": false,
+        "button": {
+          "x": 25,
+          "y": 782,
+          "width": 340,
+          "height": 39,
+          "top": 782,
+          "right": 365,
+          "bottom": 821,
+          "left": 25
+        },
+        "overflow": false
+      }
+    }
+  ],
+  "errors": []
+}

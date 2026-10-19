@@ -18,6 +18,7 @@ from runmap.api.paths import render_paths, inspect_path, load_path_data, path_co
 from runmap.api.path_tiles import PathTileService, render_version as path_render_version, tile_template
 from runmap.api.terrain import TerrainRenderer
 from runmap.api.runs import PlannerConfiguration, RunRequest, RunResponse, generate_run
+from runmap.routing.cost_settings import preference_capabilities
 from runmap.api.terrain_tiles import (
     CONTOUR_INTERVAL_M,
     CONTOUR_RENDER_VERSION,
@@ -87,6 +88,8 @@ def paths_config(request: Request):
     return {**path_config(data), "tile_template": tile_template(data, "static/{policy}"),
             "tile_min_zoom": 10, "tile_max_zoom": 16,
             "run_planner": PlannerConfiguration(
+                preference_capabilities=preference_capabilities(data.hills),
+                hill_model=data.hills.model if data.hills else None,
                 deadline_s=float(os.environ.get("RUNMAP_RUN_DEADLINE", "15"))).model_dump()}
 
 

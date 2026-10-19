@@ -39,7 +39,9 @@ traversal, closest centre approach and enclosure for simple closed geometry.
 Retracing, crossings or a centre on the path get an unclear-enclosure state.
 Equivalent route geometry is labelled, including opposite traversal of the same
 loop. Coverage limitations accompany results. Running time and ascent are not
-yet shown.
+yet shown in the baseline version. The later [hill preference](32-hill-routing.md)
+adds estimated ascent/descent and explicit uncertainty when active; running time
+remains unavailable.
 
 Initial local smoke test: the 55,627-node Leppävaara dataset loaded in 4.72 s;
 both assignments for home (24.795, 60.216) and turnaround (24.815, 60.225)

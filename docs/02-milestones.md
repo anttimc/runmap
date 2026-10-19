@@ -111,7 +111,9 @@ hills, traffic lights, busy-road exposure, and green surroundings, with data
 audits, soft costs, and observable tradeoffs. Deliver the UI checkpoint first;
 enable preference controls as their routing support becomes available. The UI
 checkpoint is implemented and checked on desktop and mobile viewport sizes;
-routing preference implementation remains planned. The
+routing preference contracts and [hill avoidance](32-hill-routing.md) are
+implemented, with local runner acceptance pending. Other preference algorithms
+remain planned. The
 [existing-data audit](30-routing-preferences-audit.md) is recorded with local
 fixtures; signal attribution, buffered environmental context, and local runner
 validation remain open gates.

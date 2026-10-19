@@ -1,9 +1,10 @@
 import { Marker, type GeoJSONSource, type Map, type ExpressionSpecification, type AddLayerObject } from "maplibre-gl";
 import type { Feature, FeatureCollection, LineString, Point, Polygon } from "geojson";
 import { turboColors } from "./turbo";
-import { startRunPlanner } from "./runs";
+import { startRunPlanner, type RunPlannerConfiguration } from "./runs";
 
 interface PathConfig {
+  run_planner?: RunPlannerConfiguration;
   status: string;
   dataset_id: string;
   coverage: { geometry: Polygon; kind: string };
@@ -591,6 +592,7 @@ export async function startPaths(map: Map, stops: ColorStop[]): Promise<void> {
   let exploreEnabled = enabled.checked;
   const runPlanner = startRunPlanner(map, {
     datasetId: config.dataset_id,
+    runPlanner: config.run_planner,
     getHome: () => requestedStart,
     setHome: location => { requestedStart = location; },
     policy: () => ({ surface: filter.value, avoid_stairs: avoidStairs.checked, radius_m: Number(radius.value) }),

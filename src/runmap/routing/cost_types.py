@@ -6,9 +6,10 @@ from typing import Literal
 
 from runmap.routing.fields import Point
 from runmap.routing.search import GraphData
+from runmap.routing.hill_types import HillData, HillFeatures
 
 
-PreferenceLevel = Literal["off", "low", "medium", "high"]
+PreferenceLevel = Literal["off", "low", "high"]
 
 
 @dataclass(frozen=True)
@@ -39,13 +40,12 @@ class PreferenceWeightTable:
     version: str
     off: float = 0.0
     low: float | None = None
-    medium: float | None = None
     high: float | None = None
 
 
 @dataclass(frozen=True)
 class PreferenceWeightTables:
-    hills: PreferenceWeightTable = PreferenceWeightTable("hills-off-v1")
+    hills: PreferenceWeightTable = PreferenceWeightTable("minetti-cr-equivalent-metres-v3", low=1.0, high=6.0)
     signals: PreferenceWeightTable = PreferenceWeightTable("signals-off-v1")
     busy_roads: PreferenceWeightTable = PreferenceWeightTable("busy-roads-off-v1")
     greenery: PreferenceWeightTable = PreferenceWeightTable("greenery-off-v1")
@@ -97,6 +97,7 @@ class PreferenceObservations:
     estimated_ascent_m: float | None = None
     estimated_descent_m: float | None = None
     terrain_valid_fraction: float | None = None
+    terrain_trusted_fraction: float | None = None
     terrain_fallback_distance_m: float | None = None
     signal_passages: int | None = None
     unresolved_signal_passages: int | None = None
@@ -142,15 +143,17 @@ class RequestCostData:
     transition_width_m: float
     spacing_m: float
     strengths: ShapeStrengths
-    distance_only: bool
+    shape_disabled: bool
     parts: Mapping[str, PhysicalPart] = field(default_factory=dict)
     preferences: ResolvedPreferences = ResolvedPreferences(
         PreferenceSettings(), PreferenceWeights(), PreferenceWeightTables())
+    hills: HillData | None = None
 
 
 @dataclass
 class RequestCostCache:
     shape_fields: dict[str, ShapeFeatures] = field(default_factory=dict)
+    hill_features: dict[str, HillFeatures] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

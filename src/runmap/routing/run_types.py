@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from runmap.routing.search import GraphData, PathResult
-from runmap.routing.cost_types import CostBreakdown, PhysicalPart, ResolvedPreferences, TraversalRef
+from runmap.routing.cost_types import CostBreakdown, PhysicalPart, PreferenceObservations, ResolvedPreferences, TraversalRef
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,8 @@ class RunCandidate:
     returning_costs: CostBreakdown
     outbound_traversals: tuple[TraversalRef, ...]
     returning_traversals: tuple[TraversalRef, ...]
+    outbound_observations: PreferenceObservations
+    returning_observations: PreferenceObservations
 
 
 @dataclass(frozen=True)

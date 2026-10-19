@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from rasterio.warp import transform
+from runmap.routing.types import MeasurementDocument
 
 
 def graph_digest(graph):
@@ -21,8 +22,8 @@ def graph_digest(graph):
 class MeasurementData:
     """Measurement document and graph lengths indexed by physical segment ID."""
 
-    document: dict
-    graph_lengths_m: dict
+    document: MeasurementDocument
+    graph_lengths_m: dict[str, float]
 
 
 def validate_measurements(graph, document):
