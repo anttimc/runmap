@@ -21,7 +21,7 @@ class CostContractTests(unittest.TestCase):
     def test_all_off_resolves_without_prepared_preference_features(self) -> None:
         resolved = resolve_preferences(PreferenceSettings())
         self.assertEqual(resolved.weights, PreferenceWeights())
-        self.assertEqual(resolved.weight_tables.hills.version, "minetti-cr-equivalent-metres-v3")
+        self.assertEqual(resolved.weight_tables.hills.version, "minetti-excess-equivalent-metres-v4")
 
     def test_each_unimplemented_level_rejected_explicitly(self) -> None:
         for name in ("hills", "signals", "busy_roads", "greenery"):

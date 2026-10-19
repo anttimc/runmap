@@ -8,7 +8,7 @@ from runmap.routing.types import GraphDocument
 
 @dataclass(frozen=True)
 class HillModel:
-    version: str = "minetti-uphill-preference-v3"
+    version: str = "minetti-excess-uphill-preference-v4"
     source_doi: str = "10.1152/japplphysiol.01177.2001"
     coefficients: tuple[float, ...] = (155.4, -30.4, -43.3, 46.3, 19.5, 3.6)
     fitted_grade_limit: float = 0.45

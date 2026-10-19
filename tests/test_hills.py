@@ -18,7 +18,8 @@ from runmap.routing.costs import arc_cost
 from runmap.routing.geometry import projected_points
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import (build_hill_data, grade_response, hill_observations,
-                                  running_energy_cost, running_energy_response, sum_hill_features, traversal_hills)
+                                  hill_penalty_response, running_energy_cost, running_energy_response,
+                                  sum_hill_features, traversal_hills)
 from runmap.routing.run_planner import RunSettings, distance_heuristic, endpoint_overlay, plan_run
 from runmap.routing.search import build_graph_index, shortest_path
 from runmap.routing.types import GraphDocument, Measurement, MeasurementDocument
@@ -83,9 +84,23 @@ class HillTests(unittest.TestCase):
         for grade in (-60, -20, -5, 0):
             self.assertEqual(grade_response(grade), running_energy_response(grade))
         for weight in (1, 6):
-            steep = 100 * (1 + weight * grade_response(10))
-            gentle = 200 * (1 + weight * grade_response(5))
+            steep = 100 * (1 + weight * hill_penalty_response(10))
+            gentle = 200 * (1 + weight * hill_penalty_response(5))
             self.assertLess(gentle, steep)  # Both gain 10 m; gentle is twice as long.
+
+    def test_hill_penalty_excludes_flat_baseline_and_downhill_rewards(self) -> None:
+        for grade in (-20, -10, -5, 0):
+            self.assertEqual(hill_penalty_response(grade), 0)
+        for grade in (1, 3, 5, 10, 20, 45):
+            self.assertAlmostEqual(hill_penalty_response(grade), grade_response(grade) - 1)
+        self.assertGreater(hill_penalty_response(-45), 0)
+        hills = self.hills([0])
+        for level in ("off", "low", "high"):
+            result = plan_run(self.index, self.home, self.turnaround, RunSettings(),
+                              preferences=PreferenceSettings(hills=level), hills=hills)
+            for candidate in result.candidates:
+                self.assertEqual(candidate.outbound_costs.hills + candidate.returning_costs.hills, 0)
+                self.assertEqual(candidate.distance_m, 240)
 
     def test_response_has_no_cap_and_tails_are_continuous_positive_and_increasing(self) -> None:
         for sign in (-1, 1):
@@ -111,17 +126,17 @@ class HillTests(unittest.TestCase):
         self.assertEqual((whole.ascent_m, whole.descent_m), (2, 4))
         reverse = traversal_hills(hills, TraversalRef("ab", 0, 100, True))
         self.assertEqual((reverse.ascent_m, reverse.descent_m), (4, 2))
-        self.assertAlmostEqual(reverse.penalty_m, 40 * grade_response(-5) + 40 * grade_response(10))
+        self.assertAlmostEqual(reverse.penalty_m, 40 * hill_penalty_response(-5) + 40 * hill_penalty_response(10))
         first = traversal_hills(hills, TraversalRef("ab", 0, 25, False))
         self.assertEqual(first.length_m, 20)
-        self.assertAlmostEqual(first.penalty_m, 20 * grade_response(5))
+        self.assertAlmostEqual(first.penalty_m, 20 * hill_penalty_response(5))
 
     def test_missing_bridge_tunnel_intervals_get_fallback_without_fake_flat_observations(self) -> None:
         for grades, flags in (([None], ()), ([0], ("bridge",)), ([0], ("tunnel",))):
             with self.subTest(grades=grades, flags=flags):
                 hills = self.hills(grades, flags=flags)
                 features = traversal_hills(hills, TraversalRef("ab", 0, 100, False))
-                self.assertAlmostEqual(features.penalty_m, 100 * running_energy_response(20))
+                self.assertAlmostEqual(features.penalty_m, 100 * (running_energy_response(20) - 1))
                 self.assertEqual(features.fallback_length_m, 100)
                 observation = hill_observations(features)
                 self.assertEqual(observation.terrain_trusted_fraction, 0)
@@ -134,7 +149,7 @@ class HillTests(unittest.TestCase):
         features = traversal_hills(hills, TraversalRef("ab", 0, 100, False))
         fallback = features.fallback_length_m
         self.assertAlmostEqual(fallback, math.dist(*projected_points(self.graph["segments"][0]["geometry"])))
-        self.assertAlmostEqual(features.penalty_m, fallback * running_energy_response(20))
+        self.assertAlmostEqual(features.penalty_m, fallback * (running_energy_response(20) - 1))
         document = hill_document(self.graph, {"ab": [5, 5], "ac": [0], "cb": [0]})
         document["segments"]["ab"][1]["graph_start_m"] += 1
         with self.assertRaisesRegex(ValueError, "contiguous"):
@@ -151,8 +166,8 @@ class HillTests(unittest.TestCase):
         self.assertEqual(candidate.returning_traversals[0].segment_id, "ab")
         self.assertTrue(candidate.returning_traversals[0].reverse)
         self.assertEqual(candidate.distance_m, 240)
-        self.assertGreater(candidate.returning_costs.hills, 0)
-        self.assertAlmostEqual(candidate.outbound_costs.hills, 140 * 6)
+        self.assertEqual(candidate.returning_costs.hills, 0)
+        self.assertEqual(candidate.outbound_costs.hills, 0)
         self.assertEqual(candidate.returning_observations.estimated_descent_m, 10)
         self.assertAlmostEqual(candidate.returning.cost, candidate.returning_costs.total)
         self.assertEqual((candidate.returning_costs.centre, candidate.returning_costs.side, candidate.returning_costs.reuse), (0, 0, 0))
@@ -177,6 +192,20 @@ class HillTests(unittest.TestCase):
                 self.assertEqual(sum(index.arcs[arc]["length_m"] for arc in candidate.outbound.arc_ids), 200)
                 self.assertEqual(candidate.returning_traversals[0].segment_id, "ab")
                 self.assertTrue(candidate.returning_traversals[0].reverse)
+
+    def test_high_accepts_longer_mild_climb_without_flat_energy_charge(self) -> None:
+        hills = build_hill_data(self.graph, hill_document(
+            self.graph, {"ab": [5], "ac": [25 / 7], "cb": [25 / 7]}))
+        result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0),
+                          preferences=PreferenceSettings(hills="high"), hills=hills)
+        candidate = result.candidates[0]
+        self.assertEqual(candidate.outbound.arc_ids, ("ac:f", "cb:f"))
+        self.assertAlmostEqual(candidate.outbound_observations.estimated_ascent_m, 5)
+        self.assertEqual(sum(result.overlay.graph.arcs[a]["length_m"]
+                             for a in candidate.outbound.arc_ids), 140)
+        # Both alternatives gain 5 m; the previous full-energy term chose 100 m at 5%.
+        self.assertLess(100 * (1 + 6 * grade_response(5)),
+                        140 * (1 + 6 * grade_response(25 / 7)))
 
     def test_both_loop_assignments_optimize_each_leg_with_signed_costs(self) -> None:
         hills = self.hills([10])

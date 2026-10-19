@@ -96,7 +96,8 @@ dataset loading. This single observation is not a latency guarantee.
 the existing terrain artifact and advertises Low / High on supported
 datasets. The current model uses Minetti et al.'s fifth-order running energy fit,
 normalized to its flat value, with a convex uphill adjustment favoring gentler
-climbs and no saturation cap. The hill model, weight calibration, coverage/fallback observations,
+climbs. Only positive excess above flat contributes, avoiding an extra distance
+charge when avoidance increases. There is no upper saturation cap. The hill model, weight calibration, coverage/fallback observations,
 directed request cache, and UI checks are documented there. Zero width now means
 shape penalties are disabled; the internal flag is `shape_disabled`. Hill costs
 stay active and return paths are searched independently. Signals and environmental

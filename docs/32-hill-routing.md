@@ -1,5 +1,8 @@
 # Hill routing with a preference for gentle climbs
 
+For a self-contained derivation of every route cost term, see
+[Run planner: cost calculation](33-routing-cost-mathematics.md).
+
 Status: Minetti-based uphill preference implemented 2026-10-19; preset calibration and local runner
 acceptance remain provisional. Delivers step 3 of the
 [cost architecture](31-routing-cost-architecture.md).
@@ -29,7 +32,7 @@ energy_ratio(i) = Cr(i) / Cr(0)
 uphill_ratio(i) = 1 + (energy_ratio(i) − 1) * (g / 5)^2       when g > 0
 uphill_ratio(i) = energy_ratio(i)                           otherwise
 response(i) = uphill_ratio(i) * sqrt(1 + i^2)
-hill cost = weight * integral(response(i) ds_projected)
+hill cost = weight * integral(max(0, response(i) − 1) ds_projected)
 route score = graph distance + shape costs + hill cost + other preference costs
 ```
 
@@ -49,27 +52,28 @@ For the same 10 m gain, 200 m at 5% now beats 100 m at 10% at both presets, when
 other costs agree. This is an illustrative tradeoff, not a promise that every
 longer gentle alternative will win. There is no upper cap.
 
-The hill term includes the **flat running baseline**. It is not
-clipped excess above flat: moderate descents are cheaper than flat terrain,
-while steeper descents become more expensive again. No deadband or saturation
-cap remains. All costs stay positive, so no negative edge costs or cycles arise.
+The hill term charges **only excess above flat running**, clipped at zero.
+Flat spans and moderate descents contribute no hill penalty. Very steep
+descents can still contribute when their energy exceeds flat running.
+Subtracting the baseline prevents the hill preset from adding another distance
+charge that overwhelms the loop-shape preferences. Clipping prevents downhill
+rewards and negative edge costs. There is no upper saturation cap.
 The distance heuristic remains admissible because total arc cost is at least
 graph distance. Physical distance and ascent/descent diagnostics keep their
 original meanings; only the optimization score changes.
 
-The model is `minetti-uphill-preference-v3`; the weight table is
-`minetti-cr-equivalent-metres-v3` (Low and High doubled from v2):
+The model is `minetti-excess-uphill-preference-v4`; the weight table is
+`minetti-excess-equivalent-metres-v4`. Weights remain unchanged from v3:
 
 | Preset | Weight | Score per flat metre, excluding shape costs |
 | --- | ---: | ---: |
 | Off | 0 | 1 |
-| Low | 1 | 2 |
-| High | 6 | 7 |
+| Low | 1 | 1 |
+| High | 6 | 1 |
 
-Low makes energy 50% of the flat score; High makes energy approximately 86%
-when graph and projected lengths agree. Thus High is a stronger energy preference,
-not a pure metabolic-energy objective. The presets are not merely a uniform
-rescaling of the whole score, so they can select different routes. They do not
+Low and High scale slope excess without changing the distance or shape weights.
+The objective represents hill avoidance rather than total metabolic energy.
+The presets can select different routes. They do not
 promise a particular detour length or minimum ascent. The weights are initial
 product calibration, not physiological constants.
 
@@ -91,10 +95,11 @@ without flattening the curve or treating a valid steep slope as missing.
 Nonfinite inputs and nonfinite/nonpositive computed energy are rejected.
 
 Missing terrain, bridges, and tunnels use a direction-independent fallback
-response equal to an **unadjusted Cr +20% climb**, including the travel-distance conversion.
+response equal to the **excess of an unadjusted Cr +20% climb above flat**,
+including the travel-distance conversion.
 This is a conservative application assumption, not an estimated actual slope
 and not a maximum: trusted steeper terrain can cost more. It adds approximately
-255 equivalent m at Low and 1,531 equivalent m at High per 100 projected m.
+155 equivalent m at Low and 931 equivalent m at High per 100 projected m.
 The new uphill multiplier is deliberately not applied to this unknown-slope
 fallback: unknown terrain is not evidence of a steep climb.
 An entirely absent profile and an explicitly invalid interval use the same rule.
@@ -159,7 +164,7 @@ including the separately optimized downhill return.
 [Penalty plot](32-hill-penalties.png) ([SVG](32-hill-penalties.svg)) shows the
 current weighted preference contribution per 100 projected metres, alongside
 the unadjusted High curve for comparison. Flat terrain has
-a nonzero contribution whenever the preference is enabled.
+a zero contribution at every preset.
 
 Regenerate it using:
 
@@ -177,11 +182,14 @@ Record current model observations separately:
 ```sh
 uv run --offline --no-sync python -m runmap.experiments.benchmark_hill_preferences \
   data/paths/prepared/leppavaara-flat-10k/graph.json \
-  docs/32-hill-routing-gentle-results.json
+  docs/32-hill-routing-excess-results.json \
+  --case agnes-west-to-salmintie --case agnes-central-to-salmintie \
+  --case agnes-east-to-salmintie --width 0.18
 ```
 
-The benchmark records four endpoint pairs at widths 0 and 0.18, at each of the
-three levels (24 requests), with exact snaps, model/weight identity, leg costs,
+The command above records three street endpoint pairs at width 0.18 and each
+preset (9 requests). With no case/width flags, the benchmark records the original
+four endpoint pairs at widths 0 and 0.18 (24 requests), with exact snaps, model/weight identity, leg costs,
 traversals, terrain coverage, timing, and expanded states. Off terrain is measured
 after generation for comparison. Review real routes before settling the weights,
 especially uncertain connectors, stairs, steep descents, and High detours.
@@ -193,7 +201,7 @@ For the initial zero-width outing, Off and Low use 3,818.9 m; High uses 3,833.4 
 Its unweighted flat-equivalent energy falls from 3,974.9 to 3,948.1 m. These are
 single-run observations, not performance guarantees or runner acceptance.
 
-The [gentle-climb report](32-hill-routing-gentle-results.json) uses the current
+The historical [gentle-climb report](32-hill-routing-gentle-results.json) uses the v3
 uphill adjustment and Low 1 / High 6 weights. All 24 requests completed in
 0.085–1.147 s. The initial High outing uses 4,221.6 m at zero width; at width
 0.18 the candidates use 4,353.3 and 4,473.3 m with different directed legs.
@@ -204,7 +212,7 @@ or choose different paths, and do not imply local runner acceptance.
 
 ## Verification
 
-All 176 Python tests pass, and frontend typecheck/build passes.
+All 178 Python tests pass, and frontend typecheck/build passes for v4.
 
 Checks cover published coefficient values and percent conversion, normalization
 and sloping length, cheaper moderate descents, increasing steep-slope costs,
@@ -213,5 +221,34 @@ fallback for absent and invalid profiles, request caching, A* agreement with
 Dijkstra, and selection of a longer route under High. Existing API tests cover
 three-level capabilities, rejected Medium requests, and cost diagnostics.
 
-The revised slider and energy help still need a browser check. Local runner
+The revised slider and hill help still need a browser check. Local runner
 acceptance remains pending.
+
+## Agnes Lundellin arkadi–Salmintie investigation
+
+The v3 full-energy baseline reproduced shorter loops on enabling avoidance.
+With home `(24.8031897, 60.217934)` and turnaround
+`(24.8034464, 60.2095759)`, default width 0.18 and the first candidate:
+
+| Model / preset | Loop distance | Uphill distance above 5% | Steepest uphill sample |
+| --- | ---: | ---: | ---: |
+| Off | 3,243 m | 223 m | 19.2% |
+| v3 High | 2,405 m | 286 m | 12.1% |
+| v4 Low | 3,420 m | 176 m | 7.7% |
+| v4 High | 3,406 m | 69 m | 5.5% |
+
+All these routes have trusted terrain throughout; fallback costs did not cause
+this behavior. The v3 hill term counted approximately one full extra distance
+charge per unit weight even on flat terrain, reducing the relative influence
+of the existing shape and reuse costs. Its downhill discounts also offset
+uphill costs. The v4 positive excess term removes both effects while keeping
+the published Cr function and the application uphill adjustment intact.
+
+[Local comparison data](32-hill-routing-excess-results.json) records all three
+tested home positions, both candidates and all presets under v4, with exact
+requests, snaps, traversals, terrain measurements and cost breakdowns.
+The pins above are representative street locations; the user's exact pins
+were not available during this investigation. Slopes are sampled terrain
+estimates, not surveyed road grades. Some corrected loops remain shorter than
+Off while improving slopes; route length alone is not an avoidance metric.
+The planner still optimizes legs greedily and has no fixed target distance.

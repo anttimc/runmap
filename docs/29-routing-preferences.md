@@ -79,10 +79,10 @@ signals, flat ground, quiet roads, or confirmed greenery.
 
 ### Hills
 
-Integrate the nonnegative running energy fit from Minetti et al. (2002), Figure 1,
+Integrate nonnegative excess above flat from the running energy fit in Minetti et al. (2002), Figure 1,
 along measured intervals, with an application adjustment that softens uphill
 excess below 5% and increasingly penalizes steeper climbs. Use signed grade in traversal direction; reverse
-traversal must reverse the grade. Moderate descents cost less than flat ground;
+traversal must reverse the grade. Flat ground and moderate descents add no hill penalty;
 steep climbs and descents remain distinct without a penalty cap. The formula,
 source, preset scaling, and policy outside the fitted range are documented in
 [hill routing](32-hill-routing.md). Avoid classifying missing terrain as flat or

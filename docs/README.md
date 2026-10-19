@@ -22,6 +22,7 @@ Numbered filenames are stable references, not a chronological task queue.
 - [Routing preference data audit](30-routing-preferences-audit.md)
 - [Modular routing cost architecture](31-routing-cost-architecture.md)
 - [Hill avoidance and calibration](32-hill-routing.md)
+- [Run planner cost mathematics](33-routing-cost-mathematics.md)
 
 ## Working system and experiments
 

@@ -10,13 +10,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from runmap.routing.cost_types import PreferenceWeightTables
-from runmap.routing.hills import grade_response, running_energy_cost, running_energy_response
+from runmap.routing.hills import hill_penalty_response, running_energy_cost, running_energy_response
 
 
 def plot_penalties(output: Path) -> None:
     energy_slopes = np.linspace(-60, 60, 1201)
     slopes = np.linspace(-20, 20, 801)
-    responses = np.array([grade_response(float(slope)) for slope in slopes])
+    responses = np.array([hill_penalty_response(float(slope)) for slope in slopes])
     energies = np.array([running_energy_cost(float(slope)) for slope in energy_slopes])
     weights = PreferenceWeightTables().hills
     fig, (energy_axis, cost_axis) = plt.subplots(1, 2, figsize=(13, 6.3))
@@ -47,7 +47,7 @@ def plot_penalties(output: Path) -> None:
                        color=color, linewidth=2.5, linestyle=style)
     cost_axis.set_xlim(-20, 20)
     cost_axis.set_xticks([-20, -10, 0, 5, 10, 15, 20])
-    original = np.array([running_energy_response(float(slope)) for slope in slopes])
+    original = np.array([max(0, running_energy_response(float(slope)) - 1) for slope in slopes])
     assert weights.high is not None
     cost_axis.plot(slopes, 100 * weights.high * original, label="High · unadjusted Cr",
                    color="#bc5335", linewidth=1.5, linestyle=":")
@@ -58,7 +58,7 @@ def plot_penalties(output: Path) -> None:
     energy_axis.set_ylim(bottom=0)
     cost_axis.set_ylim(bottom=0)
     fig.suptitle("Favoring gentler climbs", fontsize=18, fontweight="bold", y=0.97)
-    fig.supxlabel("Uphill excess above flat is scaled by (grade / 5%)². Downhill is unchanged. "
+    fig.supxlabel("Uphill excess above flat is scaled by (grade / 5%)². Flat and moderate downhill add no penalty. "
                   "Route score also includes distance and shape costs.\n"
                   "Base: Minetti et al. (2002), Figure 1 · doi:10.1152/japplphysiol.01177.2001. "
                   "Shaded: tangent continuation beyond ±45%.",

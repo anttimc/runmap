@@ -45,7 +45,7 @@ class PreferenceWeightTable:
 
 @dataclass(frozen=True)
 class PreferenceWeightTables:
-    hills: PreferenceWeightTable = PreferenceWeightTable("minetti-cr-equivalent-metres-v3", low=1.0, high=6.0)
+    hills: PreferenceWeightTable = PreferenceWeightTable("minetti-excess-equivalent-metres-v4", low=1.0, high=6.0)
     signals: PreferenceWeightTable = PreferenceWeightTable("signals-off-v1")
     busy_roads: PreferenceWeightTable = PreferenceWeightTable("busy-roads-off-v1")
     greenery: PreferenceWeightTable = PreferenceWeightTable("greenery-off-v1")

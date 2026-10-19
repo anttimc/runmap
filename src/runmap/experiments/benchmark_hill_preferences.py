@@ -8,8 +8,9 @@ from pathlib import Path
 import platform
 from time import perf_counter
 
-from runmap.api.paths import load_path_data
-from runmap.api.runs import EndpointRequest, PreferencesRequest, RunRequest, SettingsRequest, generate_run
+from runmap.api.paths import PathData, load_path_data
+from runmap.api.runs import (EndpointRequest, LegResponse, PreferencesRequest, RunRequest,
+                             SettingsRequest, generate_run)
 from runmap.routing.cost_types import PreferenceLevel, PreferenceWeightTables, TraversalRef
 from runmap.routing.hills import hill_observations, sum_hill_features, traversal_hills
 
@@ -33,16 +34,43 @@ CASES = (
               "w575610022p0", "w575610022p0"),
 )
 LEVELS: tuple[PreferenceLevel, ...] = ("off", "low", "high")
+STREET_CASES = (
+    LocalCase("agnes-west-to-salmintie", (24.8014388, 60.2178992), (24.8034464, 60.2095759)),
+    LocalCase("agnes-central-to-salmintie", (24.8031897, 60.217934), (24.8034464, 60.2095759)),
+    LocalCase("agnes-east-to-salmintie", (24.8054122, 60.2178763), (24.8034464, 60.2095759)),
+)
 
 
-def benchmark(graph_path: Path) -> dict[str, object]:
+def slope_observations(data: PathData, leg: LegResponse) -> dict[str, float]:
+    """Measure trusted uphill exposure independently of the optimization score."""
+    above_five = above_ten = maximum = 0.0
+    for traversal in leg.traversals:
+        lo, hi = sorted((traversal.start_m, traversal.end_m))
+        for item in data.measurements.document["segments"][traversal.segment_id]:
+            overlap = min(hi, item["graph_end_m"]) - max(lo, item["graph_start_m"])
+            grade = item["grade_percent"]
+            if (overlap <= 0 or not item["valid"] or grade is None
+                    or {"bridge", "tunnel", "missing_terrain"}.intersection(item["quality_flags"])):
+                continue
+            signed_grade = grade * (-1 if traversal.start_m > traversal.end_m else 1)
+            length = overlap / (item["graph_end_m"] - item["graph_start_m"]) * (item["end_m"] - item["start_m"])
+            above_five += length if signed_grade > 5 else 0.0
+            above_ten += length if signed_grade > 10 else 0.0
+            maximum = max(maximum, signed_grade)
+    return {"trusted_uphill_above_5_percent_m": above_five,
+            "trusted_uphill_above_10_percent_m": above_ten,
+            "maximum_trusted_uphill_percent": maximum}
+
+
+def benchmark(graph_path: Path, *, cases: tuple[LocalCase, ...] = CASES,
+              widths: tuple[float, ...] = (0.0, .18)) -> dict[str, object]:
     started = perf_counter()
     data = load_path_data(graph_path)
     load_s = perf_counter() - started
     assert data.hills is not None
     rows: list[dict[str, object]] = []
-    for case in CASES:
-        for width in (0.0, .18):
+    for case in cases:
+        for width in widths:
             for level in LEVELS:
                 options = RunRequest(
                     dataset_id=data.dataset_id,
@@ -61,6 +89,7 @@ def benchmark(graph_path: Path) -> dict[str, object]:
                         legs.append({"distance_m": leg.distance_m, "cost": leg.cost,
                                      "cost_breakdown": asdict(leg.cost_breakdown), "observations": asdict(leg.observations),
                                      "comparison_terrain_observations": asdict(hill_observations(observed)),
+                                     "comparison_slopes": slope_observations(data, leg),
                                      "expanded_nodes": leg.expanded_nodes,
                                      "traversals": [item.model_dump() for item in leg.traversals]})
                     candidates.append({"outbound_left": candidate.outbound_left,
@@ -91,8 +120,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("graph", type=Path)
     parser.add_argument("output", type=Path)
+    named_cases = {case.name: case for case in CASES + STREET_CASES}
+    parser.add_argument("--case", action="append", choices=tuple(named_cases))
+    parser.add_argument("--width", action="append", type=float)
     args = parser.parse_args()
-    args.output.write_text(json.dumps(benchmark(args.graph), indent=2, allow_nan=False) + "\n")
+    cases = tuple(named_cases[name] for name in args.case) if args.case else CASES
+    widths = tuple(args.width) if args.width else (0.0, .18)
+    args.output.write_text(json.dumps(benchmark(args.graph, cases=cases, widths=widths),
+                                     indent=2, allow_nan=False) + "\n")
 
 
 if __name__ == "__main__":

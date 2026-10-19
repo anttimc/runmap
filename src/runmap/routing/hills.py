@@ -56,6 +56,16 @@ def grade_response(grade_percent: float, model: HillModel = HillModel()) -> floa
     return response
 
 
+def hill_penalty_response(grade_percent: float, model: HillModel = HillModel()) -> float:
+    """Charge excess over flat effort without rewarding downhill detours."""
+    return max(0.0, grade_response(grade_percent, model) - 1.0)
+
+
+def _uncertain_response(model: HillModel) -> float:
+    """Use unadjusted excess effort when the actual slope is unknown."""
+    return max(0.0, running_energy_response(model.uncertain_grade_percent, model) - 1.0)
+
+
 def sum_hill_features(features: Iterable[HillFeatures]) -> HillFeatures:
     items = tuple(features)
     return HillFeatures(sum(i.penalty_m for i in items), sum(i.ascent_m for i in items),
@@ -80,8 +90,8 @@ def _interval_features(item: Measurement, reverse: bool, model: HillModel) -> Hi
     trusted = valid and not {"bridge", "tunnel", "missing_terrain"}.intersection(item["quality_flags"])
     signed_grade = (-grade if reverse else grade) if grade is not None else 0.0
     change = (-height if reverse else height) if height is not None and valid else 0.0
-    response = (grade_response(signed_grade, model) if trusted
-                else running_energy_response(model.uncertain_grade_percent, model))
+    response = (hill_penalty_response(signed_grade, model) if trusted
+                else _uncertain_response(model))
     return HillFeatures(length * response, max(0.0, change), max(0.0, -change),
                         length if valid else 0.0, length if trusted else 0.0,
                         0.0 if trusted else length, length)
@@ -95,7 +105,7 @@ def _segment_intervals(items: Sequence[Measurement], graph_length_m: float,
     if not items:
         if not math.isfinite(fallback_length_m) or fallback_length_m <= 0:
             raise ValueError("Unmeasured hill geometry must have positive projected length")
-        fallback = HillFeatures(fallback_length_m * running_energy_response(model.uncertain_grade_percent, model),
+        fallback = HillFeatures(fallback_length_m * _uncertain_response(model),
                                 fallback_length_m=fallback_length_m, length_m=fallback_length_m)
         return (HillInterval(0, graph_length_m, fallback, fallback),)
     result: list[HillInterval] = []
