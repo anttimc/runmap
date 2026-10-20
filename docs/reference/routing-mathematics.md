@@ -1,5 +1,14 @@
 # Run planner: cost calculation
 
+The current cost-model identifier is `distance-preferences-v1`. The hill model
+is `minetti-excess-uphill-preference-v4`, with weight table
+`minetti-excess-equivalent-metres-v4`. These identify separate contracts: a
+stable composition can contain a revised feature model. Implementations live
+in `routing/costs.py`, `cost_preparation.py`, `fields.py`, and `hills.py`.
+See [architecture](../architecture.md) for request/cache lifetimes and the
+[guide](../guide.md) for controls and result interpretation. This model is
+separate from the CLI anchor-baseline experiment.
+
 The planner finds paths from home to a turnaround point and back. It minimizes
 route distance plus penalties for loop shape, repeated paths and hills:
 
@@ -221,3 +230,27 @@ Each completed leg is optimized using A*. All penalties are nonnegative, so
 cost is at least graph distance. Spatial integrals use midpoint sampling;
 hill integrals sum the measured intervals. Traffic lights, busy roads and
 greenery currently add zero.
+
+## 6. Observations and validation
+
+Hill preparation validates graph/measurement identity and contiguous chainage,
+then prepares forward and reverse interval responses once per dataset load.
+Request caching keys directional features by directed arc. Missing profiles use
+projected geometry length and the same uncertainty fallback as invalid intervals.
+Numerically valid bridge/tunnel samples can contribute estimated ascent/descent,
+but remain untrusted for hill energy. Report valid and trusted coverage and
+fallback distance separately. Missing samples invent no height change; entirely
+unmeasured traversals have null ascent/descent. With hills Off, integration is
+skipped and terrain observations remain null.
+
+Selected-leg cost breakdowns use the same component functions and fixed reuse
+context as the search. Their artificial scores are distinct from raw observations
+and physical distance. Unsupported non-Off signal/environment requests are
+rejected rather than silently receiving zero cost.
+
+`tests/test_hills.py`, `test_costs.py`, `test_run_planner.py`, and `test_run_api.py`
+cover directional/partial integration, fallback, finite lower-bounded costs,
+request caches, capabilities, and A* agreement with separate Dijkstra searches.
+They do not establish surveyed path grades or local runner acceptance. Dated
+[hill calibration reports](../archive/history/32-hill-routing.md) preserve earlier
+models and selected examples; their identities must match before comparisons.

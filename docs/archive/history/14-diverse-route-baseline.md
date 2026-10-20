@@ -1,5 +1,10 @@
 # 14. Diverse-path route baseline
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 ## Purpose
 
 The first route generator is a general-graph baseline for both planning modes:

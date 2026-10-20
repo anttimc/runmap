@@ -1,5 +1,10 @@
 # Run routing preferences
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: existing-data audit, preference cost contracts, and hill avoidance implemented,
 2026-10-15; other preference algorithms remain planned. Extends the distance-based
 [first run planner](27-first-routing-ui.md), using the controls described in the

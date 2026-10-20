@@ -1,5 +1,10 @@
 # Building-access dead ends and path rendering
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: implemented. Measurements and validation are recorded in
 [the implementation results](24-building-access-results.md). Apply a conservative building-access filter by
 default to every prepared path overlay, including gradient colors with no start

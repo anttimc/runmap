@@ -1,5 +1,10 @@
 # 8. First smoothing comparison results
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Initial run: 2026-09-05. Thin-plate comparison added: 2026-10-01. This is an exploratory result, not the final smoother selection.
 
 ## Inputs and implementation

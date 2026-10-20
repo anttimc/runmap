@@ -1,5 +1,10 @@
 # 9. Interactive terrain map
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: first local prototype implemented. It displays slope magnitude for the
 active 40 × 40 km region centered near Leppävaara and updates it when the
 thin-plate half-amplitude wavelength changes.

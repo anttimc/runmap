@@ -1,5 +1,10 @@
 # Planner UI and settings
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: UI checkpoint implemented, 2026-10-14; preference controls follow their
 routing support. Follow-up to the accepted first version of the
 [run planner](27-first-routing-ui.md). Routing preferences have a separate

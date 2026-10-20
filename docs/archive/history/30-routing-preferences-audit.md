@@ -1,5 +1,10 @@
 # Routing preference data audit
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: existing local dataset audited, 2026-10-15. Context acquisition, crossing
 event attribution, and local runner review remain open gates for preferences
 that need them. This records the first audit increment of

@@ -1,46 +1,40 @@
 # Documentation
 
-Start with the [map-first running plan](22-map-first-running-plan.md), then the
-[milestones](02-milestones.md). These define the active implementation order.
-Numbered filenames are stable references, not a chronological task queue.
+Start with the [guide](guide.md) for what exists, [goals](goals.md) for why it
+exists, and [roadmap](roadmap.md) for outstanding work.
 
-## Direction
+| Page | Authoritative content |
+| --- | --- |
+| [Project README](../README.md) | Introduction and quick start |
+| [Goals](goals.md) | Intended outcomes, scope, and non-goals |
+| [Guide](guide.md) | Existing features, usage, and limitations |
+| [Roadmap](roadmap.md) | Outstanding work, priorities, and acceptance criteria |
+| [Architecture](architecture.md) | Current data flow, artifacts, and component boundaries |
+| [Development](development.md) | Setup, preparation, commands, and configuration |
+| [Terrain mathematics](reference/terrain-mathematics.md) | Terrain calculations |
+| [Routing mathematics](reference/routing-mathematics.md) | Planner calculations |
+| [Archive](archive/README.md) | Dated plans, experiments, and supporting artifacts |
 
-- [Goals](01-goals.md)
-- [Milestones](02-milestones.md)
-- [Architecture](03-architecture.md)
-- [Data and analysis](04-data-and-analysis.md)
-- [Decisions and open questions](05-decisions.md)
-- [Map-first running exploration and planning](22-map-first-running-plan.md)
-- [M4 implementation plan: path gradients and exploration](23-m4-path-exploration.md)
-- [Building-access filtering and path rendering plan](24-building-access-filter.md)
-- [Tiled path rendering plan](25-tiled-path-rendering.md)
-- [Tiled path implementation and measurements](25-tiled-path-results.md)
-- [First UI-driven run planner](27-first-routing-ui.md)
-- [Planner UI and settings improvements](28-planner-ui-and-settings.md)
-- [Run routing preferences](29-routing-preferences.md)
-- [Routing preference data audit](30-routing-preferences-audit.md)
-- [Modular routing cost architecture](31-routing-cost-architecture.md)
-- [Hill avoidance and calibration](32-hill-routing.md)
-- [Run planner cost mathematics](33-routing-cost-mathematics.md)
+## Maintenance rule
 
-## Working system and experiments
+When a feature ships, update its maintained topic page and remove its completed
+work from the roadmap in the same change. Archive the implementation plan if it
+provides useful history. Completed plans must not remain the primary reference
+for current behavior.
 
-- [Interactive map and development commands](09-interactive-map.md)
-- [Data acquisition](07-download-data.md)
-- [Region storage and hosting](11-region-and-hosting-design.md)
-- [Runnable-path graph prototype](13-path-graph-prototype.md)
-- [Diverse-route baseline](14-diverse-route-baseline.md)
-- [Smooth loop routing experiment: first milestone](26-smooth-loop-routing-experiment.md)
+- Give each behavior, default, and unresolved task one authoritative home;
+  link to it instead of repeating its description across documents.
+- Document existing behavior in the guide and technical references. Keep
+  planned behavior in the roadmap, distinguishing next steps from optional ideas.
+- Track outstanding validation explicitly. Implemented behavior may still need
+  local review, runner acceptance, or performance checks.
+- Keep goals focused on intended outcomes. Update them when direction or scope
+  changes, rather than for routine implementation progress.
+- Preserve experiment dates, dataset/model identities, and reproduction details.
+  Historical measurements do not establish current correctness or performance.
+- Check descriptions against code and configuration. Update links when moving
+  documents, and keep dated results with their supporting artifacts.
 
-## Terrain reference
-
-- [Leppävaara terrain experiment](06-leppavaara-terrain.md)
-- [Smoothing comparison results](08-smoothing-comparison-results.md)
-- [Thin-plate DCT mathematics](10-thin-plate-dct-mathematics.md)
-
-## Superseded work
-
-[Archived plans](archive/README.md) preserve cycle-first designs and measured
-results. Their unfinished tasks are not scheduled and their commands describe
-removed code. Use the Git reference there to reproduce historical experiments.
+The numbered documents were consolidated on 2026-10-20. Their original status
+text is retained as history under the archive; unfinished historical tasks are
+scheduled only when included in the current roadmap.

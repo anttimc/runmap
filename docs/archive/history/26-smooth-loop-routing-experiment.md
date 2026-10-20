@@ -1,5 +1,10 @@
 # Smooth loop routing experiment
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: planned. First experimental slice supporting M7/M8; this does not
 change the map-first delivery order.
 

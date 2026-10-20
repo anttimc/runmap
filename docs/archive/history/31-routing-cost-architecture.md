@@ -1,5 +1,10 @@
 # Modular routing cost architecture
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: steps 1–3 implemented, 2026-10-15; signal and environmental preference algorithms
 remain planned. Refines the cost-composition
 slice of [routing preferences](29-routing-preferences.md), using the

@@ -1,5 +1,10 @@
 # 23. M4 — Path gradients and start-based exploration
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: M4.1–M4.4 implemented; M4.5 pending, updated 2026-10-12. This is the delivery plan
 for M4 in the [map-first roadmap](22-map-first-running-plan.md). Measurement
 preservation, gradient map/inspection, and start-based outing inclusion are

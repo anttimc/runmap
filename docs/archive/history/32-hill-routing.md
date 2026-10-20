@@ -1,7 +1,12 @@
 # Hill routing with a preference for gentle climbs
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 For a self-contained derivation of every route cost term, see
-[Run planner: cost calculation](33-routing-cost-mathematics.md).
+[Run planner: cost calculation](../../reference/routing-mathematics.md).
 
 Status: Minetti-based uphill preference implemented 2026-10-19; preset calibration and local runner
 acceptance remain provisional. Delivers step 3 of the

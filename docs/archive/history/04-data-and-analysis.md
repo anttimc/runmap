@@ -1,5 +1,10 @@
 # 4. Data and analysis plan
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 ## Source data
 
 ### OpenStreetMap

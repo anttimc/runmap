@@ -1,0 +1,40 @@
+# Goals
+
+Help a runner understand terrain before choosing a run, first around
+Leppävaara in Espoo. The project is also a place to learn through replaceable,
+understandable implementations.
+
+## Intended outcomes
+
+- **Find flatter options:** locate connected paths, recognize short rises and
+  sustained climbs, and understand travel direction beyond a total-ascent number.
+- **Find training hills:** distinguish short steep climbs, longer gentle climbs,
+  and rolling terrain through inspectable measurements.
+- **Explore interactively:** navigate an intended viewport of roughly 20 × 20 km
+  without processing or transferring the entire source raster on each movement.
+  Coverage may be larger; performance promises require representative measurements.
+- **Experiment independently:** change mathematical definitions without rewriting
+  acquisition or the UI, run calculations outside the web application, and trace
+  displayed measurements to their sources and settings.
+
+## Product direction
+
+Help the runner understand available paths, assemble a run with guidance, and
+eventually compare a few useful automatic suggestions. Use one attributed
+pedestrian graph across these tools. Real junctions, access restrictions,
+bridges, tunnels, and uncertainty matter more than partitioning the map into
+cycles. Runs may retrace necessary access stems.
+
+Keep preparation separate from ordinary interaction. Prefer explicit data and
+focused functions, local files, and measured improvements over infrastructure
+introduced in anticipation of future scale.
+
+## Scope
+
+Terrain and path measurements inform route choice; they do not establish current
+path conditions or predict heart rate, personal effort, or training outcomes.
+Accounts, social features, live activity tracking, training prescriptions, and
+turn-by-turn navigation are outside the current product scope.
+
+See the [guide](guide.md) for delivered behavior and the [roadmap](roadmap.md)
+for next steps and optional experiments.

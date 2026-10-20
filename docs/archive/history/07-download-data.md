@@ -1,5 +1,10 @@
 # 7. Download elevation data
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 ## Access
 
 Automated WCS and OGC API Processes downloads require a free personal Maanmittauslaitos API key. Create one through [My Account instructions](https://www.maanmittauslaitos.fi/en/rajapinnat/api-avaimen-ohje).

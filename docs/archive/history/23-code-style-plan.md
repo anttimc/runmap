@@ -1,5 +1,10 @@
 # Python code style plan
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Preserve runtime behavior and serialized formats while applying AGENTS.md.
 Use responsibility boundaries to split functions; do not impose a line limit.
 

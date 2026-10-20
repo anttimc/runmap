@@ -1,5 +1,8 @@
 // Run with Chrome's remote debugger on 9225 and Vite on 5173.
 import fs from 'node:fs';
+import path from 'node:path';
+const outputPath = process.argv[2] || 'data/experiments/path-tiles-browser/benchmark.json';
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 const tabs = await (await fetch('http://127.0.0.1:9225/json')).json();
 const socket = new WebSocket(tabs.find(tab => tab.type === 'page').webSocketDebuggerUrl);
 await new Promise(resolve => socket.addEventListener('open', resolve));
@@ -47,10 +50,10 @@ try {
     }, 100);
   })`);
   const result = await evaluate(fs.readFileSync(new URL('./benchmark-path-tiles.js', import.meta.url), 'utf8'));
-  fs.writeFileSync(process.argv[2] || 'docs/25-tiled-path-browser-benchmark.json', JSON.stringify(result, null, 2) + '\n');
+  fs.writeFileSync(outputPath, JSON.stringify(result, null, 2) + '\n');
 } catch (error) {
   const partial = await evaluate('window.__tileBenchResult');
-  if (partial) fs.writeFileSync(process.argv[2] || 'docs/25-tiled-path-browser-benchmark.json', JSON.stringify({ ...partial, incomplete: true }, null, 2) + '\n');
+  if (partial) fs.writeFileSync(outputPath, JSON.stringify({ ...partial, incomplete: true }, null, 2) + '\n');
   throw error;
 } finally {
   socket.close();

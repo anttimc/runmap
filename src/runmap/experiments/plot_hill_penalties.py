@@ -71,7 +71,9 @@ def plot_penalties(output: Path) -> None:
 
 
 def main() -> None:
-    plot_penalties(Path("docs/32-hill-penalties"))
+    output = Path("data/experiments/hill-penalties/penalties")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    plot_penalties(output)
 
 
 if __name__ == "__main__":

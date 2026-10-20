@@ -1,4 +1,54 @@
-# Thin-plate smoothing and its DCT implementation
+# Terrain mathematics
+
+This reference describes the calculations used by terrain rendering and prepared
+path measurements. See [architecture](../architecture.md) for storage and
+sampling settings, and the [guide](../guide.md) for their interpretation in the UI.
+
+## Gradient and path conventions
+
+In EPSG:3067, let `x` increase grid-east and `y` grid-north, with elevation `z`
+in metres. `terrain/derivatives.py` computes:
+
+```text
+gx = dz/dx
+gy = dz/dy
+magnitude = hypot(gx, gy)
+slope_percent = 100 * magnitude
+uphill_grid_bearing = atan2(gx, gy), clockwise from grid north
+```
+
+NumPy central differences apply in the interior and one-sided differences at
+edges. North-up raster rows increase southward, so the row derivative is negated
+for `gy`. A validity mask hides invalid outputs; it does not fill missing cells
+or make neighboring finite differences independent of nodata. Bearing is NaN
+where magnitude does not exceed the supplied minimum, including exactly flat
+terrain. Grid bearing is not automatically a true-north compass bearing.
+
+Path preparation samples derived magnitude/bearing at interval midpoints,
+reconstructs gradient components, and projects onto the local unit tangent `t`:
+
+```text
+grade = magnitude * (sin(bearing) * t_east + cos(bearing) * t_north)
+height_change = grade * projected_interval_length
+grade_percent = 100 * grade
+```
+
+Each interval has constant sampled grade. Summing positive/negative height changes
+gives estimated ascent/descent; cumulative sums give relative profile height.
+Reverse traversal reverses order and grade sign and swaps ascent/descent.
+Missing intervals break the profile; a later valid run restarts at zero. A
+whole-segment mean must not erase an intervening climb and descent.
+
+Sampling reads the quantized derived terrain product: magnitude has 0.0001
+rise/run resolution and bearing 0.01 degree resolution. Both bands must contain
+valid samples. An exactly flat cell has undefined bearing, encoded as nodata;
+the current sampler therefore treats it as missing even when magnitude is zero.
+This is a known limitation tracked in the [roadmap](../roadmap.md).
+The profile estimates smoothed ground
+height change; it is not sampled absolute elevation, does not establish bridge
+or tunnel height, and is not constrained to integrate to zero around a loop.
+
+## Thin-plate smoothing and its DCT implementation
 
 This note derives the smoother in `src/runmap/terrain/smoothing.py` from the
 continuous thin-plate bending energy, then states exactly which discrete

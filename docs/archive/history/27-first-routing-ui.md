@@ -1,5 +1,10 @@
 # First UI-driven run planner
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: first map feedback version implemented, 2026-10-14; tuning tools and
 broader local review remain. First application slice of M7, using the
 [smooth loop experiment](26-smooth-loop-routing-experiment.md). Prioritize a

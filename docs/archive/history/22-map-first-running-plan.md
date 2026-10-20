@@ -1,8 +1,13 @@
 # 22. Map-first running exploration and planning
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: active high-level plan, adopted 2026-10-09. This supersedes the
 cycle-first roadmap in archived plans 12 and 15–21. See the
-[documentation index](README.md) and [milestones](02-milestones.md).
+[documentation index](../../README.md) and [milestones](02-milestones.md).
 
 ## Product direction
 
@@ -129,7 +134,7 @@ and receive useful local-runner feedback on the saved evaluation examples.
 
 The archived implementation is available at commit
 `99141157453d0363889957821ecc921313ddcb86`; see
-[recovery instructions](archive/README.md). Cycle-specific modules, plots, tests,
+[recovery instructions](../README.md). Cycle-specific modules, plots, tests,
 CLI commands, and topology settings are removed from the active codebase.
 
 Routing experiment schema 2 removes the topology configuration. Existing prepared

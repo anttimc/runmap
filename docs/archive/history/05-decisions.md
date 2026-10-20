@@ -1,5 +1,10 @@
 # 5. Decisions and open questions
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Initial planning record: 2026-09-05.
 
 ## Agreed direction
@@ -40,7 +45,7 @@ Initial planning record: 2026-09-05.
 | D34 | Archive cycle-first plans and remove their implementation | Keep one active roadmap; Git preserves the experiments |
 
 See the [active plan](22-map-first-running-plan.md) and
-[archive recovery instructions](archive/README.md).
+[archive recovery instructions](../README.md).
 
 ## Initial implementation defaults
 

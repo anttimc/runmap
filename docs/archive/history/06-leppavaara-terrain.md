@@ -1,5 +1,10 @@
 # 6. Leppävaara terrain-gradient experiment
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: active experiment. A provisional 6 × 6 km elevation crop has been downloaded and structurally inspected. Raw, Gaussian, spectral thin-plate, and one nonlinear preset have been compared on a central 2 × 2 km crop and synthetic terrain; see the [first results](08-smoothing-comparison-results.md). More representative validation and parameter exploration remain.
 
 ## Purpose and scope

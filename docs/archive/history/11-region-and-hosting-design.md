@@ -1,5 +1,10 @@
 # 11. Region, elevation storage, and hosting design
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status: local tiled pipeline implemented for the first region. Region
 configuration, shared source storage, the local catalog, immutable manifests,
 haloed analysis COGs, and versioned XYZ rendering are operational for

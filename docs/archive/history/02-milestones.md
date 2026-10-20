@@ -1,5 +1,10 @@
 # 2. Delivery milestones
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Status values: planned, active, complete. M0–M2 are complete, M3 is active,
 M4 is active with M4.1–M4.4 implemented and M4.5 pending; later milestones are planned.
 The [map-first plan](22-map-first-running-plan.md) defines the current product sequence. Completion requires the listed evidence, not

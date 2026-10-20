@@ -1,5 +1,10 @@
 # Tiled path rendering: implementation and measurements
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 Implemented on 2026-10-12. Path styling now uses a MapLibre vector source with a `paths` layer. Selection, inspection profiles, direction arrows, and start markers retain original geometry. Legacy GeoJSON endpoints remain available for diagnostics.
 
 ## Rendering and lifecycle
@@ -72,7 +77,7 @@ pnpm --dir web dev --host 127.0.0.1
 node web/scripts/benchmark-path-tiles.mjs docs/25-tiled-path-browser-benchmark.json
 ```
 
-The companion [browser smoke script](../web/scripts/check-path-tiles.js) can be evaluated through Chrome DevTools with the test driver's exposed `window.__map`.
+The companion [browser smoke script](../../../web/scripts/check-path-tiles.js) can be evaluated through Chrome DevTools with the test driver's exposed `window.__map`.
 
 Paired warm source medians in milliseconds, GeoJSON → vector:
 

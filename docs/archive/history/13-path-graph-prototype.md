@@ -1,9 +1,14 @@
 # 13. Runnable-path graph prototype
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 ## Scope
 
 The first path graph supports the flat 10 km loop experiment defined in the
-[historical route-planning experiment](archive/12-route-planning-design.md). Its preparation rectangle
+[historical route-planning experiment](../12-route-planning-design.md). Its preparation rectangle
 is `E 373000–380000`, `N 6673000–6682000` in EPSG:3067. This covers the
 Leppävaara/Kilo test neighborhood with context around its edges. Ring I is not a route boundary. The historical topology study is archived;
 this graph now supports the [map-first plan](22-map-first-running-plan.md).

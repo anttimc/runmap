@@ -1,5 +1,10 @@
 # 3. Architecture and software
 
+> **Archived 2026-10-20.** This is an implementation/planning record,
+> not current documentation. Status, defaults, commands, and measurements
+> below are historical and may describe superseded behavior. Read the
+> [current guide](../../guide.md) and [roadmap](../../roadmap.md).
+
 ## Design principles
 
 - Keep scientific calculations independent of HTTP, file formats, and rendering.
@@ -113,4 +118,4 @@ The retained profile helpers are not yet integrated into the baseline.
 Routes are ordered directed walks with complete distance and repetition
 accounting. Optional loop examples are selected routes, not a second network
 representation. Cycle-specific implementations are recorded in the
-[archive](archive/README.md).
+[archive](../README.md).
