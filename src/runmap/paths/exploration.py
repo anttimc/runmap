@@ -1,6 +1,7 @@
 """Eligible edge snapping and budgeted outing inclusion over prepared topology."""
 
 from collections import ChainMap, OrderedDict
+from collections.abc import Mapping
 from concurrent.futures import Future
 from time import monotonic
 from dataclasses import dataclass, field, replace
@@ -10,7 +11,7 @@ from threading import RLock
 from rasterio.warp import transform
 
 from runmap.routing.geometry import prepare_projected_geometry
-from runmap.routing.search import GraphData, shortest_distances, reachable_nodes
+from runmap.routing.search import GraphData, shortest_distances
 
 
 VIRTUAL_START = "@snapped-start"
@@ -30,8 +31,7 @@ class Snap:
 class DistanceData:
     snap: Snap
     maximum_m: float
-    outward: dict[str, float]
-    outward_connected: set[str]
+    outward: Mapping[str, float]
 
 
 @dataclass
@@ -144,8 +144,7 @@ def legal_directions(index: GraphData, segment_id: str) -> frozenset[bool]:
 def distance_data(index: GraphData, snap: Snap, maximum_m: float, deadline: float | None = None) -> DistanceData:
     graph, start = split_start_graph(index, snap)
     return DistanceData(snap, maximum_m,
-                        shortest_distances(graph, start, maximum_m, deadline=deadline),
-                        reachable_nodes(graph, start, deadline=deadline))
+                        shortest_distances(graph, start, maximum_m, deadline=deadline))
 
 
 def cached_distances(cache: ExplorationCache, dataset_id: str, index: GraphData, snap: Snap,
@@ -184,11 +183,11 @@ def cached_distances(cache: ExplorationCache, dataset_id: str, index: GraphData,
             cache.pending.pop(pending_key, None)
 
 
-def _point_distance(index: GraphData, distances: dict[str, float], connected: set[str],
-                    snap: Snap, segment_id: str, offset: float) -> tuple[float, bool]:
+def _point_distance(index: GraphData, distances: Mapping[str, float],
+                    snap: Snap, segment_id: str, offset: float) -> float:
     segment = index.segments[segment_id]
     length = segment["length_m"]
-    choices, possible = [], False
+    choices: list[float] = []
     # On the start segment, use the virtual start as a third endpoint. This also
     # handles legal interior turns without routing via an original endpoint.
     anchors = [(segment["from"], 0.0), (segment["to"], length)]
@@ -203,12 +202,11 @@ def _point_distance(index: GraphData, distances: dict[str, float], connected: se
             # Endpoint snaps use the actual node in Dijkstra, but this equivalent
             # zero-distance anchor remains useful for the point formulas.
             if node == VIRTUAL_START:
-                base, is_connected = 0.0, True
+                base = 0.0
             else:
-                base, is_connected = distances.get(node, math.inf), node in connected
-            possible |= is_connected
+                base = distances.get(node, math.inf)
             choices.append(base + abs(delta))
-    return min(choices, default=math.inf), possible
+    return min(choices, default=math.inf)
 
 
 def interval_inclusion(index, distances, segment_id, start_m, end_m, budget_m):
@@ -219,24 +217,20 @@ def interval_inclusion(index, distances, segment_id, start_m, end_m, budget_m):
     results = []
     for forward in sorted(legal_directions(index, segment_id), reverse=True):
         a, b = (start_m, end_m) if forward else (end_m, start_m)
-        outward, outward_possible = _point_distance(index, distances.outward, distances.outward_connected,
-                                                     distances.snap, segment_id, a)
+        outward = _point_distance(index, distances.outward, distances.snap, segment_id, a)
         # A point minimum beyond the search radius is not numerically resolved:
         # an unvisited anchor could improve it while still exceeding the budget.
         if outward > distances.maximum_m:
             outward = math.inf
         total = outward + abs(b - a)
         results.append({"direction": "forward" if forward else "backward",
-                        "minimum_inclusion_m": total if math.isfinite(total) else None,
-                        "connected": outward_possible})
+                        "minimum_inclusion_m": total if math.isfinite(total) else None})
     finite = [item["minimum_inclusion_m"] for item in results if item["minimum_inclusion_m"] is not None]
     minimum = min(finite, default=None)
-    connected = any(item["connected"] for item in results)
-    state = "included" if minimum is not None and minimum <= budget_m + 1e-8 else ("beyond_budget" if connected else "no_connection")
+    state = "included" if minimum is not None and minimum <= budget_m + 1e-8 else "beyond_budget"
     return {"inclusion_state": state,
-            "inclusion_reason": {"included": "entire_interval_within_budget", "beyond_budget": "beyond_distance_budget",
-                                 "no_connection": "no_connection_in_prepared_data"}[state],
-            "minimum_inclusion_m": minimum, "distance_lower_bound_m": budget_m if minimum is None and connected else None,
+            "inclusion_reason": {"included": "entire_interval_within_budget", "beyond_budget": "beyond_distance_budget"}[state],
+            "minimum_inclusion_m": minimum, "distance_lower_bound_m": budget_m if minimum is None else None,
             "directions": results}
 
 
@@ -244,6 +238,5 @@ def distance_from_start(index, distances, segment_id, offset_m):
     """Shortest legal outward distance to a point, within the cached search bound."""
     if segment_reason(index, segment_id):
         return None
-    value, _ = _point_distance(index, distances.outward, distances.outward_connected,
-                               distances.snap, segment_id, offset_m)
+    value = _point_distance(index, distances.outward, distances.snap, segment_id, offset_m)
     return value if math.isfinite(value) and value <= distances.maximum_m else None

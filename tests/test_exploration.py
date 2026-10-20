@@ -24,6 +24,20 @@ def snap(segment, offset):
 
 
 class InclusionTests(unittest.TestCase):
+    def test_outside_budget_and_disconnected_intervals_share_one_state(self) -> None:
+        index = build_graph_index(graph([
+            ("stem", "s", "a", 100), ("far", "a", "b", 1000), ("other", "x", "y", 10),
+        ]))
+        distances = distance_data(index, snap("stem", 0), 50)
+        self.assertEqual(distances.outward, {"s": 0})
+        far = interval_inclusion(index, distances, "far", 0, 10, 50)
+        disconnected = interval_inclusion(index, distances, "other", 0, 10, 50)
+        self.assertEqual(far, disconnected)
+        self.assertEqual(far["inclusion_state"], "beyond_budget")
+        self.assertIsNone(far["minimum_inclusion_m"])
+        self.assertEqual(far["distance_lower_bound_m"], 50)
+        self.assertTrue(all("connected" not in direction for direction in far["directions"]))
+
     def test_outward_distance_is_network_distance_not_round_trip(self):
         index = build_graph_index(graph([("stem", "a", "b", 100), ("branch", "b", "c", 300),
                                          ("other", "x", "y", 10)]))
@@ -54,7 +68,7 @@ class InclusionTests(unittest.TestCase):
                                          ("other", "x", "y", 10)]))
         distances = distance_data(index, snap("stem", 0), 1000)
         self.assertEqual(interval_inclusion(index, distances, "bc", 0, 100, 500)["minimum_inclusion_m"], 300)
-        self.assertEqual(interval_inclusion(index, distances, "other", 0, 10, 1000)["inclusion_state"], "no_connection")
+        self.assertEqual(interval_inclusion(index, distances, "other", 0, 10, 1000)["inclusion_state"], "beyond_budget")
 
     def test_one_way_branch_and_one_way_interior_with_return_cycle(self):
         document = graph([("stem", "s", "a", 100), ("branch", "a", "b", 100)])
@@ -169,7 +183,7 @@ class SnapTests(unittest.TestCase):
         self.assertEqual(snap_path_start(data, 24.802, 60.20002, segment_id="nonexistent")["status"], "no_eligible_snap")
         index = path_policy_index(data)
         distances = distance_data(index, snap("s", 110), 1000)
-        self.assertEqual(interval_inclusion(index, distances, "parallel", 110, 120, 1000)["inclusion_state"], "no_connection")
+        self.assertEqual(interval_inclusion(index, distances, "parallel", 110, 120, 1000)["inclusion_state"], "beyond_budget")
 
     def test_explore_cache_viewport_reuse_and_inspection_numerical_states(self):
         document = fixture()
@@ -207,7 +221,7 @@ class SnapTests(unittest.TestCase):
         self.assertEqual({c["segment_id"] for c in result["candidates"]}, {"s", "crossing"})
         index = path_policy_index(data)
         distances = distance_data(index, snap("s", 110), 1000)
-        self.assertEqual(interval_inclusion(index, distances, "crossing", 110, 120, 1000)["inclusion_state"], "no_connection")
+        self.assertEqual(interval_inclusion(index, distances, "crossing", 110, 120, 1000)["inclusion_state"], "beyond_budget")
         # A missing terrain interval remains eligible for snapping.
         self.assertEqual(snap_path_start(data, 24.8025, 60.2)["snap"]["segment_id"], "s")
 

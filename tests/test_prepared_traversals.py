@@ -10,7 +10,7 @@ from runmap.routing.geometry import projected_points
 from runmap.routing.profiles import arc_direction_allowed, exploration_profile
 from runmap.routing.run_planner import RunSettings, endpoint_overlay, plan_run
 from runmap.routing.search import (
-    apply_profile, arc_usable, build_graph_index, reachable_nodes, shortest_distances, shortest_path,
+    apply_profile, arc_usable, build_graph_index, shortest_distances, shortest_path,
 )
 from runmap.routing.types import GraphDocument
 
@@ -48,7 +48,6 @@ class PreparedTraversalTests(unittest.TestCase):
                     permitted = arc["id"] in expected
                     self.assertEqual(arc_usable(index, arc), permitted)
                     self.assertEqual(shortest_path(index, arc["from"], arc["to"]) is not None, permitted)
-                    self.assertEqual(arc["to"] in reachable_nodes(index, arc["from"]), permitted)
                     self.assertEqual(arc["from"] in shortest_distances(index, arc["to"], reverse=True), permitted)
 
     def test_relaxing_policy_restores_arcs_and_reuses_geometry(self) -> None:
@@ -94,7 +93,6 @@ class PreparedTraversalTests(unittest.TestCase):
                     self.assertIsNone(shortest_path(overlay.graph, end, start))
                     self.assertEqual(shortest_distances(overlay.graph, start)[end], 60)
                     self.assertEqual(shortest_distances(overlay.graph, end, reverse=True)[start], 60)
-                    self.assertIn(end, reachable_nodes(overlay.graph, start))
                     exploration, virtual = split_start_graph(index, home)
                     target = "b" if oneway == "yes" else "a"
                     other = "a" if oneway == "yes" else "b"

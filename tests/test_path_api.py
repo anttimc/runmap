@@ -272,14 +272,14 @@ class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
             query = f"west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&{base}"
             code, result = await get(f"/api/paths/explore?{query}")
             self.assertEqual(code, 200)
-            self.assertEqual({feature["properties"]["inclusion_state"] for feature in result["features"]}, {"included", "no_connection"})
+            self.assertEqual({feature["properties"]["inclusion_state"] for feature in result["features"]}, {"included", "beyond_budget"})
             self.assertEqual((await get(f"/api/paths/explore?{query}&dataset_id=stale"))[0], 409)
             self.assertEqual((await get(f"/api/paths/explore?{query}&budget_km=0"))[0], 422)
             self.assertEqual((await get(f"/api/paths/snap?{base}&surface=unknown"))[0], 400)
             self.assertEqual((await get(f"/api/paths/snap?{base}&segment_id=missing"))[1]["status"], "no_eligible_snap")
             code, inspected = await get(f"/api/paths/segments/s?reverse=true&{base}")
             self.assertEqual(code, 200)
-            self.assertEqual({item["inclusion_state"] for item in inspected["intervals"]}, {"included", "no_connection"})
+            self.assertEqual({item["inclusion_state"] for item in inspected["intervals"]}, {"included", "beyond_budget"})
             self.assertEqual((await get("/api/paths/segments/s?longitude=24.8"))[0], 400)
 
     async def test_missing_or_corrupt_artifacts_do_not_break_terrain_startup(self):

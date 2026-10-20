@@ -397,11 +397,9 @@ function inclusionText(interval: Inclusion): string {
   const reason =
     interval.inclusion_state === "included"
       ? "within budget"
-      : interval.inclusion_state === "no_connection"
-        ? "no connection in prepared data"
-        : interval.inclusion_state === "excluded"
-          ? `excluded: ${interval.inclusion_reason}`
-          : "beyond budget";
+      : interval.inclusion_state === "excluded"
+        ? `excluded: ${interval.inclusion_reason}`
+        : "outside budget";
   const minimum =
     interval.minimum_inclusion_m == null
       ? ""
@@ -440,8 +438,6 @@ function applyPathEmphasis(
       ["coalesce", ["get", "inclusion_state"], ""],
       "beyond_budget",
       0.3,
-      "no_connection",
-      0.12,
       "excluded",
       0.08,
       1,

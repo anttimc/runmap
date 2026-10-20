@@ -58,7 +58,7 @@ export interface PathConfig {
   initial_view: { longitude: number; latitude: number; zoom: number };
 }
 export interface Inclusion {
-  inclusion_state?: "included" | "beyond_budget" | "no_connection" | "excluded";
+  inclusion_state?: "included" | "beyond_budget" | "excluded";
   inclusion_reason?: string;
   minimum_inclusion_m?: number | null;
   coverage_limited?: boolean;

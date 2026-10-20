@@ -5,28 +5,28 @@ from concurrent.futures import Future
 from dataclasses import dataclass
 from hashlib import sha256
 import math
+from sys import getsizeof
 from threading import RLock
 from time import monotonic, time
 from typing import Callable, Generic, TypeVar
+from types import MappingProxyType
 from uuid import uuid4
 
 import mapbox_vector_tile
 import numpy as np
-from numpy.typing import NDArray
 from shapely.geometry import LineString, box
 from shapely import transform
 
 from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, exploration_context, path_policy_index
 from runmap.paths.dead_ends import ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M
-from runmap.paths.exploration import segment_reason
+from runmap.paths.exploration import DistanceData, segment_reason
 
-RENDER_VERSION = 2
-ALGORITHM_VERSION = 1
+RENDER_VERSION = 3
+ALGORITHM_VERSION = 3
 MIN_ZOOM = 10
 MAX_ZOOM = 16
 EXTENT = 4096
 BUFFER = 8 * EXTENT / 512
-STATES = ("included", "beyond_budget", "no_connection", "excluded")
 Property = str | float | bool | int
 T = TypeVar("T")
 
@@ -99,18 +99,20 @@ class ByteCache(Generic[T]):
 @dataclass(frozen=True)
 class Snapshot:
     id: str
-    state: NDArray[np.uint8]
-    distance: NDArray[np.float64]
-    boundary: NDArray[np.bool_]
+    distances: DistanceData
+    budget_km: float
     policy: str
     expires_at: float
     preparation_ms: float
     routing_ms: float
-    interval_preparation_ms: float
+    retained_bytes: int
 
-    @property
-    def retained_bytes(self) -> int:
-        return self.state.nbytes + self.distance.nbytes + self.boundary.nbytes + 512
+
+def snapshot_distances(distances: DistanceData) -> tuple[DistanceData, int]:
+    """Freeze search results and conservatively account for retained node data."""
+    outward = dict(distances.outward)
+    retained = getsizeof(outward) + sum(getsizeof(node) + getsizeof(value) for node, value in outward.items()) + 512
+    return DistanceData(distances.snap, distances.maximum_m, MappingProxyType(outward)), retained
 
 
 @dataclass(frozen=True)
@@ -171,17 +173,20 @@ def display_runs(data: PathData, indexes: list[int], policy: str, variant: str,
             "segment_id": segment, "quality": source["quality"], "stairs": source["stairs"],
             "eligible": segment_reason(index, segment) is None,
         }
+        distance: float | None = None
         if snapshot is not None:
-            properties["inclusion_state"] = STATES[int(snapshot.state[i])]
-            properties["coverage_limited"] = bool(snapshot.boundary[i])
+            interval = data.measurements.document["segments"][segment][source["interval_index"]]
+            state = _interval_state(data, index, snapshot.distances, interval, snapshot.budget_km)
+            properties["inclusion_state"] = state["inclusion_state"]
+            properties["coverage_limited"] = state["coverage_limited"]
+            distance = state["distance_from_start_m"]
         if metric == "gradient":
             if source.get("flat_min_grade_50m") is not None:
                 properties["flat_min_grade_50m"] = source["flat_min_grade_50m"]
             grade = source["grade_percent"]
             if grade is not None and source["quality"] == "terrain_estimate":
                 properties["grade_percent"] = math.ceil(abs(grade) / grade_bin) * grade_bin if grade_bin else abs(grade)
-        elif snapshot is not None and math.isfinite(snapshot.distance[i]):
-            distance = float(snapshot.distance[i])
+        elif distance is not None:
             properties["distance_from_start_m"] = round(distance / distance_bin) * distance_bin if distance_bin else distance
         coordinates = tuple(tuple(point) for point in feature["geometry"]["coordinates"])
         interval = source["interval_index"]
@@ -235,7 +240,7 @@ class PathTileService:
         started = monotonic()
         policy = f"{surface}-{'no-stairs' if avoid_stairs else 'stairs'}"
         policy_options(policy)
-        index, distances, start, distance_hit = exploration_context(
+        _, distances, start, distance_hit = exploration_context(
             self.data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id,
             deadline=started + self.preparation_deadline)
         if distances is None:
@@ -246,25 +251,12 @@ class PathTileService:
                           snap["segment_id"], snap["graph_offset_m"], budget_km)).encode()).hexdigest()
 
         def materialize() -> Snapshot:
-            interval_started = monotonic()
-            count = len(self.data.features)
-            states = np.empty(count, dtype=np.uint8)
-            values = np.full(count, np.nan, dtype=np.float64)
-            boundary = np.empty(count, dtype=np.bool_)
-            for i, feature in enumerate(self.data.features):
-                if i % 256 == 0 and monotonic() - started > self.preparation_deadline:
-                    raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
-                props = feature["properties"]
-                interval = self.data.measurements.document["segments"][props["segment_id"]][props["interval_index"]]
-                state = _interval_state(self.data, index, distances, interval, budget_km)
-                states[i] = STATES.index(state["inclusion_state"])
-                values[i] = state["distance_from_start_m"] if state["distance_from_start_m"] is not None else np.nan
-                boundary[i] = state["coverage_limited"]
-            for array in (states, values, boundary):
-                array.flags.writeable = False
-            return Snapshot(uuid4().hex, states, values, boundary, policy,
+            frozen, retained = snapshot_distances(distances)
+            if monotonic() - started > self.preparation_deadline:
+                raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
+            return Snapshot(uuid4().hex, frozen, budget_km, policy,
                             time() + self.snapshots.ttl, (monotonic() - started) * 1000,
-                            routing_ms, (monotonic() - interval_started) * 1000)
+                            routing_ms, retained)
 
         snapshot, hit = self.snapshots.compute(key, materialize, lambda item: item.retained_bytes)
         return {"status": "ready", "dataset_id": self.data.dataset_id, "snapshot_id": snapshot.id,
@@ -272,7 +264,7 @@ class PathTileService:
                 "tile_template": tile_template(self.data, f"snapshots/{snapshot.id}"),
                 "expires_at": snapshot.expires_at, "preparation_ms": snapshot.preparation_ms,
                 "request_ms": (monotonic() - started) * 1000, "retained_bytes": snapshot.retained_bytes,
-                "routing_ms": snapshot.routing_ms, "interval_preparation_ms": snapshot.interval_preparation_ms,
+                "routing_ms": snapshot.routing_ms, "interval_preparation_ms": 0.0,
                 "snapshot_cache_hit": hit, "distance_cache_hit": distance_hit}
 
     def snapshot(self, snapshot_id: str) -> Snapshot:

@@ -118,10 +118,18 @@ distinct tile renders; derived-core generation has a separate process-local lock
 Path MVTs use buffered clipping, zoom-dependent simplification and grade/distance
 bins, while keeping segment IDs, eligibility, quality, and inclusion boundaries.
 Inspection retains full measurements. Static tiles use immutable versioned URLs.
-Start/policy/budget queries prepare process-local snapshots; navigation reuses
-tiles without repeating distance searches. Snapshots and encoded tiles have
+Start/policy/budget queries prepare process-local snapshots containing immutable
+bounded search results. Interval states, midpoint distances, and boundary flags
+are calculated only for the spatial candidates of requested buffered tiles.
+Navigation and tile variants reuse the same search; encoded tiles are cached.
+Snapshot memory accounting includes retained node distances. Snapshots and tiles have
 byte-bounded TTL/LRU caches. Expired snapshots return 410; the client recreates
 once. Use one API worker until snapshots can be shared or reconstructed.
+
+Exploration runs only a distance-bounded Dijkstra search. Eligible intervals not
+reached within the budget share the `beyond_budget` state and faint styling,
+including disconnected intervals. No whole-network connectivity search runs;
+policy-excluded intervals retain their separate state.
 
 Run requests split both snapped endpoints in one temporary overlay. The planner
 uses A* with a calibrated graph-distance lower bound, lazy shared shape integrals,

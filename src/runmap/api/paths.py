@@ -382,7 +382,7 @@ def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=3, surface=
         features.append({**feature, "properties": {**properties, **_interval_state(data, index, distances, interval, budget_km)}})
     return {**response, "features": features, "distance_cache_hit": hit,
             "search_limit_m": distances.maximum_m, "interval_resolution_note":
-            "Whole display intervals are tested conservatively. Exact minima beyond the bounded search may be unavailable; they are beyond budget, not disconnected."}
+            "Whole display intervals are tested conservatively. Paths not reached within the budget share one state, including disconnected paths. Exact minima beyond the bounded search may be unavailable."}
 
 
 def inspect_outing(data, result, longitude, latitude, budget_km=3, surface="all", avoid_stairs=True,
@@ -402,8 +402,8 @@ def inspect_outing(data, result, longitude, latitude, budget_km=3, surface="all"
 def render_paths(response, metric="gradient"):
     """Coalesce contiguous equal-value intervals; inspection retains exact samples.
 
-    Keep segment boundaries and outing-state transitions, including disconnected
-    and excluded portions. Only properties consumed by map styling are shipped.
+    Keep segment boundaries and outing-state transitions. Only properties
+    consumed by map styling are shipped.
     """
     if metric not in {"gradient", "distance"}:
         raise ValueError("Unknown path display metric")

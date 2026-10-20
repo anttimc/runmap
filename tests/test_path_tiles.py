@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 import math
 from threading import Event
+from types import MappingProxyType
 import unittest
 from unittest.mock import patch
 
@@ -11,9 +12,11 @@ import mapbox_vector_tile
 from tempfile import TemporaryDirectory
 from test_path_api import fixture
 from runmap.api.paths import load_path_data
+from runmap.api.paths import _interval_state, candidate_path_indexes
 from runmap.paths.graph import write_graph_outputs
 from runmap.api.path_tiles import (ByteCache, PathTileService, display_runs, encode_tile,
-                                  projected_point, render_version, tile_bounds)
+                                  projected_point, render_version, snapshot_distances, tile_bounds)
+from runmap.paths.exploration import DistanceData, Snap
 
 
 def xyz(longitude: float, latitude: float, z: int) -> tuple[int, int]:
@@ -26,6 +29,76 @@ class PathTileTests(unittest.TestCase):
         directory = TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.data = load_path_data(write_graph_outputs(fixture(), directory.name)["graph"])
+
+    def test_snapshot_preparation_defers_all_interval_work(self) -> None:
+        service = PathTileService(self.data)
+        with patch("runmap.api.path_tiles._interval_state", side_effect=AssertionError("eager interval work")):
+            result = service.prepare(24.8, 60.2, .1, "all", True, 50, None)
+        self.assertEqual(result["interval_preparation_ms"], 0)
+        self.assertEqual(self.data.boundary_intervals, {})
+        self.assertEqual(service.snapshot(result["snapshot_id"]).budget_km, .1)
+
+    def test_only_requested_tile_candidates_are_evaluated_and_cached(self) -> None:
+        graph = fixture()
+        far = fixture()
+        segment = far["segments"][0]
+        segment.update(id="far", **{"from": "3", "to": "4"})
+        segment["geometry"] = [[lon + 1, lat] for lon, lat in segment["geometry"]]
+        for number, node in enumerate(far["nodes"], 3):
+            node.update(id=str(number), longitude=node["longitude"] + 1)
+        far["arcs"][0].update(id="far:f", segment_id="far", **{"from": "3", "to": "4"})
+        intervals = far["_measurements"]["segments"]["s"]
+        for interval in intervals:
+            interval.update(segment_id="far", geometry=[[lon + 1, lat] for lon, lat in interval["geometry"]])
+        graph["segments"].append(segment)
+        graph["nodes"].extend(far["nodes"])
+        graph["arcs"].extend(far["arcs"])
+        graph["_measurements"]["segments"]["far"] = intervals
+        with TemporaryDirectory() as directory:
+            data = load_path_data(write_graph_outputs(graph, directory)["graph"])
+        service = PathTileService(data)
+        result = service.prepare(24.8, 60.2, .1, "all", True, 50, None)
+        snapshot = service.snapshot(result["snapshot_id"])
+        x, y = xyz(24.8, 60.2, 15)
+        west, south, east, north = tile_bounds(15, x, y)
+        pad = (east - west) / 64
+        expected = candidate_path_indexes(data, (west - pad, south - pad, east + pad, north + pad), False)
+        self.assertLess(len(expected), len(data.features))
+        with patch("runmap.api.path_tiles._interval_state", wraps=_interval_state) as evaluate:
+            encoded, hit, _ = service.tile(snapshot.policy, "distance-all", 15, x, y, snapshot)
+            self.assertFalse(hit)
+            self.assertEqual(evaluate.call_count, len(expected))
+            self.assertEqual({call.args[3]["segment_id"] for call in evaluate.call_args_list}, {"s"})
+            self.assertEqual(service.tile(snapshot.policy, "distance-all", 15, x, y, snapshot)[0], encoded)
+            self.assertEqual(evaluate.call_count, len(expected))
+            # Panning uses the same immutable search; only the new tile is evaluated.
+            far_x, far_y = xyz(25.8, 60.2, 15)
+            service.tile(snapshot.policy, "distance-all", 15, far_x, far_y, snapshot)
+            self.assertIn("far", {call.args[3]["segment_id"] for call in evaluate.call_args_list})
+
+    def test_snapshot_distances_are_isolated_and_memory_scales_with_nodes(self) -> None:
+        snap = Snap("s", 0, 0, 24.8, 60.2, 0)
+        outward = {"1": 0.0}
+        frozen, small = snapshot_distances(DistanceData(snap, 100, outward))
+        outward["1"] = 99
+        self.assertEqual(frozen.outward["1"], 0)
+        self.assertIsInstance(frozen.outward, MappingProxyType)
+        _, large = snapshot_distances(DistanceData(snap, 100, {"1": 0, "2": 50}))
+        self.assertGreater(large, small)
+
+    def test_smaller_budget_uses_cached_search_without_changing_earlier_snapshot(self) -> None:
+        service = PathTileService(self.data)
+        large_result = service.prepare(24.8, 60.2, .3, "all", True, 50, None)
+        small_result = service.prepare(24.8, 60.2, .06, "all", True, 50, None)
+        self.assertTrue(small_result["distance_cache_hit"])
+        large = service.snapshot(large_result["snapshot_id"])
+        small = service.snapshot(small_result["snapshot_id"])
+        self.assertEqual(small.distances.maximum_m, large.distances.maximum_m)
+        for snapshot, expected in ((large, ["included"] * 4),
+                                   (small, ["included"] + ["beyond_budget"] * 3)):
+            states = [display_runs(self.data, [i], snapshot.policy, "distance-all", 15, snapshot)[0]
+                      .properties["inclusion_state"] for i in range(4)]
+            self.assertEqual(states, expected)
 
     def test_decode_identity_orientation_and_missing_grade(self) -> None:
         x, y = xyz(24.8, 60.2, 15)
@@ -59,9 +132,13 @@ class PathTileTests(unittest.TestCase):
         self.assertEqual(result["snapshot_id"], same["snapshot_id"])
         self.assertTrue(same["snapshot_cache_hit"])
         snapshot = service.snapshot(result["snapshot_id"])
-        self.assertEqual(snapshot.state.tolist(), [0, 1, 1, 1])
-        self.assertFalse(snapshot.state.flags.writeable)
-        self.assertEqual(snapshot.retained_bytes, 552)
+        states = [display_runs(self.data, [i], snapshot.policy, "gradient-all", 15, snapshot)[0]
+                  .properties["inclusion_state"] for i in range(4)]
+        self.assertEqual(states, ["included", "beyond_budget", "beyond_budget", "beyond_budget"])
+        self.assertIsInstance(snapshot.distances.outward, MappingProxyType)
+        self.assertEqual(snapshot.distances.outward, {"1": 0})
+        self.assertGreater(snapshot.retained_bytes, 512)
+        self.assertEqual(service.snapshots.bytes, snapshot.retained_bytes)
         changed_policy = service.prepare(24.8, 60.2, .1, "all", False, 50, None)
         self.assertNotEqual(result["snapshot_id"], changed_policy["snapshot_id"])
         changed_budget = service.prepare(24.8, 60.2, .2, "all", True, 50, None)
@@ -98,6 +175,24 @@ class PathTileTests(unittest.TestCase):
         runs = display_runs(self.data, [0, 1], "all-no-stairs", "gradient-all", 11, snapshot)
         self.assertEqual(len(runs), 2)
         self.assertNotEqual(runs[0].properties["inclusion_state"], runs[1].properties["inclusion_state"])
+
+    def test_snapshot_tiles_unify_unreachable_and_beyond_budget_intervals(self) -> None:
+        service = PathTileService(self.data)
+        result = service.prepare(24.802, 60.2, .06, "all", True, 50, None)
+        snapshot = service.snapshot(result["snapshot_id"])
+        # The one-way path before the start and the distant end share a state.
+        states = [display_runs(self.data, [i], snapshot.policy, "gradient-all", 15, snapshot)[0]
+                  .properties["inclusion_state"] for i in range(4)]
+        self.assertEqual(states, ["beyond_budget", "beyond_budget", "included", "beyond_budget"])
+        for variant in ("gradient-all", "distance-all"):
+            runs = display_runs(self.data, [0, 1, 2, 3], "all-no-stairs", variant, 15, snapshot)
+            self.assertEqual(runs[0].properties["inclusion_state"], "beyond_budget")
+            self.assertEqual(runs[-1].properties["inclusion_state"], "beyond_budget")
+            x, y = xyz(24.8, 60.2, 15)
+            decoded = mapbox_vector_tile.decode(encode_tile(
+                self.data, "all-no-stairs", variant, 15, x, y, snapshot))["paths"]
+            self.assertEqual({feature["properties"]["inclusion_state"] for feature in decoded["features"]},
+                             {"included", "beyond_budget"})
 
     def test_flat_length_features_use_full_samples_before_tile_selection_and_bins(self) -> None:
         graph = fixture()
@@ -302,7 +397,7 @@ class RoutingConcurrencyTests(unittest.TestCase):
                 if snap.graph_offset_m == 0:
                     entered.set()
                     release.wait(2)
-                return DistanceData(snap, maximum, {}, set())
+                return DistanceData(snap, maximum, {})
 
             with patch("runmap.paths.exploration.distance_data", side_effect=search):
                 with ThreadPoolExecutor(2) as pool:

@@ -427,26 +427,6 @@ def route_coordinates(index: GraphData, arc_ids: Iterable[str]) -> list[Coordina
     return coordinates
 
 
-def reachable_nodes(index: GraphData, start: str, reverse: bool = False,
-                    deadline: float | None = None) -> set[str]:
-    """Connectivity only: distinguish absent connections from bounded distances."""
-    if start in index.blocked_nodes:
-        return set()
-    seen, queue = {start}, [start]
-    while queue:
-        if deadline is not None and monotonic() > deadline:
-            raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
-        node = queue.pop()
-        adjacency = index.incoming if reverse else index.outgoing
-        for arc_id in adjacency.get(node, ()):
-            arc = index.arcs[arc_id]
-            neighbour = arc["from"] if reverse else arc["to"]
-            if neighbour not in seen:
-                seen.add(neighbour)
-                queue.append(neighbour)
-    return seen
-
-
 def apply_profile(index: GraphData, profile: EdgeProfile) -> GraphData:
     """Reuse topology while applying the same policy to nodes and physical segments."""
     result = replace(index, profile=profile, direction_cache={}, ineligible_segments={}, blocked_nodes={
