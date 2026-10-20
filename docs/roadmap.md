@@ -68,6 +68,9 @@ absolute-elevation profiles need explicit scope before implementation.
   and add static checking when domain types are coherent.
 - Add preparation implementation identity to provenance. Measure before adding
   cross-request field caching or replacing inspectable JSON storage.
+- Continue frontend separation by extracting inspection/chart rendering and
+  feature map layers from the interaction controllers. Make remaining feature
+  state explicit where DOM values or status text currently carry it.
 
 ## Optional / later
 

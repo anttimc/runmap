@@ -37,13 +37,25 @@ and hosted storage are [future work](roadmap.md).
 | `routing/cost_*`, `routing/costs.py`, `routing/hills.py`, `routing/fields.py` | Explicit request/leg data, settings, features, integration, and cost composition |
 | `routing/baseline.py`, `experiments/` | CLI anchor baseline and standalone measurements/experiments |
 | `api/` | Terrain/path delivery, inspection, snapshots, and bounded planner requests |
-| `web/src/main.ts`, `paths.ts`, `runs.ts`, `layout.ts` | Map setup, exploration, planner, and responsive controls |
+| `web/src/main.ts`, `map-style.ts` | Map startup, terrain controls, and declarative basemap style |
+| `web/src/app.ts`, `state.ts` | Shared home/path policy, mode switching, and map-click dispatch |
+| `web/src/api.ts`, `api-types.ts` | HTTP transport, error handling, and frontend request/response types |
+| `web/src/paths.ts`, `runs.ts`, `layout.ts` | Feature interaction/rendering and responsive controls |
 
 Keep calculations independent of HTTP and rendering. Use data-only records and
 focused module functions; behavioral classes are appropriate for reusable
 spectral state, stores, and cache/service lifetimes. The planner binds a scalar
 arc-cost callback with explicit request data and fixed leg context; it does not
 require a plugin registry or a second graph representation.
+
+The frontend coordinator owns shared state and notifies exploration/planning
+controllers when inputs or mode change. Features read shared state and request
+home changes through a callback; they do not modify each other's controls.
+Exploration mode is held in TypeScript rather than hidden form controls. The
+shared API module preserves cancellation and reports HTTP failures consistently;
+its response types are compile-time contracts, not runtime schema validation.
+DOM lookups use one helper that reports missing markup during setup. Prettier
+formats frontend sources; strict TypeScript checks also reject unused code.
 
 ## Terrain storage and identity
 

@@ -112,11 +112,17 @@ implemented `RUNMAP_PUBLIC_ACQUISITION` switch or automatic source-refresh job.
 ```sh
 uv run --extra web --extra experiments python -m unittest discover -s tests
 pnpm --dir web build
+pnpm --dir web test
+pnpm --dir web format:check
 ```
 
 The Python suite covers terrain, graph/policy behavior, measurements, exploration,
 tiles/caches, routing costs, and API contracts. The frontend build includes
-TypeScript checking. Browser/local-runner acceptance remains separate in the
+TypeScript checking, including unused declarations and parameters. The frontend
+tests use Node's built-in test runner with TypeScript stripping; use the
+recorded Node 24 toolchain. Use `pnpm --dir web format` to apply
+Prettier to frontend TypeScript, HTML, CSS, scripts, tests, and configuration.
+Browser/local-runner acceptance remains separate in the
 [roadmap](roadmap.md). For an already synchronized environment, use
 `uv run --offline --no-sync python …` to avoid dependency resolution.
 
