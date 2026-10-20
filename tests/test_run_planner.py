@@ -1,6 +1,7 @@
 """Real-network adapter invariants independent of a downloaded dataset."""
 
 import math
+from dataclasses import replace
 from time import monotonic
 import unittest
 from unittest.mock import patch
@@ -13,7 +14,8 @@ from runmap.routing.cost_types import LegCostContext, PreferenceSettings, Reques
 from runmap.routing.costs import arc_cost
 from runmap.routing.fields import integrate_fields
 from runmap.routing.run_planner import (RunSettings, endpoint_overlay, plan_run,
-                                        projected_points, validate_settings, penalty_strengths)
+                                        distance_heuristic, projected_points, validate_settings, penalty_strengths)
+from runmap.paths.exploration import split_start_graph
 from runmap.routing.search import GraphData, PathResult, arc_usable, build_graph_index, route_coordinates, shortest_path
 from runmap.routing.types import Arc
 
@@ -68,6 +70,47 @@ class RunPlannerTests(unittest.TestCase):
         assert path is not None
         self.assertAlmostEqual(path.cost, 825)
         self.assertTrue(all(arc_usable(overlay.graph, overlay.graph.arcs[a]) for a in path.arc_ids))
+
+    def test_prepared_projection_matches_base_and_overlay_geometry(self) -> None:
+        overlay = endpoint_overlay(self.index, self.snap("ab", .2), self.snap("bc", .5))
+        for graph in (self.index, overlay.graph):
+            for segment_id, segment in graph.segments.items():
+                self.assertEqual(graph.projected.segments[segment_id],
+                                 tuple(projected_points(segment["geometry"])))
+            for node_id, node in graph.nodes.items():
+                self.assertEqual(graph.projected.nodes[node_id],
+                                 projected_points([[node["longitude"], node["latitude"]]])[0])
+        self.assertIs(overlay.graph.projected.segments["ab"], self.index.projected.segments["ab"])
+        self.assertNotIn(overlay.home, self.index.projected.nodes)
+
+    def test_cached_lower_bound_accounts_for_short_temporary_arcs(self) -> None:
+        home = replace(self.snap("ab", .2), graph_offset_m=1)
+        overlay = endpoint_overlay(self.index, home, self.snap("bc", .5))
+        exploration, _ = split_start_graph(self.index, home)
+        for graph in (overlay.graph, exploration):
+            self.assertLess(graph.projected.distance_scale, self.index.projected.distance_scale)
+            heuristic = distance_heuristic(graph, None)
+            for arc in graph.arcs.values():
+                self.assertLessEqual(heuristic(arc["from"], arc["to"]), arc["length_m"])
+        for graph, start, end in ((overlay.graph, overlay.home, overlay.turnaround),
+                                  (exploration, "@snapped-start", "c")):
+            astar = shortest_path(graph, start, end, heuristic=distance_heuristic(graph, None))
+            self.assertEqual(astar, shortest_path(graph, start, end))
+
+    def test_shape_cost_and_heuristic_reuse_prepared_projection(self) -> None:
+        home, turnaround = self.snap("ab", .2), self.snap("bc", .5)
+        overlay = endpoint_overlay(self.index, home, turnaround)
+        data = build_request_cost_data(overlay.graph, home, turnaround, RunSettings())
+        cache = RequestCostCache()
+        with patch("runmap.routing.cost_preparation.projected_points", side_effect=AssertionError), \
+                patch("runmap.routing.run_planner.projected_points", side_effect=AssertionError):
+            heuristic = distance_heuristic(overlay.graph, None)
+            result = shortest_path(overlay.graph, overlay.home, overlay.turnaround,
+                                   heuristic=heuristic,
+                                   arc_cost=lambda arc: arc_cost(arc, data=data, cache=cache,
+                                                               leg=LegCostContext(True), deadline=None))
+        self.assertIsNotNone(result)
+        self.assertGreater(len(cache.shape_fields), 0)
 
     def test_pedestrian_oneway_prevents_return(self) -> None:
         self.index.segments["ab"]["tags"]["oneway:foot"] = "yes"

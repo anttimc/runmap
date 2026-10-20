@@ -118,6 +118,12 @@ nonnegative, and at least physical length. Legs are optimized sequentially;
 there is no globally optimal loop guarantee. Request caches do not persist
 across requests. See the [routing reference](reference/routing-mathematics.md).
 
+Graph-index preparation batch-projects node and segment coordinates to EPSG:3067
+and calibrates the distance lower bound once. Policy indexes share this geometry.
+Endpoint overlays project only their new geometry and lower the calibration scale
+if needed for their partial arcs. Shape integrals remain request-specific because
+their fields depend on the selected endpoints and settings.
+
 The synchronous API permits two concurrent planners and applies a cooperative
 deadline across preparation/search. Browser cancellation prevents stale result
 display; it does not terminate Python work immediately. Client generation guards

@@ -17,7 +17,7 @@ from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.costs import arc_cost, path_cost_breakdown, path_observations
 from runmap.routing.hill_types import HillData
 from runmap.routing.deadlines import check_deadline
-from runmap.routing.geometry import projected_points, slice_geometry
+from runmap.routing.geometry import prepare_projected_geometry, projected_points, slice_geometry
 from runmap.routing.run_types import (
     PhysicalPart, RunCandidate, RunOverlay, RunResult, RunSettings,
 )
@@ -40,7 +40,7 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
         if segment_reason(index, segment_id):
             raise ValueError("Run endpoint is on an ineligible segment")
         segment = index.segments[segment_id]
-        geometry = projected_points(segment["geometry"])
+        geometry = index.projected.segments[segment_id]
         total = sum(math.dist(a, b) for a, b in zip(geometry, geometry[1:]))
         length = segment["length_m"]
         cuts = [(0.0, 0.0, segment["from"]), (length, total, segment["to"])]
@@ -85,25 +85,18 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
         incoming[arc["to"]].append(arc["id"])
     graph = replace(index, nodes=ChainMap(nodes, index.nodes), segments=ChainMap(segments, index.segments),
                     arcs=ChainMap(arcs, index.arcs), outgoing=ChainMap(outgoing, index.outgoing),
-                    incoming=ChainMap(incoming, index.incoming), direction_cache={})
+                    incoming=ChainMap(incoming, index.incoming), direction_cache={},
+                    projected=prepare_projected_geometry(nodes, segments, arcs.values(), index.projected))
     if endpoints["home"] == endpoints["turnaround"]:
         raise ValueError("Home and turnaround must snap to distinct points")
     return RunOverlay(graph, endpoints["home"], endpoints["turnaround"], parts)
 
 
 def distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[str, str], float]:
-    """Calibrate a geometric lower bound against every directed base length."""
-    identifiers = list(graph.nodes)
-    points = projected_points([[graph.nodes[n]["longitude"], graph.nodes[n]["latitude"]] for n in identifiers])
-    coordinates = dict(zip(identifiers, points))
-    scale = 1.0
-    for number, arc in enumerate(graph.arcs.values()):
-        if number % 256 == 0:
-            check_deadline(deadline)
-        distance = math.dist(coordinates[arc["from"]], coordinates[arc["to"]])
-        if distance:
-            scale = min(scale, arc["length_m"] / distance)
-    scale *= 1 - 1e-12
+    """Reuse the prepared lower bound, including any temporary endpoint arcs."""
+    check_deadline(deadline)
+    coordinates = graph.projected.nodes
+    scale = graph.projected.distance_scale * (1 - 1e-12)
 
     def estimate(node: str, destination: str) -> float:
         return scale * math.dist(coordinates[node], coordinates[destination])

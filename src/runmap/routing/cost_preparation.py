@@ -87,7 +87,7 @@ def ensure_arc_features(data: RequestCostData, cache: RequestCostCache,
     """Integrate each overlay segment once for all request legs and assignments."""
     segment_id = arc["segment_id"]
     if segment_id not in cache.shape_fields:
-        points = projected_points(data.graph.segments[segment_id]["geometry"])
+        points = data.graph.projected.segments[segment_id]
         cache.shape_fields[segment_id] = ShapeFeatures(*integrate_fields(
             points, data.home, data.turnaround, data.radius_m,
             data.transition_width_m, data.spacing_m, deadline,

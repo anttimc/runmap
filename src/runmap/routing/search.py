@@ -8,6 +8,7 @@ import math
 from time import monotonic
 
 from runmap.routing.types import Arc, Coordinate, EdgeProfile, GraphDocument, Node, RouteMetrics, Segment
+from runmap.routing.geometry import ProjectedGeometry, prepare_projected_geometry
 
 from runmap.routing.profiles import (arc_direction_allowed, classify_segments, exploration_profile, pedestrian_access_reason)
 
@@ -158,6 +159,7 @@ class GraphData:
     boundary_blocked_segments: set[str]
     ineligible_segments: dict[str, str]
     profile: EdgeProfile
+    projected: ProjectedGeometry
     direction_cache: dict[str, frozenset[bool]] = field(default_factory=dict)
 
 
@@ -175,7 +177,8 @@ def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) 
         degree[segment["to"]] += 1
     index = GraphData(graph, nodes, segments, arcs, dict(outgoing), dict(incoming), degree,
                       {node_id for node_id, node in nodes.items() if pedestrian_access_reason(node, profile)},
-                      _boundary_blocked_segments(graph), {}, profile)
+                      _boundary_blocked_segments(graph), {}, profile,
+                      prepare_projected_geometry(nodes, segments, arcs.values()))
     index.ineligible_segments.update(classify_segments(index, profile))
     return index
 

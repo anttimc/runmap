@@ -1,11 +1,45 @@
 """Projected geometry shared by endpoint splitting and cost preparation."""
 
 import math
+from collections import ChainMap
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 
 from rasterio.warp import transform
 
 from runmap.routing.fields import Point
-from runmap.routing.types import Coordinate
+from runmap.routing.types import Arc, Coordinate, Node, Segment
+
+
+@dataclass(frozen=True)
+class ProjectedGeometry:
+    nodes: Mapping[str, Point]
+    segments: Mapping[str, tuple[Point, ...]]
+    distance_scale: float
+
+
+def prepare_projected_geometry(nodes: Mapping[str, Node], segments: Mapping[str, Segment],
+                               arcs: Iterable[Arc],
+                               base: ProjectedGeometry | None = None) -> ProjectedGeometry:
+    """Batch graph projection once; overlays add only their new geometry."""
+    coordinates: list[Coordinate] = [[node["longitude"], node["latitude"]] for node in nodes.values()]
+    coordinates.extend(point for segment in segments.values() for point in segment["geometry"])
+    points = projected_points(coordinates) if coordinates else []
+    node_points = dict(zip(nodes, points[:len(nodes)]))
+    segment_points: dict[str, tuple[Point, ...]] = {}
+    offset = len(nodes)
+    for segment_id, segment in segments.items():
+        end = offset + len(segment["geometry"])
+        segment_points[segment_id] = tuple(points[offset:end])
+        offset = end
+    all_nodes = ChainMap(node_points, base.nodes) if base else node_points
+    all_segments = ChainMap(segment_points, base.segments) if base else segment_points
+    scale = base.distance_scale if base else 1.0
+    for arc in arcs:
+        distance = math.dist(all_nodes[arc["from"]], all_nodes[arc["to"]])
+        if distance:
+            scale = min(scale, arc["length_m"] / distance)
+    return ProjectedGeometry(all_nodes, all_segments, scale)
 
 
 def projected_points(geometry: list[Coordinate]) -> list[Point]:
