@@ -12,3 +12,6 @@ web/node_modules/
 web/dist/
 .pnpm-store/
 config/regions.local/
+rust/target/
+src/runmap/*.so
+src/runmap/*.pyd

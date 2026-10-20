@@ -1,0 +1,16 @@
+[package]
+name = "runmap-routing"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[lib]
+name = "_routing_native"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+python = ["dep:pyo3"]
+
+[dependencies]
+pyo3 = { version = "0.30.1", optional = true, features = ["abi3-py311"] }

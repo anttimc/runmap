@@ -1,7 +1,8 @@
 # Architecture
 
-Runmap is a local Python processing/API package and a TypeScript/MapLibre web
-application. Numerical work uses NumPy, SciPy, and Rasterio/GDAL; the optional
+Runmap is a local Python processing/API package with a Rust integration kernel
+and a TypeScript/MapLibre web application. Numerical work also uses NumPy, SciPy,
+and Rasterio/GDAL; the optional
 web dependencies add FastAPI, Shapely, ContourPy, Pillow, and an MVT encoder.
 Vite builds the frontend. SQLite catalogs elevation products; path artifacts
 are JSON files loaded into memory. There is no application database server.
@@ -35,6 +36,7 @@ and hosted storage are [future work](roadmap.md).
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
 | `routing/cost_*`, `routing/costs.py`, `routing/hills.py`, `routing/fields.py` | Explicit request/leg data, settings, features, integration, and cost composition |
+| `rust/src/fields.rs`, `rust/src/bindings.rs` | Scalar integration kernel and its PyO3 adapter, built as `runmap._routing_native` |
 | `routing/baseline.py`, `experiments/` | CLI anchor baseline and standalone measurements/experiments |
 | `api/` | Terrain/path delivery, inspection, snapshots, and bounded planner requests |
 | `web/src/main.ts`, `map-style.ts` | Map startup, terrain controls, and declarative basemap style |
@@ -143,6 +145,19 @@ and calibrates the distance lower bound once. Policy indexes share this geometry
 Endpoint overlays project only their new geometry and lower the calibration scale
 if needed for their partial arcs. Shape integrals remain request-specific because
 their fields depend on the selected endpoints and settings.
+
+`routing.fields.integrate_fields` calls a scalar Rust kernel once per geometry,
+passing coordinates and field settings and returning radial/right integrals and
+projected length. The PyO3 adapter copies the small coordinate sequence into a
+Rust vector. The pure kernel borrows its slice and has no Python dependencies or
+callbacks. The previous Python implementation remains as `integrate_fields_python`
+for comparison; there is no automatic fallback when the extension is missing.
+The kernel preserves midpoint sampling and the fixed left/right frame. Python
+checks the request deadline before and after the call; Rust receives a remaining
+duration and checks its own elapsed time at bounded sample intervals. The first
+binding keeps the interpreter lock during each short call. A*, cost composition,
+and request caches remain in Python; spatial batching and native graph ownership
+are [later decisions](roadmap.md#next-rust-integration-kernel-and-interactive-routing).
 
 Each policy index also prepares eligible outgoing and incoming adjacency and
 segment directions. Searches use these lists without reparsing pedestrian tags;

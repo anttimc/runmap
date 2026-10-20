@@ -30,6 +30,56 @@ remaining acceptance gates complete.
   Acceptance: measured interaction performance supports exploration and regeneration;
   adopt numerical targets from representative observations.
 
+## Next: Rust integration kernel and interactive routing
+
+The product goal is responsive route updates when moving the start or turnaround
+or changing the centre-cost width. The learning goal is to implement a small
+low-level numerical algorithm in Rust. The first per-geometry kernel is delivered;
+its boundary and behavior are in [architecture](architecture.md), build commands
+in [development](development.md#native-integration-kernel), and initial evidence
+in the [dated report](archive/history/33-rust-integration-kernel.md). Kernel
+speedup alone does not establish instant backend or browser response.
+
+### Broaden native validation and profiling
+
+- Verify clean builds and runtime behavior across supported Python versions and
+  platforms, including the declared minimum Rust version. The first build was
+  verified locally on macOS ARM64 with Python 3.14 and Rust 1.99.1.
+- Extend route equivalence checks to shorter/longer routes, moved endpoints, and
+  width changes. Investigate any path changes, including near-equal alternatives.
+  Existing unit checks cover scalar-reference agreement, reversed/repeated points,
+  narrow/wide fields, invalid inputs, and expired/mid-calculation deadlines.
+- Benchmark release builds with a warmed process and fresh request feature
+  caches. Report kernel-only time, Python-to-Rust call/conversion time, complete
+  planner time, and full API response time separately. Cover the existing profile
+  route plus shorter/longer routes, moved endpoints, width changes, shape disabled,
+  and hills enabled. Record p50/p95 latency, sample counts, expanded states,
+  machine/toolchain, and dataset/settings identities. Include two concurrent
+  planners and bursts of changing inputs to expose queueing and stale work.
+- Measure whether releasing the interpreter lock benefits the existing two-planner
+  concurrency case without adding excessive overhead to tiny calls. The current
+  binding holds it; field results remain request-local.
+- Save fresh flamegraphs and cProfile reports alongside previous local profiles,
+  preserving old evidence. Python profiling sees the native call as one frame;
+  use Rust/native profiling only if its internal cost needs investigation.
+  Extend the tracked `benchmark_integration` entry point and retain dataset,
+  machine, toolchain, and settings identities with new reports. Keep the Python
+  reference available explicitly; missing native support must remain visible.
+
+### Assess interaction latency and the next boundary
+
+Measure rapid endpoint moves and centre-width changes through the browser,
+including network, serialization, queueing, route rendering, cancellation, and
+stale-response suppression. Establish an explicit backend and visible-interaction
+latency budget on the target machine before claiming instant response. Avoid
+using repeated identical-request cache hits as the acceptance workload.
+
+If the remaining Python work misses that budget, profile again and consider
+moving A* together with cost evaluation and its feature cache into Rust. Avoid a
+native search that calls Python for every edge. Persistent native graph data,
+incremental search, and spatial batching are later decisions supported by that
+profile, rather than prerequisites for the first kernel.
+
 ## Planned: routing improvements
 
 Deliver these independently after their data and validation gates pass:

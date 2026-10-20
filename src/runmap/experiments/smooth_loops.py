@@ -12,7 +12,7 @@ from time import perf_counter
 import numpy as np
 from scipy.spatial import Delaunay
 
-from runmap.routing.fields import smooth_fields
+from runmap.routing.fields import smooth_fields, smooth_fields_array
 
 Point = tuple[float, float]
 Edge = tuple[int, int]
@@ -111,23 +111,32 @@ def edge_weights(
         raise ValueError("Field scales must be finite and positive")
     if home == destination:
         raise ValueError("Home and destination must differ")
+    edges = [(node, neighbour) for node, neighbours in enumerate(grid.neighbours)
+             for neighbour in neighbours if neighbour >= node]
     weights: dict[Edge, float] = {}
-    for node, neighbours in enumerate(grid.neighbours):
-        for neighbour in neighbours:
-            if neighbour < node:
-                continue
-            first, second = grid.points[node], grid.points[neighbour]
-            penalty = 0.0
-            sample_count = max(4, math.ceil(math.dist(first, second)))
-            for sample in range(sample_count):
-                fraction = (sample + 0.5) / sample_count
-                point = (first[0] + fraction * (second[0] - first[0]),
-                         first[1] + fraction * (second[1] - first[1]))
-                radial, right = penalty_fields(point, grid.points[home], grid.points[destination], settings)
-                side = right if discourage_right else 1 - right
-                penalty += (settings.centre_strength * radial + settings.side_strength * side) / sample_count
-            edge = (node, neighbour)
-            weight = math.dist(first, second) * (1 + penalty + settings.reuse_strength * (edge in reused))
+    points = np.asarray(grid.points, dtype=np.float64)
+    for start in range(0, len(edges), 1024):
+        batch = edges[start:start + 1024]
+        nodes = np.asarray(batch)
+        first = points[nodes[:, 0]]
+        delta = points[nodes[:, 1]] - first
+        # Match A*'s geometric lower bound exactly, including float rounding.
+        lengths = np.fromiter((math.dist(grid.points[a], grid.points[b]) for a, b in batch),
+                              dtype=np.float64, count=len(batch))
+        counts = np.maximum(4, np.ceil(lengths).astype(np.intp))
+        offsets = np.concatenate(([0], np.cumsum(counts)))
+        sample_edges = np.repeat(np.arange(len(batch)), counts)
+        fractions = (np.arange(offsets[-1]) - offsets[sample_edges] + 0.5) / counts[sample_edges]
+        samples = first[sample_edges] + fractions[:, None] * delta[sample_edges]
+        radial, right = smooth_fields_array(samples[:, 0], samples[:, 1],
+                                            grid.points[home], grid.points[destination],
+                                            settings.radius, settings.transition_width)
+        side = right if discourage_right else 1 - right
+        penalties = np.add.reduceat(settings.centre_strength * radial + settings.side_strength * side,
+                                    offsets[:-1]) / counts
+        for edge, length, penalty in zip(batch, lengths, penalties):
+            node, neighbour = edge
+            weight = float(length * (1 + penalty + settings.reuse_strength * (edge in reused)))
             weights[edge] = weights[(neighbour, node)] = weight
     return weights
 

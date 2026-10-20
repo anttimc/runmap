@@ -26,6 +26,9 @@ model; they do not prove current correctness, performance, or runner acceptance.
 | Paths | [Graph prototype](history/13-path-graph-prototype.md), [path exploration](history/23-m4-path-exploration.md), [building-access plan](history/24-building-access-filter.md) and [results](history/24-building-access-results.md), [tile plan](history/25-tiled-path-rendering.md) and [results](history/25-tiled-path-results.md) |
 | Routing | [Anchor baseline](history/14-diverse-route-baseline.md), [smooth-loop experiment](history/26-smooth-loop-routing-experiment.md), [first planner UI](history/27-first-routing-ui.md), [UI/settings](history/28-planner-ui-and-settings.md), [preferences](history/29-routing-preferences.md), [source audit](history/30-routing-preferences-audit.md), [cost architecture](history/31-routing-cost-architecture.md), [hill calibration](history/32-hill-routing.md) |
 
+The [first Rust integration kernel report](history/33-rust-integration-kernel.md)
+records the native boundary, initial validation, and real-route benchmark.
+
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.
 

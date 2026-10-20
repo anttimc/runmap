@@ -10,8 +10,9 @@ behavior and limitations, and the [goals](docs/goals.md) for intended outcomes.
 
 ## Quick start
 
-Install Python 3.11+, uv, Node.js, and pnpm. From the repository root, with
-local terrain data already prepared:
+Install Python 3.11+, uv, the Rust toolchain, Node.js, and pnpm. Rust builds the
+integration extension; see [native setup](docs/development.md#native-integration-kernel).
+From the repository root, with local terrain data already prepared:
 
 ```sh
 uv sync --extra web

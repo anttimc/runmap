@@ -13,9 +13,17 @@ understandable implementations.
 - **Explore interactively:** navigate an intended viewport of roughly 20 × 20 km
   without processing or transferring the entire source raster on each movement.
   Coverage may be larger; performance promises require representative measurements.
+- **Adjust routes interactively:** move the start or turnaround, or change the
+  centre-cost width, and see the revised route without a perceptible wait.
+  Measure backend response and visible browser latency separately; a fast cached
+  repeat does not establish responsiveness when endpoints or settings change.
 - **Experiment independently:** change mathematical definitions without rewriting
   acquisition or the UI, run calculations outside the web application, and trace
   displayed measurements to their sources and settings.
+- **Learn low-level implementation:** implement and measure small numerical and
+  algorithmic kernels in Rust behind clear Python boundaries. Prefer an
+  understandable scalar implementation first, preserving a readable reference
+  and measuring the effect on complete interactions.
 
 ## Product direction
 

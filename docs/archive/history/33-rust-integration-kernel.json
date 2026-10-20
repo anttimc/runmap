@@ -1,0 +1,44 @@
+{
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "graph": "data/paths/prepared/leppavaara-flat-10k/graph.json",
+  "graph_bytes": 88825009,
+  "graph_sha256": "6a8b61db10ffc7650b26ff4757583a6c3ea3c92cd516ef882188265febf295de",
+  "endpoints": [
+    [
+      24.795,
+      60.216
+    ],
+    [
+      24.815,
+      60.225
+    ]
+  ],
+  "settings": {
+    "avoidance_ratio": 0.18,
+    "centre_enabled": true,
+    "radius_ratio": 0.15,
+    "transition_ratio": 0.05,
+    "side_strength": 2.0,
+    "reuse_strength": 4.0
+  },
+  "repeats": 20,
+  "geometry_count": 8053,
+  "routes_and_integrals_match": true,
+  "python_integration": {
+    "median_ms": 24.15045849920716,
+    "p95_ms": 24.440582987153903
+  },
+  "native_integration_with_conversion": {
+    "median_ms": 2.3571039928356186,
+    "p95_ms": 2.3980830155778676
+  },
+  "python_route": {
+    "median_ms": 75.45008350280114,
+    "p95_ms": 76.4206669991836
+  },
+  "native_route": {
+    "median_ms": 51.89341650111601,
+    "p95_ms": 53.16716598463245
+  }
+}

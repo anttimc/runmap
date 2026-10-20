@@ -6,6 +6,11 @@ Node.js must be on PATH; the previously recorded frontend toolchain was Node.js
 24.21.0 and pnpm 12.9.1. The frontend declares its package manager in
 [package.json](../web/package.json), with resolved dependencies in the pnpm lockfile.
 
+The integration extension requires Rust on PATH before installing from source.
+The current local toolchain is Rust 1.99.1, PyO3 0.30.1, and Maturin 1.15.0;
+the crate declares Rust 1.85 as its minimum. Only the current local toolchain has
+been verified so far. Cargo and uv lockfiles record dependencies.
+
 ## Install and run
 
 ```sh
@@ -16,6 +21,53 @@ pnpm --dir web install
 The web extra includes the API, image, and geometry dependencies; experiments
 adds Matplotlib. The old `requirements-inspection.txt` records a historical
 inspection environment and is not the application setup procedure.
+
+## Native integration kernel
+
+Install the compiler and Cargo with [Rustup](https://rust-lang.org/tools/install/)
+before the initial `uv sync`. This session installed Rustup's minimal stable
+toolchain without modifying shell startup files. In a new shell, expose it with:
+
+```sh
+source "$HOME/.cargo/env"
+rustc --version
+cargo --version
+```
+
+`uv sync --extra web --extra experiments` builds the native extension as part of
+installing the project. The default development dependency group supplies
+Maturin. After editing Rust source, explicitly rebuild the optimized extension:
+
+```sh
+uv run --no-sync maturin develop --release --locked --uv
+```
+
+Maturin compiles and installs the mixed Python/Rust package; PyO3 supplies the
+bindings between Python objects and Rust values. `pyproject.toml` points to
+`rust/Cargo.toml` and names the extension `runmap._routing_native`. Python sources
+remain under `src/runmap`. Cargo's `python` feature enables only the binding layer,
+so pure Rust tests do not need a Python interpreter. The `abi3-py311` setting
+targets CPython's stable extension ABI starting at Python 3.11; runtime validation
+across supported Python versions remains outstanding. See the
+[Maturin layout documentation](https://www.maturin.rs/project_layout.html) and
+[PyO3 guide](https://pyo3.rs/v0.30.1/).
+
+Start reading at [the scalar kernel](../rust/src/fields.rs), then
+[the binding](../rust/src/bindings.rs), and finally
+[the Python wrapper](../src/runmap/routing/fields.py). The kernel takes a borrowed
+slice of coordinate pairs and returns three `f64` values. Settings are plain
+data; numerical operations are functions. Empty/single-point geometries return
+zero integrals; invalid coordinates/scales raise `ValueError`, and deadline
+expiry raises `TimeoutError`. The Python reference is available explicitly as
+`integrate_fields_python`. A missing compiled extension is an installation error,
+not a reason to silently benchmark Python instead.
+
+```sh
+uv run --no-sync python -c 'from runmap.routing.fields import integrate_fields; print(integrate_fields([(0., 0.), (100., 0.)], (0., 0.), (100., 0.), 15., 5.))'
+```
+
+Compiled extensions and `rust/target/` are ignored by Git. Restart the backend
+after rebuilding; an already running process retains its loaded native library.
 
 With terrain prepared as below, start the backend:
 
@@ -109,12 +161,24 @@ implemented `RUNMAP_PUBLIC_ACQUISITION` switch or automatic source-refresh job.
 
 ## Verification
 
+For the first Rust checkout, install the formatting/linting components with
+`rustup component add rustfmt clippy`. Then run:
+
 ```sh
+cargo fmt --manifest-path rust/Cargo.toml -- --check
+cargo test --manifest-path rust/Cargo.toml --locked
+cargo clippy --manifest-path rust/Cargo.toml --locked --all-targets -- -D warnings
+uv run --no-sync cargo clippy --manifest-path rust/Cargo.toml --locked --all-targets --features python -- -D warnings
 uv run --extra web --extra experiments python -m unittest discover -s tests
 pnpm --dir web build
 pnpm --dir web test
 pnpm --dir web format:check
 ```
+
+The Python field tests compare the native implementation with scalar midpoint
+calculations and the prior Python integrator, including narrow/wide fields and
+deadline expiry during a long native call. Rebuild Rust before running Python
+checks after native edits; uv does not detect every Rust source change itself.
 
 The Python suite covers terrain, graph/policy behavior, measurements, exploration,
 tiles/caches, routing costs, and API contracts. The frontend build includes
@@ -137,6 +201,19 @@ uv run --extra experiments python -m runmap.experiments.smooth_loops
 uv run --extra experiments python -m runmap.experiments.smooth_loop_obstacles
 uv run --extra experiments python -m runmap.experiments.plot_hill_penalties
 ```
+
+Compare the release-built Rust integrator with the Python reference on the real
+profile route, including conversion overhead and fresh per-request field caches:
+
+```sh
+uv run --extra web python -m runmap.experiments.benchmark_integration \
+  --repeats 20 --output artifacts/pathfinding-profile/first-rust/integration-benchmark.json
+```
+
+This reports median/p95 integration and planner times and checks both legs' paths
+and costs. It excludes dataset loading, snapping, HTTP delivery, and rendering.
+The [first Rust report](archive/history/33-rust-integration-kernel.md) records the
+initial result; wider interaction and concurrency checks remain in the roadmap.
 
 Baseline results go under `data/routes/prepared/`; synthetic results and hill
 plots go under `data/experiments/`. For scripts taking explicit report paths,
