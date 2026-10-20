@@ -21,7 +21,7 @@ from runmap.routing.hills import (build_hill_data, grade_response, hill_observat
                                   hill_penalty_response, running_energy_cost, running_energy_response,
                                   sum_hill_features, traversal_hills)
 from runmap.routing.run_planner import RunSettings, distance_heuristic, endpoint_overlay, plan_run
-from runmap.routing.search import build_graph_index, shortest_path
+from runmap.routing.search import apply_profile, build_graph_index, shortest_path
 from runmap.routing.types import GraphDocument, Measurement, MeasurementDocument
 
 
@@ -254,7 +254,9 @@ class HillTests(unittest.TestCase):
         with patch("runmap.routing.cost_preparation.traversal_hills", side_effect=AssertionError):
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0), hills=hills)
         self.assertEqual(result.candidates[0].distance_m, 200)
-        self.index.ineligible_segments.update({"ac": "fixture", "cb": "fixture"})
+        for segment_id in ("ac", "cb"):
+            self.index.segments[segment_id]["tags"]["foot"] = "no"
+        self.index = apply_profile(self.index, self.index.profile)
         result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0),
                           preferences=PreferenceSettings(hills="high"), hills=hills)
         self.assertEqual(result.outcomes, ("complete",))

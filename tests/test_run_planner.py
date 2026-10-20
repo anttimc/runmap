@@ -16,7 +16,7 @@ from runmap.routing.fields import integrate_fields
 from runmap.routing.run_planner import (RunSettings, endpoint_overlay, plan_run,
                                         distance_heuristic, projected_points, validate_settings, penalty_strengths)
 from runmap.paths.exploration import split_start_graph
-from runmap.routing.search import GraphData, PathResult, arc_usable, build_graph_index, route_coordinates, shortest_path
+from runmap.routing.search import GraphData, PathResult, apply_profile, arc_usable, build_graph_index, route_coordinates, shortest_path
 from runmap.routing.types import Arc
 
 
@@ -114,6 +114,7 @@ class RunPlannerTests(unittest.TestCase):
 
     def test_pedestrian_oneway_prevents_return(self) -> None:
         self.index.segments["ab"]["tags"]["oneway:foot"] = "yes"
+        self.index = apply_profile(self.index, self.index.profile)
         result = plan_run(self.index, self.snap("ab", .2), self.snap("ab", .8), RunSettings())
         self.assertEqual(result.outcomes, ("unreachable", "unreachable"))
 
@@ -141,6 +142,7 @@ class RunPlannerTests(unittest.TestCase):
 
     def test_zero_avoidance_still_honours_oneway(self) -> None:
         self.index.segments["ab"]["tags"]["oneway:foot"] = "yes"
+        self.index = apply_profile(self.index, self.index.profile)
         result = plan_run(self.index, self.snap("ab", .2), self.snap("ab", .8),
                           RunSettings(avoidance_ratio=0))
         self.assertEqual(result.outcomes, ("unreachable",))

@@ -9,9 +9,8 @@ from threading import RLock
 
 from rasterio.warp import transform
 
-from runmap.routing.profiles import arc_forward
 from runmap.routing.geometry import prepare_projected_geometry
-from runmap.routing.search import GraphData, arc_usable, shortest_distances, reachable_nodes
+from runmap.routing.search import GraphData, shortest_distances, reachable_nodes
 
 
 VIRTUAL_START = "@snapped-start"
@@ -138,17 +137,7 @@ def split_start_graph(index, snap):
                    projected=prepare_projected_geometry(nodes, {}, arcs.values(), index.projected)), VIRTUAL_START
 
 
-def legal_directions(index, segment_id):
-    if segment_id in index.direction_cache:
-        return index.direction_cache[segment_id]
-    segment = index.segments[segment_id]
-    result = set()
-    for node in {segment["from"], segment["to"]}:
-        for arc_id in index.outgoing.get(node, ()):
-            arc = index.arcs[arc_id]
-            if arc["segment_id"] == segment_id and arc_usable(index, arc):
-                result.add(arc_forward(segment, arc))
-    index.direction_cache[segment_id] = frozenset(result)
+def legal_directions(index: GraphData, segment_id: str) -> frozenset[bool]:
     return index.direction_cache[segment_id]
 
 

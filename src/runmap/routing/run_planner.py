@@ -85,7 +85,9 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
         incoming[arc["to"]].append(arc["id"])
     graph = replace(index, nodes=ChainMap(nodes, index.nodes), segments=ChainMap(segments, index.segments),
                     arcs=ChainMap(arcs, index.arcs), outgoing=ChainMap(outgoing, index.outgoing),
-                    incoming=ChainMap(incoming, index.incoming), direction_cache={},
+                    incoming=ChainMap(incoming, index.incoming), direction_cache=ChainMap({
+                        part_id: index.direction_cache[part.segment_id] for part_id, part in parts.items()
+                    }, index.direction_cache),
                     projected=prepare_projected_geometry(nodes, segments, arcs.values(), index.projected))
     if endpoints["home"] == endpoints["turnaround"]:
         raise ValueError("Home and turnaround must snap to distinct points")

@@ -124,6 +124,13 @@ Endpoint overlays project only their new geometry and lower the calibration scal
 if needed for their partial arcs. Shape integrals remain request-specific because
 their fields depend on the selected endpoints and settings.
 
+Each policy index also prepares eligible outgoing and incoming adjacency and
+segment directions. Searches use these lists without reparsing pedestrian tags;
+request-specific segment blocks still apply during search. Endpoint splits inherit
+their physical segment's prepared directions. Applying a policy rebuilds adjacency
+from all arcs, so relaxing a policy restores connections. Rebuild the policy index
+after changing access or direction tags.
+
 The synchronous API permits two concurrent planners and applies a cooperative
 deadline across preparation/search. Browser cancellation prevents stale result
 display; it does not terminate Python work immediately. Client generation guards

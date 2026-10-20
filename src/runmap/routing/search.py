@@ -10,7 +10,9 @@ from time import monotonic
 from runmap.routing.types import Arc, Coordinate, EdgeProfile, GraphDocument, Node, RouteMetrics, Segment
 from runmap.routing.geometry import ProjectedGeometry, prepare_projected_geometry
 
-from runmap.routing.profiles import (arc_direction_allowed, classify_segments, exploration_profile, pedestrian_access_reason)
+from runmap.routing.profiles import (
+    arc_forward, classify_segments, exploration_profile, pedestrian_access_reason, pedestrian_directions,
+)
 
 
 def _is_grade_separated(segment: Segment) -> bool:
@@ -160,7 +162,7 @@ class GraphData:
     ineligible_segments: dict[str, str]
     profile: EdgeProfile
     projected: ProjectedGeometry
-    direction_cache: dict[str, frozenset[bool]] = field(default_factory=dict)
+    direction_cache: Mapping[str, frozenset[bool]] = field(default_factory=dict)
 
 
 def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) -> GraphData:
@@ -168,19 +170,44 @@ def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) 
     nodes = {node["id"]: node for node in graph["nodes"]}
     segments = {segment["id"]: segment for segment in graph["segments"]}
     arcs = {arc["id"]: arc for arc in graph["arcs"]}
-    outgoing, incoming, degree = defaultdict(list), defaultdict(list), Counter()
-    for arc in graph["arcs"]:
-        outgoing[arc["from"]].append(arc["id"])
-        incoming[arc["to"]].append(arc["id"])
+    degree = Counter()
     for segment in graph["segments"]:
         degree[segment["from"]] += 1
         degree[segment["to"]] += 1
-    index = GraphData(graph, nodes, segments, arcs, dict(outgoing), dict(incoming), degree,
+    index = GraphData(graph, nodes, segments, arcs, {}, {}, degree,
                       {node_id for node_id, node in nodes.items() if pedestrian_access_reason(node, profile)},
                       _boundary_blocked_segments(graph), {}, profile,
                       prepare_projected_geometry(nodes, segments, arcs.values()))
     index.ineligible_segments.update(classify_segments(index, profile))
-    return index
+    return _prepare_traversals(index)
+
+
+def _prepare_traversals(index: GraphData) -> GraphData:
+    """Resolve policy and direction tags before any search traverses the graph."""
+    allowed: dict[str, tuple[bool, bool]] = {}
+    for segment_id, segment in index.segments.items():
+        if segment_id in index.ineligible_segments or segment_id in index.boundary_blocked_segments:
+            continue
+        forward, backward = pedestrian_directions(segment.get("tags", {}), index.profile)
+        allowed[segment_id] = (forward and segment.get("forward", True),
+                               backward and segment.get("backward", True))
+    outgoing: dict[str, list[str]] = defaultdict(list)
+    incoming: dict[str, list[str]] = defaultdict(list)
+    directions: dict[str, set[bool]] = defaultdict(set)
+    for arc in index.arcs.values():
+        segment_id = arc["segment_id"]
+        if (segment_id not in allowed or arc["from"] in index.blocked_nodes
+                or arc["to"] in index.blocked_nodes):
+            continue
+        forward = arc_forward(index.segments[segment_id], arc)
+        if not allowed[segment_id][0 if forward else 1]:
+            continue
+        outgoing[arc["from"]].append(arc["id"])
+        incoming[arc["to"]].append(arc["id"])
+        directions[segment_id].add(forward)
+    return replace(index, outgoing=dict(outgoing), incoming=dict(incoming), direction_cache={
+        segment_id: frozenset(directions.get(segment_id, ())) for segment_id in index.segments
+    })
 
 
 def arc_usable(index: GraphData, arc: Arc, blocked_segments: Set[str] = frozenset()) -> bool:
@@ -188,7 +215,8 @@ def arc_usable(index: GraphData, arc: Arc, blocked_segments: Set[str] = frozense
             and arc["segment_id"] not in index.ineligible_segments
             and arc["segment_id"] not in blocked_segments
             and arc["from"] not in index.blocked_nodes and arc["to"] not in index.blocked_nodes
-            and arc_direction_allowed(index.segments[arc["segment_id"]], arc, index.profile))
+            and arc_forward(index.segments[arc["segment_id"]], arc)
+            in index.direction_cache[arc["segment_id"]])
 
 
 def _arc_cost(
@@ -248,7 +276,7 @@ def shortest_path(
         expanded += 1
         for arc_id in index.outgoing.get(node_id, ()):
             arc = index.arcs[arc_id]
-            if not arc_usable(index, arc, blocked_segments):
+            if arc["segment_id"] in blocked_segments:
                 continue
             cost = arc_cost(arc) if arc_cost is not None else _arc_cost(
                 index, arc, model, overlap_segments, overlap_factor)
@@ -315,7 +343,7 @@ def shortest_distances(
         )
         for arc_id in arc_ids:
             arc = index.arcs[arc_id]
-            if not arc_usable(index, arc, blocked_segments):
+            if arc["segment_id"] in blocked_segments:
                 continue
             neighbour = arc["from"] if reverse else arc["to"]
             candidate = distance + float(arc["length_m"])
@@ -413,7 +441,7 @@ def reachable_nodes(index: GraphData, start: str, reverse: bool = False,
         for arc_id in adjacency.get(node, ()):
             arc = index.arcs[arc_id]
             neighbour = arc["from"] if reverse else arc["to"]
-            if neighbour not in seen and arc_usable(index, arc):
+            if neighbour not in seen:
                 seen.add(neighbour)
                 queue.append(neighbour)
     return seen
@@ -425,4 +453,4 @@ def apply_profile(index: GraphData, profile: EdgeProfile) -> GraphData:
         node_id for node_id, node in index.nodes.items() if pedestrian_access_reason(node, profile)
     })
     result.ineligible_segments.update(classify_segments(result, profile))
-    return result
+    return _prepare_traversals(result)
