@@ -18,6 +18,7 @@ from runmap.routing.costs import arc_cost, path_cost_breakdown, path_observation
 from runmap.routing.hill_types import HillData
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import prepare_projected_geometry, projected_points, slice_geometry
+from runmap.routing.integer_graph import extend_integer_graph
 from runmap.routing.run_types import (
     PhysicalPart, RunCandidate, RunOverlay, RunResult, RunSettings,
 )
@@ -88,7 +89,8 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
                     incoming=ChainMap(incoming, index.incoming), direction_cache=ChainMap({
                         part_id: index.direction_cache[part.segment_id] for part_id, part in parts.items()
                     }, index.direction_cache),
-                    projected=prepare_projected_geometry(nodes, segments, arcs.values(), index.projected))
+                    projected=prepare_projected_geometry(nodes, segments, arcs.values(), index.projected),
+                    integer=extend_integer_graph(index.integer, nodes, segments, arcs, outgoing, incoming))
     if endpoints["home"] == endpoints["turnaround"]:
         raise ValueError("Home and turnaround must snap to distinct points")
     return RunOverlay(graph, endpoints["home"], endpoints["turnaround"], parts)

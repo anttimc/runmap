@@ -215,6 +215,21 @@ and costs. It excludes dataset loading, snapping, HTTP delivery, and rendering.
 The [first Rust report](archive/history/33-rust-integration-kernel.md) records the
 initial result; wider interaction and concurrency checks remain in the roadmap.
 
+Benchmark the Python A* integer index against the retained string-indexed baseline:
+
+```sh
+uv run --extra web python -m runmap.experiments.benchmark_integer_ids \
+  --repeats 20 --output artifacts/pathfinding-profile/integer-ids/benchmark.json
+```
+
+Both searches remain Python. Complete-route comparisons use the same integrator
+on both sides, with an additional profile using Python integration explicitly.
+The benchmark alternates implementations, verifies paths/costs/expansion counts,
+includes endpoint-overlay preparation, and reports isolated length-only search,
+index preparation time, and retained allocations. See the
+[integer-index report](archive/history/34-integer-search-index.md) for scope and
+the initial measured tradeoffs.
+
 Baseline results go under `data/routes/prepared/`; synthetic results and hill
 plots go under `data/experiments/`. For scripts taking explicit report paths,
 create a fresh output directory and retain the model/dataset identity:

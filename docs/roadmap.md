@@ -40,6 +40,10 @@ in [development](development.md#native-integration-kernel), and initial evidence
 in the [dated report](archive/history/33-rust-integration-kernel.md). Kernel
 speedup alone does not establish instant backend or browser response.
 
+Python A* now uses a prepared integer index with shared endpoint overlays. The
+[integer-index report](archive/history/34-integer-search-index.md) records its
+separate benchmark; this does not move search or per-edge costs into Rust.
+
 ### Broaden native validation and profiling
 
 - Verify clean builds and runtime behavior across supported Python versions and
@@ -78,7 +82,9 @@ If the remaining Python work misses that budget, profile again and consider
 moving A* together with cost evaluation and its feature cache into Rust. Avoid a
 native search that calls Python for every edge. Persistent native graph data,
 incremental search, and spatial batching are later decisions supported by that
-profile, rather than prerequisites for the first kernel.
+profile, rather than prerequisites for the first kernel. Use the existing dense
+IDs as the starting point for a native graph boundary, preserving their lifetime
+and overlay semantics instead of converting the full graph on each interaction.
 
 ## Planned: routing improvements
 

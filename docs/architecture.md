@@ -35,6 +35,7 @@ and hosted storage are [future work](roadmap.md).
 | `paths/exploration.py`, `routing/profiles.py` | Shared eligibility, snapping, temporary start overlay, and forward-distance inclusion |
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
+| `routing/integer_graph.py` | Prepared dense node/segment/arc indices and shared sparse endpoint overlays |
 | `routing/cost_*`, `routing/costs.py`, `routing/hills.py`, `routing/fields.py` | Explicit request/leg data, settings, features, integration, and cost composition |
 | `rust/src/fields.rs`, `rust/src/bindings.rs` | Scalar integration kernel and its PyO3 adapter, built as `runmap._routing_native` |
 | `routing/baseline.py`, `experiments/` | CLI anchor baseline and standalone measurements/experiments |
@@ -48,7 +49,8 @@ Keep calculations independent of HTTP and rendering. Use data-only records and
 focused module functions; behavioral classes are appropriate for reusable
 spectral state, stores, and cache/service lifetimes. The planner binds a scalar
 arc-cost callback with explicit request data and fixed leg context; it does not
-require a plugin registry or a second graph representation.
+require a plugin registry. Its integer search view references the same physical
+segments and directed arc records as the serialized graph.
 
 The frontend coordinator owns shared state and notifies exploration/planning
 controllers when inputs or mode change. Features read shared state and request
@@ -165,6 +167,17 @@ request-specific segment blocks still apply during search. Endpoint splits inher
 their physical segment's prepared directions. Applying a policy rebuilds adjacency
 from all arcs, so relaxing a policy restores connections. Rebuild the policy index
 after changing access or direction tags.
+
+A* uses prepared integer node, arc, and segment indices, direct adjacency records,
+and per-search lists for distances and predecessors. Cost/heuristic callbacks and
+external results retain string IDs. Heap entries retain the original string node
+name as a tie key so equal-cost routes preserve their previous ordering. Integer
+IDs are local to a prepared graph, not serialized identifiers. Policy changes
+share the base integer topology and rebuild eligible adjacency. Endpoint overlays
+append a few indices and override only affected rows, sharing the full base arrays
+without copying them per request. Rebuild the graph index after topology changes.
+The bounded exploration Dijkstra still uses string-indexed dictionaries; this
+increment changes A* bookkeeping, not its cost model or the integration kernel.
 
 The synchronous API permits two concurrent planners and applies a cooperative
 deadline across preparation/search. Browser cancellation prevents stale result
