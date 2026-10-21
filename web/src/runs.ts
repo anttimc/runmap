@@ -1,4 +1,11 @@
-import { LngLatBounds, Marker, type GeoJSONSource, type Map } from "maplibre-gl";
+import {
+  LngLatBounds,
+  Marker,
+  type GeoJSONSource,
+  type Map,
+  type MapMouseEvent,
+  type MapTouchEvent,
+} from "maplibre-gl";
 import type { FeatureCollection, Feature, LineString } from "geojson";
 import { mapPadding } from "./layout";
 import { requestRun, snapEndpoint } from "./api";
@@ -62,6 +69,19 @@ function separation(a: Location, b: Location): number {
         ),
       ),
     )
+  );
+}
+
+function circlePoint(midpoint: Location, radius: number, angle: number): Location {
+  return [
+    midpoint[0] + (radius * Math.cos(angle)) / (111195 * Math.cos((midpoint[1] * Math.PI) / 180)),
+    midpoint[1] + (radius * Math.sin(angle)) / 111195,
+  ];
+}
+
+function circleCoordinates(midpoint: Location, radius: number): Location[] {
+  return Array.from({ length: 65 }, (_, i) =>
+    circlePoint(midpoint, radius, (i * 2 * Math.PI) / 64),
   );
 }
 
@@ -139,6 +159,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   const active = (): boolean => options.state.mode === "plan";
   let choosing: "home" | "turnaround" | undefined;
   let turnaround: Location | undefined;
+  let dragging = false;
   let response: RunResponse | undefined;
   let selected = 0;
   let generating = false;
@@ -195,10 +216,35 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       hills.value,
     ]);
   let observedInputs = inputsKey();
-  const markers = [new Marker({ color: "#193c38" }), new Marker({ color: "#805523" })];
+  const markers = [
+    new Marker({ color: "#193c38", draggable: true }),
+    new Marker({ color: "#805523", draggable: true }),
+  ];
   markers[0].getElement().title = "Home";
   markers[1].getElement().title = "Turnaround";
+  const handle = document.createElement("button");
+  handle.type = "button";
+  handle.className = "run-centre-handle";
+  handle.textContent = "↔";
+  handle.title = "Drag to resize loop width";
+  handle.setAttribute("aria-label", "Loop width: drag to resize");
+  const centreMarker = new Marker({ element: handle, draggable: true });
   addRunLayers(map);
+  map.addLayer({
+    id: "run-centre-circle",
+    type: "line",
+    source: "run-geometry",
+    filter: ["==", ["get", "kind"], "centre"],
+    paint: { "line-color": "#95602b", "line-width": 4, "line-opacity": 0.7 },
+  });
+  map.addLayer({
+    id: "run-centre-hit",
+    type: "line",
+    source: "run-geometry",
+    filter: ["==", ["get", "kind"], "centre"],
+    paint: { "line-width": 20, "line-opacity": 0 },
+  });
+  let displayFeatures: Feature<LineString>[] = [];
 
   function draw(): void {
     const home = options.state.home;
@@ -207,6 +253,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       ? [turnaroundSnap.longitude, turnaroundSnap.latitude]
       : turnaround;
     const features: Feature<LineString>[] = [];
+    centreMarker.remove();
     markers.forEach((marker) => marker.remove());
     if (active()) {
       if (a) markers[0].setLngLat(a).addTo(map);
@@ -218,20 +265,10 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
         const midpoint: Location = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
         const radius = distance * Number(avoidance.value);
         features.push(line([a, b], "guide"));
-        if (centre.checked)
-          features.push(
-            line(
-              Array.from({ length: 65 }, (_, i): Location => {
-                const angle = (i * 2 * Math.PI) / 64;
-                return [
-                  midpoint[0] +
-                    (radius * Math.cos(angle)) / (111195 * Math.cos((midpoint[1] * Math.PI) / 180)),
-                  midpoint[1] + (radius * Math.sin(angle)) / 111195,
-                ];
-              }),
-              "guide",
-            ),
-          );
+        if (centre.checked) {
+          centreMarker.setLngLat(circlePoint(midpoint, radius, 0)).addTo(map);
+          features.push(line(circleCoordinates(midpoint, radius), "centre"));
+        }
         element("run-avoidance-value").textContent =
           `${Math.round(radius)} m (${Math.round(Number(avoidance.value) * 100)}%)`;
       } else
@@ -249,6 +286,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
           `${candidateName(candidate)} · arrows show travel direction`;
       }
     }
+    displayFeatures = features;
     (map.getSource("run-geometry") as GeoJSONSource).setData({
       type: "FeatureCollection",
       features,
@@ -297,7 +335,11 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
           : "Set turnaround on map",
     );
     map.getCanvas().style.cursor = value ? "crosshair" : "";
-    if (value) status.textContent = `Click the map to set ${value}.`;
+    if (value)
+      status.textContent =
+        value === "home"
+          ? "Click the map to set your start."
+          : "Click the map to set your turnaround.";
     else if (wasPicking) status.textContent = pickStatus;
   }
   function invalidate(): void {
@@ -410,7 +452,10 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
           home: { longitude: home[0], latitude: home[1] },
           turnaround: { longitude: turnaround[0], latitude: turnaround[1] },
           ...options.state.policy,
-          settings: { avoidance_ratio: Number(avoidance.value), centre_enabled: centre.checked },
+          settings: {
+            avoidance_ratio: Number(avoidance.value),
+            centre_enabled: centre.checked,
+          },
           preferences: { hills: hillPreset().level },
         },
         abort.signal,
@@ -444,11 +489,117 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       }
     }
   }
-  function modeChanged(): void {
+  function beginDrag(): void {
+    dragging = true;
     pick();
+    snappingAbort?.abort();
+    ++snapSequence;
+    abort?.abort();
+    ++sequence;
+    generating = false;
+    element("run-cancel").hidden = true;
+    element<HTMLButtonElement>("run-generate").disabled = true;
+    status.textContent = "Move the marker, then generate again to update the run.";
+  }
+  function endDrag(): void {
+    window.setTimeout(() => {
+      dragging = false;
+    }, 0);
+  }
+  markers.forEach((marker, index) => {
+    marker.getElement().title = index === 0 ? "Drag to move home" : "Drag to move turnaround";
+    marker.on("dragstart", beginDrag);
+    marker.on("dragend", () => {
+      const point = marker.getLngLat();
+      const location: Location = [point.lng, point.lat];
+      homeSnap = turnaroundSnap = null;
+      if (index === 0) options.setHome(location);
+      else {
+        turnaround = location;
+        invalidate();
+        void snapEndpoints();
+      }
+      endDrag();
+    });
+  });
+  function resizeCircle(location: Location): void {
+    const a = markers[0].getLngLat();
+    const b = markers[1].getLngLat();
+    const distance = separation([a.lng, a.lat], [b.lng, b.lat]);
+    if (distance < 0.01) return;
+    const midpoint: Location = [(a.lng + b.lng) / 2, (a.lat + b.lat) / 2];
+    avoidance.value = String(separation(midpoint, location) / distance);
+    const radius = distance * Number(avoidance.value);
+    element("run-avoidance-value").textContent =
+      `${Math.round(radius)} m (${Math.round(Number(avoidance.value) * 100)}%)`;
+    (map.getSource("run-geometry") as GeoJSONSource).setData({
+      type: "FeatureCollection",
+      features: [
+        ...displayFeatures.filter((feature) => feature.properties?.kind !== "centre"),
+        line(circleCoordinates(midpoint, radius), "centre"),
+      ],
+    });
+  }
+  centreMarker.on("dragstart", beginDrag);
+  centreMarker.on("drag", () => {
+    const point = centreMarker.getLngLat();
+    resizeCircle([point.lng, point.lat]);
+  });
+  centreMarker.on("dragend", () => {
+    invalidate();
+    endDrag();
+  });
+  function dragCircle(event: MapMouseEvent | MapTouchEvent): void {
+    if (!active()) return;
+    event.preventDefault();
+    const panEnabled = map.dragPan.isEnabled();
+    beginDrag();
+    map.dragPan.disable();
+    const move = (next: MapMouseEvent | MapTouchEvent): void => {
+      resizeCircle([next.lngLat.lng, next.lngLat.lat]);
+      const a = markers[0].getLngLat();
+      const b = markers[1].getLngLat();
+      const midpoint: Location = [(a.lng + b.lng) / 2, (a.lat + b.lat) / 2];
+      const radius = separation([a.lng, a.lat], [b.lng, b.lat]) * Number(avoidance.value);
+      centreMarker.setLngLat(circlePoint(midpoint, radius, 0));
+    };
+    const finish = (): void => {
+      map.off("mousemove", move);
+      map.off("touchmove", move);
+      map.off("mouseup", finish);
+      map.off("touchend", finish);
+      map.off("touchcancel", finish);
+      if (panEnabled) map.dragPan.enable();
+      invalidate();
+      endDrag();
+    };
+    map.on("mousemove", move);
+    map.on("touchmove", move);
+    map.on("mouseup", finish);
+    map.on("touchend", finish);
+    map.on("touchcancel", finish);
+  }
+  map.on("mousedown", "run-centre-hit", dragCircle);
+  map.on("touchstart", "run-centre-hit", dragCircle);
+  map.on("mouseenter", "run-centre-hit", () => {
+    if (active()) map.getCanvas().style.cursor = "ew-resize";
+  });
+  map.on("mouseleave", "run-centre-hit", () => {
+    map.getCanvas().style.cursor = choosing ? "crosshair" : "";
+  });
+  function modeChanged(): void {
+    if (active() && observedInputs !== inputsKey()) invalidate();
+    pick(
+      active()
+        ? !options.state.home
+          ? "home"
+          : !turnaround
+            ? "turnaround"
+            : undefined
+        : undefined,
+    );
     draw();
     if (active()) {
-      if (observedInputs !== inputsKey()) invalidate();
       void snapEndpoints();
     }
   }
@@ -476,6 +627,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     ++snapSequence;
     pick();
     options.setHome(undefined);
+    pick("home");
     candidates();
   });
   avoidance.addEventListener("input", invalidate);
@@ -506,11 +658,14 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     policyChanged: sharedInputsChanged,
     picking: () => Boolean(choosing),
     click: (location) => {
+      if (dragging) return true;
       if (!active() || !choosing) return false;
       const endpoint = choosing;
       pick();
-      if (endpoint === "home") options.setHome(location);
-      else {
+      if (endpoint === "home") {
+        options.setHome(location);
+        pick("turnaround");
+      } else {
         turnaround = location;
         invalidate();
         void snapEndpoints();

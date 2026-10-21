@@ -47,8 +47,11 @@ label correction is tracked in the [roadmap](roadmap.md).
 
 ## Plan run
 
-1. Set home and a distinct turnaround location; inspect the snapped positions.
-2. Adjust Loop width and, where supported, Avoid hills.
+1. Click the map to set home; turnaround selection starts automatically. Click
+   again to set a distinct turnaround. Drag either marker to adjust its snapped position.
+2. Adjust Loop width with the slider or by dragging the circle edge or its handle
+   inward or outward. Its centre stays at the endpoint midpoint. Adjust Avoid hills
+   where supported. Generate again after moving markers or changing settings.
 3. Select Generate run. Compare the candidate cards and use Fit run to inspect
    the result. Cancel stops waiting in the browser; server work has its own deadline.
 
