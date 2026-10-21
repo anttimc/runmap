@@ -36,6 +36,8 @@ The [integer planner-cost report](history/36-indexed-planner-costs.md) records t
 following migration of callbacks, endpoint parts, and request caches.
 The [indexed exploration report](history/37-indexed-exploration.md) records bounded
 Dijkstra, shared immutable distance buffers, and unchanged tile output.
+The [packed measurement report](history/38-packed-measurements.md) records the
+following migration of retained samples and integer display references.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

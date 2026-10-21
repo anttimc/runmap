@@ -14,6 +14,7 @@ from rasterio.warp import transform
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import (
     build_measurement_data, graph_digest, inspect_measurements, load_measurements,
+    indexed_measurement, segment_measurements,
 )
 from runmap.paths.terrain import TerrainSample, enrich_graph_terrain, _sample_gradients
 
@@ -38,6 +39,41 @@ def enrich(g, gradients, valid=None):
 
 
 class MeasurementTests(unittest.TestCase):
+    def test_packed_records_preserve_nulls_flags_and_detach_mutable_inputs(self) -> None:
+        g = graph([(375000, 6675100), (375040, 6675100)])
+        enrich(g, lambda i, r: (.1, 90), lambda i: i != 1)
+        document = {**g["_measurements"], "graph_digest": graph_digest(g)}
+        document["segments"]["s"][0]["quality_flags"] = ["future_flag", "bridge", "bridge"]
+        # Grade and height nullability are independent of validity in the file schema.
+        document["segments"]["s"][1]["height_change_m"] = 0.0
+        expected = copy.deepcopy(document["segments"]["s"])
+        packed = build_measurement_data(g, document)
+        self.assertEqual(segment_measurements(packed, "s"), expected)
+        document["segments"]["s"][0]["geometry"][0][0] = 0
+        document["segments"]["s"][0]["quality_flags"].clear()
+        item = indexed_measurement(packed, 0, 0)
+        item["geometry"][0][0] = 1
+        item["quality_flags"].clear()
+        self.assertEqual(segment_measurements(packed, "s"), expected)
+        self.assertFalse(hasattr(packed, "document"))
+        for array in (packed.graph_lengths_m, packed.interval_offsets, packed.values, packed.present,
+                      packed.valid, packed.geometry, packed.geometry_offsets, packed.flag_codes):
+            with self.assertRaises(ValueError):
+                array.flat[0] = 0
+        for segment, interval in ((-1, 0), (1, 0), (0, -1), (0, len(expected))):
+            with self.assertRaises(IndexError):
+                indexed_measurement(packed, segment, interval)
+
+    def test_packing_rejects_wrong_interval_identity(self) -> None:
+        g = graph([(375000, 6675100), (375040, 6675100)])
+        enrich(g, lambda i, r: (.1, 90))
+        document = {**g["_measurements"], "graph_digest": graph_digest(g)}
+        for key, value in (("segment_id", "other"), ("interval_index", 3)):
+            changed = copy.deepcopy(document)
+            changed["segments"]["s"][0][key] = value
+            with self.assertRaisesRegex(ValueError, "interval identity mismatch"):
+                build_measurement_data(g, changed)
+
     def test_planes_cross_slope_and_curved_geometry(self):
         for magnitude, bearing, expected in [(0, 90, 0), (.1, 90, 4), (.1, 0, 0)]:
             g = graph([(375000, 6675100), (375040, 6675100)])
@@ -79,11 +115,11 @@ class MeasurementTests(unittest.TestCase):
             paths = write_graph_outputs(g, directory)
             self.assertGreater(paths["measurements"].stat().st_size, 0)
             index = load_measurements(paths["graph"])
-            self.assertEqual(index.document["method"]["manifest_id"], "test-manifest")
+            self.assertEqual(index.method["manifest_id"], "test-manifest")
             changed = copy.deepcopy(g)
             changed["segments"][0]["length_m"] += 1
             with self.assertRaisesRegex(ValueError, "identity mismatch"):
-                build_measurement_data(changed, index.document)
+                build_measurement_data(changed, json.loads(paths["measurements"].read_text()))
             old = json.loads(paths["graph"].read_text())
             enrich(g, lambda i, r: (.2, 90))
             write_graph_outputs(g, directory)

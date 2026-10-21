@@ -87,14 +87,17 @@ class GraphSummary(TypedDict):
     terrain_valid_fraction: NotRequired[float]
 
 
-class Measurement(TypedDict):
+class MeasurementLocation(TypedDict):
     segment_id: str
     interval_index: int
-    start_m: float
-    end_m: float
     graph_start_m: float
     graph_end_m: float
     geometry: list[Coordinate]
+
+
+class Measurement(MeasurementLocation):
+    start_m: float
+    end_m: float
     grade_percent: float | None
     height_change_m: float | None
     valid: bool

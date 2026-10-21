@@ -18,6 +18,7 @@ from shapely import transform
 
 from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, display_segment_reason, exploration_context, path_policy_index
 from runmap.paths.display import measurement_quality
+from runmap.routing.types import MeasurementLocation
 from runmap.routing.profiles import exploration_profile
 from runmap.paths.dead_ends import ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M
 from runmap.paths.exploration import DistanceData, segment_reason
@@ -170,41 +171,54 @@ def display_runs(data: PathData, indexes: list[int], policy: str, variant: str,
     distance_bin = 250 if z <= 12 else 125 if z <= 14 else 0
     runs: list[DisplayRun] = []
     eligible: dict[str, bool] = {}
+    measurements = data.measurements
+    offsets, values = memoryview(measurements.interval_offsets), memoryview(measurements.values)
+    valid, present = memoryview(measurements.valid), memoryview(measurements.present)
+    flag_codes = memoryview(measurements.flag_codes)
+    geometry, geometry_offsets = memoryview(measurements.geometry), memoryview(measurements.geometry_offsets)
     for i in indexes:
         feature = data.features[i]
-        source = feature.measurement
-        segment = source["segment_id"]
-        quality = measurement_quality(source)
+        number = offsets[feature.segment] + feature.interval_index
+        segment = measurements.segment_ids[feature.segment]
+        flags = measurements.flag_values[flag_codes[number]]
+        quality = measurement_quality(valid[number], flags)
+        coordinates = _interval_coordinates(geometry, geometry_offsets, number)
         if segment not in eligible:
             eligible[segment] = (segment_reason(index, segment) if snapshot is not None
                                  else display_segment_reason(index, segment, profile)) is None
         properties: dict[str, Property] = {
-            "segment_id": segment, "quality": quality, "stairs": "stairs" in source["quality_flags"],
+            "segment_id": segment, "quality": quality, "stairs": "stairs" in flags,
             "eligible": eligible[segment],
         }
         distance: float | None = None
         if snapshot is not None:
-            interval = data.measurements.document["segments"][segment][source["interval_index"]]
-            state = _interval_state(data, index, snapshot.distances, interval, snapshot.budget_km)
+            source = MeasurementLocation(segment_id=segment, interval_index=feature.interval_index,
+                                         graph_start_m=values[number, 2], graph_end_m=values[number, 3],
+                                         geometry=list(coordinates))
+            state = _interval_state(data, index, snapshot.distances, source, snapshot.budget_km)
             properties["inclusion_state"] = state["inclusion_state"]
             properties["coverage_limited"] = state["coverage_limited"]
             distance = state["distance_from_start_m"]
         if metric == "gradient":
             if feature.flat_min_grade_50m is not None:
                 properties["flat_min_grade_50m"] = feature.flat_min_grade_50m
-            grade = source["grade_percent"]
+            grade = values[number, 4] if present[number, 0] else None
             if grade is not None and quality == "terrain_estimate":
                 properties["grade_percent"] = math.ceil(abs(grade) / grade_bin) * grade_bin if grade_bin else abs(grade)
         elif distance is not None:
             properties["distance_from_start_m"] = round(distance / distance_bin) * distance_bin if distance_bin else distance
-        coordinates = tuple(tuple(point) for point in source["geometry"])
-        interval = source["interval_index"]
+        interval = feature.interval_index
         if (runs and runs[-1].properties == properties and runs[-1].last_interval + 1 == interval
                 and runs[-1].coordinates[-1] == coordinates[0]):
             runs[-1] = DisplayRun(runs[-1].coordinates + coordinates[1:], properties, interval)
         else:
             runs.append(DisplayRun(coordinates, properties, interval))
     return runs
+
+
+def _interval_coordinates(geometry: memoryview, offsets: memoryview, number: int) -> tuple[tuple[float, float], ...]:
+    """Read native scalars directly without temporary NumPy rows or JSON lists."""
+    return tuple((geometry[i, 0], geometry[i, 1]) for i in range(offsets[number], offsets[number + 1]))
 
 
 def encode_tile(data: PathData, policy: str, variant: str, z: int, x: int, y: int,

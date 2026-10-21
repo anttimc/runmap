@@ -6,7 +6,7 @@ from collections.abc import Iterable, Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from runmap.paths.measurements import validate_measurements
+from runmap.paths.measurements import MeasurementData, segment_measurements, validate_measurements
 from runmap.routing.cost_types import PreferenceObservations, TraversalRef
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points
@@ -155,23 +155,32 @@ def _fill_segment(data: HillData, segment: int, intervals: Sequence[HillInterval
     data.totals[segment, 1] = _feature_values(sum_hill_features(item.backward for item in intervals))
 
 
-def build_hill_data(graph: GraphData, document: MeasurementDocument) -> HillData:
+def build_hill_data(graph: GraphData, document: MeasurementDocument | MeasurementData) -> HillData:
     """Share the prepared segment IDs and retain only packed numeric hill data."""
-    validate_measurements(graph.document, document)
+    if not isinstance(document, MeasurementData):
+        validate_measurements(graph.document, document)
     index = graph.integer
     if index is None or index.extra_node_ids or index.extra_segment_ids or index.extra_arcs or index.arc_overrides:
         raise ValueError("Hill preparation requires the base integer graph")
+    if isinstance(document, MeasurementData) and (document.graph is not graph.document
+                                                 or document.segment_ids is not index.segment_ids):
+        raise ValueError("Hill measurements must share the graph segment ordering")
     model = HillModel()
     offsets = np.empty(len(index.segment_ids) + 1, dtype=np.int64)
     offsets[0] = 0
     for segment, segment_id in enumerate(index.segment_ids):
-        offsets[segment + 1] = offsets[segment] + max(1, len(document["segments"][segment_id]))
+        count = (int(document.interval_offsets[segment + 1] - document.interval_offsets[segment])
+                 if isinstance(document, MeasurementData) else len(document["segments"][segment_id]))
+        offsets[segment + 1] = offsets[segment] + max(1, count)
     count = int(offsets[-1])
-    data = HillData(graph.document, document["graph_digest"], model, index, offsets,
+    digest = document.graph_digest if isinstance(document, MeasurementData) else document["graph_digest"]
+    data = HillData(graph.document, digest, model, index, offsets,
                     np.empty((count, 2), dtype=np.float64), np.empty((count, 2, 7), dtype=np.float64),
                     np.empty((len(index.segment_ids), 2, 7), dtype=np.float64), 0.0, 0.0)
     for segment, segment_id in enumerate(index.segment_ids):
-        intervals = _prepare_segment(graph.segments[segment_id], document["segments"][segment_id], model)
+        items = (segment_measurements(document, segment_id) if isinstance(document, MeasurementData)
+                 else document["segments"][segment_id])
+        intervals = _prepare_segment(graph.segments[segment_id], items, model)
         _fill_segment(data, segment, intervals)
     length = sum(float(value) for value in data.features[:, 0, 6])
     valid = sum(float(value) for value in data.features[:, 0, 3])

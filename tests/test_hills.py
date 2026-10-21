@@ -14,7 +14,7 @@ import numpy as np
 
 from test_routing import graph_document
 from runmap.paths.exploration import Snap
-from runmap.paths.measurements import graph_digest
+from runmap.paths.measurements import build_measurement_data, graph_digest
 from runmap.routing.cost_preparation import build_request_cost_data
 from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache, TraversalRef
@@ -70,6 +70,17 @@ class HillTests(unittest.TestCase):
               projected_scale: float = 1) -> HillData:
         return build_hill_data(self.index, hill_document(self.graph, {"ab": grades, "ac": [0], "cb": [0]},
                                                          flags=flags, projected_scale=projected_scale))
+
+    def test_packed_measurements_match_document_hills_and_require_shared_graph(self) -> None:
+        document = hill_document(self.graph, {"ab": [5, None, -10], "ac": [], "cb": [0]}, flags=("bridge",))
+        packed = build_measurement_data(self.graph, document, index=self.index.integer)
+        original = build_hill_data(self.index, document)
+        actual = build_hill_data(self.index, packed)
+        for name in ("interval_offsets", "chainage", "features", "totals"):
+            np.testing.assert_array_equal(getattr(original, name), getattr(actual, name))
+        with self.assertRaisesRegex(ValueError, "share the graph"):
+            build_hill_data(build_graph_index(deepcopy(self.graph)), packed)
+
 
     def test_hill_arrays_share_segment_order_and_are_read_only(self) -> None:
         self.graph["segments"].reverse()

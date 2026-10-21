@@ -8,6 +8,7 @@ from pathlib import Path
 import platform
 from time import perf_counter
 
+from runmap.paths.measurements import segment_measurements
 from runmap.api.paths import PathData, load_path_data
 from runmap.api.runs import (EndpointRequest, LegResponse, PreferencesRequest, RunRequest,
                              SettingsRequest, generate_run)
@@ -46,7 +47,7 @@ def slope_observations(data: PathData, leg: LegResponse) -> dict[str, float]:
     above_five = above_ten = maximum = 0.0
     for traversal in leg.traversals:
         lo, hi = sorted((traversal.start_m, traversal.end_m))
-        for item in data.measurements.document["segments"][traversal.segment_id]:
+        for item in segment_measurements(data.measurements, traversal.segment_id):
             overlap = min(hi, item["graph_end_m"]) - max(lo, item["graph_start_m"])
             grade = item["grade_percent"]
             if (overlap <= 0 or not item["valid"] or grade is None

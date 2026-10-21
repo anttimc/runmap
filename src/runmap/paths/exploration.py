@@ -9,6 +9,7 @@ from threading import RLock
 
 from rasterio.warp import transform
 
+from runmap.paths.measurements import indexed_measurement
 from runmap.routing.geometry import prepare_projected_geometry
 from runmap.routing.integer_graph import IntegerGraph, extend_integer_graph
 from runmap.routing.search import GraphData, NodeDistances, indexed_shortest_distances
@@ -68,7 +69,8 @@ def snap_candidates(data, index, longitude, latitude, radius_m=50, preferred_seg
     records = []
     reasons = {}
     for feature_index in indices:
-        interval = data.features[feature_index].measurement
+        feature = data.features[feature_index]
+        interval = indexed_measurement(data.measurements, feature.segment, feature.interval_index)
         segment_id = interval["segment_id"]
         if segment_id not in reasons:
             reasons[segment_id] = segment_reason(index, segment_id)

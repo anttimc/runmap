@@ -46,11 +46,16 @@ geometry/interval arrays. Endpoint overlays append temporary IDs and retain the
 original segment index and chainage range. They never renumber the base dataset.
 
 The current integer search/cost pipeline and packed hill storage are described in
-[architecture](architecture.md). Continue incrementally, removing each replaced
+[architecture](architecture.md). Measurement samples now also use packed arrays
+in the shared segment order, and display references use integer IDs; the
+[storage report](archive/history/38-packed-measurements.md) records equivalence
+and the retained-memory change. Continue incrementally, removing each replaced
 representation:
 
-1. Move remaining projected geometry maps and display measurements onto the
-   shared IDs and compact arrays. Share topology across policies; compare an
+1. Move remaining graph/projected geometry maps, per-interval display metadata,
+   and spatial cell lists onto shared IDs and compact arrays. Interval coordinates
+   are currently packed losslessly; evaluate shared segment geometry without
+   changing their sampled positions or tile seams. Share topology across policies; compare an
    allowed-arc mask with compact filtered adjacency before choosing the search
    representation. Acceptance: remove redundant string adjacency/data copies,
    preserve tile/inspection semantics, and measure memory plus bounded-search time.

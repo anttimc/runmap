@@ -14,6 +14,7 @@ from test_path_api import fixture
 from runmap.api.paths import load_path_data
 from runmap.api.paths import _interval_state, candidate_path_indexes, path_policy_index
 from runmap.paths.graph import write_graph_outputs
+from runmap.paths.measurements import build_measurement_data, indexed_measurement, segment_measurements
 from runmap.api.path_tiles import (ByteCache, PathTileService, display_runs, encode_tile,
                                   projected_point, render_version, snapshot_distances, tile_bounds)
 from runmap.paths.exploration import DistanceData, Snap
@@ -32,10 +33,29 @@ class PathTileTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.data = load_path_data(write_graph_outputs(fixture(), directory.name)["graph"])
 
-    def test_display_intervals_share_measurements_without_retaining_geojson(self) -> None:
+    def replace_interval(self, number: int, *, grade: float | None = None,
+                         geometry: list[list[float]] | None = None) -> None:
+        feature = self.data.features[number]
+        document = {"schema_version": 1, "graph_digest": self.data.measurements.graph_digest,
+                    "method": self.data.measurements.method,
+                    "segments": {key: segment_measurements(self.data.measurements, key)
+                                 for key in self.data.measurements.segment_ids}}
+        item = document["segments"][self.data.measurements.segment_ids[feature.segment]][feature.interval_index]
+        if grade is not None:
+            item["grade_percent"] = grade
+        if geometry is not None:
+            item["geometry"] = geometry
+        packed = build_measurement_data(self.data.graph, document, index=self.data.routing.integer)
+        self.data = replace(self.data, measurements=packed)
+
+    def test_display_intervals_reference_packed_measurements(self) -> None:
         interval = self.data.features[0]
-        self.assertIs(interval.measurement, self.data.measurements.document["segments"]["s"][0])
+        item = indexed_measurement(self.data.measurements, interval.segment, interval.interval_index)
+        self.assertEqual((item["segment_id"], item["interval_index"]), ("s", 0))
+        self.assertIs(self.data.measurements.segment_ids, self.data.routing.integer.segment_ids)
+        self.assertIs(self.data.measurements.segment_indices, self.data.routing.integer.segment_indices)
         self.assertFalse(hasattr(interval, "__dict__"))
+        self.assertFalse(hasattr(interval, "measurement"))
 
     def test_static_policy_switch_does_not_build_a_routing_index(self) -> None:
         self.assertEqual(self.data.profile_indexes, {})
@@ -207,8 +227,8 @@ class PathTileTests(unittest.TestCase):
             self.assertEqual(service.snapshots.bytes, 0)
 
     def test_lod_semantic_boundaries_and_conservative_bins(self) -> None:
-        self.data.features[0].measurement["grade_percent"] = 2.1
-        self.data.features[1].measurement["grade_percent"] = 3.9
+        self.replace_interval(0, grade=2.1)
+        self.replace_interval(1, grade=3.9)
         runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", "gradient-all", 11, None)
         # Different minimum thresholds must survive coalescing even if grade bins match.
         self.assertEqual(len(runs), 4)
@@ -280,8 +300,8 @@ class PathTileTests(unittest.TestCase):
         x, y = xyz(24.8, 60.2, z)
         west, south, east, north = tile_bounds(z, x, y)
         geometry = [[west, (south + north) / 2], [east + (east - west), (south + north) / 2]]
-        original = self.data.features[0].measurement["geometry"]
-        self.data.features[0].measurement["geometry"] = geometry
+        original = segment_measurements(self.data.measurements, "s")[0]["geometry"]
+        self.replace_interval(0, geometry=geometry)
         bounds = (west, south, east + (east - west), north)
         data = replace(self.data, bounds=bounds, cells={cell: [0] for cell in _cells(bounds)})
         try:
@@ -296,7 +316,7 @@ class PathTileTests(unittest.TestCase):
             self.assertEqual(parts[1][0][0], -64)
             self.assertEqual(parts[0][-1][1], parts[1][0][1])
         finally:
-            self.data.features[0].measurement["geometry"] = original
+            self.replace_interval(0, geometry=original)
 
     def test_measurement_replacement_changes_immutable_tile_urls(self) -> None:
         graph = {**self.data.graph, "measurements": {**self.data.graph["measurements"], "sha256": "new"}}
@@ -322,9 +342,9 @@ class PathTileTests(unittest.TestCase):
         z = 15
         x, y = xyz(24.8, 60.2, z)
         west, south, east, north = tile_bounds(z, x, y)
-        feature = self.data.features[0].measurement
+        feature = segment_measurements(self.data.measurements, "s")[0]
         original = feature["geometry"]
-        feature["geometry"] = [[west - .01, (south + north) / 2], [east + .01, (south + north) / 2]]
+        self.replace_interval(0, geometry=[[west - .01, (south + north) / 2], [east + .01, (south + north) / 2]])
         data = replace(self.data, cells={(cx, cy): [0] for cx, cy in self.data.cells})
         try:
             decoded = mapbox_vector_tile.decode(encode_tile(data, "all-stairs", "gradient-all", z, x, y),
@@ -333,7 +353,7 @@ class PathTileTests(unittest.TestCase):
             self.assertEqual(points[0][0], -64)
             self.assertEqual(points[-1][0], 4160)
         finally:
-            feature["geometry"] = original
+            self.replace_interval(0, geometry=original)
 
 
 class CacheTests(unittest.TestCase):

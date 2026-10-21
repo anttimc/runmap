@@ -8,17 +8,18 @@ from pathlib import Path
 
 from rasterio.warp import transform
 
-from runmap.paths.measurements import MeasurementData, graph_digest, inspect_measurements, load_measurements
+from runmap.paths.measurements import (MeasurementData, graph_digest, inspect_measurements,
+                                       load_measurements, indexed_measurement, segment_measurements)
 from runmap.paths.flat import GradeInterval, flat_run_thresholds
 from runmap.paths.display import DisplayInterval, display_feature
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                                    Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile, forbidden_reason, pedestrian_access_reason
-from runmap.routing.types import EdgeProfile
+from runmap.routing.types import EdgeProfile, MeasurementLocation
 from runmap.routing.search import GraphData, build_graph_index, apply_profile
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import build_hill_data
-from runmap.paths.exploration import (ExplorationCache, Snap, cached_distances, distance_from_start, interval_inclusion, legal_directions, segment_reason, snap_candidates)
+from runmap.paths.exploration import (DistanceData, ExplorationCache, Snap, cached_distances, distance_from_start, interval_inclusion, legal_directions, segment_reason, snap_candidates)
 
 
 MIN_ZOOM = 11
@@ -114,16 +115,18 @@ def _coverage(graph):
     ]]}, "geometry_envelope"
 
 
-def load_path_data(graph_path):
+def load_path_data(graph_path: str | Path) -> PathData:
     graph_path = Path(graph_path)
     graph = json.loads(graph_path.read_text())
     if "measurements" not in graph:
         raise FileNotFoundError("Graph has no prepared measurement reference")
-    measurements = load_measurements(graph_path, graph=graph)
+    routing = build_graph_index(graph)
+    measurements = load_measurements(graph_path, graph=graph, index=routing.integer)
     segments = {segment["id"]: segment for segment in graph["segments"]}
     features = []
     cells = defaultdict(list)
-    for segment_id, intervals in measurements.document["segments"].items():
+    for segment_number, segment_id in enumerate(measurements.segment_ids):
+        intervals = segment_measurements(measurements, segment_id)
         category = surface_category(segments[segment_id])
         flat_thresholds = flat_run_thresholds([
             GradeInterval(item["start_m"], item["end_m"], item["grade_percent"]
@@ -133,7 +136,7 @@ def load_path_data(graph_path):
         ])
         for interval, flat_threshold in zip(intervals, flat_thresholds):
             feature_index = len(features)
-            features.append(DisplayInterval(interval, category, flat_threshold))
+            features.append(DisplayInterval(segment_number, interval["interval_index"], category, flat_threshold))
             for cell in _cells(_bounds(interval["geometry"])):
                 cells[cell].append(feature_index)
     if not features:
@@ -141,8 +144,8 @@ def load_path_data(graph_path):
     coverage, kind = _coverage(graph)
     data = PathData(graph, measurements, segments, tuple(features), dict(cells),
                     {"geometry": coverage, "kind": kind},
-                    _bounds(coverage["coordinates"][0]), graph_digest(graph), build_graph_index(graph))
-    return _build_display_index(replace(data, hills=build_hill_data(data.routing, measurements.document)))
+                    _bounds(coverage["coordinates"][0]), graph_digest(graph), routing)
+    return _build_display_index(replace(data, hills=build_hill_data(data.routing, measurements)))
 
 
 def _build_display_index(data: PathData) -> PathData:
@@ -150,7 +153,7 @@ def _build_display_index(data: PathData) -> PathData:
         data.routing, lambda geometry: _near_boundary(data, geometry),
         data.coverage["kind"] == "prepared_extract")
     visible = {i for i, feature in enumerate(data.features)
-               if feature.measurement["segment_id"] not in classified}
+               if data.measurements.segment_ids[feature.segment] not in classified}
     cells = {cell: [i for i in indexes if i in visible] for cell, indexes in data.cells.items()}
     return replace(data, building_access=classified, display_cells=cells)
 
@@ -163,11 +166,12 @@ def path_config(data):
             "access_policy": ACCESS_POLICY, "entrance_limit_m": ENTRANCE_LIMIT_M,
             "cache_identity": [data.dataset_id, ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M],
             "hidden_segments": len(data.building_access),
-            "hidden_intervals": sum(len(data.measurements.document["segments"][segment])
-                                    for segment in data.building_access),
+            "hidden_intervals": sum(int(data.measurements.interval_offsets[i + 1] - data.measurements.interval_offsets[i])
+                                    for segment in data.building_access
+                                    for i in (data.measurements.segment_indices[segment],)),
         },
         "coverage": data.coverage, "bounds_wgs84": data.bounds,
-        "method": data.measurements.document["method"],
+        "method": data.measurements.method,
         "initial_view": {
             "longitude": data.graph.get("start", {}).get("longitude", (data.bounds[0] + data.bounds[2]) / 2),
             "latitude": data.graph.get("start", {}).get("latitude", (data.bounds[1] + data.bounds[3]) / 2),
@@ -225,7 +229,7 @@ def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES,
     features = []
     reasons = {}
     for index in sorted(candidates):
-        feature = display_feature(data.features[index])
+        feature = display_feature(data.measurements, data.features[index])
         segment_id = feature["properties"]["segment_id"]
         if segment_id not in reasons:
             reasons[segment_id] = segment_reason(policy_index, segment_id)
@@ -352,7 +356,8 @@ def exploration_context(data, longitude, latitude, budget_km, surface, avoid_sta
     return index, distances, snap_response, hit
 
 
-def _interval_state(data, index, distances, interval, budget_km):
+def _interval_state(data: PathData, index: GraphData, distances: DistanceData,
+                    interval: MeasurementLocation, budget_km: float) -> dict[str, object]:
     key = (interval["segment_id"], interval["interval_index"])
     if key not in data.boundary_intervals:
         data.boundary_intervals[key] = _near_boundary(data, interval["geometry"])
@@ -377,7 +382,7 @@ def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=3, surface=
     features = []
     for feature in response["features"]:
         properties = feature["properties"]
-        interval = data.measurements.document["segments"][properties["segment_id"]][properties["interval_index"]]
+        interval = indexed_measurement(data.measurements, data.measurements.segment_indices[properties["segment_id"]], properties["interval_index"])
         features.append({**feature, "properties": {**properties, **_interval_state(data, index, distances, interval, budget_km)}})
     return {**response, "features": features, "distance_cache_hit": hit,
             "search_limit_m": distances.maximum_m, "interval_resolution_note":
@@ -392,7 +397,7 @@ def inspect_outing(data, result, longitude, latitude, budget_km=3, surface="all"
               "outing_label": f"Within {budget_km:g} km of the start"}
     if distances is None:
         return result
-    original = data.measurements.document["segments"][result["segment_id"]]
+    original = segment_measurements(data.measurements, result["segment_id"])
     result["intervals"] = [{**interval, **_interval_state(data, index, distances, original[interval["interval_index"]], budget_km)}
                            for interval in result["intervals"]]
     return result

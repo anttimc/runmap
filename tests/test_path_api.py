@@ -10,7 +10,7 @@ from runmap.api.app import app, lifespan
 from runmap.api.paths import (load_path_data, path_config, viewport_paths, inspect_path,
                               uphill_sections, render_paths, explore_paths, snap_path_start, _build_display_index)
 from runmap.paths.graph import write_graph_outputs
-from runmap.paths.measurements import graph_digest
+from runmap.paths.measurements import graph_digest, segment_measurements
 from runmap.routing.profiles import surface_category, exploration_profile
 from runmap.routing.search import apply_profile
 from runmap.paths.exploration import legal_directions
@@ -187,7 +187,7 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual(reverse["uphill_sections"][0]["gain_m"], 4)
         self.assertEqual(forward["source"], self.graph["source"])
         self.assertFalse(forward["segment"]["backward"])
-        self.assertEqual(self.data.measurements.document["segments"]["s"][0]["grade_percent"], 2)
+        self.assertEqual(segment_measurements(self.data.measurements, "s")[0]["grade_percent"], 2)
 
     def test_quality_and_surface_unknowns_are_not_flat(self):
         graph = fixture()
@@ -204,7 +204,7 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual(surface_category({"tags": {"highway": "footway"}}), "unknown")
 
     def test_hills_do_not_bridge_missing_samples(self):
-        intervals = copy.deepcopy(self.data.measurements.document["segments"]["s"])
+        intervals = copy.deepcopy(segment_measurements(self.data.measurements, "s"))
         intervals[-1].update(grade_percent=5, height_change_m=2.5, quality_flags=["tunnel"])
         sections = uphill_sections(intervals)
         self.assertEqual(len(sections), 2)

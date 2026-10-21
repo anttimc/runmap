@@ -114,6 +114,16 @@ Loading checks checksum and graph identity. The service builds spatial/display
 indexes and directional hill features once per dataset load. Path API identities
 and rendering URLs prevent stale datasets or changed measurements being reused.
 
+The loaded measurement document is packed and released. `MeasurementData` shares
+the integer graph's physical-segment ID tuple and lookup; segment offsets locate
+interval ranges. Read-only float64 columns retain both chainages, signed grade,
+height change, and exact WGS84 coordinates. Separate masks preserve validity and
+independent null values; pooled flag tuples preserve flag ordering and unknown
+flags. Geometry offsets retain the file's interval vertices without reprojection.
+Inspection materializes records for one segment. Hill preparation reads one
+segment at a time from the same store. Loading still parses the source JSON and
+temporarily holds its dictionaries; this is not a persistent prepared-array format.
+
 ## Delivery and request lifetimes
 
 Terrain tiles are 256-pixel Web Mercator PNGs, reprojected directly from derived
@@ -124,8 +134,9 @@ distinct tile renders; derived-core generation has a separate process-local lock
 Path MVTs use buffered clipping, zoom-dependent simplification and grade/distance
 bins, while keeping segment IDs, eligibility, quality, and inclusion boundaries.
 Inspection retains full measurements. Static tiles use immutable versioned URLs.
-Display intervals retain compact references to those measurements; GeoJSON is
-assembled only for viewport responses. Static tiles evaluate policy eligibility
+Display intervals retain integer segment/local-interval references, surface class,
+and flat-run thresholds. Tiles read packed columns directly through native
+memoryviews; GeoJSON is assembled only for viewport responses. Static tiles evaluate policy eligibility
 for candidate segments without constructing a whole-network routing index.
 Routing and exploration prepare and cache policy adjacency when a search needs it.
 Start/policy/budget queries prepare process-local snapshots containing immutable
@@ -225,13 +236,15 @@ object overhead and snapshot copies when many nodes are reached. Snapshot cache
 limits apply to the full payload. The [exploration report](archive/history/37-indexed-exploration.md)
 records the latency/storage tradeoff and tile equivalence.
 
-Measurement dictionaries, raw geometry maps, and display indexes remain due for
+Raw graph/projected geometry maps and object-based display indexes remain due for
 the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
 These storage/callback changes do not alter the cost model or integration kernel. The
 [packed-hill report](archive/history/35-packed-hill-storage.md) records equivalence
 and storage measurements; the [integer-cost report](archive/history/36-indexed-planner-costs.md)
 records the following callback/cache migration. Persistence and startup
 improvements remain separate.
+The [measurement storage report](archive/history/38-packed-measurements.md)
+records the retained-memory reduction and output equivalence for packed samples.
 
 The synchronous API permits two concurrent planners and applies a cooperative
 deadline across preparation/search. Browser cancellation prevents stale result
