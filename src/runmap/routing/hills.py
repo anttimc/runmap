@@ -2,14 +2,17 @@
 
 import math
 from collections.abc import Iterable, Sequence
-from types import MappingProxyType
+
+import numpy as np
+from numpy.typing import NDArray
 
 from runmap.paths.measurements import validate_measurements
 from runmap.routing.cost_types import PreferenceObservations, TraversalRef
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points
 from runmap.routing.hill_types import HillData, HillFeatures, HillInterval, HillModel
-from runmap.routing.types import GraphDocument, Measurement, MeasurementDocument, Segment
+from runmap.routing.search import GraphData
+from runmap.routing.types import Measurement, MeasurementDocument, Segment
 
 
 def _polynomial(value: float, coefficients: Sequence[float]) -> float:
@@ -133,31 +136,83 @@ def _prepare_segment(segment: Segment, items: Sequence[Measurement], model: Hill
     return _segment_intervals(items, segment["length_m"], model, fallback_length)
 
 
-def build_hill_data(graph: GraphDocument, document: MeasurementDocument) -> HillData:
-    """Prepare unweighted responses once from the existing validated terrain artifact."""
-    validate_measurements(graph, document)
+def _feature_values(features: HillFeatures) -> tuple[float, ...]:
+    return (features.penalty_m, features.ascent_m, features.descent_m, features.valid_length_m,
+            features.trusted_length_m, features.fallback_length_m, features.length_m)
+
+
+def _feature_record(values: NDArray[np.float64]) -> HillFeatures:
+    return HillFeatures(*(float(value) for value in values))
+
+
+def _fill_segment(data: HillData, segment: int, intervals: Sequence[HillInterval]) -> None:
+    offset = int(data.interval_offsets[segment])
+    for number, item in enumerate(intervals, offset):
+        data.chainage[number] = item.graph_start_m, item.graph_end_m
+        data.features[number, 0] = _feature_values(item.forward)
+        data.features[number, 1] = _feature_values(item.backward)
+    data.totals[segment, 0] = _feature_values(sum_hill_features(item.forward for item in intervals))
+    data.totals[segment, 1] = _feature_values(sum_hill_features(item.backward for item in intervals))
+
+
+def build_hill_data(graph: GraphData, document: MeasurementDocument) -> HillData:
+    """Share the prepared segment IDs and retain only packed numeric hill data."""
+    validate_measurements(graph.document, document)
+    index = graph.integer
+    if index is None or index.extra_node_ids or index.extra_segment_ids or index.extra_arcs or index.arc_overrides:
+        raise ValueError("Hill preparation requires the base integer graph")
     model = HillModel()
-    segments = {segment["id"]: _prepare_segment(segment, document["segments"][segment["id"]], model)
-                for segment in graph["segments"]}
-    totals = sum_hill_features(item.forward for items in segments.values() for item in items)
-    return HillData(graph, document["graph_digest"], model, MappingProxyType(segments),
-                    totals.valid_length_m / totals.length_m if totals.length_m else 0.0,
-                    totals.trusted_length_m / totals.length_m if totals.length_m else 0.0)
+    offsets = np.empty(len(index.segment_ids) + 1, dtype=np.int64)
+    offsets[0] = 0
+    for segment, segment_id in enumerate(index.segment_ids):
+        offsets[segment + 1] = offsets[segment] + max(1, len(document["segments"][segment_id]))
+    count = int(offsets[-1])
+    data = HillData(graph.document, document["graph_digest"], model, index, offsets,
+                    np.empty((count, 2), dtype=np.float64), np.empty((count, 2, 7), dtype=np.float64),
+                    np.empty((len(index.segment_ids), 2, 7), dtype=np.float64), 0.0, 0.0)
+    for segment, segment_id in enumerate(index.segment_ids):
+        intervals = _prepare_segment(graph.segments[segment_id], document["segments"][segment_id], model)
+        _fill_segment(data, segment, intervals)
+    length = sum(float(value) for value in data.features[:, 0, 6])
+    valid = sum(float(value) for value in data.features[:, 0, 3])
+    trusted = sum(float(value) for value in data.features[:, 0, 4])
+    for array in (data.interval_offsets, data.chainage, data.features, data.totals):
+        array.flags.writeable = False
+    return HillData(data.graph, data.graph_digest, model, index, offsets, data.chainage, data.features,
+                    data.totals, valid / length if length else 0.0, trusted / length if length else 0.0)
 
 
 def traversal_hills(data: HillData, traversal: TraversalRef, deadline: float | None = None) -> HillFeatures:
-    intervals = data.segments[traversal.segment_id]
-    if not 0 <= traversal.graph_start_m < traversal.graph_end_m <= intervals[-1].graph_end_m + 1e-6:
+    """Translate an external traversal at the boundary of the indexed hill store."""
+    return indexed_traversal_hills(data, data.index.segment_indices[traversal.segment_id],
+                                   traversal.graph_start_m, traversal.graph_end_m, traversal.reverse, deadline)
+
+
+def indexed_traversal_hills(data: HillData, segment: int, start_m: float, end_m: float,
+                           reverse: bool, deadline: float | None = None) -> HillFeatures:
+    """Read segment totals directly; inspect intervals only for partial spans."""
+    check_deadline(deadline)
+    if not 0 <= segment < len(data.index.segment_ids):
+        raise ValueError("Hill segment index is outside the prepared graph")
+    lo, hi = int(data.interval_offsets[segment]), int(data.interval_offsets[segment + 1])
+    length = float(data.chainage[hi - 1, 1])
+    if not 0 <= start_m < end_m <= length + 1e-6:
         raise ValueError("Hill traversal is outside its physical segment")
+    direction = int(reverse)
+    if start_m == 0 and end_m == length:
+        return _feature_record(data.totals[segment, direction])
+    chainage = data.chainage[lo:hi]
+    first = lo + int(np.searchsorted(chainage[:, 1], start_m, side="right"))
+    last = lo + int(np.searchsorted(chainage[:, 0], end_m, side="left"))
     pieces: list[HillFeatures] = []
-    for index, item in enumerate(intervals):
-        if index % 256 == 0:
+    for number in range(first, last):
+        if (number - first) % 256 == 0:
             check_deadline(deadline)
-        start = max(item.graph_start_m, traversal.graph_start_m)
-        end = min(item.graph_end_m, traversal.graph_end_m)
+        a, b = data.chainage[number]
+        start, end = max(float(a), start_m), min(float(b), end_m)
         if end > start:
-            fraction = (end - start) / (item.graph_end_m - item.graph_start_m)
-            pieces.append(_scaled(item.backward if traversal.reverse else item.forward, fraction))
+            fraction = (end - start) / float(b - a)
+            pieces.append(_scaled(_feature_record(data.features[number, direction]), fraction))
     return sum_hill_features(pieces)
 
 

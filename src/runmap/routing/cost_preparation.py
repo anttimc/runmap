@@ -9,7 +9,7 @@ from runmap.routing.cost_types import (
     ShapeStrengths, TraversalRef,
 )
 from runmap.routing.hill_types import HillData, HillFeatures
-from runmap.routing.hills import traversal_hills
+from runmap.routing.hills import indexed_traversal_hills
 from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.fields import integrate_fields
@@ -61,8 +61,10 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
         raise ValueError("Home and turnaround must be spatially distinct")
     strengths = resolve_shape_strengths(settings)
     resolved = resolve_preferences(preferences, hills=hills)
-    if resolved.weights.hills and hills is not None and hills.graph is not graph.document:
-        raise ValueError("Hill features belong to a different prepared graph")
+    if resolved.weights.hills and hills is not None:
+        if (hills.graph is not graph.document or graph.integer is None
+                or hills.index.segment_ids is not graph.integer.segment_ids):
+            raise ValueError("Hill features belong to a different prepared graph or integer ordering")
     return RequestCostData(
         graph, home_point, destination, separation * settings.radius_ratio,
         separation * settings.transition_ratio,
@@ -101,5 +103,8 @@ def ensure_hill_features(data: RequestCostData, cache: RequestCostCache,
     if data.hills is None:
         return HillFeatures()
     if arc["id"] not in cache.hill_features:
-        cache.hill_features[arc["id"]] = traversal_hills(data.hills, resolve_traversal(data, arc), deadline)
+        traversal = resolve_traversal(data, arc)
+        segment = data.hills.index.segment_indices[traversal.segment_id]
+        cache.hill_features[arc["id"]] = indexed_traversal_hills(
+            data.hills, segment, traversal.graph_start_m, traversal.graph_end_m, traversal.reverse, deadline)
     return cache.hill_features[arc["id"]]

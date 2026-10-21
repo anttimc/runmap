@@ -142,7 +142,7 @@ def load_path_data(graph_path):
     data = PathData(graph, measurements, segments, tuple(features), dict(cells),
                     {"geometry": coverage, "kind": kind},
                     _bounds(coverage["coordinates"][0]), graph_digest(graph), build_graph_index(graph))
-    return _build_display_index(replace(data, hills=build_hill_data(graph, measurements.document)))
+    return _build_display_index(replace(data, hills=build_hill_data(data.routing, measurements.document)))
 
 
 def _build_display_index(data: PathData) -> PathData:

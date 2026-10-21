@@ -30,6 +30,45 @@ remaining acceptance gates complete.
   Acceptance: measured interaction performance supports exploration and regeneration;
   adopt numerical targets from representative observations.
 
+## Next: shared integer indexing and compact prepared data
+
+Use the existing integer graph as the shared internal addressing system rather
+than retaining another independent representation for every subsystem. Keep
+three data containers: an immutable prepared network, a policy view containing
+eligibility, and request-local overlays/search state/cost caches. Operations stay
+in module-level functions. External string IDs remain available for API contracts,
+provenance, inspection, and deterministic route ordering.
+
+Node, physical-segment, directed-arc, and measurement-interval indices are distinct.
+Their ordering is fixed for one dataset and shared across policies. Arcs reference
+physical segments and direction; segment offsets identify ranges in packed
+geometry/interval arrays. Endpoint overlays append temporary IDs and retain the
+original segment index and chainage range. They never renumber the base dataset.
+
+The current integer index and packed hill storage are described in
+[architecture](architecture.md). Continue incrementally, removing each replaced
+representation:
+
+1. Carry integer arc/node/segment indices through search cost and heuristic
+   callbacks, physical-part references, and request caches. Keep expensive shape
+   integration lazy and caches proportional to visited data. Acceptance: no string
+   lookup or return to JSON arc records in the search cost loop; preserve route
+   ordering and benchmark complete requests, not just lookups.
+2. Move distance exploration, projected geometry, and display measurements onto
+   the same IDs and compact arrays. Share topology across policies; compare an
+   allowed-arc mask with compact filtered adjacency before choosing the search
+   representation. Acceptance: remove redundant string adjacency/data copies,
+   preserve tile/inspection semantics, and measure memory plus bounded-search time.
+3. Persist the prepared arrays with format version, graph/measurement identities,
+   feature-model version, and explicit index ordering. Reject mismatched artifacts.
+   Acceptance: restart without JSON reparsing or index rebuilding, with measured
+   startup time, retained/peak memory, and cold/warm interaction latency.
+
+Do not introduce a generic feature registry or move graph ownership/search into
+Rust as part of this migration. Those are separate decisions supported by later
+measurements. Numeric packing provides the expected memory saving; changing
+dictionary keys to integers alone does not establish one.
+
 ## Next: Rust integration kernel and interactive routing
 
 The product goal is responsive route updates when moving the start or turnaround

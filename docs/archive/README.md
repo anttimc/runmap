@@ -30,6 +30,8 @@ The [first Rust integration kernel report](history/33-rust-integration-kernel.md
 records the native boundary, initial validation, and real-route benchmark.
 The [Python integer-index report](history/34-integer-search-index.md) measures the
 following data-layout change independently of the Rust integrator.
+The [packed-hill storage report](history/35-packed-hill-storage.md) records the
+first migration of feature storage onto that shared integer ordering.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

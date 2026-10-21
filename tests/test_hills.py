@@ -2,11 +2,15 @@
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
+from dataclasses import asdict, replace
 from functools import partial
 import math
+import random
 from time import monotonic
 import unittest
 from unittest.mock import patch
+
+import numpy as np
 
 from test_routing import graph_document
 from runmap.paths.exploration import Snap
@@ -19,7 +23,8 @@ from runmap.routing.geometry import projected_points
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import (build_hill_data, grade_response, hill_observations,
                                   hill_penalty_response, running_energy_cost, running_energy_response,
-                                  sum_hill_features, traversal_hills)
+                                  sum_hill_features, traversal_hills, indexed_traversal_hills,
+                                  _prepare_segment, _scaled)
 from runmap.routing.run_planner import RunSettings, distance_heuristic, endpoint_overlay, plan_run
 from runmap.routing.search import apply_profile, build_graph_index, shortest_path
 from runmap.routing.types import GraphDocument, Measurement, MeasurementDocument
@@ -61,8 +66,72 @@ class HillTests(unittest.TestCase):
 
     def hills(self, grades: Sequence[float | None], *, flags: tuple[str, ...] = (),
               projected_scale: float = 1) -> HillData:
-        return build_hill_data(self.graph, hill_document(self.graph, {"ab": grades, "ac": [0], "cb": [0]},
+        return build_hill_data(self.index, hill_document(self.graph, {"ab": grades, "ac": [0], "cb": [0]},
                                                          flags=flags, projected_scale=projected_scale))
+
+    def test_hill_arrays_share_segment_order_and_are_read_only(self) -> None:
+        self.graph["segments"].reverse()
+        hills = self.hills([5, -10])
+        self.assertIs(hills.index, self.index.integer)
+        self.assertEqual(hills.index.segment_ids, ("ab", "ac", "cb"))
+        np.testing.assert_array_equal(hills.interval_offsets, [0, 2, 3, 4])
+        self.assertEqual(hills.features.shape, (4, 2, 7))
+        self.assertEqual(hills.totals.shape, (3, 2, 7))
+        self.assertEqual(indexed_traversal_hills(hills, 0, 0, 100, False).ascent_m, 2.5)
+        for array in (hills.interval_offsets, hills.chainage, hills.features, hills.totals):
+            with self.assertRaises(ValueError):
+                array.flat[0] = 0
+
+    def test_full_segments_use_precomputed_totals(self) -> None:
+        hills = self.hills([5, -10])
+        with patch("runmap.routing.hills.np.searchsorted", side_effect=AssertionError("interval search")), \
+                patch("runmap.routing.hills._scaled", side_effect=AssertionError("interval scaling")):
+            forward = indexed_traversal_hills(hills, 0, 0, 100, False)
+            backward = indexed_traversal_hills(hills, 0, 0, 100, True)
+        self.assertEqual((forward.ascent_m, backward.descent_m), (2.5, 2.5))
+
+    def test_indexed_partial_spans_match_original_interval_summation(self) -> None:
+        document = hill_document(self.graph, {"ab": [1.7, None, -12.1, 22], "ac": [0], "cb": [5, -5, 10]},
+                                 projected_scale=.8)
+        document["segments"]["ab"][2]["quality_flags"] = ["bridge"]
+        hills = build_hill_data(self.index, document)
+        rng = random.Random(42)
+        for segment, segment_id in enumerate(hills.index.segment_ids):
+            source = self.index.segments[segment_id]
+            original = _prepare_segment(source, document["segments"][segment_id], hills.model)
+            spans = [(0.0, source["length_m"])] + [tuple(sorted((
+                rng.uniform(0, source["length_m"]), rng.uniform(0, source["length_m"])))) for _ in range(50)]
+            for start, end in spans:
+                for reverse in (False, True):
+                    expected = sum_hill_features(
+                        _scaled(item.backward if reverse else item.forward,
+                                (min(end, item.graph_end_m) - max(start, item.graph_start_m))
+                                / (item.graph_end_m - item.graph_start_m))
+                        for item in original if min(end, item.graph_end_m) > max(start, item.graph_start_m))
+                    actual = indexed_traversal_hills(hills, segment, start, end, reverse)
+                    self.assertEqual(asdict(actual), asdict(expected))
+
+    def test_hill_ordering_must_match_the_request_graph(self) -> None:
+        hills = self.hills([5])
+        assert self.index.integer is not None
+        different_order = replace(self.index.integer, segment_ids=tuple(reversed(self.index.integer.segment_ids)))
+        graph = replace(self.index, integer=different_order)
+        with self.assertRaisesRegex(ValueError, "integer ordering"):
+            build_request_cost_data(graph, self.home, self.turnaround, RunSettings(),
+                                    preferences=PreferenceSettings(hills="low"), hills=hills)
+        policy = apply_profile(self.index, self.index.profile)
+        data = build_request_cost_data(policy, self.home, self.turnaround, RunSettings(),
+                                       preferences=PreferenceSettings(hills="low"), hills=hills)
+        self.assertIs(data.hills, hills)
+
+    def test_indexed_lookup_rejects_invalid_ranges_and_honors_deadlines(self) -> None:
+        hills = self.hills([5])
+        for segment, start, end in ((-1, 0, 100), (3, 0, 100), (0, -1, 100),
+                                    (0, 20, 20), (0, 0, 101), (0, math.nan, 100)):
+            with self.assertRaises(ValueError):
+                indexed_traversal_hills(hills, segment, start, end, False)
+        with self.assertRaises(TimeoutError):
+            indexed_traversal_hills(hills, 0, 0, 100, False, monotonic() - 1)
 
     def test_response_uses_published_cr_coefficients_and_fractional_grade(self) -> None:
         for grade, expected in ((0, 3.6), (10, 5.968214), (-10, 2.151706),
@@ -153,7 +222,7 @@ class HillTests(unittest.TestCase):
         document = hill_document(self.graph, {"ab": [5, 5], "ac": [0], "cb": [0]})
         document["segments"]["ab"][1]["graph_start_m"] += 1
         with self.assertRaisesRegex(ValueError, "contiguous"):
-            build_hill_data(self.graph, document)
+            build_hill_data(self.index, document)
 
     def test_zero_width_hills_search_return_independently_and_use_both_directions(self) -> None:
         hills = self.hills([10])
@@ -181,7 +250,7 @@ class HillTests(unittest.TestCase):
         for arc in graph["arcs"]:
             arc["length_m"] = 100
         index = build_graph_index(graph)
-        hills = build_hill_data(graph, hill_document(graph, {"ab": [10], "ac": [5], "cb": [5]}))
+        hills = build_hill_data(index, hill_document(graph, {"ab": [10], "ac": [5], "cb": [5]}))
         for level in ("low", "high"):
             with self.subTest(level=level):
                 result = plan_run(index, self.home, self.turnaround, RunSettings(avoidance_ratio=0),
@@ -194,7 +263,7 @@ class HillTests(unittest.TestCase):
                 self.assertTrue(candidate.returning_traversals[0].reverse)
 
     def test_high_accepts_longer_mild_climb_without_flat_energy_charge(self) -> None:
-        hills = build_hill_data(self.graph, hill_document(
+        hills = build_hill_data(self.index, hill_document(
             self.graph, {"ab": [5], "ac": [25 / 7], "cb": [25 / 7]}))
         result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0),
                           preferences=PreferenceSettings(hills="high"), hills=hills)
@@ -251,7 +320,7 @@ class HillTests(unittest.TestCase):
 
     def test_off_skips_hill_features_and_unavoidable_hill_still_returns_a_route(self) -> None:
         hills = self.hills([10])
-        with patch("runmap.routing.cost_preparation.traversal_hills", side_effect=AssertionError):
+        with patch("runmap.routing.cost_preparation.indexed_traversal_hills", side_effect=AssertionError):
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0), hills=hills)
         self.assertEqual(result.candidates[0].distance_m, 200)
         for segment_id in ("ac", "cb"):
@@ -273,11 +342,11 @@ class HillTests(unittest.TestCase):
 
     def test_directed_hill_cache_is_shared_within_a_request_and_isolated_between_requests(self) -> None:
         hills = self.hills([5])
-        with patch("runmap.routing.cost_preparation.traversal_hills", wraps=traversal_hills) as integrate:
+        with patch("runmap.routing.cost_preparation.indexed_traversal_hills", wraps=indexed_traversal_hills) as integrate:
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(),
                               preferences=PreferenceSettings(hills="low"), hills=hills)
             self.assertEqual(result.outcomes, ("complete", "complete"))
-            references = [call.args[1] for call in integrate.call_args_list]
+            references = [call.args[1:5] for call in integrate.call_args_list]
             self.assertGreater(len(references), 0)
             self.assertEqual(len(references), len(set(references)))
             first_count = integrate.call_count

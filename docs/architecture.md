@@ -182,8 +182,24 @@ IDs are local to a prepared graph, not serialized identifiers. Policy changes
 share the base integer topology and rebuild eligible adjacency. Endpoint overlays
 append a few indices and override only affected rows, sharing the full base arrays
 without copying them per request. Rebuild the graph index after topology changes.
-The bounded exploration Dijkstra still uses string-indexed dictionaries; this
-increment changes A* bookkeeping, not its cost model or the integration kernel.
+Hill storage shares that integer graph's segment ordering and ID mapping. It
+retains read-only float64 arrays for directional segment totals, interval chainage,
+and directional interval features, with int64 offsets identifying each segment's
+interval range. The seven feature columns follow `HillFeatures` field order.
+Whole-segment traversals read totals directly; partial traversals binary-search
+the original graph chainage and scale the overlapping intervals. Projected length,
+uncertainty, ascent/descent, and directional costs retain their existing meanings.
+Small feature records are constructed for request costs and explanations; per-interval
+Python hill records are temporary preparation data, not retained alongside arrays.
+Requests reject a hill store with a different graph identity or segment ordering;
+policy views and endpoint overlays share the base ordering.
+
+The bounded exploration Dijkstra still uses string-indexed dictionaries. Shape
+and hill request caches and cost callbacks also retain string IDs; converting
+those boundaries is the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
+This storage change does not alter the cost model or integration kernel. The
+[packed-hill report](archive/history/35-packed-hill-storage.md) records equivalence
+and storage measurements; persistence and startup improvements remain separate.
 
 The synchronous API permits two concurrent planners and applies a cooperative
 deadline across preparation/search. Browser cancellation prevents stale result

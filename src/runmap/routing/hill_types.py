@@ -1,8 +1,11 @@
 """Prepared directional hill features retain physical coverage and provenance."""
 
 from dataclasses import dataclass
-from collections.abc import Mapping
 
+import numpy as np
+from numpy.typing import NDArray
+
+from runmap.routing.integer_graph import IntegerGraph
 from runmap.routing.types import GraphDocument
 
 
@@ -31,6 +34,8 @@ class HillFeatures:
 
 @dataclass(frozen=True, slots=True)
 class HillInterval:
+    """Transient preparation record; the retained store uses packed arrays."""
+
     graph_start_m: float
     graph_end_m: float
     forward: HillFeatures
@@ -39,9 +44,15 @@ class HillInterval:
 
 @dataclass(frozen=True)
 class HillData:
+    """Arrays share segment IDs; feature columns follow HillFeatures field order."""
+
     graph: GraphDocument
     graph_digest: str
     model: HillModel
-    segments: Mapping[str, tuple[HillInterval, ...]]
+    index: IntegerGraph
+    interval_offsets: NDArray[np.int64]
+    chainage: NDArray[np.float64]
+    features: NDArray[np.float64]
+    totals: NDArray[np.float64]
     valid_fraction: float
     trusted_fraction: float

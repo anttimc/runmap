@@ -1,0 +1,200 @@
+{
+  "reference_commit": "9df3dbf5942a2b1b640fdc6fbd199e8ef42e25cb",
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "python": "3.14.6",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "reference": {
+    "build_s_with_tracemalloc": 7.686147375003202,
+    "retained_bytes": 110649304,
+    "peak_bytes": 115192808
+  },
+  "packed": {
+    "build_s_with_tracemalloc": 9.219278291973751,
+    "retained_bytes": 44057604,
+    "peak_bytes": 112238430,
+    "array_bytes": 44056240
+  },
+  "exact_traversal_comparisons": 4000,
+  "routes": [
+    {
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.815,
+        60.225
+      ],
+      "width": 0.0,
+      "hills": "off",
+      "reference_s": 0.00368587500997819,
+      "packed_s": 0.0045935410016682,
+      "candidates": 1
+    },
+    {
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.815,
+        60.225
+      ],
+      "width": 0.0,
+      "hills": "low",
+      "reference_s": 0.08333508300711401,
+      "packed_s": 0.07453700000769459,
+      "candidates": 1
+    },
+    {
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.815,
+        60.225
+      ],
+      "width": 0.0,
+      "hills": "high",
+      "reference_s": 0.14302874999702908,
+      "packed_s": 0.09474791600950994,
+      "candidates": 1
+    },
+    {
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.815,
+        60.225
+      ],
+      "width": 0.18,
+      "hills": "off",
+      "reference_s": 0.0446889589948114,
+      "packed_s": 0.04864279201137833,
+      "candidates": 2
+    },
+    {
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.815,
+        60.225
+      ],
+      "width": 0.18,
+      "hills": "low",
+      "reference_s": 0.22820758298621513,
+      "packed_s": 0.16733529200428165,
+      "candidates": 2
+    },
+    {
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.815,
+        60.225
+      ],
+      "width": 0.18,
+      "hills": "high",
+      "reference_s": 0.30071916698943824,
+      "packed_s": 0.22370529200998135,
+      "candidates": 2
+    },
+    {
+      "home": [
+        24.8050071,
+        60.2164463
+      ],
+      "turnaround": [
+        24.8058177,
+        60.2160201
+      ],
+      "width": 0.0,
+      "hills": "off",
+      "reference_s": 0.0004685829917434603,
+      "packed_s": 0.000556334009161219,
+      "candidates": 1
+    },
+    {
+      "home": [
+        24.8050071,
+        60.2164463
+      ],
+      "turnaround": [
+        24.8058177,
+        60.2160201
+      ],
+      "width": 0.0,
+      "hills": "low",
+      "reference_s": 0.0020234999828971922,
+      "packed_s": 0.0015397499955724925,
+      "candidates": 1
+    },
+    {
+      "home": [
+        24.8050071,
+        60.2164463
+      ],
+      "turnaround": [
+        24.8058177,
+        60.2160201
+      ],
+      "width": 0.0,
+      "hills": "high",
+      "reference_s": 0.020029792009154335,
+      "packed_s": 0.013331624999409541,
+      "candidates": 1
+    },
+    {
+      "home": [
+        24.8050071,
+        60.2164463
+      ],
+      "turnaround": [
+        24.8058177,
+        60.2160201
+      ],
+      "width": 0.18,
+      "hills": "off",
+      "reference_s": 0.0012445830216165632,
+      "packed_s": 0.0013610419991891831,
+      "candidates": 2
+    },
+    {
+      "home": [
+        24.8050071,
+        60.2164463
+      ],
+      "turnaround": [
+        24.8058177,
+        60.2160201
+      ],
+      "width": 0.18,
+      "hills": "low",
+      "reference_s": 0.004769417020725086,
+      "packed_s": 0.003292999987024814,
+      "candidates": 2
+    },
+    {
+      "home": [
+        24.8050071,
+        60.2164463
+      ],
+      "turnaround": [
+        24.8058177,
+        60.2160201
+      ],
+      "width": 0.18,
+      "hills": "high",
+      "reference_s": 0.026056458009406924,
+      "packed_s": 0.01779250000254251,
+      "candidates": 2
+    }
+  ]
+}
