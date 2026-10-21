@@ -10,9 +10,11 @@ from rasterio.warp import transform
 
 from runmap.paths.measurements import MeasurementData, graph_digest, inspect_measurements, load_measurements
 from runmap.paths.flat import GradeInterval, flat_run_thresholds
+from runmap.paths.display import DisplayInterval, display_feature
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                                    Classification, classify_building_access)
-from runmap.routing.profiles import surface_category, exploration_profile
+from runmap.routing.profiles import surface_category, exploration_profile, forbidden_reason, pedestrian_access_reason
+from runmap.routing.types import EdgeProfile
 from runmap.routing.search import GraphData, build_graph_index, apply_profile
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import build_hill_data
@@ -30,7 +32,7 @@ class PathData:
     graph: dict
     measurements: MeasurementData
     segments: dict
-    features: tuple
+    features: tuple[DisplayInterval, ...]
     cells: dict
     coverage: dict
     bounds: tuple
@@ -117,9 +119,7 @@ def load_path_data(graph_path):
     graph = json.loads(graph_path.read_text())
     if "measurements" not in graph:
         raise FileNotFoundError("Graph has no prepared measurement reference")
-    measurements = load_measurements(graph_path)
-    if measurements.document["graph_digest"] != graph_digest(graph):
-        raise ValueError("Graph changed while loading measurements; restart the service")
+    measurements = load_measurements(graph_path, graph=graph)
     segments = {segment["id"]: segment for segment in graph["segments"]}
     features = []
     cells = defaultdict(list)
@@ -132,22 +132,8 @@ def load_path_data(graph_path):
             for item in intervals
         ])
         for interval, flat_threshold in zip(intervals, flat_thresholds):
-            flags = interval["quality_flags"]
-            quality = "missing" if not interval["valid"] else (
-                "uncertain" if "bridge" in flags or "tunnel" in flags else "terrain_estimate")
-            feature = {
-                "type": "Feature", "id": f"{segment_id}:{interval['interval_index']}",
-                "geometry": {"type": "LineString", "coordinates": interval["geometry"]},
-                "properties": {
-                    "segment_id": segment_id, "interval_index": interval["interval_index"],
-                    "grade_percent": interval["grade_percent"], "quality": quality,
-                    "quality_flags": flags, "surface_class": category,
-                    "stairs": "stairs" in flags,
-                    "flat_min_grade_50m": flat_threshold,
-                },
-            }
             feature_index = len(features)
-            features.append(feature)
+            features.append(DisplayInterval(interval, category, flat_threshold))
             for cell in _cells(_bounds(interval["geometry"])):
                 cells[cell].append(feature_index)
     if not features:
@@ -164,7 +150,7 @@ def _build_display_index(data: PathData) -> PathData:
         data.routing, lambda geometry: _near_boundary(data, geometry),
         data.coverage["kind"] == "prepared_extract")
     visible = {i for i, feature in enumerate(data.features)
-               if feature["properties"]["segment_id"] not in classified}
+               if feature.measurement["segment_id"] not in classified}
     cells = {cell: [i for i in indexes if i in visible] for cell, indexes in data.cells.items()}
     return replace(data, building_access=classified, display_cells=cells)
 
@@ -177,8 +163,8 @@ def path_config(data):
             "access_policy": ACCESS_POLICY, "entrance_limit_m": ENTRANCE_LIMIT_M,
             "cache_identity": [data.dataset_id, ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M],
             "hidden_segments": len(data.building_access),
-            "hidden_intervals": sum(feature["properties"]["segment_id"] in data.building_access
-                                    for feature in data.features),
+            "hidden_intervals": sum(len(data.measurements.document["segments"][segment])
+                                    for segment in data.building_access),
         },
         "coverage": data.coverage, "bounds_wgs84": data.bounds,
         "method": data.measurements.document["method"],
@@ -239,7 +225,7 @@ def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES,
     features = []
     reasons = {}
     for index in sorted(candidates):
-        feature = data.features[index]
+        feature = display_feature(data.features[index])
         segment_id = feature["properties"]["segment_id"]
         if segment_id not in reasons:
             reasons[segment_id] = segment_reason(policy_index, segment_id)
@@ -305,6 +291,19 @@ def path_policy_index(data, surface="all", avoid_stairs=True):
         if profile["id"] not in data.profile_indexes:
             data.profile_indexes[profile["id"]] = apply_profile(data.routing, profile)
         return data.profile_indexes[profile["id"]]
+
+
+def display_segment_reason(index: GraphData, segment_id: str, profile: EdgeProfile) -> str | None:
+    """Tile eligibility needs local checks, not a new whole-network search index."""
+    reason = forbidden_reason(index.segments[segment_id], profile)
+    if reason:
+        return reason
+    for node in (index.segments[segment_id]["from"], index.segments[segment_id]["to"]):
+        if reason := pedestrian_access_reason(index.nodes[node], profile):
+            return f"node:{node}:{reason}"
+    if segment_id in index.boundary_blocked_segments:
+        return "prepared_route_boundary"
+    return None if index.direction_cache[segment_id] else "no_legal_direction"
 
 
 def snap_path_start(data, longitude, latitude, surface="all", avoid_stairs=True,

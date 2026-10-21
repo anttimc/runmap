@@ -86,8 +86,10 @@ boundary behavior, and quantization are in the
 
 ## Path preparation and policy
 
-The [path experiment configuration](../config/routing-experiments/leppavaara-flat-10k.json)
-selects a smaller Leppävaara/Kilo extract. Import keeps real shared-node
+The default [capital-area configuration](../config/routing-experiments/helsinki-capital-area.json)
+uses the elevation region's full 40 × 40 km footprint. The original
+[Leppävaara/Kilo experiment](../config/routing-experiments/leppavaara-flat-10k.json)
+remains available as a smaller benchmark extract. Import keeps real shared-node
 connectivity: geometric crossings create no junction. Ordinary vehicle one-way
 rules do not constrain pedestrians; explicit pedestrian direction rules do.
 Cycleways require explicit pedestrian permission. Outdoor pedestrian areas use
@@ -122,6 +124,10 @@ distinct tile renders; derived-core generation has a separate process-local lock
 Path MVTs use buffered clipping, zoom-dependent simplification and grade/distance
 bins, while keeping segment IDs, eligibility, quality, and inclusion boundaries.
 Inspection retains full measurements. Static tiles use immutable versioned URLs.
+Display intervals retain compact references to those measurements; GeoJSON is
+assembled only for viewport responses. Static tiles evaluate policy eligibility
+for candidate segments without constructing a whole-network routing index.
+Routing and exploration prepare and cache policy adjacency when a search needs it.
 Start/policy/budget queries prepare process-local snapshots containing immutable
 bounded search results. Interval states, midpoint distances, and boundary flags
 are calculated only for the spatial candidates of requested buffered tiles.

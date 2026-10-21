@@ -12,11 +12,12 @@ import mapbox_vector_tile
 from tempfile import TemporaryDirectory
 from test_path_api import fixture
 from runmap.api.paths import load_path_data
-from runmap.api.paths import _interval_state, candidate_path_indexes
+from runmap.api.paths import _interval_state, candidate_path_indexes, path_policy_index
 from runmap.paths.graph import write_graph_outputs
 from runmap.api.path_tiles import (ByteCache, PathTileService, display_runs, encode_tile,
                                   projected_point, render_version, snapshot_distances, tile_bounds)
 from runmap.paths.exploration import DistanceData, Snap
+from runmap.paths.exploration import segment_reason
 
 
 def xyz(longitude: float, latitude: float, z: int) -> tuple[int, int]:
@@ -29,6 +30,46 @@ class PathTileTests(unittest.TestCase):
         directory = TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.data = load_path_data(write_graph_outputs(fixture(), directory.name)["graph"])
+
+    def test_display_intervals_share_measurements_without_retaining_geojson(self) -> None:
+        interval = self.data.features[0]
+        self.assertIs(interval.measurement, self.data.measurements.document["segments"]["s"][0])
+        self.assertFalse(hasattr(interval, "__dict__"))
+
+    def test_static_policy_switch_does_not_build_a_routing_index(self) -> None:
+        self.assertEqual(self.data.profile_indexes, {})
+        with patch("runmap.api.path_tiles.path_policy_index", side_effect=AssertionError("routing index")):
+            runs = display_runs(self.data, [0, 1, 2, 3], "surfaced-no-stairs", "gradient-all", 12, None)
+        self.assertTrue(runs)
+        self.assertEqual(self.data.profile_indexes, {})
+
+    def test_static_display_policy_matches_search_eligibility(self) -> None:
+        for tags, restricted_node, missing_arc in (
+            ({"surface": "asphalt"}, False, False),
+            ({"surface": "ground"}, False, False),
+            ({"surface": ""}, False, False),
+            ({"highway": "steps"}, False, False),
+            ({"foot": "private"}, False, False),
+            ({"oneway:foot": "-1"}, False, False),
+            ({}, True, False),
+            ({}, False, True),
+        ):
+            with self.subTest(tags=tags, restricted_node=restricted_node, missing_arc=missing_arc):
+                graph = fixture()
+                graph["segments"][0]["tags"].update(tags)
+                if restricted_node:
+                    graph["nodes"][0]["foot"] = "no"
+                if missing_arc:
+                    graph["arcs"] = []
+                with TemporaryDirectory() as directory:
+                    data = load_path_data(write_graph_outputs(graph, directory)["graph"])
+                for surface in ("all", "surfaced"):
+                    for stairs in (False, True):
+                        policy = f"{surface}-{'no-stairs' if stairs else 'stairs'}"
+                        runs = display_runs(data, [0, 1, 2, 3], policy, "gradient-all", 12, None)
+                        index = path_policy_index(data, surface, stairs)
+                        self.assertEqual({run.properties["eligible"] for run in runs},
+                                         {segment_reason(index, "s") is None})
 
     def test_snapshot_preparation_defers_all_interval_work(self) -> None:
         service = PathTileService(self.data)
@@ -158,13 +199,14 @@ class PathTileTests(unittest.TestCase):
             self.assertEqual(service.snapshots.bytes, 0)
 
     def test_lod_semantic_boundaries_and_conservative_bins(self) -> None:
-        self.data.features[0]["properties"]["grade_percent"] = 2.1
-        self.data.features[1]["properties"]["grade_percent"] = 3.9
+        self.data.features[0].measurement["grade_percent"] = 2.1
+        self.data.features[1].measurement["grade_percent"] = 3.9
         runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", "gradient-all", 11, None)
         # Different minimum thresholds must survive coalescing even if grade bins match.
         self.assertEqual(len(runs), 4)
         self.assertNotEqual(runs[0].properties["flat_min_grade_50m"], runs[1].properties["flat_min_grade_50m"])
-        self.data.features[0]["properties"]["flat_min_grade_50m"] = 4
+        self.data = replace(self.data, features=(
+            replace(self.data.features[0], flat_min_grade_50m=4), *self.data.features[1:]))
         runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", "gradient-all", 11, None)
         self.assertEqual(len(runs), 3)
         self.assertEqual(runs[0].properties["grade_percent"], 4)
@@ -222,7 +264,7 @@ class PathTileTests(unittest.TestCase):
             intervals[1]["quality_flags"] = flags
             with TemporaryDirectory() as directory:
                 data = load_path_data(write_graph_outputs(graph, directory)["graph"])
-            self.assertTrue(all(feature["properties"]["flat_min_grade_50m"] is None for feature in data.features))
+            self.assertTrue(all(feature.flat_min_grade_50m is None for feature in data.features))
 
     def test_buffered_neighbors_keep_shared_segment_and_seam(self) -> None:
         from runmap.api.paths import _cells
@@ -230,8 +272,8 @@ class PathTileTests(unittest.TestCase):
         x, y = xyz(24.8, 60.2, z)
         west, south, east, north = tile_bounds(z, x, y)
         geometry = [[west, (south + north) / 2], [east + (east - west), (south + north) / 2]]
-        original = self.data.features[0]["geometry"]["coordinates"]
-        self.data.features[0]["geometry"]["coordinates"] = geometry
+        original = self.data.features[0].measurement["geometry"]
+        self.data.features[0].measurement["geometry"] = geometry
         bounds = (west, south, east + (east - west), north)
         data = replace(self.data, bounds=bounds, cells={cell: [0] for cell in _cells(bounds)})
         try:
@@ -246,7 +288,7 @@ class PathTileTests(unittest.TestCase):
             self.assertEqual(parts[1][0][0], -64)
             self.assertEqual(parts[0][-1][1], parts[1][0][1])
         finally:
-            self.data.features[0]["geometry"]["coordinates"] = original
+            self.data.features[0].measurement["geometry"] = original
 
     def test_measurement_replacement_changes_immutable_tile_urls(self) -> None:
         graph = {**self.data.graph, "measurements": {**self.data.graph["measurements"], "sha256": "new"}}
@@ -272,9 +314,9 @@ class PathTileTests(unittest.TestCase):
         z = 15
         x, y = xyz(24.8, 60.2, z)
         west, south, east, north = tile_bounds(z, x, y)
-        feature = self.data.features[0]
-        original = feature["geometry"]["coordinates"]
-        feature["geometry"]["coordinates"] = [[west - .01, (south + north) / 2], [east + .01, (south + north) / 2]]
+        feature = self.data.features[0].measurement
+        original = feature["geometry"]
+        feature["geometry"] = [[west - .01, (south + north) / 2], [east + .01, (south + north) / 2]]
         data = replace(self.data, cells={(cx, cy): [0] for cx, cy in self.data.cells})
         try:
             decoded = mapbox_vector_tile.decode(encode_tile(data, "all-stairs", "gradient-all", z, x, y),
@@ -283,7 +325,7 @@ class PathTileTests(unittest.TestCase):
             self.assertEqual(points[0][0], -64)
             self.assertEqual(points[-1][0], 4160)
         finally:
-            feature["geometry"]["coordinates"] = original
+            feature["geometry"] = original
 
 
 class CacheTests(unittest.TestCase):

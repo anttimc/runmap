@@ -195,7 +195,7 @@ def _prepare_traversals(index: GraphData) -> GraphData:
                                backward and segment.get("backward", True))
     outgoing: dict[str, list[str]] = defaultdict(list)
     incoming: dict[str, list[str]] = defaultdict(list)
-    directions: dict[str, set[bool]] = defaultdict(set)
+    directions: dict[str, int] = {}
     for arc in index.arcs.values():
         segment_id = arc["segment_id"]
         if (segment_id not in allowed or arc["from"] in index.blocked_nodes
@@ -206,14 +206,15 @@ def _prepare_traversals(index: GraphData) -> GraphData:
             continue
         outgoing[arc["from"]].append(arc["id"])
         incoming[arc["to"]].append(arc["id"])
-        directions[segment_id].add(forward)
+        directions[segment_id] = directions.get(segment_id, 0) | (1 if forward else 2)
     base = index.integer
     if base is None or base.extra_arcs or base.extra_node_ids or base.arc_overrides:
         integer = prepare_integer_graph(index.nodes, index.segments, index.arcs, outgoing, incoming)
     else:
         integer = apply_integer_policy(base, outgoing, incoming)
+    direction_sets = (frozenset(), frozenset({True}), frozenset({False}), frozenset({True, False}))
     return replace(index, outgoing=dict(outgoing), incoming=dict(incoming), direction_cache={
-        segment_id: frozenset(directions.get(segment_id, ())) for segment_id in index.segments
+        segment_id: direction_sets[directions.get(segment_id, 0)] for segment_id in index.segments
     }, integer=integer)
 
 

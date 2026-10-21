@@ -202,7 +202,8 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
         "line-color": "#fffdf5",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1.5, 15, 6],
+        "line-width": pathWidth(["literal", 1], true),
+        "line-opacity": pathCasingOpacity(),
       },
     },
     before,
@@ -218,7 +219,7 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
       filter: ["==", ["get", "quality"], "terrain_estimate"],
       layout: { "line-cap": "butt", "line-join": "round" },
       paint: {
-        "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1, 15, 3.5],
+        "line-width": pathWidth(["literal", 1]),
         "line-color": gradeColor,
       },
     },
@@ -233,7 +234,7 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
       minzoom: config.tile_min_zoom,
       filter: ["!=", ["get", "quality"], "terrain_estimate"],
       paint: {
-        "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1, 15, 3.5],
+        "line-width": pathWidth(["literal", 1]),
         "line-dasharray": [1.5, 1],
         "line-color": ["match", ["get", "quality"], "missing", "#727980", "#8b619e"],
       },
@@ -248,7 +249,11 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
       "source-layer": "paths",
       minzoom: config.tile_min_zoom,
       filter: ["==", ["get", "stairs"], true],
-      paint: { "line-width": 1.5, "line-color": "#182e36", "line-dasharray": [0.5, 3] },
+      paint: {
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.4, 12, 0.7, 14, 1.5],
+        "line-color": "#182e36",
+        "line-dasharray": [0.5, 3],
+      },
     },
     before,
   );
@@ -416,11 +421,19 @@ function pathWidth(scale: ExpressionSpecification, casing = false): ExpressionSp
     "interpolate",
     ["linear"],
     ["zoom"],
-    11,
-    ["*", casing ? 1.5 : 1, scale],
+    10,
+    ["*", casing ? 0.65 : 0.4, scale],
+    12,
+    ["*", casing ? 1 : 0.7, scale],
+    14,
+    ["*", casing ? 4.875 : 2.875, scale],
     15,
     ["*", casing ? 6 : 3.5, scale],
   ];
+}
+
+function pathCasingOpacity(opacity: ExpressionSpecification | number = 1): ExpressionSpecification {
+  return ["interpolate", ["linear"], ["zoom"], 13, 0, 14, opacity];
 }
 
 function applyPathEmphasis(
@@ -454,7 +467,7 @@ function applyPathEmphasis(
     ["has", "flat_min_grade_50m"],
     ["<=", ["coalesce", ["get", "flat_min_grade_50m"], 11], threshold],
   ];
-  for (const layer of ["path-casing", "path-uncertain", "path-stairs"])
+  for (const layer of ["path-uncertain", "path-stairs"])
     map.setPaintProperty(layer, "line-opacity", alpha);
   const gradeOpacity: ExpressionSpecification = highlightFlat
     ? ["case", flat, 0.8, gradientOpacity()]
@@ -464,8 +477,11 @@ function applyPathEmphasis(
     "line-opacity",
     distance ? alpha : ["*", alpha, gradeOpacity],
   );
-  if (highlightFlat)
-    map.setPaintProperty("path-casing", "line-opacity", ["*", alpha, ["case", flat, 0.8, 1]]);
+  map.setPaintProperty(
+    "path-casing",
+    "line-opacity",
+    pathCasingOpacity(["*", alpha, highlightFlat ? ["case", flat, 0.8, 1] : 1]),
+  );
   const scale: ExpressionSpecification = highlightFlat ? ["case", flat, 1.5, 1] : ["literal", 1];
   map.setPaintProperty("path-grades", "line-width", pathWidth(scale));
   map.setPaintProperty("path-casing", "line-width", pathWidth(scale, true));

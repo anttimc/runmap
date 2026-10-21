@@ -18,7 +18,7 @@ class HillModel:
     uphill_grade_power: float = 2.0
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class HillFeatures:
     penalty_m: float = 0.0
     ascent_m: float = 0.0
@@ -29,7 +29,7 @@ class HillFeatures:
     length_m: float = 0.0
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class HillInterval:
     graph_start_m: float
     graph_end_m: float

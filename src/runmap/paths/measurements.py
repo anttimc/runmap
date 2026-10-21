@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from rasterio.warp import transform
-from runmap.routing.types import MeasurementDocument
+from runmap.routing.types import GraphDocument, MeasurementDocument
 
 
 def graph_digest(graph):
@@ -45,10 +45,11 @@ def build_measurement_data(graph, document):
     )
 
 
-def load_measurements(graph_path):
+def load_measurements(graph_path: str | Path, *, graph: GraphDocument | None = None) -> MeasurementData:
     """Read a published graph/measurement pair and verify its checksum and identity."""
     graph_path = Path(graph_path)
-    graph = json.loads(graph_path.read_text())
+    if graph is None:
+        graph = json.loads(graph_path.read_text())
     reference = graph["measurements"]
     path = graph_path.parent / reference["file"]
     payload = path.read_bytes()

@@ -17,7 +17,9 @@ import numpy as np
 from shapely.geometry import LineString, box
 from shapely import transform
 
-from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, exploration_context, path_policy_index
+from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, display_segment_reason, exploration_context, path_policy_index
+from runmap.paths.display import measurement_quality
+from runmap.routing.profiles import exploration_profile
 from runmap.paths.dead_ends import ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M
 from runmap.paths.exploration import DistanceData, segment_reason
 
@@ -161,17 +163,24 @@ def projected_point(longitude: float, latitude: float, z: int, x: int, y: int) -
 def display_runs(data: PathData, indexes: list[int], policy: str, variant: str,
                  z: int, snapshot: Snapshot | None) -> list[DisplayRun]:
     metric, _ = variant_options(variant)
-    index = path_policy_index(data, *policy_options(policy))
+    options = policy_options(policy)
+    profile = exploration_profile(*options)
+    index = path_policy_index(data, *options) if snapshot is not None else data.routing
     grade_bin = 2 if z <= 12 else 1 if z <= 14 else 0
     distance_bin = 250 if z <= 12 else 125 if z <= 14 else 0
     runs: list[DisplayRun] = []
+    eligible: dict[str, bool] = {}
     for i in indexes:
         feature = data.features[i]
-        source = feature["properties"]
+        source = feature.measurement
         segment = source["segment_id"]
+        quality = measurement_quality(source)
+        if segment not in eligible:
+            eligible[segment] = (segment_reason(index, segment) if snapshot is not None
+                                 else display_segment_reason(index, segment, profile)) is None
         properties: dict[str, Property] = {
-            "segment_id": segment, "quality": source["quality"], "stairs": source["stairs"],
-            "eligible": segment_reason(index, segment) is None,
+            "segment_id": segment, "quality": quality, "stairs": "stairs" in source["quality_flags"],
+            "eligible": eligible[segment],
         }
         distance: float | None = None
         if snapshot is not None:
@@ -181,14 +190,14 @@ def display_runs(data: PathData, indexes: list[int], policy: str, variant: str,
             properties["coverage_limited"] = state["coverage_limited"]
             distance = state["distance_from_start_m"]
         if metric == "gradient":
-            if source.get("flat_min_grade_50m") is not None:
-                properties["flat_min_grade_50m"] = source["flat_min_grade_50m"]
+            if feature.flat_min_grade_50m is not None:
+                properties["flat_min_grade_50m"] = feature.flat_min_grade_50m
             grade = source["grade_percent"]
-            if grade is not None and source["quality"] == "terrain_estimate":
+            if grade is not None and quality == "terrain_estimate":
                 properties["grade_percent"] = math.ceil(abs(grade) / grade_bin) * grade_bin if grade_bin else abs(grade)
         elif distance is not None:
             properties["distance_from_start_m"] = round(distance / distance_bin) * distance_bin if distance_bin else distance
-        coordinates = tuple(tuple(point) for point in feature["geometry"]["coordinates"])
+        coordinates = tuple(tuple(point) for point in source["geometry"])
         interval = source["interval_index"]
         if (runs and runs[-1].properties == properties and runs[-1].last_interval + 1 == interval
                 and runs[-1].coordinates[-1] == coordinates[0]):

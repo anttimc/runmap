@@ -48,7 +48,7 @@ async def lifespan(application):
         store = ElevationStore(data_root, catalog_path)
         application.state.terrain = TerrainTileService(region, store)
     graph_path = Path(os.environ.get(
-        "RUNMAP_PATH_GRAPH", PROJECT_ROOT / "data/paths/prepared/leppavaara-flat-10k/graph.json"
+        "RUNMAP_PATH_GRAPH", PROJECT_ROOT / "data/paths/prepared/helsinki-capital-area/graph.json"
     ))
     application.state.paths = None
     application.state.path_status = "unavailable"

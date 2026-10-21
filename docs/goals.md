@@ -1,7 +1,7 @@
 # Goals
 
-Help a runner understand terrain before choosing a run, first around
-Leppävaara in Espoo. The project is also a place to learn through replaceable,
+Help a runner understand terrain before choosing a run across the Helsinki
+capital area. The project is also a place to learn through replaceable,
 understandable implementations.
 
 ## Intended outcomes

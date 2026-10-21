@@ -69,12 +69,11 @@ def snap_candidates(data, index, longitude, latitude, radius_m=50, preferred_seg
     records = []
     reasons = {}
     for feature_index in indices:
-        feature = data.features[feature_index]
-        segment_id = feature["properties"]["segment_id"]
+        interval = data.features[feature_index].measurement
+        segment_id = interval["segment_id"]
         if segment_id not in reasons:
             reasons[segment_id] = segment_reason(index, segment_id)
         if not reasons[segment_id]:
-            interval = data.measurements.document["segments"][segment_id][feature["properties"]["interval_index"]]
             records.append(interval)
     if not records:
         return None, []

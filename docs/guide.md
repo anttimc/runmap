@@ -88,9 +88,12 @@ Map settings can hide conservatively identified building-access dead ends.
 This affects colored geometry only: legal snapping and routing still use those
 branches. The separate basemap may continue to show them faintly.
 
-The terrain region is a 40 × 40 km square near Leppävaara. The prepared path
-dataset covers a smaller Leppävaara/Kilo area and shows its own boundary. Panning
-does not download more analysis data. Outside it, basemap paths are context.
+The terrain region and default capital-area path dataset use the same
+40 × 40 km square near Leppävaara, with a visible path coverage boundary.
+This is a terrain-aligned footprint rather than complete municipal coverage.
+The smaller Leppävaara/Kilo dataset remains available as an optional backend
+configuration. Panning does not download more analysis data. Outside the
+prepared network, basemap paths are context.
 Missing path artifacts leave the terrain map available; corrupt artifacts report
 a failed path service. Missing connections mean no connection in prepared data,
 not proof that none exists on the ground.

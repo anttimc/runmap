@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "id": "helsinki-capital-area",
+  "title": "Helsinki capital area running network",
+  "bounds_epsg3067": [360000, 6660000, 400000, 6700000],
+  "start": {
+    "name": "Ruusutorpan koulu",
+    "address": "Leppävaarankatu 24, 02600 Espoo",
+    "latitude": 60.21682,
+    "longitude": 24.80259
+  },
+  "request": {
+    "mode": "environment-loop",
+    "target_distance_m": 20000,
+    "distance_tolerance_m": 1000,
+    "minimize": "ascent_m",
+    "max_repeated_fraction": 0.1,
+    "allow_immediate_reversal_for_access_stem": true
+  },
+  "terrain": {
+    "elevation_region": "leppavaara",
+    "wavelength_m": 40,
+    "sampling_interval_m": 10
+  },
+  "baseline": {
+    "anchor_count": 24,
+    "alternative_count": 5,
+    "ascent_costs_per_m": [5, 20, 50],
+    "stairs_multiplier": 8,
+    "overlap_factors": [3, 10, 30]
+  },
+  "route_boundaries": [],
+  "area_note": "Capital-area path exploration and longer run planning over the existing 40 km elevation footprint. Coverage follows the prepared terrain square rather than municipal boundaries; extract-edge dead ends and ways extending outside terrain coverage retain their quality flags."
+}

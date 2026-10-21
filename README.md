@@ -1,6 +1,6 @@
 # Runmap
 
-A hobby project for exploring running-path hilliness around Leppävaara, Espoo,
+A hobby project for exploring running-path hilliness across the Helsinki capital area,
 and experimenting with elevation data and routing mathematics.
 
 The map supports terrain and path-gradient exploration, path inspection,

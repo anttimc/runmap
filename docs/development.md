@@ -113,22 +113,31 @@ Prepare elevation and its default derivative first, then acquire and prepare the
 configured OSM network:
 
 ```sh
-uv run --extra web python -m runmap.cli paths prepare leppavaara-flat-10k --dry-run
-uv run --extra web python -m runmap.cli paths prepare leppavaara-flat-10k
+uv run --extra web python -m runmap.cli paths prepare helsinki-capital-area --dry-run
+uv run --extra web python -m runmap.cli paths prepare helsinki-capital-area
 ```
 
 Rebuild from an existing local extract without downloading again:
 
 ```sh
-uv run --extra web python -m runmap.cli paths prepare leppavaara-flat-10k \
-  --input data/paths/raw/leppavaara-flat-10k/osm-network-boundaries-101.json
+uv run --extra web python -m runmap.cli paths prepare helsinki-capital-area \
+  --input data/paths/raw/helsinki-capital-area/osm-network-boundaries-none.json
 ```
 
 Use the actual cached extract filename if different. Outputs under
-`data/paths/prepared/leppavaara-flat-10k/` include `graph.json`, content-addressed
+`data/paths/prepared/helsinki-capital-area/` include `graph.json`, content-addressed
 measurements, `segments.geojson`, and `inspection.json`. `--without-terrain`
 supports topology inspection but does not supply the measurements required by
 the web path service. Restart the backend after replacing prepared artifacts.
+
+The default capital-area network uses the existing elevation region's full
+40 × 40 km EPSG:3067 footprint `[360000, 6660000, 400000, 6700000]`, rather than
+municipal boundaries. It reuses the prepared 40 m terrain product without new
+elevation downloads. OSM acquisition includes complete ways intersecting its
+WGS84 bounding box; portions outside terrain coverage retain missing-terrain
+flags. The original `leppavaara-flat-10k` experiment remains available for small
+benchmarks and the anchor baseline. To run the app with that smaller graph, set
+`RUNMAP_PATH_GRAPH=data/paths/prepared/leppavaara-flat-10k/graph.json`.
 
 ## Configuration
 
@@ -145,7 +154,7 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_DATA_ROOT` | Project `data/elevation` for the API |
 | `RUNMAP_CATALOG_PATH` | `catalog.sqlite` under the elevation root |
 | `RUNMAP_ELEVATION_PATH` | Optional complete single-band raster; overrides named-region terrain |
-| `RUNMAP_PATH_GRAPH` | Project `data/paths/prepared/leppavaara-flat-10k/graph.json` |
+| `RUNMAP_PATH_GRAPH` | Project `data/paths/prepared/helsinki-capital-area/graph.json` |
 | `RUNMAP_RUN_DEADLINE` | 15 seconds per planner request |
 | `RUNMAP_PATH_PREPARATION_DEADLINE` | 10 seconds per exploration snapshot preparation |
 | `RUNMAP_PATH_TILE_CACHE_BYTES` | 67,108,864 bytes |
