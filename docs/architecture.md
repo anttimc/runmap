@@ -175,8 +175,11 @@ from all arcs, so relaxing a policy restores connections. Rebuild the policy ind
 after changing access or direction tags.
 
 A* uses prepared integer node, arc, and segment indices, direct adjacency records,
-and per-search lists for distances and predecessors. Cost/heuristic callbacks and
-external results retain string IDs. Heap entries retain the original string node
+and per-search lists for distances and predecessors. Planner cost callbacks receive
+prepared integer arcs, including their physical direction; heuristic callbacks
+receive integer node IDs. They use aligned projected-coordinate references and
+integer-keyed sparse request caches without looking up JSON records or string IDs.
+External results retain string IDs. Heap entries retain the original string node
 name as a tie key so equal-cost routes preserve their previous ordering. Integer
 IDs are local to a prepared graph, not serialized identifiers. Policy changes
 share the base integer topology and rebuild eligible adjacency. Endpoint overlays
@@ -194,12 +197,23 @@ Python hill records are temporary preparation data, not retained alongside array
 Requests reject a hill store with a different graph identity or segment ordering;
 policy views and endpoint overlays share the base ordering.
 
-The bounded exploration Dijkstra still uses string-indexed dictionaries. Shape
-and hill request caches and cost callbacks also retain string IDs; converting
-those boundaries is the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
-This storage change does not alter the cost model or integration kernel. The
+Endpoint part references and return-leg reuse sets use integer segment indices;
+parts retain the original physical index and graph chainage. Shape features remain
+lazy per overlay segment and hill features per directed arc. Selected traversals
+are translated to external physical IDs when producing explanations and responses.
+Generic search retains record/string callback adapters for existing CLI and
+comparison callers. Both policy views and endpoint overlays share the base
+coordinate-reference tuples, with small appended tuples for temporary geometry.
+The existing string geometry maps remain for preparation and display; the tuples
+share their point objects rather than duplicating coordinate values.
+
+The bounded exploration Dijkstra, measurement dictionaries, and display indexes
+are still due for the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
+These storage/callback changes do not alter the cost model or integration kernel. The
 [packed-hill report](archive/history/35-packed-hill-storage.md) records equivalence
-and storage measurements; persistence and startup improvements remain separate.
+and storage measurements; the [integer-cost report](archive/history/36-indexed-planner-costs.md)
+records the following callback/cache migration. Persistence and startup
+improvements remain separate.
 
 The synchronous API permits two concurrent planners and applies a cooperative
 deadline across preparation/search. Browser cancellation prevents stale result

@@ -16,6 +16,10 @@ class ProjectedGeometry:
     nodes: Mapping[str, Point]
     segments: Mapping[str, tuple[Point, ...]]
     distance_scale: float
+    node_points: tuple[Point, ...]
+    segment_points: tuple[tuple[Point, ...], ...]
+    extra_node_points: tuple[Point, ...] = ()
+    extra_segment_points: tuple[tuple[Point, ...], ...] = ()
 
 
 def prepare_projected_geometry(nodes: Mapping[str, Node], segments: Mapping[str, Segment],
@@ -39,7 +43,24 @@ def prepare_projected_geometry(nodes: Mapping[str, Node], segments: Mapping[str,
         distance = math.dist(all_nodes[arc["from"]], all_nodes[arc["to"]])
         if distance:
             scale = min(scale, arc["length_m"] / distance)
-    return ProjectedGeometry(all_nodes, all_segments, scale)
+    if base is not None:
+        return ProjectedGeometry(all_nodes, all_segments, scale, base.node_points, base.segment_points,
+                                  base.extra_node_points + tuple(node_points.values()),
+                                  base.extra_segment_points + tuple(segment_points.values()))
+    return ProjectedGeometry(all_nodes, all_segments, scale,
+                              tuple(node_points.values()), tuple(segment_points.values()))
+
+
+def indexed_node_point(geometry: ProjectedGeometry, node: int) -> Point:
+    if node < len(geometry.node_points):
+        return geometry.node_points[node]
+    return geometry.extra_node_points[node - len(geometry.node_points)]
+
+
+def indexed_segment_points(geometry: ProjectedGeometry, segment: int) -> tuple[Point, ...]:
+    if segment < len(geometry.segment_points):
+        return geometry.segment_points[segment]
+    return geometry.extra_segment_points[segment - len(geometry.segment_points)]
 
 
 def projected_points(geometry: list[Coordinate]) -> list[Point]:

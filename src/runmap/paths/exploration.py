@@ -135,7 +135,8 @@ def split_start_graph(index, snap):
     return replace(index, nodes=ChainMap(nodes, index.nodes), arcs=ChainMap(arcs, index.arcs),
                    outgoing=ChainMap(outgoing, index.outgoing), incoming=ChainMap(incoming, index.incoming),
                    projected=prepare_projected_geometry(nodes, {}, arcs.values(), index.projected),
-                   integer=extend_integer_graph(index.integer, nodes, {}, arcs, outgoing, incoming)), VIRTUAL_START
+                   integer=extend_integer_graph(index.integer, nodes, {}, arcs, outgoing, incoming,
+                                                 segment_records=index.segments)), VIRTUAL_START
 
 
 def legal_directions(index: GraphData, segment_id: str) -> frozenset[bool]:

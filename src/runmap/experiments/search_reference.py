@@ -7,6 +7,7 @@ from time import monotonic
 
 from runmap.routing.search import CostModel, GraphData, PathResult, _arc_cost, _remaining_cost
 from runmap.routing.types import Arc
+from runmap.routing.integer_graph import IntegerArc, integer_arc
 
 
 def _path_arc_ids(index: GraphData, predecessors: Mapping[str, str], start: str,
@@ -26,8 +27,15 @@ def shortest_path_string(
     blocked_segments: Set[str] = frozenset(), *,
     heuristic: Callable[[str, str], float] | None = None,
     arc_cost: Callable[[Arc], float] | None = None, deadline: float | None = None,
+    indexed_arc_cost: Callable[[IntegerArc], float] | None = None,
+    indexed_heuristic: Callable[[int, int], float] | None = None,
 ) -> PathResult | None:
-    """Keep the pre-integer search behavior available outside production dispatch."""
+    """Retain string bookkeeping, adapting indexed callbacks for planner comparisons."""
+    if indexed_heuristic is not None:
+        assert index.integer is not None
+        dense = index.integer
+        def heuristic(node: str, target: str) -> float:
+            return indexed_heuristic(dense.node_indices[node], dense.node_indices[target])
     if start not in index.nodes or destination not in index.nodes:
         raise ValueError('Route endpoint is not in the graph')
     if overlap_factor < 1:
@@ -54,8 +62,12 @@ def shortest_path_string(
             arc = index.arcs[arc_id]
             if arc['segment_id'] in blocked_segments:
                 continue
-            cost = arc_cost(arc) if arc_cost is not None else _arc_cost(
-                index, arc, model, overlap_segments, overlap_factor)
+            if indexed_arc_cost is not None:
+                assert index.integer is not None
+                cost = indexed_arc_cost(integer_arc(index.integer, index.integer.arc_indices[arc_id]))
+            else:
+                cost = arc_cost(arc) if arc_cost is not None else _arc_cost(
+                    index, arc, model, overlap_segments, overlap_factor)
             if not math.isfinite(cost) or cost < 0:
                 raise ValueError('Arc cost must be finite and non-negative')
             candidate = distance + cost

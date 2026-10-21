@@ -18,7 +18,7 @@ from runmap.paths.measurements import graph_digest
 from runmap.routing.cost_preparation import build_request_cost_data
 from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache, TraversalRef
-from runmap.routing.costs import arc_cost
+from runmap.routing.costs import arc_cost, indexed_arc_cost
 from runmap.routing.geometry import projected_points
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import (build_hill_data, grade_response, hill_observations,
@@ -26,6 +26,8 @@ from runmap.routing.hills import (build_hill_data, grade_response, hill_observat
                                   sum_hill_features, traversal_hills, indexed_traversal_hills,
                                   _prepare_segment, _scaled)
 from runmap.routing.run_planner import RunSettings, distance_heuristic, endpoint_overlay, plan_run
+from runmap.routing.run_planner import indexed_distance_heuristic
+from runmap.routing.integer_graph import IntegerGraph
 from runmap.routing.search import apply_profile, build_graph_index, shortest_path
 from runmap.routing.types import GraphDocument, Measurement, MeasurementDocument
 
@@ -132,6 +134,42 @@ class HillTests(unittest.TestCase):
                 indexed_traversal_hills(hills, segment, start, end, False)
         with self.assertRaises(TimeoutError):
             indexed_traversal_hills(hills, 0, 0, 100, False, monotonic() - 1)
+
+    def test_search_and_costs_do_not_read_json_records_or_string_geometry(self) -> None:
+        hills = self.hills([5, -10])
+        overlay = endpoint_overlay(self.index, self.home, self.turnaround)
+        assert overlay.graph.integer is not None
+
+        def without_records(index: IntegerGraph) -> IntegerGraph:
+            records = {arc.index: replace(arc, record={})
+                       for arc in (*index.arcs, *index.extra_arcs, *index.arc_overrides.values())}
+            return replace(index, arcs=tuple(records[a.index] for a in index.arcs),
+                           extra_arcs=tuple(records[a.index] for a in index.extra_arcs),
+                           arc_overrides={key: records[a.index] for key, a in index.arc_overrides.items()},
+                           outgoing=tuple(tuple(records[a.index] for a in row) for row in index.outgoing),
+                           incoming=tuple(tuple(records[a.index] for a in row) for row in index.incoming),
+                           outgoing_overrides={key: tuple(records[a.index] for a in row)
+                                               for key, row in index.outgoing_overrides.items()})
+
+        graph = replace(overlay.graph, arcs={}, segments={}, integer=without_records(overlay.graph.integer),
+                        projected=replace(overlay.graph.projected, nodes={}, segments={}))
+        for width in (0.0, .18):
+            for level in ("off", "low", "high"):
+                settings = RunSettings(avoidance_ratio=width)
+                preference = PreferenceSettings(hills=level)
+                results = []
+                for current in (overlay.graph, graph):
+                    data = build_request_cost_data(current, self.home, self.turnaround, settings,
+                                                   parts=overlay.parts, preferences=preference, hills=hills)
+                    cache = RequestCostCache()
+                    result = shortest_path(current, overlay.home, overlay.turnaround,
+                                           indexed_arc_cost=partial(indexed_arc_cost, data=data, cache=cache,
+                                                                    leg=LegCostContext(True), deadline=None),
+                                           indexed_heuristic=indexed_distance_heuristic(current, None))
+                    results.append(result)
+                    self.assertTrue(all(isinstance(key, int) for key in cache.shape_fields))
+                    self.assertTrue(all(isinstance(key, int) for key in cache.hill_features))
+                self.assertEqual(results[0], results[1])
 
     def test_response_uses_published_cr_coefficients_and_fractional_grade(self) -> None:
         for grade, expected in ((0, 3.6), (10, 5.968214), (-10, 2.151706),
@@ -284,13 +322,15 @@ class HillTests(unittest.TestCase):
                               preferences=PreferenceSettings(hills="high"), hills=hills)
         self.assertEqual(result.outcomes, ("complete", "complete"))
         self.assertEqual(search.call_count, 4)
-        contexts = [call.kwargs["arc_cost"].keywords["leg"] for call in search.call_args_list]
+        contexts = [call.kwargs["indexed_arc_cost"].keywords["leg"] for call in search.call_args_list]
         self.assertEqual([context.penalize_right for context in contexts], [True, False, False, True])
         graph = result.overlay.graph
         data = build_request_cost_data(graph, self.home, self.turnaround, settings,
                                       parts=result.overlay.parts, preferences=PreferenceSettings(hills="high"), hills=hills)
         for candidate in result.candidates:
-            used = frozenset(graph.arcs[arc]["segment_id"] for arc in candidate.outbound.arc_ids)
+            assert graph.integer is not None
+            used = frozenset(graph.integer.segment_indices[graph.arcs[arc]["segment_id"]]
+                             for arc in candidate.outbound.arc_ids)
             legs = ((candidate.outbound, result.overlay.home, result.overlay.turnaround,
                      LegCostContext(candidate.outbound_left)),
                     (candidate.returning, result.overlay.turnaround, result.overlay.home,

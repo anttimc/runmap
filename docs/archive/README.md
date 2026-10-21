@@ -32,6 +32,8 @@ The [Python integer-index report](history/34-integer-search-index.md) measures t
 following data-layout change independently of the Rust integrator.
 The [packed-hill storage report](history/35-packed-hill-storage.md) records the
 first migration of feature storage onto that shared integer ordering.
+The [integer planner-cost report](history/36-indexed-planner-costs.md) records the
+following migration of callbacks, endpoint parts, and request caches.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

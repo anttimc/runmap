@@ -14,11 +14,11 @@ from runmap.routing.cost_preparation import (
 )
 from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
 from runmap.routing.cost_settings import resolve_preferences
-from runmap.routing.costs import arc_cost, path_cost_breakdown, path_observations
+from runmap.routing.costs import indexed_arc_cost, path_cost_breakdown, path_observations
 from runmap.routing.hill_types import HillData
 from runmap.routing.deadlines import check_deadline
-from runmap.routing.geometry import prepare_projected_geometry, projected_points, slice_geometry
-from runmap.routing.integer_graph import extend_integer_graph
+from runmap.routing.geometry import prepare_projected_geometry, projected_points, slice_geometry, indexed_node_point
+from runmap.routing.integer_graph import extend_integer_graph, integer_arc, integer_segment_id
 from runmap.routing.run_types import (
     PhysicalPart, RunCandidate, RunOverlay, RunResult, RunSettings,
 )
@@ -29,6 +29,9 @@ from runmap.routing.types import Arc, Node, Segment
 def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
                      deadline: float | None = None) -> RunOverlay:
     """Split each affected physical segment once, sharing coincident junctions."""
+    base = index.integer
+    if base is None:
+        raise ValueError("Graph has no prepared integer index")
     nodes: dict[str, Node] = {}
     segments: dict[str, Segment] = {}
     arcs: dict[str, Arc] = {}
@@ -74,7 +77,7 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
                              "tags": segment["tags"], "forward": segment.get("forward", True),
                              "backward": segment.get("backward", True)}
             segments[part_id] = part
-            parts[part_id] = PhysicalPart(segment_id, first[0], second[0])
+            parts[part_id] = PhysicalPart(base.segment_indices[segment_id], first[0], second[0])
             for forward in sorted(legal_directions(index, segment_id), reverse=True):
                 a, b = (first[2], second[2]) if forward else (second[2], first[2])
                 arc_id = f"{part_id}:{'f' if forward else 'b'}"
@@ -84,16 +87,21 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
     for arc in arcs.values():
         outgoing[arc["from"]].append(arc["id"])
         incoming[arc["to"]].append(arc["id"])
-    graph = replace(index, nodes=ChainMap(nodes, index.nodes), segments=ChainMap(segments, index.segments),
+    all_segments = ChainMap(segments, index.segments)
+    graph = replace(index, nodes=ChainMap(nodes, index.nodes), segments=all_segments,
                     arcs=ChainMap(arcs, index.arcs), outgoing=ChainMap(outgoing, index.outgoing),
                     incoming=ChainMap(incoming, index.incoming), direction_cache=ChainMap({
-                        part_id: index.direction_cache[part.segment_id] for part_id, part in parts.items()
+                        part_id: index.direction_cache[integer_segment_id(base, part.segment)]
+                        for part_id, part in parts.items()
                     }, index.direction_cache),
                     projected=prepare_projected_geometry(nodes, segments, arcs.values(), index.projected),
-                    integer=extend_integer_graph(index.integer, nodes, segments, arcs, outgoing, incoming))
+                    integer=extend_integer_graph(index.integer, nodes, segments, arcs, outgoing, incoming,
+                                                  segment_records=all_segments))
     if endpoints["home"] == endpoints["turnaround"]:
         raise ValueError("Home and turnaround must snap to distinct points")
-    return RunOverlay(graph, endpoints["home"], endpoints["turnaround"], parts)
+    assert graph.integer is not None
+    return RunOverlay(graph, endpoints["home"], endpoints["turnaround"], {
+        graph.integer.segment_indices[part]: source for part, source in parts.items()})
 
 
 def distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[str, str], float]:
@@ -104,6 +112,18 @@ def distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[st
 
     def estimate(node: str, destination: str) -> float:
         return scale * math.dist(coordinates[node], coordinates[destination])
+
+    return estimate
+
+
+def indexed_distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[int, int], float]:
+    """Use shared projected coordinates directly from integer node IDs."""
+    check_deadline(deadline)
+    geometry = graph.projected
+    scale = geometry.distance_scale * (1 - 1e-12)
+
+    def estimate(node: int, destination: int) -> float:
+        return scale * math.dist(indexed_node_point(geometry, node), indexed_node_point(geometry, destination))
 
     return estimate
 
@@ -120,7 +140,7 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
         raise ValueError("Hill features belong to a different prepared graph")
     overlay = endpoint_overlay(index, home, turnaround, deadline)
     graph = overlay.graph
-    heuristic = distance_heuristic(graph, deadline)
+    heuristic = indexed_distance_heuristic(graph, deadline)
     cost_data = build_request_cost_data(graph, home, turnaround, settings,
                                        parts=overlay.parts, preferences=preferences, hills=hills)
     cost_cache = RequestCostCache()
@@ -132,20 +152,21 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
         try:
             outbound_context = LegCostContext(left)
             outbound = shortest_path(graph, overlay.home, overlay.turnaround,
-                                     arc_cost=partial(arc_cost, data=cost_data, cache=cost_cache,
+                                     indexed_arc_cost=partial(indexed_arc_cost, data=cost_data, cache=cost_cache,
                                                       leg=outbound_context, deadline=deadline),
-                                     heuristic=heuristic, deadline=deadline)
+                                     indexed_heuristic=heuristic, deadline=deadline)
             if outbound is None:
                 outcomes.append("unreachable")
                 continue
-            used = frozenset(graph.arcs[a]["segment_id"] for a in outbound.arc_ids)
+            used = frozenset(integer_arc(cost_data.index, cost_data.index.arc_indices[a]).segment
+                             for a in outbound.arc_ids)
             return_context = LegCostContext(not left, used)
             returning = reverse_path(graph, outbound) if zero_width and cost_data.hills is None else None
             if returning is None:
                 returning = shortest_path(graph, overlay.turnaround, overlay.home,
-                                      arc_cost=partial(arc_cost, data=cost_data, cache=cost_cache,
+                                      indexed_arc_cost=partial(indexed_arc_cost, data=cost_data, cache=cost_cache,
                                                        leg=return_context, deadline=deadline),
-                                      heuristic=heuristic, deadline=deadline)
+                                      indexed_heuristic=heuristic, deadline=deadline)
             if returning is None:
                 outcomes.append("unreachable")
                 continue

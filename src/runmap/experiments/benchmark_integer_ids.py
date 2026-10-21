@@ -1,7 +1,7 @@
 """Compare string and integer bookkeeping while keeping A* in Python."""
 
 import argparse
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from dataclasses import asdict, dataclass, replace
 import hashlib
@@ -19,11 +19,11 @@ from runmap.experiments.benchmark_integration import Timing, verify_routes
 from runmap.experiments.search_reference import shortest_path_string
 from runmap.paths.exploration import snap_candidates
 from runmap.routing.fields import Point, integrate_fields, integrate_fields_python
-from runmap.routing.integer_graph import IntegerGraph, prepare_integer_graph
+from runmap.routing.integer_graph import prepare_integer_graph
 from runmap.routing.run_planner import distance_heuristic, endpoint_overlay, plan_run
 from runmap.routing.run_types import RunSettings
 from runmap.routing.search import GraphData, shortest_path
-from runmap.routing.types import Arc, Node, Segment
+from runmap.routing.types import Arc
 
 
 @dataclass(frozen=True)
@@ -34,17 +34,10 @@ class Scenario:
     settings: RunSettings = RunSettings()
 
 
-def _unchanged_index(base: IntegerGraph | None, nodes: Mapping[str, Node],
-                     segments: Mapping[str, Segment], arcs: Mapping[str, Arc],
-                     outgoing: Mapping[str, list[str]], incoming: Mapping[str, list[str]]) -> IntegerGraph | None:
-    return base
-
-
 @contextmanager
 def string_planner() -> Iterator[None]:
-    # The old planner never prepared an integer overlay; do not charge it for one.
-    with patch('runmap.routing.run_planner.shortest_path', shortest_path_string), \
-            patch('runmap.routing.run_planner.extend_integer_graph', _unchanged_index):
+    # Both planners now need shared integer feature IDs; compare search bookkeeping.
+    with patch('runmap.routing.run_planner.shortest_path', shortest_path_string):
         yield
 
 

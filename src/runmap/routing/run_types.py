@@ -22,7 +22,7 @@ class RunOverlay:
     graph: GraphData
     home: str
     turnaround: str
-    parts: dict[str, PhysicalPart]
+    parts: dict[int, PhysicalPart]
 
 
 @dataclass(frozen=True)

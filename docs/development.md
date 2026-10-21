@@ -233,6 +233,9 @@ uv run --extra web python -m runmap.experiments.benchmark_integer_ids \
 
 Both searches remain Python. Complete-route comparisons use the same integrator
 on both sides, with an additional profile using Python integration explicitly.
+Both planners now prepare shared integer feature IDs; the string-search reference
+adapts indexed callbacks at its boundary. Its historical measurements predate
+this callback migration and are not directly comparable to current timings.
 The benchmark alternates implementations, verifies paths/costs/expansion counts,
 includes endpoint-overlay preparation, and reports isolated length-only search,
 index preparation time, and retained allocations. See the

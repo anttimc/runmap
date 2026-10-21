@@ -6,16 +6,16 @@ from collections.abc import Mapping
 from runmap.paths.exploration import Snap
 from runmap.routing.cost_types import (
     PhysicalPart, PreferenceSettings, RequestCostCache, RequestCostData, ShapeFeatures,
-    ShapeStrengths, TraversalRef,
+    ShapeStrengths, TraversalRef, IndexedTraversal,
 )
 from runmap.routing.hill_types import HillData, HillFeatures
 from runmap.routing.hills import indexed_traversal_hills
 from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.fields import integrate_fields
-from runmap.routing.geometry import projected_points
+from runmap.routing.geometry import projected_points, indexed_segment_points
+from runmap.routing.integer_graph import IntegerArc, integer_arc, integer_segment_id
 from runmap.routing.run_types import RunSettings
-from runmap.routing.profiles import arc_forward
 from runmap.routing.search import GraphData
 from runmap.routing.types import Arc
 
@@ -51,7 +51,7 @@ def penalty_strengths(settings: RunSettings) -> tuple[float, float, float]:
 
 def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
                             settings: RunSettings, *,
-                            parts: Mapping[str, PhysicalPart] | None = None,
+                            parts: Mapping[int, PhysicalPart] | None = None,
                             preferences: PreferenceSettings = PreferenceSettings(),
                             hills: HillData | None = None) -> RequestCostData:
     home_point, destination = projected_points([[home.longitude, home.latitude],
@@ -61,12 +61,15 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
         raise ValueError("Home and turnaround must be spatially distinct")
     strengths = resolve_shape_strengths(settings)
     resolved = resolve_preferences(preferences, hills=hills)
+    index = graph.integer
+    if index is None:
+        raise ValueError("Graph has no prepared integer index")
     if resolved.weights.hills and hills is not None:
         if (hills.graph is not graph.document or graph.integer is None
                 or hills.index.segment_ids is not graph.integer.segment_ids):
             raise ValueError("Hill features belong to a different prepared graph or integer ordering")
     return RequestCostData(
-        graph, home_point, destination, separation * settings.radius_ratio,
+        graph, index, home_point, destination, separation * settings.radius_ratio,
         separation * settings.transition_ratio,
         min(5.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4),
         strengths, settings.avoidance_ratio == 0, parts if parts is not None else {},
@@ -75,36 +78,40 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
 
 
 def resolve_traversal(data: RequestCostData, arc: Arc) -> TraversalRef:
-    """Keep physical chainage ascending and traversal direction explicit."""
-    segment = data.graph.segments[arc["segment_id"]]
-    part = data.parts.get(segment["id"])
-    return TraversalRef(part.segment_id if part else segment["id"],
-                        part.start_m if part else 0.0,
-                        part.end_m if part else segment["length_m"],
-                        not arc_forward(segment, arc))
+    """Translate selected traversals to external IDs for response serialization."""
+    prepared = integer_arc(data.index, data.index.arc_indices[arc["id"]])
+    traversal = resolve_indexed_traversal(data, prepared)
+    return TraversalRef(integer_segment_id(data.index, traversal.segment),
+                        traversal.graph_start_m, traversal.graph_end_m, traversal.reverse)
+
+
+def resolve_indexed_traversal(data: RequestCostData, arc: IntegerArc) -> IndexedTraversal:
+    part = data.parts.get(arc.segment)
+    return IndexedTraversal(part.segment if part else arc.segment,
+                            part.start_m if part else 0.0,
+                            part.end_m if part else arc.length_m, arc.reverse)
 
 
 def ensure_arc_features(data: RequestCostData, cache: RequestCostCache,
-                        arc: Arc, deadline: float | None) -> ShapeFeatures:
+                        arc: IntegerArc, deadline: float | None) -> ShapeFeatures:
     """Integrate each overlay segment once for all request legs and assignments."""
-    segment_id = arc["segment_id"]
-    if segment_id not in cache.shape_fields:
-        points = data.graph.projected.segments[segment_id]
-        cache.shape_fields[segment_id] = ShapeFeatures(*integrate_fields(
+    segment = arc.segment
+    if segment not in cache.shape_fields:
+        points = indexed_segment_points(data.graph.projected, segment)
+        cache.shape_fields[segment] = ShapeFeatures(*integrate_fields(
             points, data.home, data.turnaround, data.radius_m,
             data.transition_width_m, data.spacing_m, deadline,
         ))
         check_deadline(deadline)
-    return cache.shape_fields[segment_id]
+    return cache.shape_fields[segment]
 
 
 def ensure_hill_features(data: RequestCostData, cache: RequestCostCache,
-                         arc: Arc, deadline: float | None) -> HillFeatures:
+                         arc: IntegerArc, deadline: float | None) -> HillFeatures:
     if data.hills is None:
         return HillFeatures()
-    if arc["id"] not in cache.hill_features:
-        traversal = resolve_traversal(data, arc)
-        segment = data.hills.index.segment_indices[traversal.segment_id]
-        cache.hill_features[arc["id"]] = indexed_traversal_hills(
-            data.hills, segment, traversal.graph_start_m, traversal.graph_end_m, traversal.reverse, deadline)
-    return cache.hill_features[arc["id"]]
+    if arc.index not in cache.hill_features:
+        traversal = resolve_indexed_traversal(data, arc)
+        cache.hill_features[arc.index] = indexed_traversal_hills(
+            data.hills, traversal.segment, traversal.graph_start_m, traversal.graph_end_m, traversal.reverse, deadline)
+    return cache.hill_features[arc.index]

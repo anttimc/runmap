@@ -6,14 +6,19 @@ from dataclasses import dataclass, field, replace
 import heapq
 import math
 from time import monotonic
+from typing import TypeVar
 
 from runmap.routing.types import Arc, Coordinate, EdgeProfile, GraphDocument, Node, RouteMetrics, Segment
 from runmap.routing.geometry import ProjectedGeometry, prepare_projected_geometry
-from runmap.routing.integer_graph import IntegerGraph, apply_integer_policy, integer_arc, prepare_integer_graph
+from runmap.routing.integer_graph import (IntegerArc, IntegerGraph, apply_integer_policy, integer_arc,
+                                         integer_node_id, integer_arc_id, prepare_integer_graph)
 
 from runmap.routing.profiles import (
     arc_forward, classify_segments, exploration_profile, pedestrian_access_reason, pedestrian_directions,
 )
+
+
+NodeKey = TypeVar("NodeKey", str, int)
 
 
 def _is_grade_separated(segment: Segment) -> bool:
@@ -252,6 +257,8 @@ def shortest_path(
     *,
     heuristic: Callable[[str, str], float] | None = None,
     arc_cost: Callable[[Arc], float] | None = None,
+    indexed_arc_cost: Callable[[IntegerArc], float] | None = None,
+    indexed_heuristic: Callable[[int, int], float] | None = None,
     deadline: float | None = None,
 ) -> PathResult | None:
     """Find a least-cost path; an optional lower-bound heuristic enables A*.
@@ -259,7 +266,13 @@ def shortest_path(
     The heuristic takes node and destination IDs and must be deterministic,
     finite, non-negative, zero at the destination, and never overestimate the
     remaining cost under the selected cost model and overlap penalty.
+    Indexed callbacks receive prepared arcs and integer node IDs. Use only one
+    callback from each pair; returned paths keep their external arc IDs.
     """
+    if arc_cost is not None and indexed_arc_cost is not None:
+        raise ValueError("Choose one arc-cost callback")
+    if heuristic is not None and indexed_heuristic is not None:
+        raise ValueError("Choose one heuristic callback")
     if start not in index.nodes or destination not in index.nodes:
         raise ValueError("Route endpoint is not in the graph")
     if overlap_factor < 1:
@@ -271,15 +284,19 @@ def shortest_path(
     if dense is None:
         raise ValueError("Graph has no prepared integer index")
     start_index, destination_index = dense.node_indices[start], dense.node_indices[destination]
+    estimate = indexed_heuristic
+    if heuristic is not None:
+        def estimate(node: int, target: int) -> float:
+            return heuristic(integer_node_id(dense, node), integer_node_id(dense, target))
     blocked = {dense.segment_indices[s] for s in blocked_segments if s in dense.segment_indices}
     node_count = len(dense.node_ids) + len(dense.extra_node_ids)
     distances = [math.inf] * node_count
     distances[start_index] = 0.0
     predecessors = [-1] * node_count
-    if _remaining_cost(heuristic, destination, destination) != 0:
+    if _remaining_cost(estimate, destination_index, destination_index) != 0:
         raise ValueError("Heuristic must be zero at the destination")
     # Keep external IDs only as heap tie keys to preserve existing equal-cost paths.
-    queue = [(_remaining_cost(heuristic, start, destination), 0.0, start, start_index)]
+    queue = [(_remaining_cost(estimate, start_index, destination_index), 0.0, start, start_index)]
     expanded = 0
     while queue:
         if deadline is not None and monotonic() >= deadline:
@@ -296,9 +313,12 @@ def shortest_path(
         for prepared in outgoing:
             if prepared.segment in blocked:
                 continue
-            arc = prepared.record
-            cost = arc_cost(arc) if arc_cost is not None else _arc_cost(
-                index, arc, model, overlap_segments, overlap_factor)
+            if indexed_arc_cost is not None:
+                cost = indexed_arc_cost(prepared)
+            elif arc_cost is not None:
+                cost = arc_cost(prepared.record)
+            else:
+                cost = _arc_cost(index, prepared.record, model, overlap_segments, overlap_factor)
             if not math.isfinite(cost) or cost < 0:
                 raise ValueError("Arc cost must be finite and non-negative")
             candidate = distance + cost
@@ -306,8 +326,8 @@ def shortest_path(
             if candidate < distances[target]:
                 distances[target] = candidate
                 predecessors[target] = prepared.index
-                target_id = arc['to']
-                priority = candidate + _remaining_cost(heuristic, target_id, destination)
+                target_id = integer_node_id(dense, target)
+                priority = candidate + _remaining_cost(estimate, target, destination_index)
                 heapq.heappush(queue, (priority, candidate, target_id, target))
     if distances[destination_index] == math.inf:
         return None
@@ -321,13 +341,13 @@ def _integer_path(graph: IntegerGraph, predecessors: list[int], start: int,
     node = destination
     while node != start:
         arc = integer_arc(graph, predecessors[node])
-        arc_ids.append(arc.record['id'])
+        arc_ids.append(integer_arc_id(graph, arc.index))
         node = arc.source
     return tuple(reversed(arc_ids))
 
 
 def _remaining_cost(
-    heuristic: Callable[[str, str], float] | None, node_id: str, destination: str,
+    heuristic: Callable[[NodeKey, NodeKey], float] | None, node_id: NodeKey, destination: NodeKey,
 ) -> float:
     if heuristic is None:
         return 0.0

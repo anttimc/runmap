@@ -13,11 +13,12 @@ from runmap.routing.cost_preparation import build_request_cost_data, resolve_tra
 from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
 from runmap.routing.costs import arc_cost
 from runmap.routing.fields import integrate_fields
+from runmap.routing.geometry import indexed_node_point, indexed_segment_points
+from runmap.routing.integer_graph import IntegerArc
 from runmap.routing.run_planner import (RunSettings, endpoint_overlay, plan_run,
                                         distance_heuristic, projected_points, validate_settings, penalty_strengths)
 from runmap.paths.exploration import split_start_graph
 from runmap.routing.search import GraphData, PathResult, apply_profile, arc_usable, build_graph_index, route_coordinates, shortest_path
-from runmap.routing.types import Arc
 
 
 class RunPlannerTests(unittest.TestCase):
@@ -75,12 +76,19 @@ class RunPlannerTests(unittest.TestCase):
         overlay = endpoint_overlay(self.index, self.snap("ab", .2), self.snap("bc", .5))
         for graph in (self.index, overlay.graph):
             for segment_id, segment in graph.segments.items():
+                assert graph.integer is not None
                 self.assertEqual(graph.projected.segments[segment_id],
                                  tuple(projected_points(segment["geometry"])))
+                self.assertIs(indexed_segment_points(graph.projected, graph.integer.segment_indices[segment_id]),
+                              graph.projected.segments[segment_id])
             for node_id, node in graph.nodes.items():
                 self.assertEqual(graph.projected.nodes[node_id],
                                  projected_points([[node["longitude"], node["latitude"]]])[0])
+                self.assertIs(indexed_node_point(graph.projected, graph.integer.node_indices[node_id]),
+                              graph.projected.nodes[node_id])
         self.assertIs(overlay.graph.projected.segments["ab"], self.index.projected.segments["ab"])
+        self.assertIs(overlay.graph.projected.node_points, self.index.projected.node_points)
+        self.assertIs(overlay.graph.projected.segment_points, self.index.projected.segment_points)
         self.assertNotIn(overlay.home, self.index.projected.nodes)
 
     def test_cached_lower_bound_accounts_for_short_temporary_arcs(self) -> None:
@@ -167,14 +175,14 @@ class RunPlannerTests(unittest.TestCase):
         calls = 0
 
         def bounded_search(index: GraphData, start: str, destination: str, *,
-                           arc_cost: Callable[[Arc], float], deadline: float | None,
-                           heuristic: Callable[[str, str], float]) -> PathResult | None:
+                           indexed_arc_cost: Callable[[IntegerArc], float], deadline: float | None,
+                           indexed_heuristic: Callable[[int, int], float]) -> PathResult | None:
             nonlocal calls
             calls += 1
             if calls > 2:
                 raise TimeoutError
-            return shortest_path(index, start, destination, arc_cost=arc_cost,
-                                 deadline=deadline, heuristic=heuristic)
+            return shortest_path(index, start, destination, indexed_arc_cost=indexed_arc_cost,
+                                 deadline=deadline, indexed_heuristic=indexed_heuristic)
 
         with patch("runmap.routing.run_planner.shortest_path", side_effect=bounded_search):
             result = plan_run(self.index, self.snap("ab", .2), self.snap("ab", .8), RunSettings())
@@ -208,12 +216,13 @@ class RunPlannerTests(unittest.TestCase):
         arc = overlay.graph.arcs[overlay.graph.outgoing[overlay.home][0]]
         unused = LegCostContext(True)
         baseline = arc_cost(arc, data=data, cache=cache, leg=unused, deadline=None)
-        returning = LegCostContext(False, frozenset({arc["segment_id"]}))
+        segment = data.index.segment_indices[arc["segment_id"]]
+        returning = LegCostContext(False, frozenset({segment}))
         reused = arc_cost(arc, data=data, cache=cache, leg=returning, deadline=None)
         self.assertGreater(reused, baseline)
         self.assertEqual(arc_cost(arc, data=data, cache=cache, leg=unused, deadline=None), baseline)
         # A different piece of the same original physical segment is not reuse.
-        other_part = next(part for part in overlay.parts if part != arc["segment_id"])
+        other_part = next(part for part in overlay.parts if part != segment)
         disjoint = LegCostContext(True, frozenset({other_part}))
         self.assertEqual(arc_cost(arc, data=data, cache=cache, leg=disjoint, deadline=None), baseline)
         with self.assertRaises(TimeoutError):

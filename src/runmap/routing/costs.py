@@ -11,6 +11,7 @@ from runmap.routing.cost_types import (
 from runmap.routing.hills import hill_observations, sum_hill_features
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.types import Arc
+from runmap.routing.integer_graph import IntegerArc, integer_arc
 
 
 NO_SHAPE_FEATURES = ShapeFeatures(0, 0, 0)
@@ -68,12 +69,12 @@ def path_cost_breakdown(arc_ids: Iterable[str], data: RequestCostData,
     """Explain selected paths using cached features and the original search context."""
     costs: list[CostBreakdown] = []
     for arc_id in arc_ids:
-        arc = data.graph.arcs[arc_id]
-        features = NO_SHAPE_FEATURES if data.shape_disabled else cache.shape_fields[arc["segment_id"]]
-        preferences = (PreferenceCosts(hills=cache.hill_features[arc_id].penalty_m * data.preferences.weights.hills)
+        arc = integer_arc(data.index, data.index.arc_indices[arc_id])
+        features = NO_SHAPE_FEATURES if data.shape_disabled else cache.shape_fields[arc.segment]
+        preferences = (PreferenceCosts(hills=cache.hill_features[arc.index].penalty_m * data.preferences.weights.hills)
                        if data.hills else PreferenceCosts())
-        costs.append(evaluate_arc_breakdown(arc["length_m"], features, data.strengths, leg,
-                                            arc["segment_id"] in leg.used_segments, preferences))
+        costs.append(evaluate_arc_breakdown(arc.length_m, features, data.strengths, leg,
+                                            arc.segment in leg.used_segments, preferences))
     return CostBreakdown(
         sum(c.distance_m for c in costs), sum(c.centre for c in costs),
         sum(c.side for c in costs), sum(c.reuse for c in costs), sum(c.hills for c in costs),
@@ -86,17 +87,24 @@ def path_observations(arc_ids: Iterable[str], data: RequestCostData,
                       cache: RequestCostCache) -> PreferenceObservations:
     if data.hills is None:
         return PreferenceObservations()
-    return hill_observations(sum_hill_features(cache.hill_features[arc_id] for arc_id in arc_ids))
+    return hill_observations(sum_hill_features(cache.hill_features[data.index.arc_indices[arc_id]] for arc_id in arc_ids))
 
 
 def arc_cost(arc: Arc, *, data: RequestCostData, cache: RequestCostCache,
              leg: LegCostContext, deadline: float | None) -> float:
-    """Bind explicit request data to the search's scalar arc-cost interface."""
+    """Adapt a legacy record callback at the boundary of indexed cost evaluation."""
+    return indexed_arc_cost(integer_arc(data.index, data.index.arc_indices[arc["id"]]),
+                             data=data, cache=cache, leg=leg, deadline=deadline)
+
+
+def indexed_arc_cost(arc: IntegerArc, *, data: RequestCostData, cache: RequestCostCache,
+                     leg: LegCostContext, deadline: float | None) -> float:
+    """Evaluate prepared arcs without string lookup or JSON-record access."""
     check_deadline(deadline)
     features = NO_SHAPE_FEATURES if data.shape_disabled else ensure_arc_features(data, cache, arc, deadline)
-    reused = arc["segment_id"] in leg.used_segments
+    reused = arc.segment in leg.used_segments
     if data.hills is None:
-        return evaluate_arc_cost(arc["length_m"], features, data.strengths, leg, reused)
+        return evaluate_arc_cost(arc.length_m, features, data.strengths, leg, reused)
     hills = ensure_hill_features(data, cache, arc, deadline)
-    return evaluate_arc_cost(arc["length_m"], features, data.strengths, leg, reused,
+    return evaluate_arc_cost(arc.length_m, features, data.strengths, leg, reused,
                              PreferenceCosts(hills=hills.penalty_m * data.preferences.weights.hills))

@@ -11,7 +11,7 @@ from runmap.experiments.search_reference import shortest_path_string
 from runmap.paths.exploration import Snap, split_start_graph
 from runmap.routing.geometry import projected_points
 from runmap.routing.integer_graph import integer_arc
-from runmap.routing.profiles import exploration_profile
+from runmap.routing.profiles import exploration_profile, arc_forward
 from runmap.routing.run_planner import endpoint_overlay
 from runmap.routing.search import CostModel, apply_profile, build_graph_index, shortest_path
 from runmap.routing.types import GraphDocument
@@ -50,6 +50,25 @@ class IntegerGraphTests(unittest.TestCase):
         for position, arc in enumerate(dense.arcs):
             self.assertEqual(arc.index, position)
             self.assertIs(arc.record, document['arcs'][position])
+            self.assertEqual(arc.reverse, not arc_forward(index.segments[arc.record['segment_id']], arc.record))
+
+    def test_indexed_callbacks_preserve_routes_and_reject_invalid_costs(self) -> None:
+        index = build_graph_index(fixture())
+        assert index.integer is not None
+        expected = shortest_path(index, 's', 'd', arc_cost=lambda arc: arc['length_m'] * 2)
+        actual = shortest_path(index, 's', 'd', indexed_arc_cost=lambda arc: arc.length_m * 2,
+                               indexed_heuristic=lambda node, target: 0.0)
+        self.assertEqual(actual, expected)
+        for value in (-1, math.nan, math.inf):
+            with self.assertRaises(ValueError):
+                shortest_path(index, 's', 'd', indexed_arc_cost=lambda arc: value)
+        with self.assertRaisesRegex(ValueError, 'zero at the destination'):
+            shortest_path(index, 's', 'd', indexed_heuristic=lambda node, target: 1)
+        with self.assertRaisesRegex(ValueError, 'one arc-cost callback'):
+            shortest_path(index, 's', 'd', arc_cost=lambda arc: 1, indexed_arc_cost=lambda arc: 1)
+        with self.assertRaisesRegex(ValueError, 'one heuristic callback'):
+            shortest_path(index, 's', 'd', heuristic=lambda node, target: 0,
+                          indexed_heuristic=lambda node, target: 0)
 
     def test_heap_ties_follow_external_names_instead_of_integer_order(self) -> None:
         index = build_graph_index(fixture())

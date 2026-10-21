@@ -45,21 +45,16 @@ physical segments and direction; segment offsets identify ranges in packed
 geometry/interval arrays. Endpoint overlays append temporary IDs and retain the
 original segment index and chainage range. They never renumber the base dataset.
 
-The current integer index and packed hill storage are described in
+The current integer search/cost pipeline and packed hill storage are described in
 [architecture](architecture.md). Continue incrementally, removing each replaced
 representation:
 
-1. Carry integer arc/node/segment indices through search cost and heuristic
-   callbacks, physical-part references, and request caches. Keep expensive shape
-   integration lazy and caches proportional to visited data. Acceptance: no string
-   lookup or return to JSON arc records in the search cost loop; preserve route
-   ordering and benchmark complete requests, not just lookups.
-2. Move distance exploration, projected geometry, and display measurements onto
+1. Move distance exploration, projected geometry, and display measurements onto
    the same IDs and compact arrays. Share topology across policies; compare an
    allowed-arc mask with compact filtered adjacency before choosing the search
    representation. Acceptance: remove redundant string adjacency/data copies,
    preserve tile/inspection semantics, and measure memory plus bounded-search time.
-3. Persist the prepared arrays with format version, graph/measurement identities,
+2. Persist the prepared arrays with format version, graph/measurement identities,
    feature-model version, and explicit index ordering. Reject mismatched artifacts.
    Acceptance: restart without JSON reparsing or index rebuilding, with measured
    startup time, retained/peak memory, and cold/warm interaction latency.
