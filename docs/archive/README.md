@@ -34,6 +34,8 @@ The [packed-hill storage report](history/35-packed-hill-storage.md) records the
 first migration of feature storage onto that shared integer ordering.
 The [integer planner-cost report](history/36-indexed-planner-costs.md) records the
 following migration of callbacks, endpoint parts, and request caches.
+The [indexed exploration report](history/37-indexed-exploration.md) records bounded
+Dijkstra, shared immutable distance buffers, and unchanged tile output.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

@@ -9,7 +9,7 @@ from runmap.api.paths import load_path_data, snap_path_start, explore_paths, pat
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.exploration import (Snap, ExplorationCache, distance_data, interval_inclusion,
                                      split_start_graph, cached_distances, distance_from_start)
-from runmap.routing.search import build_graph_index, shortest_path, shortest_distances
+from runmap.routing.search import build_graph_index, shortest_path, shortest_distances, external_node_distances
 from runmap.routing.profiles import exploration_profile
 
 
@@ -29,7 +29,7 @@ class InclusionTests(unittest.TestCase):
             ("stem", "s", "a", 100), ("far", "a", "b", 1000), ("other", "x", "y", 10),
         ]))
         distances = distance_data(index, snap("stem", 0), 50)
-        self.assertEqual(distances.outward, {"s": 0})
+        self.assertEqual(external_node_distances(distances.outward), {"s": 0})
         far = interval_inclusion(index, distances, "far", 0, 10, 50)
         disconnected = interval_inclusion(index, distances, "other", 0, 10, 50)
         self.assertEqual(far, disconnected)
@@ -137,8 +137,18 @@ class InclusionTests(unittest.TestCase):
         self.assertIs(a, b)
         c, hit = cached_distances(cache, "data", index, snap("ab", 0), 2000)
         self.assertFalse(hit)
-        self.assertIn("b", c.outward)
+        self.assertIn("b", external_node_distances(c.outward))
         self.assertEqual(interval_inclusion(index, a, "ab", 900, 910, 100)["inclusion_state"], "beyond_budget")
+
+    def test_distances_reject_an_unrelated_integer_ordering(self) -> None:
+        document = graph([("ab", "a", "b", 100)])
+        index = build_graph_index(document)
+        distances = distance_data(index, snap("ab", 30), 200)
+        other = build_graph_index(copy.deepcopy(document))
+        with self.assertRaisesRegex(ValueError, "different prepared integer graph"):
+            interval_inclusion(other, distances, "ab", 0, 10, 200)
+        with self.assertRaisesRegex(ValueError, "different prepared integer graph"):
+            distance_from_start(other, distances, "ab", 10)
 
 
 class SnapTests(unittest.TestCase):

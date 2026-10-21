@@ -1,19 +1,21 @@
 """Integer search preserves external IDs, policies, and overlay isolation."""
 
 from copy import deepcopy
+from dataclasses import replace
 import math
 import random
 from time import monotonic
 import unittest
 
 from test_routing import graph_document
-from runmap.experiments.search_reference import shortest_path_string
+from runmap.experiments.search_reference import shortest_path_string, shortest_distances_string
 from runmap.paths.exploration import Snap, split_start_graph
 from runmap.routing.geometry import projected_points
 from runmap.routing.integer_graph import integer_arc
 from runmap.routing.profiles import exploration_profile, arc_forward
 from runmap.routing.run_planner import endpoint_overlay
-from runmap.routing.search import CostModel, apply_profile, build_graph_index, shortest_path
+from runmap.routing.search import (CostModel, apply_profile, build_graph_index, shortest_path,
+                                   shortest_distances, indexed_shortest_distances, external_node_distances)
 from runmap.routing.types import GraphDocument
 
 
@@ -146,3 +148,50 @@ class IntegerGraphTests(unittest.TestCase):
             shortest_path(index, 'missing', 'd')
         self.assertEqual(shortest_path(index, 's', 'd', blocked_segments={'missing'}),
                          shortest_path(index, 's', 'd'))
+
+    def test_bounded_distance_search_matches_string_reference_and_discovery_order(self) -> None:
+        rng = random.Random(91)
+        for _ in range(12):
+            nodes = [(str(n * 7), 24.8, 60.2) for n in range(10)]
+            edges = [(f'e{a}-{b}', nodes[a][0], nodes[b][0], rng.randrange(1, 20), 0,
+                      {'highway': rng.choice(('path', 'steps')), 'oneway:foot': rng.choice(('yes', 'no'))})
+                     for a in range(10) for b in range(a + 1, 10) if rng.random() < .3]
+            index = build_graph_index(graph_document(nodes, edges), exploration_profile(avoid_stairs=True))
+            assert index.integer is not None
+            blocked = frozenset(rng.sample(list(index.segments), min(2, len(index.segments))))
+            start = rng.choice(list(index.nodes))
+            for reverse in (False, True):
+                for maximum in (0, 10, 30, math.inf):
+                    expected = shortest_distances_string(index, start, maximum, blocked, reverse)
+                    actual = shortest_distances(index, start, maximum, blocked, reverse)
+                    self.assertEqual(list(actual.items()), list(expected.items()))
+                    packed = indexed_shortest_distances(index, index.integer.node_indices[start], maximum,
+                                                        {index.integer.segment_indices[s] for s in blocked}, reverse)
+                    self.assertEqual(external_node_distances(packed), expected)
+                    self.assertTrue(packed.values.readonly)
+                    self.assertTrue(packed.reached.readonly)
+                    with self.assertRaises(TypeError):
+                        packed.values[0] = 0
+
+    def test_distance_search_uses_only_integer_records_and_adjacency(self) -> None:
+        index = build_graph_index(fixture())
+        dense = index.integer
+        assert dense is not None
+        records = tuple(replace(arc, record={}) for arc in dense.arcs)
+        stripped = replace(dense, arcs=records,
+                           outgoing=tuple(tuple(records[a.index] for a in row) for row in dense.outgoing),
+                           incoming=tuple(tuple(records[a.index] for a in row) for row in dense.incoming))
+        graph = replace(index, nodes={}, segments={}, arcs={}, outgoing={}, incoming={}, integer=stripped)
+        for reverse in (False, True):
+            actual = indexed_shortest_distances(graph, dense.node_indices['s'], reverse=reverse)
+            self.assertEqual(external_node_distances(actual), shortest_distances_string(index, 's', reverse=reverse))
+
+    def test_indexed_distance_deadline_and_invalid_start(self) -> None:
+        index = build_graph_index(fixture())
+        assert index.integer is not None
+        start = index.integer.node_indices['s']
+        with self.assertRaises(TimeoutError):
+            indexed_shortest_distances(index, start, deadline=monotonic() - 1)
+        for invalid in (-1, len(index.nodes)):
+            with self.assertRaises(ValueError):
+                indexed_shortest_distances(index, invalid)

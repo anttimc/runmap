@@ -1,9 +1,9 @@
 """Decoded tile semantics, cache lifetimes, and immutable exploration state."""
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from array import array
 import math
 from threading import Event
-from types import MappingProxyType
 import unittest
 from unittest.mock import patch
 
@@ -18,6 +18,7 @@ from runmap.api.path_tiles import (ByteCache, PathTileService, display_runs, enc
                                   projected_point, render_version, snapshot_distances, tile_bounds)
 from runmap.paths.exploration import DistanceData, Snap
 from runmap.paths.exploration import segment_reason
+from runmap.routing.search import freeze_node_distances, external_node_distances
 
 
 def xyz(longitude: float, latitude: float, z: int) -> tuple[int, int]:
@@ -119,12 +120,18 @@ class PathTileTests(unittest.TestCase):
 
     def test_snapshot_distances_are_isolated_and_memory_scales_with_nodes(self) -> None:
         snap = Snap("s", 0, 0, 24.8, 60.2, 0)
-        outward = {"1": 0.0}
-        frozen, small = snapshot_distances(DistanceData(snap, 100, outward))
-        outward["1"] = 99
-        self.assertEqual(frozen.outward["1"], 0)
-        self.assertIsInstance(frozen.outward, MappingProxyType)
-        _, large = snapshot_distances(DistanceData(snap, 100, {"1": 0, "2": 50}))
+        index = self.data.routing.integer
+        assert index is not None
+        values = array("d", [0, math.inf])
+        outward = freeze_node_distances(index, values, array("q", [0]))
+        source = DistanceData(snap, 100, outward)
+        frozen, small = snapshot_distances(source)
+        values[0] = 99
+        self.assertEqual(frozen.outward.values[0], 0)
+        self.assertTrue(frozen.outward.values.readonly)
+        self.assertIs(frozen, source)
+        larger = freeze_node_distances(index, array("d", [0, 50]), array("q", [0, 1]))
+        _, large = snapshot_distances(DistanceData(snap, 100, larger))
         self.assertGreater(large, small)
 
     def test_smaller_budget_uses_cached_search_without_changing_earlier_snapshot(self) -> None:
@@ -135,6 +142,7 @@ class PathTileTests(unittest.TestCase):
         large = service.snapshot(large_result["snapshot_id"])
         small = service.snapshot(small_result["snapshot_id"])
         self.assertEqual(small.distances.maximum_m, large.distances.maximum_m)
+        self.assertIs(small.distances.outward, large.distances.outward)
         for snapshot, expected in ((large, ["included"] * 4),
                                    (small, ["included"] + ["beyond_budget"] * 3)):
             states = [display_runs(self.data, [i], snapshot.policy, "distance-all", 15, snapshot)[0]
@@ -176,8 +184,8 @@ class PathTileTests(unittest.TestCase):
         states = [display_runs(self.data, [i], snapshot.policy, "gradient-all", 15, snapshot)[0]
                   .properties["inclusion_state"] for i in range(4)]
         self.assertEqual(states, ["included", "beyond_budget", "beyond_budget", "beyond_budget"])
-        self.assertIsInstance(snapshot.distances.outward, MappingProxyType)
-        self.assertEqual(snapshot.distances.outward, {"1": 0})
+        self.assertTrue(snapshot.distances.outward.values.readonly)
+        self.assertEqual(external_node_distances(snapshot.distances.outward), {"1": 0})
         self.assertGreater(snapshot.retained_bytes, 512)
         self.assertEqual(service.snapshots.bytes, snapshot.retained_bytes)
         changed_policy = service.prepare(24.8, 60.2, .1, "all", False, 50, None)
@@ -439,7 +447,9 @@ class RoutingConcurrencyTests(unittest.TestCase):
                 if snap.graph_offset_m == 0:
                     entered.set()
                     release.wait(2)
-                return DistanceData(snap, maximum, {})
+                assert index.integer is not None
+                outward = freeze_node_distances(index.integer, array("d", [math.inf, math.inf]), array("q"))
+                return DistanceData(snap, maximum, outward)
 
             with patch("runmap.paths.exploration.distance_data", side_effect=search):
                 with ThreadPoolExecutor(2) as pool:

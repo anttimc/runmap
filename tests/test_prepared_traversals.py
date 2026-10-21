@@ -98,7 +98,9 @@ class PreparedTraversalTests(unittest.TestCase):
                     other = "a" if oneway == "yes" else "b"
                     self.assertIsNotNone(shortest_path(exploration, virtual, target))
                     self.assertIsNone(shortest_path(exploration, virtual, other))
-                    self.assertIn(target, distance_data(index, home, 300).outward)
+                    reached = distance_data(index, home, 300).outward
+                    assert index.integer is not None
+                    self.assertLess(reached.values[index.integer.node_indices[target]], float("inf"))
                     result = plan_run(index, home, turnaround, RunSettings())
                     self.assertEqual(result.outcomes, ("unreachable", "unreachable"))
                 self.assertEqual(set(index.direction_cache), {"ab"})

@@ -1,0 +1,37 @@
+{
+  "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+  "snapshots": [
+    {
+      "budget_km": 3,
+      "http_status": 200,
+      "status": "ready",
+      "request_ms": 3845.5387910071295,
+      "retained_bytes": 4195026,
+      "wall_ms": 3849.7846659999996
+    },
+    {
+      "budget_km": 10,
+      "http_status": 200,
+      "status": "ready",
+      "request_ms": 197.74354199762456,
+      "retained_bytes": 5382042,
+      "wall_ms": 199.47908300000017
+    },
+    {
+      "budget_km": 30,
+      "http_status": 200,
+      "status": "ready",
+      "request_ms": 339.87712499219924,
+      "retained_bytes": 7477786,
+      "wall_ms": 341.41229099999964
+    },
+    {
+      "budget_km": 50,
+      "http_status": 200,
+      "status": "ready",
+      "request_ms": 329.2107089946512,
+      "retained_bytes": 7585138,
+      "wall_ms": 331.20537500000046
+    }
+  ]
+}

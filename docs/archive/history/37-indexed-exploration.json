@@ -1,0 +1,55 @@
+{
+  "reference_commit": "84fa7a3c078a726e116996b5d1e17378b64cbb34",
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "python": "3.14.6",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "repeats": 10,
+  "searches": [
+    {
+      "budget_m": 1000,
+      "reached_nodes": 2251,
+      "nodes": 55628,
+      "old_median_ms": 2.6978750247508287,
+      "new_median_ms": 1.1889165034517646,
+      "old_retained_search_and_snapshot_bytes": 158464,
+      "old_snapshot_accounted_bytes": 221605,
+      "new_retained_search_and_snapshot_bytes": 464274,
+      "new_snapshot_accounted_bytes": 464026
+    },
+    {
+      "budget_m": 3000,
+      "reached_nodes": 16335,
+      "nodes": 55628,
+      "old_median_ms": 23.537458502687514,
+      "new_median_ms": 10.159708501305431,
+      "old_retained_search_and_snapshot_bytes": 1222608,
+      "old_snapshot_accounted_bytes": 1641270,
+      "new_retained_search_and_snapshot_bytes": 576722,
+      "new_snapshot_accounted_bytes": 576698
+    },
+    {
+      "budget_m": 10000,
+      "reached_nodes": 51901,
+      "nodes": 55628,
+      "old_median_ms": 77.88679200166371,
+      "new_median_ms": 33.610937505727634,
+      "old_retained_search_and_snapshot_bytes": 5090824,
+      "old_snapshot_accounted_bytes": 5814773,
+      "new_retained_search_and_snapshot_bytes": 861210,
+      "new_snapshot_accounted_bytes": 861226
+    },
+    {
+      "budget_m": 30000,
+      "reached_nodes": 52014,
+      "nodes": 55628,
+      "old_median_ms": 77.84145850746427,
+      "new_median_ms": 33.525728998938575,
+      "old_retained_search_and_snapshot_bytes": 5093536,
+      "old_snapshot_accounted_bytes": 5823273,
+      "new_retained_search_and_snapshot_bytes": 862114,
+      "new_snapshot_accounted_bytes": 862130
+    }
+  ],
+  "tile_comparisons": 48,
+  "point_comparisons": 4000
+}

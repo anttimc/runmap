@@ -49,8 +49,8 @@ The current integer search/cost pipeline and packed hill storage are described i
 [architecture](architecture.md). Continue incrementally, removing each replaced
 representation:
 
-1. Move distance exploration, projected geometry, and display measurements onto
-   the same IDs and compact arrays. Share topology across policies; compare an
+1. Move remaining projected geometry maps and display measurements onto the
+   shared IDs and compact arrays. Share topology across policies; compare an
    allowed-arc mask with compact filtered adjacency before choosing the search
    representation. Acceptance: remove redundant string adjacency/data copies,
    preserve tile/inspection semantics, and measure memory plus bounded-search time.

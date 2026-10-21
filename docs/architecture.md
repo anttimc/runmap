@@ -132,7 +132,8 @@ Start/policy/budget queries prepare process-local snapshots containing immutable
 bounded search results. Interval states, midpoint distances, and boundary flags
 are calculated only for the spatial candidates of requested buffered tiles.
 Navigation and tile variants reuse the same search; encoded tiles are cached.
-Snapshot memory accounting includes retained node distances. Snapshots and tiles have
+Snapshot memory accounting charges the shared immutable distance buffers to each
+entry conservatively; creating a snapshot does not copy search results. Snapshots and tiles have
 byte-bounded TTL/LRU caches. Expired snapshots return 410; the client recreates
 once. Use one API worker until snapshots can be shared or reconstructed.
 
@@ -207,8 +208,25 @@ coordinate-reference tuples, with small appended tuples for temporary geometry.
 The existing string geometry maps remain for preparation and display; the tuples
 share their point objects rather than duplicating coordinate values.
 
-The bounded exploration Dijkstra, measurement dictionaries, and display indexes
-are still due for the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
+Bounded exploration Dijkstra also traverses prepared integer adjacency. Its result
+contains immutable native float64 values indexed by node, plus int64 indices in
+discovery order. Unreached values are infinity. The shared base node-ID tuple binds
+the result to the correct integer ordering; a small extra-ID tuple covers temporary
+start nodes. Search uses mutable numeric working arrays and seals them into bytes
+before publishing. Search caches and snapshots share the same sealed result,
+including when a smaller budget reuses a larger search. Point/interval queries
+translate prepared endpoints to integer indices; legacy callers of
+`shortest_distances` receive a string-keyed dictionary through an explicit adapter.
+Discovery order and external-ID heap tie ordering preserve previous results.
+
+Distance buffer payload is `8 N + 8 R` bytes for N graph/overlay nodes and R reached
+nodes. This has a per-node floor even for small budgets; it avoids dictionary/float
+object overhead and snapshot copies when many nodes are reached. Snapshot cache
+limits apply to the full payload. The [exploration report](archive/history/37-indexed-exploration.md)
+records the latency/storage tradeoff and tile equivalence.
+
+Measurement dictionaries, raw geometry maps, and display indexes remain due for
+the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
 These storage/callback changes do not alter the cost model or integration kernel. The
 [packed-hill report](archive/history/35-packed-hill-storage.md) records equivalence
 and storage measurements; the [integer-cost report](archive/history/36-indexed-planner-costs.md)

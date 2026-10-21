@@ -9,7 +9,6 @@ from sys import getsizeof
 from threading import RLock
 from time import monotonic, time
 from typing import Callable, Generic, TypeVar
-from types import MappingProxyType
 from uuid import uuid4
 
 import mapbox_vector_tile
@@ -111,10 +110,11 @@ class Snapshot:
 
 
 def snapshot_distances(distances: DistanceData) -> tuple[DistanceData, int]:
-    """Freeze search results and conservatively account for retained node data."""
-    outward = dict(distances.outward)
-    retained = getsizeof(outward) + sum(getsizeof(node) + getsizeof(value) for node, value in outward.items()) + 512
-    return DistanceData(distances.snap, distances.maximum_m, MappingProxyType(outward)), retained
+    """Share sealed search buffers and charge their payload to each snapshot."""
+    outward = distances.outward
+    retained = (getsizeof(outward) + getsizeof(outward.values) + getsizeof(outward.values.obj)
+                + getsizeof(outward.reached) + getsizeof(outward.reached.obj) + 512)
+    return distances, retained
 
 
 @dataclass(frozen=True)

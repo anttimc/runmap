@@ -1,7 +1,6 @@
 """Eligible edge snapping and budgeted outing inclusion over prepared topology."""
 
 from collections import ChainMap, OrderedDict
-from collections.abc import Mapping
 from concurrent.futures import Future
 from time import monotonic
 from dataclasses import dataclass, field, replace
@@ -11,8 +10,8 @@ from threading import RLock
 from rasterio.warp import transform
 
 from runmap.routing.geometry import prepare_projected_geometry
-from runmap.routing.integer_graph import extend_integer_graph
-from runmap.routing.search import GraphData, shortest_distances
+from runmap.routing.integer_graph import IntegerGraph, extend_integer_graph
+from runmap.routing.search import GraphData, NodeDistances, indexed_shortest_distances
 
 
 VIRTUAL_START = "@snapped-start"
@@ -32,7 +31,7 @@ class Snap:
 class DistanceData:
     snap: Snap
     maximum_m: float
-    outward: Mapping[str, float]
+    outward: NodeDistances
 
 
 @dataclass
@@ -106,7 +105,7 @@ def snap_candidates(data, index, longitude, latitude, radius_m=50, preferred_seg
     return selected, alternatives
 
 
-def split_start_graph(index, snap):
+def split_start_graph(index: GraphData, snap: Snap) -> tuple[GraphData, str]:
     """Overlay temporary directed partial arcs; never modify prepared graph dictionaries."""
     segment = index.segments[snap.segment_id]
     a, b, length = segment["from"], segment["to"], segment["length_m"]
@@ -145,8 +144,9 @@ def legal_directions(index: GraphData, segment_id: str) -> frozenset[bool]:
 
 def distance_data(index: GraphData, snap: Snap, maximum_m: float, deadline: float | None = None) -> DistanceData:
     graph, start = split_start_graph(index, snap)
+    assert graph.integer is not None
     return DistanceData(snap, maximum_m,
-                        shortest_distances(graph, start, maximum_m, deadline=deadline))
+                        indexed_shortest_distances(graph, graph.integer.node_indices[start], maximum_m, deadline=deadline))
 
 
 def cached_distances(cache: ExplorationCache, dataset_id: str, index: GraphData, snap: Snap,
@@ -185,7 +185,14 @@ def cached_distances(cache: ExplorationCache, dataset_id: str, index: GraphData,
             cache.pending.pop(pending_key, None)
 
 
-def _point_distance(index: GraphData, distances: Mapping[str, float],
+def _distance_index(index: GraphData, distances: DistanceData) -> IntegerGraph:
+    dense = index.integer
+    if dense is None or distances.outward.node_ids is not dense.node_ids:
+        raise ValueError("Distances belong to a different prepared integer graph")
+    return dense
+
+
+def _point_distance(index: GraphData, dense: IntegerGraph, distances: NodeDistances,
                     snap: Snap, segment_id: str, offset: float) -> float:
     segment = index.segments[segment_id]
     length = segment["length_m"]
@@ -206,12 +213,14 @@ def _point_distance(index: GraphData, distances: Mapping[str, float],
             if node == VIRTUAL_START:
                 base = 0.0
             else:
-                base = distances.get(node, math.inf)
+                base = float(distances.values[dense.node_indices[node]])
             choices.append(base + abs(delta))
     return min(choices, default=math.inf)
 
 
-def interval_inclusion(index, distances, segment_id, start_m, end_m, budget_m):
+def interval_inclusion(index: GraphData, distances: DistanceData, segment_id: str,
+                        start_m: float, end_m: float, budget_m: float) -> dict[str, object]:
+    dense = _distance_index(index, distances)
     reason = segment_reason(index, segment_id)
     if reason:
         return {"inclusion_state": "excluded", "inclusion_reason": reason,
@@ -219,7 +228,7 @@ def interval_inclusion(index, distances, segment_id, start_m, end_m, budget_m):
     results = []
     for forward in sorted(legal_directions(index, segment_id), reverse=True):
         a, b = (start_m, end_m) if forward else (end_m, start_m)
-        outward = _point_distance(index, distances.outward, distances.snap, segment_id, a)
+        outward = _point_distance(index, dense, distances.outward, distances.snap, segment_id, a)
         # A point minimum beyond the search radius is not numerically resolved:
         # an unvisited anchor could improve it while still exceeding the budget.
         if outward > distances.maximum_m:
@@ -236,9 +245,10 @@ def interval_inclusion(index, distances, segment_id, start_m, end_m, budget_m):
             "directions": results}
 
 
-def distance_from_start(index, distances, segment_id, offset_m):
+def distance_from_start(index: GraphData, distances: DistanceData, segment_id: str, offset_m: float) -> float | None:
     """Shortest legal outward distance to a point, within the cached search bound."""
+    dense = _distance_index(index, distances)
     if segment_reason(index, segment_id):
         return None
-    value = _point_distance(index, distances.outward, distances.snap, segment_id, offset_m)
+    value = _point_distance(index, dense, distances.outward, distances.snap, segment_id, offset_m)
     return value if math.isfinite(value) and value <= distances.maximum_m else None

@@ -1,6 +1,7 @@
 """Shortest-path primitives and diverse outbound/return path pairs."""
 
 from collections import Counter, defaultdict
+from array import array
 from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from dataclasses import dataclass, field, replace
 import heapq
@@ -152,6 +153,32 @@ class PathResult:
     arc_ids: tuple[str, ...]
     cost: float
     expanded_nodes: int = field(default=0, compare=False)
+
+
+@dataclass(frozen=True)
+class NodeDistances:
+    """Immutable float64 node values and int64 discovery order, bound to shared IDs."""
+
+    node_ids: tuple[str, ...]
+    extra_node_ids: tuple[str, ...]
+    values: memoryview
+    reached: memoryview
+
+
+def freeze_node_distances(index: IntegerGraph, values: array, reached: array) -> NodeDistances:
+    """Seal numeric search buffers before sharing them between caches and snapshots."""
+    if (values.typecode != "d" or reached.typecode != "q" or values.itemsize != 8 or reached.itemsize != 8
+            or len(values) != len(index.node_ids) + len(index.extra_node_ids)):
+        raise ValueError("Distance buffers must match the graph and use float64/int64 elements")
+    return NodeDistances(index.node_ids, index.extra_node_ids,
+                          memoryview(values.tobytes()).cast("d"), memoryview(reached.tobytes()).cast("q"))
+
+
+def external_node_distances(distances: NodeDistances) -> dict[str, float]:
+    """Translate only reached nodes for legacy callers requiring external IDs."""
+    count = len(distances.node_ids)
+    return {(distances.node_ids[node] if node < count else distances.extra_node_ids[node - count]):
+            float(distances.values[node]) for node in distances.reached}
 
 
 @dataclass(frozen=True)
@@ -362,35 +389,65 @@ def shortest_distances(
     blocked_segments: Set[str] = frozenset(), reverse: bool = False,
     deadline: float | None = None,
 ) -> dict[str, float]:
-    """Calculate distances from a start in the directed graph or its reverse."""
+    """Adapt external IDs around the shared integer distance search."""
     if start not in index.nodes:
         raise ValueError("Route start is not in the graph")
-    if start in index.blocked_nodes:
-        return {}
-    distances = {start: 0.0}
-    queue = [(0.0, start)]
+    dense = index.integer
+    if dense is None:
+        raise ValueError("Graph has no prepared integer index")
+    blocked = {dense.segment_indices[s] for s in blocked_segments if s in dense.segment_indices}
+    result = indexed_shortest_distances(index, dense.node_indices[start], maximum, blocked, reverse, deadline)
+    return external_node_distances(result)
+
+
+def indexed_shortest_distances(
+    index: GraphData, start: int, maximum: float = math.inf,
+    blocked_segments: Set[int] = frozenset(), reverse: bool = False,
+    deadline: float | None = None,
+) -> NodeDistances:
+    """Traverse prepared integer adjacency and retain immutable float64 distances."""
+    dense = index.integer
+    if dense is None:
+        raise ValueError("Graph has no prepared integer index")
+    count = len(dense.node_ids) + len(dense.extra_node_ids)
+    if not 0 <= start < count:
+        raise ValueError("Route start is not in the graph")
+    check_time = monotonic
+    if deadline is not None and check_time() > deadline:
+        raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
+    distances = array("d", [math.inf]) * count
+    reached = array("q")
+    start_id = integer_node_id(dense, start)
+    if start_id in index.blocked_nodes:
+        return freeze_node_distances(dense, distances, reached)
+    distances[start] = 0.0
+    reached.append(start)
+    queue = [(0.0, start_id, start)]
+    adjacency = dense.incoming if reverse else dense.outgoing
+    overrides = dense.incoming_overrides if reverse else dense.outgoing_overrides
     while queue:
-        if deadline is not None and monotonic() > deadline:
+        if deadline is not None and check_time() > deadline:
             raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
-        distance, node_id = heapq.heappop(queue)
-        if distance != distances.get(node_id):
+        distance, _, node = heapq.heappop(queue)
+        if distance != distances[node]:
             continue
         if distance > maximum:
             continue
-        arc_ids = (
-            index.incoming.get(node_id, ()) if reverse
-            else index.outgoing.get(node_id, ())
-        )
-        for arc_id in arc_ids:
-            arc = index.arcs[arc_id]
-            if arc["segment_id"] in blocked_segments:
+        arcs = overrides.get(node)
+        if arcs is None:
+            arcs = adjacency[node]
+        for arc in arcs:
+            if arc.segment in blocked_segments:
                 continue
-            neighbour = arc["from"] if reverse else arc["to"]
-            candidate = distance + float(arc["length_m"])
-            if candidate <= maximum and candidate < distances.get(neighbour, math.inf):
+            neighbour = arc.source if reverse else arc.target
+            candidate = distance + arc.length_m
+            previous = distances[neighbour]
+            if candidate <= maximum and candidate < previous:
+                if math.isinf(previous):
+                    reached.append(neighbour)
                 distances[neighbour] = candidate
-                heapq.heappush(queue, (candidate, neighbour))
-    return distances
+                heapq.heappush(queue, (candidate, integer_node_id(dense, neighbour), neighbour))
+    return freeze_node_distances(dense, distances, reached)
 
 
 def diverse_path_pair(

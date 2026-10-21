@@ -79,3 +79,34 @@ def shortest_path_string(
     if destination not in distances:
         return None
     return PathResult(_path_arc_ids(index, predecessors, start, destination), distances[destination], expanded)
+
+
+def shortest_distances_string(
+    index: GraphData, start: str, maximum: float = math.inf,
+    blocked_segments: Set[str] = frozenset(), reverse: bool = False,
+    deadline: float | None = None,
+) -> dict[str, float]:
+    """Keep the former bounded search as an independent migration reference."""
+    if start not in index.nodes:
+        raise ValueError("Route start is not in the graph")
+    if start in index.blocked_nodes:
+        return {}
+    distances = {start: 0.0}
+    queue = [(0.0, start)]
+    while queue:
+        if deadline is not None and monotonic() > deadline:
+            raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
+        distance, node = heapq.heappop(queue)
+        if distance != distances.get(node) or distance > maximum:
+            continue
+        adjacency = index.incoming if reverse else index.outgoing
+        for arc_id in adjacency.get(node, ()):
+            arc = index.arcs[arc_id]
+            if arc["segment_id"] in blocked_segments:
+                continue
+            neighbour = arc["from"] if reverse else arc["to"]
+            candidate = distance + float(arc["length_m"])
+            if candidate <= maximum and candidate < distances.get(neighbour, math.inf):
+                distances[neighbour] = candidate
+                heapq.heappush(queue, (candidate, neighbour))
+    return distances
