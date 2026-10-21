@@ -93,6 +93,7 @@ fn integrate_segment(
         ));
     }
     let count = samples as usize;
+    let sample_length = distance / count as f64;
     let mut radial = 0.0;
     let mut right = 0.0;
     for sample in 0..count {
@@ -102,14 +103,22 @@ fn integrate_segment(
         let fraction = (sample as f64 + 0.5) / count as f64;
         let x = first.0 + fraction * (second.0 - first.0);
         let y = first.1 + fraction * (second.1 - first.1);
-        let signed = (frame.direction.0 * (y - frame.home.1)
-            - frame.direction.1 * (x - frame.home.0))
-            / frame.separation;
-        let squared_distance = (x - frame.centre.0).powi(2) + (y - frame.centre.1).powi(2);
-        radial += (-squared_distance / frame.radius_denominator).exp() * distance / count as f64;
-        right += (1.0 - (signed / frame.transition_width).tanh()) / 2.0 * distance / count as f64;
+        radial += radial_penalty(&x, &y, frame) * sample_length;
+        right += side_penalty(&x, &y, frame) * sample_length;
     }
     Ok((radial, right, distance))
+}
+
+fn side_penalty(x: &f64, y: &f64, frame: &FieldFrame) -> f64 {
+    let signed = (frame.direction.0 * (y - frame.home.1)
+            - frame.direction.1 * (x - frame.home.0))
+            / frame.separation;
+    (1.0 - (signed / frame.transition_width).tanh()) / 2.0
+}
+
+fn radial_penalty(x: &f64, y: &f64, frame: &FieldFrame) -> f64 {
+    let squared_distance = (x - frame.centre.0).powi(2) + (y - frame.centre.1).powi(2);
+    (-squared_distance / frame.radius_denominator).exp() 
 }
 
 /// Preserve midpoint integration while keeping the sample loop outside Python.
