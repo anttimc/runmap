@@ -208,10 +208,11 @@ def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) 
     for segment in graph["segments"]:
         degree[segment["from"]] += 1
         degree[segment["to"]] += 1
+    integer = prepare_integer_graph(nodes, segments, arcs, {}, {})
     index = GraphData(graph, nodes, segments, arcs, {}, {}, degree,
                       {node_id for node_id, node in nodes.items() if pedestrian_access_reason(node, profile)},
                       _boundary_blocked_segments(graph), {}, profile,
-                      prepare_projected_geometry(nodes, segments, arcs.values()))
+                      prepare_projected_geometry(nodes, segments, arcs.values(), integer), integer=integer)
     index.ineligible_segments.update(classify_segments(index, profile))
     return _prepare_traversals(index)
 
@@ -520,7 +521,7 @@ def route_coordinates(index: GraphData, arc_ids: Iterable[str]) -> list[Coordina
             geometry = reversed(geometry)
         for coordinate in geometry:
             if not coordinates or coordinate != coordinates[-1]:
-                coordinates.append(coordinate)
+                coordinates.append(list(coordinate))
     return coordinates
 
 

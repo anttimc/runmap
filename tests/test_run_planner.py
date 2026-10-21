@@ -77,19 +77,17 @@ class RunPlannerTests(unittest.TestCase):
         for graph in (self.index, overlay.graph):
             for segment_id, segment in graph.segments.items():
                 assert graph.integer is not None
-                self.assertEqual(graph.projected.segments[segment_id],
+                self.assertEqual(indexed_segment_points(graph.projected, graph.integer.segment_indices[segment_id]),
                                  tuple(projected_points(segment["geometry"])))
-                self.assertIs(indexed_segment_points(graph.projected, graph.integer.segment_indices[segment_id]),
-                              graph.projected.segments[segment_id])
             for node_id, node in graph.nodes.items():
-                self.assertEqual(graph.projected.nodes[node_id],
+                self.assertEqual(indexed_node_point(graph.projected, graph.integer.node_indices[node_id]),
                                  projected_points([[node["longitude"], node["latitude"]]])[0])
-                self.assertIs(indexed_node_point(graph.projected, graph.integer.node_indices[node_id]),
-                              graph.projected.nodes[node_id])
-        self.assertIs(overlay.graph.projected.segments["ab"], self.index.projected.segments["ab"])
         self.assertIs(overlay.graph.projected.node_points, self.index.projected.node_points)
-        self.assertIs(overlay.graph.projected.segment_points, self.index.projected.segment_points)
-        self.assertNotIn(overlay.home, self.index.projected.nodes)
+        self.assertIs(overlay.graph.projected.segments, self.index.projected.segments)
+        self.assertIs(overlay.graph.projected.wgs84, self.index.projected.wgs84)
+        self.assertIs(self.index.projected.node_ids, self.index.integer.node_ids)
+        self.assertIs(self.index.projected.segment_ids, self.index.integer.segment_ids)
+        self.assertNotIn(overlay.home, self.index.integer.node_indices)
 
     def test_cached_lower_bound_accounts_for_short_temporary_arcs(self) -> None:
         home = replace(self.snap("ab", .2), graph_offset_m=1)

@@ -38,6 +38,8 @@ The [indexed exploration report](history/37-indexed-exploration.md) records boun
 Dijkstra, shared immutable distance buffers, and unchanged tile output.
 The [packed measurement report](history/38-packed-measurements.md) records the
 following migration of retained samples and integer display references.
+The [packed geometry report](history/39-packed-geometry.md) records the following
+WGS84/projected coordinate migration and capital-area graph memory comparison.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

@@ -17,7 +17,8 @@ from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.costs import indexed_arc_cost, path_cost_breakdown, path_observations
 from runmap.routing.hill_types import HillData
 from runmap.routing.deadlines import check_deadline
-from runmap.routing.geometry import prepare_projected_geometry, projected_points, slice_geometry, indexed_node_point
+from runmap.routing.geometry import (prepare_projected_geometry, projected_points, slice_geometry,
+                                     indexed_node_point, indexed_segment_points)
 from runmap.routing.integer_graph import extend_integer_graph, integer_arc, integer_segment_id
 from runmap.routing.run_types import (
     PhysicalPart, RunCandidate, RunOverlay, RunResult, RunSettings,
@@ -44,7 +45,7 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
         if segment_reason(index, segment_id):
             raise ValueError("Run endpoint is on an ineligible segment")
         segment = index.segments[segment_id]
-        geometry = index.projected.segments[segment_id]
+        geometry = indexed_segment_points(index.projected, base.segment_indices[segment_id])
         total = sum(math.dist(a, b) for a, b in zip(geometry, geometry[1:]))
         length = segment["length_m"]
         cuts = [(0.0, 0.0, segment["from"]), (length, total, segment["to"])]
@@ -88,15 +89,16 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
         outgoing[arc["from"]].append(arc["id"])
         incoming[arc["to"]].append(arc["id"])
     all_segments = ChainMap(segments, index.segments)
+    integer = extend_integer_graph(index.integer, nodes, segments, arcs, outgoing, incoming,
+                                   segment_records=all_segments)
     graph = replace(index, nodes=ChainMap(nodes, index.nodes), segments=all_segments,
                     arcs=ChainMap(arcs, index.arcs), outgoing=ChainMap(outgoing, index.outgoing),
                     incoming=ChainMap(incoming, index.incoming), direction_cache=ChainMap({
                         part_id: index.direction_cache[integer_segment_id(base, part.segment)]
                         for part_id, part in parts.items()
                     }, index.direction_cache),
-                    projected=prepare_projected_geometry(nodes, segments, arcs.values(), index.projected),
-                    integer=extend_integer_graph(index.integer, nodes, segments, arcs, outgoing, incoming,
-                                                  segment_records=all_segments))
+                    projected=prepare_projected_geometry(nodes, segments, arcs.values(), integer, index.projected),
+                    integer=integer)
     if endpoints["home"] == endpoints["turnaround"]:
         raise ValueError("Home and turnaround must snap to distinct points")
     assert graph.integer is not None
@@ -107,11 +109,15 @@ def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
 def distance_heuristic(graph: GraphData, deadline: float | None) -> Callable[[str, str], float]:
     """Reuse the prepared lower bound, including any temporary endpoint arcs."""
     check_deadline(deadline)
-    coordinates = graph.projected.nodes
+    integer = graph.integer
+    if integer is None:
+        raise ValueError("Graph has no prepared integer index")
+    geometry = graph.projected
     scale = graph.projected.distance_scale * (1 - 1e-12)
 
     def estimate(node: str, destination: str) -> float:
-        return scale * math.dist(coordinates[node], coordinates[destination])
+        return scale * math.dist(indexed_node_point(geometry, integer.node_indices[node]),
+                                 indexed_node_point(geometry, integer.node_indices[destination]))
 
     return estimate
 

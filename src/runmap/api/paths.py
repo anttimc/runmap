@@ -1,6 +1,7 @@
 """File-backed path exploration; requests never import OSM or sample terrain."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field, replace
 import json
 import math
@@ -15,7 +16,7 @@ from runmap.paths.display import DisplayInterval, display_feature
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                                    Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile, forbidden_reason, pedestrian_access_reason
-from runmap.routing.types import EdgeProfile, MeasurementLocation
+from runmap.routing.types import Bounds, Coordinate, EdgeProfile, MeasurementLocation
 from runmap.routing.search import GraphData, build_graph_index, apply_profile
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import build_hill_data
@@ -48,9 +49,17 @@ class PathData:
     hills: HillData | None = None
 
 
-def _bounds(coordinates):
-    xs, ys = zip(*coordinates)
-    return min(xs), min(ys), max(xs), max(ys)
+def _bounds(coordinates: Iterable[Coordinate]) -> Bounds:
+    points = iter(coordinates)
+    try:
+        west, south = next(points)
+    except StopIteration:
+        raise ValueError("Geometry has no coordinates") from None
+    east, north = west, south
+    for x, y in points:
+        west, south = min(west, x), min(south, y)
+        east, north = max(east, x), max(north, y)
+    return west, south, east, north
 
 
 def _cells(bounds):
@@ -108,7 +117,7 @@ def _coverage(graph):
                              [west, east, east, west, west], [south, south, north, north, south])
         ring = [list(point) for point in zip(lon, lat)]
         return {"type": "Polygon", "coordinates": [ring]}, "prepared_extract"
-    bounds = _bounds([point for segment in graph["segments"] for point in segment["geometry"]])
+    bounds = _bounds(point for segment in graph["segments"] for point in segment["geometry"])
     west, south, east, north = bounds
     return {"type": "Polygon", "coordinates": [[
         [west, south], [east, south], [east, north], [west, north], [west, south],
@@ -277,7 +286,8 @@ def inspect_path(data, segment_id, reverse=False, surface="all", avoid_stairs=Tr
     reason = segment_reason(policy_index, segment_id)
     directions = legal_directions(policy_index, segment_id) if reason is None else set()
     classification = data.building_access.get(segment_id)
-    return {**result, "dataset_id": data.dataset_id, "segment": data.segments[segment_id],
+    segment = data.segments[segment_id]
+    return {**result, "dataset_id": data.dataset_id, "segment": {**segment, "geometry": list(segment["geometry"])},
             "visibility_reason": classification.reason if classification else None,
             "hidden_by_building_access": hide_building_access and classification is not None,
             "building_access": asdict(classification) if classification else None,

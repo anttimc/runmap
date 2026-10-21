@@ -163,7 +163,7 @@ class HillTests(unittest.TestCase):
                                                for key, row in index.outgoing_overrides.items()})
 
         graph = replace(overlay.graph, arcs={}, segments={}, integer=without_records(overlay.graph.integer),
-                        projected=replace(overlay.graph.projected, nodes={}, segments={}))
+                        projected=overlay.graph.projected)
         for width in (0.0, .18):
             for level in ("off", "low", "high"):
                 settings = RunSettings(avoidance_ratio=width)

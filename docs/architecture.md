@@ -36,6 +36,7 @@ and hosted storage are [future work](roadmap.md).
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
 | `routing/integer_graph.py` | Prepared dense node/segment/arc indices and shared sparse endpoint overlays |
+| `routing/coordinates.py`, `routing/geometry.py` | Packed WGS84/projected coordinates, read-only segment views, and sparse overlay geometry |
 | `routing/cost_*`, `routing/costs.py`, `routing/hills.py`, `routing/fields.py` | Explicit request/leg data, settings, features, integration, and cost composition |
 | `rust/src/fields.rs`, `rust/src/bindings.rs` | Scalar integration kernel and its PyO3 adapter, built as `runmap._routing_native` |
 | `routing/baseline.py`, `experiments/` | CLI anchor baseline and standalone measurements/experiments |
@@ -236,7 +237,19 @@ object overhead and snapshot copies when many nodes are reached. Snapshot cache
 limits apply to the full payload. The [exploration report](archive/history/37-indexed-exploration.md)
 records the latency/storage tradeoff and tile equivalence.
 
-Raw graph/projected geometry maps and object-based display indexes remain due for
+Graph coordinates are packed once at base-index construction. WGS84 segment
+vertices and projected segment vertices use float64 pair buffers and shared int64
+segment offsets; projected nodes use a separate float64 pair buffer. Prepared
+node/segment ID tuples share the integer graph's ordering. No projected string maps
+or retained per-point Python tuples remain. `PackedLine` is a small read-only
+sequence view on a segment's WGS84 buffer, preserving existing geometry consumers
+without retaining coordinate lists. Optional integer-coordinate masks preserve
+published JSON number spelling and graph checksums. Inspection/export materialize
+geometry at their serialization boundaries. Endpoint overlays retain sparse added
+points while sharing all base buffers. Node metadata still retains its WGS84
+longitude/latitude scalars; measurements retain their independently sampled vertices.
+
+Raw node/segment/arc metadata and object-based display indexes remain due for
 the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
 These storage/callback changes do not alter the cost model or integration kernel. The
 [packed-hill report](archive/history/35-packed-hill-storage.md) records equivalence
@@ -245,6 +258,8 @@ records the following callback/cache migration. Persistence and startup
 improvements remain separate.
 The [measurement storage report](archive/history/38-packed-measurements.md)
 records the retained-memory reduction and output equivalence for packed samples.
+The [geometry storage report](archive/history/39-packed-geometry.md) records the
+following WGS84/projected packing and standalone capital-area memory measurements.
 
 The synchronous API permits two concurrent planners and applies a cooperative
 deadline across preparation/search. Browser cancellation prevents stale result

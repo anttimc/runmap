@@ -1,6 +1,7 @@
 """Shared routing schemas preserve the prepared graph's JSON representation."""
 
 from typing import NotRequired, TypedDict
+from collections.abc import Sequence
 
 
 Coordinate = list[float] | tuple[float, float]
@@ -28,7 +29,7 @@ class StartSnap(Node):
 
 Segment = TypedDict("Segment", {
     "id": str, "osm_way_id": str, "from": str, "to": str,
-    "length_m": float, "geometry": list[Coordinate], "tags": Tags,
+    "length_m": float, "geometry": Sequence[Coordinate], "tags": Tags,
     "forward": NotRequired[bool], "backward": NotRequired[bool],
     "ascent_m": NotRequired[float], "descent_m": NotRequired[float],
     "terrain_valid_fraction": NotRequired[float],

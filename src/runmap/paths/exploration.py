@@ -133,11 +133,12 @@ def split_start_graph(index: GraphData, snap: Snap) -> tuple[GraphData, str]:
         outgoing[first].append(arc_id)
         incoming[second].append(arc_id)
     nodes = {VIRTUAL_START: {"id": VIRTUAL_START, "longitude": snap.longitude, "latitude": snap.latitude}}
+    integer = extend_integer_graph(index.integer, nodes, {}, arcs, outgoing, incoming,
+                                    segment_records=index.segments)
     return replace(index, nodes=ChainMap(nodes, index.nodes), arcs=ChainMap(arcs, index.arcs),
                    outgoing=ChainMap(outgoing, index.outgoing), incoming=ChainMap(incoming, index.incoming),
-                   projected=prepare_projected_geometry(nodes, {}, arcs.values(), index.projected),
-                   integer=extend_integer_graph(index.integer, nodes, {}, arcs, outgoing, incoming,
-                                                 segment_records=index.segments)), VIRTUAL_START
+                   projected=prepare_projected_geometry(nodes, {}, arcs.values(), integer, index.projected),
+                   integer=integer), VIRTUAL_START
 
 
 def legal_directions(index: GraphData, segment_id: str) -> frozenset[bool]:

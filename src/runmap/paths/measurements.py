@@ -10,6 +10,7 @@ from rasterio.warp import transform
 import numpy as np
 from numpy.typing import NDArray
 from runmap.routing.integer_graph import IntegerGraph
+from runmap.routing.coordinates import coordinate_json
 from runmap.routing.types import Coordinate, GraphDocument, Measurement, MeasurementDocument, TerrainMetadata
 
 
@@ -18,7 +19,7 @@ def graph_digest(graph: GraphDocument) -> str:
     document = {key: value for key, value in graph.items()
                 if key not in {"_measurements", "measurements"}}
     return hashlib.sha256(json.dumps(
-        document, sort_keys=True, separators=(",", ":"), allow_nan=False
+        document, sort_keys=True, separators=(",", ":"), allow_nan=False, default=coordinate_json
     ).encode()).hexdigest()
 
 

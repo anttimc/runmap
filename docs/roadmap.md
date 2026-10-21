@@ -49,13 +49,19 @@ The current integer search/cost pipeline and packed hill storage are described i
 [architecture](architecture.md). Measurement samples now also use packed arrays
 in the shared segment order, and display references use integer IDs; the
 [storage report](archive/history/38-packed-measurements.md) records equivalence
-and the retained-memory change. Continue incrementally, removing each replaced
-representation:
+and the retained-memory change.
 
-1. Move remaining graph/projected geometry maps, per-interval display metadata,
-   and spatial cell lists onto shared IDs and compact arrays. Interval coordinates
-   are currently packed losslessly; evaluate shared segment geometry without
-   changing their sampled positions or tile seams. Share topology across policies; compare an
+Graph WGS84/projected geometry is also packed in shared segment/node order, with
+read-only segment views and sparse endpoint overlays; the
+[geometry report](archive/history/39-packed-geometry.md) records the memory change.
+Continue incrementally, removing each replaced representation:
+
+1. Move remaining node/segment/arc metadata, per-interval display metadata,
+   and spatial cell lists onto shared IDs and compact arrays. Remove raw arc
+   dictionaries and redundant string adjacency as numeric consumers migrate.
+   Measurement interval coordinates are packed independently; evaluate sharing
+   segment geometry without changing sampled positions or tile seams.
+   Share topology across policies; compare an
    allowed-arc mask with compact filtered adjacency before choosing the search
    representation. Acceptance: remove redundant string adjacency/data copies,
    preserve tile/inspection semantics, and measure memory plus bounded-search time.

@@ -1,74 +1,101 @@
-"""Projected geometry shared by endpoint splitting and cost preparation."""
+"""Packed projected geometry shared by policies and sparse endpoint overlays."""
 
 import math
-from collections import ChainMap
-from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, replace
 
+import numpy as np
 from rasterio.warp import transform
 
+from runmap.routing.coordinates import PackedLines, pack_segment_coordinates
 from runmap.routing.fields import Point
+from runmap.routing.integer_graph import IntegerGraph
 from runmap.routing.types import Arc, Coordinate, Node, Segment
 
 
 @dataclass(frozen=True)
 class ProjectedGeometry:
-    nodes: Mapping[str, Point]
-    segments: Mapping[str, tuple[Point, ...]]
+    node_ids: tuple[str, ...]
+    segment_ids: tuple[str, ...]
+    node_points: memoryview
+    segments: PackedLines
+    wgs84: PackedLines
     distance_scale: float
-    node_points: tuple[Point, ...]
-    segment_points: tuple[tuple[Point, ...], ...]
     extra_node_points: tuple[Point, ...] = ()
     extra_segment_points: tuple[tuple[Point, ...], ...] = ()
 
 
 def prepare_projected_geometry(nodes: Mapping[str, Node], segments: Mapping[str, Segment],
-                               arcs: Iterable[Arc],
+                               arcs: Iterable[Arc], index: IntegerGraph,
                                base: ProjectedGeometry | None = None) -> ProjectedGeometry:
-    """Batch graph projection once; overlays add only their new geometry."""
-    coordinates: list[Coordinate] = [[node["longitude"], node["latitude"]] for node in nodes.values()]
-    coordinates.extend(point for segment in segments.values() for point in segment["geometry"])
-    points = projected_points(coordinates) if coordinates else []
-    node_points = dict(zip(nodes, points[:len(nodes)]))
-    segment_points: dict[str, tuple[Point, ...]] = {}
-    offset = len(nodes)
-    for segment_id, segment in segments.items():
-        end = offset + len(segment["geometry"])
-        segment_points[segment_id] = tuple(points[offset:end])
-        offset = end
-    all_nodes = ChainMap(node_points, base.nodes) if base else node_points
-    all_segments = ChainMap(segment_points, base.segments) if base else segment_points
-    scale = base.distance_scale if base else 1.0
+    """Pack the base once; overlays project only their added coordinates."""
+    if base is not None:
+        return _overlay_geometry(nodes, segments, arcs, index, base)
+    if tuple(nodes) != index.node_ids or tuple(segments) != index.segment_ids:
+        raise ValueError("Geometry must use the base integer graph ordering")
+    wgs84 = pack_segment_coordinates(segments)
+    coordinates = np.empty((len(nodes) + len(wgs84.points), 2), dtype=np.float64)
+    if nodes:
+        coordinates[:len(nodes)] = [(node["longitude"], node["latitude"]) for node in nodes.values()]
+    coordinates[len(nodes):] = wgs84.points
+    x, y = transform("EPSG:4326", "EPSG:3067", coordinates[:, 0], coordinates[:, 1]) if len(coordinates) else ([], [])
+    points = np.column_stack((x, y))
+    node_points, segment_points = points[:len(nodes)].copy(), points[len(nodes):].copy()
+    node_points.flags.writeable = segment_points.flags.writeable = False
+    projected = PackedLines(memoryview(segment_points), wgs84.offsets)
+    data = ProjectedGeometry(index.node_ids, index.segment_ids, memoryview(node_points), projected, wgs84, 1.0)
+    return _with_distance_scale(data, arcs, index)
+
+
+def _overlay_geometry(nodes: Mapping[str, Node], segments: Mapping[str, Segment],
+                      arcs: Iterable[Arc], index: IntegerGraph, base: ProjectedGeometry) -> ProjectedGeometry:
+    if index.node_ids is not base.node_ids or index.segment_ids is not base.segment_ids:
+        raise ValueError("Overlay geometry must share the base integer graph ordering")
+    expected_nodes = index.extra_node_ids[len(base.extra_node_points):]
+    expected_segments = index.extra_segment_ids[len(base.extra_segment_points):]
+    if tuple(nodes) != expected_nodes or tuple(segments) != expected_segments:
+        raise ValueError("Overlay geometry must append the integer graph additions")
+    node_points = projected_points([(node["longitude"], node["latitude"]) for node in nodes.values()]) if nodes else []
+    segment_points = tuple(tuple(projected_points(segment["geometry"])) for segment in segments.values())
+    data = ProjectedGeometry(base.node_ids, base.segment_ids, base.node_points, base.segments, base.wgs84,
+                             base.distance_scale, base.extra_node_points + tuple(node_points),
+                             base.extra_segment_points + segment_points)
+    return _with_distance_scale(data, arcs, index)
+
+
+def _with_distance_scale(data: ProjectedGeometry, arcs: Iterable[Arc], index: IntegerGraph) -> ProjectedGeometry:
+    scale = data.distance_scale
     for arc in arcs:
-        distance = math.dist(all_nodes[arc["from"]], all_nodes[arc["to"]])
+        distance = math.dist(indexed_node_point(data, index.node_indices[arc["from"]]),
+                             indexed_node_point(data, index.node_indices[arc["to"]]))
         if distance:
             scale = min(scale, arc["length_m"] / distance)
-    if base is not None:
-        return ProjectedGeometry(all_nodes, all_segments, scale, base.node_points, base.segment_points,
-                                  base.extra_node_points + tuple(node_points.values()),
-                                  base.extra_segment_points + tuple(segment_points.values()))
-    return ProjectedGeometry(all_nodes, all_segments, scale,
-                              tuple(node_points.values()), tuple(segment_points.values()))
+    return replace(data, distance_scale=scale)
 
 
 def indexed_node_point(geometry: ProjectedGeometry, node: int) -> Point:
+    if node < 0:
+        raise IndexError("Geometry node index out of range")
     if node < len(geometry.node_points):
-        return geometry.node_points[node]
+        return geometry.node_points[node, 0], geometry.node_points[node, 1]
     return geometry.extra_node_points[node - len(geometry.node_points)]
 
 
 def indexed_segment_points(geometry: ProjectedGeometry, segment: int) -> tuple[Point, ...]:
-    if segment < len(geometry.segment_points):
-        return geometry.segment_points[segment]
-    return geometry.extra_segment_points[segment - len(geometry.segment_points)]
+    if segment < 0:
+        raise IndexError("Geometry segment index out of range")
+    if segment < len(geometry.segment_ids):
+        points, offsets = geometry.segments.points, geometry.segments.offsets
+        return tuple((points[i, 0], points[i, 1]) for i in range(offsets[segment], offsets[segment + 1]))
+    return geometry.extra_segment_points[segment - len(geometry.segment_ids)]
 
 
-def projected_points(geometry: list[Coordinate]) -> list[Point]:
+def projected_points(geometry: Sequence[Coordinate]) -> list[Point]:
     xs, ys = transform("EPSG:4326", "EPSG:3067", *zip(*geometry))
     return list(zip(xs, ys))
 
 
-def slice_geometry(geometry: list[Coordinate], start: float, end: float) -> list[Coordinate]:
+def slice_geometry(geometry: Sequence[Coordinate], start: float, end: float) -> list[Coordinate]:
     """Slice using projected chainage, retaining bends between the cut points."""
     points = projected_points(geometry)
     lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]

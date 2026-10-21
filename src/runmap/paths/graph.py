@@ -12,6 +12,7 @@ import math
 from pathlib import Path
 
 from runmap.paths.measurements import graph_digest
+from runmap.routing.coordinates import coordinate_json
 from runmap.routing.profiles import pedestrian_directions
 from runmap.routing.types import (
     Arc, Boundary, Coordinate, GraphDocument, GraphSource, GraphSummary, Node, Segment, Tags,
@@ -391,7 +392,7 @@ def graph_geojson(graph):
 
 
 def _json_payload(document):
-    return (json.dumps(document, indent=2, allow_nan=False) + "\n").encode("utf-8")
+    return (json.dumps(document, indent=2, allow_nan=False, default=coordinate_json) + "\n").encode("utf-8")
 
 
 def _publish_payload(path, payload):
