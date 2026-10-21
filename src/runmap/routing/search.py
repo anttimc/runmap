@@ -9,10 +9,14 @@ import math
 from time import monotonic
 from typing import TypeVar
 
+import numpy as np
+
+from runmap.routing.arc_storage import ArcLookup, ArcRecords
 from runmap.routing.types import Arc, Coordinate, EdgeProfile, GraphDocument, Node, RouteMetrics, Segment
 from runmap.routing.geometry import ProjectedGeometry, prepare_projected_geometry
-from runmap.routing.integer_graph import (IntegerArc, IntegerGraph, apply_integer_policy, integer_arc,
-                                         integer_node_id, integer_arc_id, prepare_integer_graph)
+from runmap.routing.integer_graph import (AdjacencyLookup, IntegerArc, IntegerGraph, apply_integer_policy,
+                                         external_arc, integer_arc, integer_arc_id, integer_node_id,
+                                         integer_segment_id, prepare_integer_graph)
 
 from runmap.routing.profiles import (
     arc_forward, classify_segments, exploration_profile, pedestrian_access_reason, pedestrian_directions,
@@ -208,47 +212,43 @@ def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) 
     for segment in graph["segments"]:
         degree[segment["from"]] += 1
         degree[segment["to"]] += 1
-    integer = prepare_integer_graph(nodes, segments, arcs, {}, {})
+    integer = prepare_integer_graph(nodes, segments, arcs)
     index = GraphData(graph, nodes, segments, arcs, {}, {}, degree,
                       {node_id for node_id, node in nodes.items() if pedestrian_access_reason(node, profile)},
                       _boundary_blocked_segments(graph), {}, profile,
                       prepare_projected_geometry(nodes, segments, arcs.values(), integer), integer=integer)
+    graph["arcs"] = ArcRecords(integer.arcs)
+    index = replace(index, arcs=ArcLookup(integer.arcs, integer.arc_indices))
     index.ineligible_segments.update(classify_segments(index, profile))
     return _prepare_traversals(index)
 
 
 def _prepare_traversals(index: GraphData) -> GraphData:
     """Resolve policy and direction tags before any search traverses the graph."""
-    allowed: dict[str, tuple[bool, bool]] = {}
-    for segment_id, segment in index.segments.items():
+    base = index.integer
+    if base is None or base.extra_arcs or base.extra_node_ids or base.arc_overrides:
+        raise ValueError("Policy preparation requires the base integer graph")
+    allowed = np.zeros((len(base.segment_ids), 2), dtype=np.bool_)
+    for number, segment_id in enumerate(base.segment_ids):
+        segment = index.segments[segment_id]
         if segment_id in index.ineligible_segments or segment_id in index.boundary_blocked_segments:
             continue
         forward, backward = pedestrian_directions(segment.get("tags", {}), index.profile)
-        allowed[segment_id] = (forward and segment.get("forward", True),
-                               backward and segment.get("backward", True))
-    outgoing: dict[str, list[str]] = defaultdict(list)
-    incoming: dict[str, list[str]] = defaultdict(list)
-    directions: dict[str, int] = {}
-    for arc in index.arcs.values():
-        segment_id = arc["segment_id"]
-        if (segment_id not in allowed or arc["from"] in index.blocked_nodes
-                or arc["to"] in index.blocked_nodes):
-            continue
-        forward = arc_forward(index.segments[segment_id], arc)
-        if not allowed[segment_id][0 if forward else 1]:
-            continue
-        outgoing[arc["from"]].append(arc["id"])
-        incoming[arc["to"]].append(arc["id"])
-        directions[segment_id] = directions.get(segment_id, 0) | (1 if forward else 2)
-    base = index.integer
-    if base is None or base.extra_arcs or base.extra_node_ids or base.arc_overrides:
-        integer = prepare_integer_graph(index.nodes, index.segments, index.arcs, outgoing, incoming)
-    else:
-        integer = apply_integer_policy(base, outgoing, incoming)
+        allowed[number] = (forward and segment.get("forward", True), backward and segment.get("backward", True))
+    sources, targets = np.asarray(base.arcs.sources), np.asarray(base.arcs.targets)
+    segments = np.asarray(base.arcs.segments)
+    reverse = np.asarray(base.arcs.reverse)
+    blocked = np.zeros(len(base.node_ids), dtype=np.bool_)
+    for node in index.blocked_nodes:
+        blocked[base.node_indices[node]] = True
+    enabled = (allowed[segments, reverse.astype(np.int8)]
+               & ~blocked[sources] & ~blocked[targets])
+    directions = np.zeros(len(base.segment_ids), dtype=np.uint8)
+    np.bitwise_or.at(directions, segments[enabled], np.where(reverse[enabled], 2, 1).astype(np.uint8))
+    integer = apply_integer_policy(base, enabled)
     direction_sets = (frozenset(), frozenset({True}), frozenset({False}), frozenset({True, False}))
-    return replace(index, outgoing=dict(outgoing), incoming=dict(incoming), direction_cache={
-        segment_id: direction_sets[directions.get(segment_id, 0)] for segment_id in index.segments
-    }, integer=integer)
+    return replace(index, integer=integer, outgoing=AdjacencyLookup(integer), incoming=AdjacencyLookup(integer, True),
+                   direction_cache={segment: direction_sets[directions[i]] for i, segment in enumerate(base.segment_ids)})
 
 
 def arc_usable(index: GraphData, arc: Arc, blocked_segments: Set[str] = frozenset()) -> bool:
@@ -317,6 +317,7 @@ def shortest_path(
         def estimate(node: int, target: int) -> float:
             return heuristic(integer_node_id(dense, node), integer_node_id(dense, target))
     blocked = {dense.segment_indices[s] for s in blocked_segments if s in dense.segment_indices}
+    overlap = {dense.segment_indices[s] for s in overlap_segments if s in dense.segment_indices}
     node_count = len(dense.node_ids) + len(dense.extra_node_ids)
     distances = [math.inf] * node_count
     distances[start_index] = 0.0
@@ -326,6 +327,8 @@ def shortest_path(
     # Keep external IDs only as heap tie keys to preserve existing equal-cost paths.
     queue = [(_remaining_cost(estimate, start_index, destination_index), 0.0, start, start_index)]
     expanded = 0
+    arc_count, enabled, arc_overrides = len(dense.arc_ids), dense.enabled, dense.arc_overrides
+    offsets, entries = dense.outgoing.offsets, dense.outgoing.arcs
     while queue:
         if deadline is not None and monotonic() >= deadline:
             raise TimeoutError("Route search exceeded its deadline")
@@ -337,16 +340,27 @@ def shortest_path(
         expanded += 1
         outgoing = dense.outgoing_overrides.get(node)
         if outgoing is None:
-            outgoing = dense.outgoing[node]
-        for prepared in outgoing:
+            outgoing = entries[offsets[node]:offsets[node + 1]]
+        for number in outgoing:
+            if number < arc_count and number not in arc_overrides and not enabled[number]:
+                continue
+            prepared = integer_arc(dense, number)
             if prepared.segment in blocked:
                 continue
             if indexed_arc_cost is not None:
                 cost = indexed_arc_cost(prepared)
             elif arc_cost is not None:
-                cost = arc_cost(prepared.record)
+                cost = arc_cost(external_arc(dense, number))
             else:
-                cost = _arc_cost(index, prepared.record, model, overlap_segments, overlap_factor)
+                cost = prepared.length_m
+                if model.stairs_multiplier != 1 and index.segments[integer_segment_id(dense, prepared.segment)]["tags"].get("highway") == "steps":
+                    cost *= model.stairs_multiplier
+                if model.ascent_cost_per_m:
+                    ascent = (dense.arcs.optional[number, 0] if number < arc_count and number not in arc_overrides
+                              else float(external_arc(dense, number).get("ascent_m", 0.0)))
+                    cost += ascent * model.ascent_cost_per_m
+                if prepared.segment in overlap:
+                    cost += prepared.length_m * (overlap_factor - 1.0)
             if not math.isfinite(cost) or cost < 0:
                 raise ValueError("Arc cost must be finite and non-negative")
             candidate = distance + cost
@@ -426,6 +440,11 @@ def indexed_shortest_distances(
     queue = [(0.0, start_id, start)]
     adjacency = dense.incoming if reverse else dense.outgoing
     overrides = dense.incoming_overrides if reverse else dense.outgoing_overrides
+    offsets, entries = adjacency.offsets, adjacency.arcs
+    arc_count, enabled = len(dense.arc_ids), dense.enabled
+    neighbours = dense.arcs.sources if reverse else dense.arcs.targets
+    segments, lengths = dense.arcs.segments, dense.arcs.lengths
+    arc_overrides = dense.arc_overrides
     while queue:
         if deadline is not None and check_time() > deadline:
             raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
@@ -436,12 +455,20 @@ def indexed_shortest_distances(
             continue
         arcs = overrides.get(node)
         if arcs is None:
-            arcs = adjacency[node]
-        for arc in arcs:
-            if arc.segment in blocked_segments:
-                continue
-            neighbour = arc.source if reverse else arc.target
-            candidate = distance + arc.length_m
+            arcs = entries[offsets[node]:offsets[node + 1]]
+        for number in arcs:
+            if number < arc_count and number not in arc_overrides:
+                if not enabled[number] or (blocked_segments and segments[number] in blocked_segments):
+                    continue
+                neighbour = neighbours[number]
+                length = lengths[number]
+            else:
+                arc = integer_arc(dense, number)
+                if arc.segment in blocked_segments:
+                    continue
+                neighbour = arc.source if reverse else arc.target
+                length = arc.length_m
+            candidate = distance + length
             previous = distances[neighbour]
             if candidate <= maximum and candidate < previous:
                 if math.isinf(previous):

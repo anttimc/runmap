@@ -40,6 +40,8 @@ The [packed measurement report](history/38-packed-measurements.md) records the
 following migration of retained samples and integer display references.
 The [packed geometry report](history/39-packed-geometry.md) records the following
 WGS84/projected coordinate migration and capital-area graph memory comparison.
+The [packed arc report](history/40-packed-arcs.md) records numeric arc/adjacency
+storage, shared policy masks, and the memory/search-time tradeoff.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

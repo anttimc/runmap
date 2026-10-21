@@ -54,16 +54,17 @@ and the retained-memory change.
 Graph WGS84/projected geometry is also packed in shared segment/node order, with
 read-only segment views and sparse endpoint overlays; the
 [geometry report](archive/history/39-packed-geometry.md) records the memory change.
+Arcs and outgoing/incoming adjacency are now packed too, with lazy external views
+and shared policy masks. The [arc report](archive/history/40-packed-arcs.md) records
+the filtered-adjacency comparison and retained-memory/search-time tradeoff.
 Continue incrementally, removing each replaced representation:
 
-1. Move remaining node/segment/arc metadata, per-interval display metadata,
-   and spatial cell lists onto shared IDs and compact arrays. Remove raw arc
-   dictionaries and redundant string adjacency as numeric consumers migrate.
+1. Move remaining node/segment metadata, per-interval display metadata,
+   and spatial cell lists onto shared IDs and compact arrays.
    Measurement interval coordinates are packed independently; evaluate sharing
    segment geometry without changing sampled positions or tile seams.
-   Share topology across policies; compare an
-   allowed-arc mask with compact filtered adjacency before choosing the search
-   representation. Acceptance: remove redundant string adjacency/data copies,
+   Keep policy topology shared; revisit filtered adjacency if representative
+   capital-area timings justify its additional storage. Acceptance: remove redundant data copies,
    preserve tile/inspection semantics, and measure memory plus bounded-search time.
 2. Persist the prepared arrays with format version, graph/measurement identities,
    feature-model version, and explicit index ordering. Reject mismatched artifacts.

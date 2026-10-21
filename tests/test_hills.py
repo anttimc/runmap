@@ -151,19 +151,8 @@ class HillTests(unittest.TestCase):
         overlay = endpoint_overlay(self.index, self.home, self.turnaround)
         assert overlay.graph.integer is not None
 
-        def without_records(index: IntegerGraph) -> IntegerGraph:
-            records = {arc.index: replace(arc, record={})
-                       for arc in (*index.arcs, *index.extra_arcs, *index.arc_overrides.values())}
-            return replace(index, arcs=tuple(records[a.index] for a in index.arcs),
-                           extra_arcs=tuple(records[a.index] for a in index.extra_arcs),
-                           arc_overrides={key: records[a.index] for key, a in index.arc_overrides.items()},
-                           outgoing=tuple(tuple(records[a.index] for a in row) for row in index.outgoing),
-                           incoming=tuple(tuple(records[a.index] for a in row) for row in index.incoming),
-                           outgoing_overrides={key: tuple(records[a.index] for a in row)
-                                               for key, row in index.outgoing_overrides.items()})
-
-        graph = replace(overlay.graph, arcs={}, segments={}, integer=without_records(overlay.graph.integer),
-                        projected=overlay.graph.projected)
+        graph = replace(overlay.graph, arcs={}, segments={},
+                        integer=replace(overlay.graph.integer, extra_records={}))
         for width in (0.0, .18):
             for level in ("off", "low", "high"):
                 settings = RunSettings(avoidance_ratio=width)

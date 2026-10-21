@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.search import GraphData, apply_profile, arc_usable
+from runmap.routing.search import GraphData, apply_profile
 from runmap.routing.types import Coordinate
 
 
@@ -31,7 +31,7 @@ class PeeledEdge:
 
 
 def _peel(index: GraphData) -> tuple[list[PeeledEdge], set[str]]:
-    legal = {arc["segment_id"] for arc in index.arcs.values() if arc_usable(index, arc)}
+    legal = {segment for segment, directions in index.direction_cache.items() if directions}
     incident: dict[str, set[str]] = defaultdict(set)
     degree: dict[str, int] = defaultdict(int)
     for segment_id in legal:

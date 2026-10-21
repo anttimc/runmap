@@ -9,7 +9,8 @@ from test_routing import graph_document
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import graph_digest
 from runmap.paths.exploration import Snap, split_start_graph
-from runmap.routing.coordinates import PackedLine, coordinate_json
+from runmap.routing.coordinates import PackedLine
+from runmap.routing.serialization import prepared_json
 from runmap.routing.geometry import (indexed_node_point, indexed_segment_points,
                                      prepare_projected_geometry, projected_points)
 from runmap.routing.search import apply_profile, build_graph_index, route_coordinates
@@ -30,7 +31,7 @@ class PackedGeometryTests(unittest.TestCase):
         line = graph["segments"][0]["geometry"]
         self.assertIsInstance(line, PackedLine)
         self.assertEqual(list(line), original["segments"][0]["geometry"])
-        self.assertEqual(json.dumps(graph, sort_keys=True, allow_nan=False, default=coordinate_json), encoded)
+        self.assertEqual(json.dumps(graph, sort_keys=True, allow_nan=False, default=prepared_json), encoded)
         self.assertEqual(graph_digest(graph), digest)
         for selection in (slice(None), slice(None, None, -1), slice(1, 3), slice(3, 0, -2)):
             self.assertEqual(line[selection], original["segments"][0]["geometry"][selection])

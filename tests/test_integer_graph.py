@@ -11,7 +11,7 @@ from test_routing import graph_document
 from runmap.experiments.search_reference import shortest_path_string, shortest_distances_string
 from runmap.paths.exploration import Snap, split_start_graph
 from runmap.routing.geometry import projected_points
-from runmap.routing.integer_graph import integer_arc
+from runmap.routing.integer_graph import integer_arc, external_arc
 from runmap.routing.profiles import exploration_profile, arc_forward
 from runmap.routing.run_planner import endpoint_overlay
 from runmap.routing.search import (CostModel, apply_profile, build_graph_index, shortest_path,
@@ -49,10 +49,12 @@ class IntegerGraphTests(unittest.TestCase):
                                (dense.segment_indices, len(document['segments'])),
                                (dense.arc_indices, len(document['arcs']))):
             self.assertEqual(sorted(indices.values()), list(range(count)))
-        for position, arc in enumerate(dense.arcs):
+        for position, source in enumerate(original['arcs']):
+            arc = integer_arc(dense, position)
             self.assertEqual(arc.index, position)
-            self.assertIs(arc.record, document['arcs'][position])
-            self.assertEqual(arc.reverse, not arc_forward(index.segments[arc.record['segment_id']], arc.record))
+            self.assertEqual(external_arc(dense, position), source)
+            self.assertFalse(hasattr(arc, 'record'))
+            self.assertEqual(arc.reverse, not arc_forward(index.segments[source['segment_id']], source))
 
     def test_indexed_callbacks_preserve_routes_and_reject_invalid_costs(self) -> None:
         index = build_graph_index(fixture())
@@ -103,7 +105,7 @@ class IntegerGraphTests(unittest.TestCase):
         self.assertEqual(sorted(dense.node_indices.values()), list(range(len(base.node_ids) + 2)))
         for arc_id in overlay.graph.arcs:
             prepared = integer_arc(dense, dense.arc_indices[arc_id])
-            self.assertEqual(prepared.record['id'], arc_id)
+            self.assertEqual(external_arc(dense, prepared.index)['id'], arc_id)
         self.assertEqual(shortest_path(overlay.graph, overlay.home, overlay.turnaround),
                          shortest_path_string(overlay.graph, overlay.home, overlay.turnaround))
 
@@ -177,11 +179,7 @@ class IntegerGraphTests(unittest.TestCase):
         index = build_graph_index(fixture())
         dense = index.integer
         assert dense is not None
-        records = tuple(replace(arc, record={}) for arc in dense.arcs)
-        stripped = replace(dense, arcs=records,
-                           outgoing=tuple(tuple(records[a.index] for a in row) for row in dense.outgoing),
-                           incoming=tuple(tuple(records[a.index] for a in row) for row in dense.incoming))
-        graph = replace(index, nodes={}, segments={}, arcs={}, outgoing={}, incoming={}, integer=stripped)
+        graph = replace(index, nodes={}, segments={}, arcs={}, outgoing={}, incoming={})
         for reverse in (False, True):
             actual = indexed_shortest_distances(graph, dense.node_indices['s'], reverse=reverse)
             self.assertEqual(external_node_distances(actual), shortest_distances_string(index, 's', reverse=reverse))

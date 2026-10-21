@@ -36,6 +36,7 @@ and hosted storage are [future work](roadmap.md).
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
 | `routing/integer_graph.py` | Prepared dense node/segment/arc indices and shared sparse endpoint overlays |
+| `routing/arc_storage.py`, `routing/serialization.py` | Packed arc columns, lazy external record views, and explicit JSON boundaries |
 | `routing/coordinates.py`, `routing/geometry.py` | Packed WGS84/projected coordinates, read-only segment views, and sparse overlay geometry |
 | `routing/cost_*`, `routing/costs.py`, `routing/hills.py`, `routing/fields.py` | Explicit request/leg data, settings, features, integration, and cost composition |
 | `rust/src/fields.rs`, `rust/src/bindings.rs` | Scalar integration kernel and its PyO3 adapter, built as `runmap._routing_native` |
@@ -139,7 +140,7 @@ Display intervals retain integer segment/local-interval references, surface clas
 and flat-run thresholds. Tiles read packed columns directly through native
 memoryviews; GeoJSON is assembled only for viewport responses. Static tiles evaluate policy eligibility
 for candidate segments without constructing a whole-network routing index.
-Routing and exploration prepare and cache policy adjacency when a search needs it.
+Routing and exploration prepare and cache policy eligibility when a search needs it.
 Start/policy/budget queries prepare process-local snapshots containing immutable
 bounded search results. Interval states, midpoint distances, and boundary flags
 are calculated only for the spatial candidates of requested buffered tiles.
@@ -180,14 +181,16 @@ binding keeps the interpreter lock during each short call. A*, cost composition,
 and request caches remain in Python; spatial batching and native graph ownership
 are [later decisions](roadmap.md#next-rust-integration-kernel-and-interactive-routing).
 
-Each policy index also prepares eligible outgoing and incoming adjacency and
-segment directions. Searches use these lists without reparsing pedestrian tags;
-request-specific segment blocks still apply during search. Endpoint splits inherit
-their physical segment's prepared directions. Applying a policy rebuilds adjacency
-from all arcs, so relaxing a policy restores connections. Rebuild the policy index
-after changing access or direction tags.
+Each policy index prepares an arc eligibility mask and segment directions.
+All policies share outgoing/incoming arc-index buffers and int64 node offsets;
+searches skip disabled arcs without reparsing pedestrian tags. Request-specific
+segment blocks still apply. Endpoint splits inherit their physical segment's
+prepared directions. Applying a policy recomputes its mask from the full topology,
+so relaxing a policy restores connections. Rebuild the policy index after changing
+access or direction tags. Existing blocked-node and classification metadata remain
+policy-local alongside the mask.
 
-A* uses prepared integer node, arc, and segment indices, direct adjacency records,
+A* uses prepared integer node, arc, and segment indices and packed adjacency,
 and per-search lists for distances and predecessors. Planner cost callbacks receive
 prepared integer arcs, including their physical direction; heuristic callbacks
 receive integer node IDs. They use aligned projected-coordinate references and
@@ -195,9 +198,20 @@ integer-keyed sparse request caches without looking up JSON records or string ID
 External results retain string IDs. Heap entries retain the original string node
 name as a tie key so equal-cost routes preserve their previous ordering. Integer
 IDs are local to a prepared graph, not serialized identifiers. Policy changes
-share the base integer topology and rebuild eligible adjacency. Endpoint overlays
+share the base integer topology and retain separate eligibility masks. Endpoint overlays
 append a few indices and override only affected rows, sharing the full base arrays
 without copying them per request. Rebuild the graph index after topology changes.
+
+Arc source/target/segment indices use read-only int64 columns; length and retained
+ascent/descent/terrain metadata use float64 columns. Direction and optional-field/
+integer-spelling flags preserve external records and canonical graph identity.
+No base arc dictionaries, persistent per-arc Python records, or string adjacency
+lists remain. `ArcRecords`, `ArcLookup`, and `AdjacencyLookup` are on-demand views
+for serialization and legacy consumers. Numeric search loops read buffers directly;
+indexed cost callbacks receive transient immutable `IntegerArc` named tuples.
+Endpoint overlays keep only their small extra records and row overrides. Canonical
+graph hashing batches arc materialization to avoid recreating the full dictionary
+tree. Full artifact export materializes views at its serialization boundary.
 Hill storage shares that integer graph's segment ordering and ID mapping. It
 retains read-only float64 arrays for directional segment totals, interval chainage,
 and directional interval features, with int64 offsets identifying each segment's
@@ -249,7 +263,7 @@ geometry at their serialization boundaries. Endpoint overlays retain sparse adde
 points while sharing all base buffers. Node metadata still retains its WGS84
 longitude/latitude scalars; measurements retain their independently sampled vertices.
 
-Raw node/segment/arc metadata and object-based display indexes remain due for
+Raw node/segment metadata and object-based display indexes remain due for
 the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
 These storage/callback changes do not alter the cost model or integration kernel. The
 [packed-hill report](archive/history/35-packed-hill-storage.md) records equivalence
@@ -260,6 +274,8 @@ The [measurement storage report](archive/history/38-packed-measurements.md)
 records the retained-memory reduction and output equivalence for packed samples.
 The [geometry storage report](archive/history/39-packed-geometry.md) records the
 following WGS84/projected packing and standalone capital-area memory measurements.
+The [arc storage report](archive/history/40-packed-arcs.md) records shared topology,
+policy mask selection, output equivalence, and the memory/search-time tradeoff.
 
 The synchronous API permits two concurrent planners and applies a cooperative
 deadline across preparation/search. Browser cancellation prevents stale result

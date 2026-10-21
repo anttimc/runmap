@@ -66,15 +66,15 @@ def measure_preparation(index: GraphData) -> dict[str, float | int]:
     elapsed: list[float] = []
     for _ in range(3):
         started = perf_counter()
-        prepared = prepare_integer_graph(index.nodes, index.segments, index.arcs, index.outgoing, index.incoming)
+        prepared = prepare_integer_graph(index.nodes, index.segments, index.arcs)
         elapsed.append((perf_counter() - started) * 1000)
         del prepared
     tracemalloc.start()
-    prepared = prepare_integer_graph(index.nodes, index.segments, index.arcs, index.outgoing, index.incoming)
+    prepared = prepare_integer_graph(index.nodes, index.segments, index.arcs)
     retained, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     return {'median_ms': median(elapsed), 'retained_bytes': retained, 'peak_bytes': peak,
-            'nodes': len(prepared.node_ids), 'arcs': len(prepared.arcs), 'segments': len(prepared.segment_ids)}
+            'nodes': len(prepared.node_ids), 'arcs': len(prepared.arc_ids), 'segments': len(prepared.segment_ids)}
 
 
 def benchmark_scenario(data: PathData, index: GraphData, scenario: Scenario,

@@ -89,10 +89,3 @@ def pack_segment_coordinates(segments: Mapping[str, Segment]) -> PackedLines:
     for i, segment in enumerate(segments.values()):
         segment["geometry"] = PackedLine(data, i)
     return data
-
-
-def coordinate_json(value: object) -> list[Coordinate]:
-    """Materialize geometry only at a JSON serialization boundary."""
-    if isinstance(value, PackedLine):
-        return list(value)
-    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")

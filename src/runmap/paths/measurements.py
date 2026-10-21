@@ -1,26 +1,49 @@
 """File-backed terrain measurements and direction-independent inspection."""
 
 from dataclasses import dataclass, replace
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping, Sequence
 import hashlib
 import json
+from itertools import islice
 from pathlib import Path
 
 from rasterio.warp import transform
 import numpy as np
 from numpy.typing import NDArray
 from runmap.routing.integer_graph import IntegerGraph
-from runmap.routing.coordinates import coordinate_json
-from runmap.routing.types import Coordinate, GraphDocument, Measurement, MeasurementDocument, TerrainMetadata
+from runmap.routing.serialization import prepared_json
+from runmap.routing.types import Arc, Coordinate, GraphDocument, Measurement, MeasurementDocument, TerrainMetadata
 
 
 def graph_digest(graph: GraphDocument) -> str:
     """Hash the published graph, excluding its measurement reference."""
     document = {key: value for key, value in graph.items()
                 if key not in {"_measurements", "measurements"}}
-    return hashlib.sha256(json.dumps(
-        document, sort_keys=True, separators=(",", ":"), allow_nan=False, default=coordinate_json
-    ).encode()).hexdigest()
+    encoder = json.JSONEncoder(sort_keys=True, separators=(",", ":"), allow_nan=False, default=prepared_json)
+    digest = hashlib.sha256(b"{")
+    for number, key in enumerate(sorted(document)):
+        digest.update(("," if number else "").encode())
+        digest.update(encoder.encode(key).encode())
+        digest.update(b":")
+        if key == "arcs":
+            for payload in _arc_digest_chunks(graph["arcs"], encoder):
+                digest.update(payload)
+        else:
+            digest.update(encoder.encode(document[key]).encode())
+    digest.update(b"}")
+    return digest.hexdigest()
+
+
+def _arc_digest_chunks(arcs: Sequence[Arc], encoder: json.JSONEncoder) -> Iterator[bytes]:
+    """Keep hashing from recreating the entire packed arc dictionary tree."""
+    yield b"["
+    records = iter(arcs)
+    first = True
+    while batch := list(islice(records, 1024)):
+        yield ("" if first else ",").encode()
+        yield encoder.encode(batch)[1:-1].encode()
+        first = False
+    yield b"]"
 
 
 @dataclass(frozen=True)
