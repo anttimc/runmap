@@ -30,7 +30,66 @@ remaining acceptance gates complete.
   Acceptance: measured interaction performance supports exploration and regeneration;
   adopt numerical targets from representative observations.
 
-## Next: shared integer indexing and compact prepared data
+## Next: SQLite storage and bounded network loading
+
+Replace whole-dataset API loading with selective reads from a prepared SQLite
+database. Use SQLite R-tree envelope queries; geometry refinement, clipping,
+snapping, cost evaluation, and graph search stay in the application. SpatiaLite
+and a database server are not required. Memory should follow the requested area,
+network density, concurrency, and bounded caches rather than total coverage.
+
+The initial exporter and local-network reader are implemented in
+`paths/database.py`; see [architecture](architecture.md#sqlite-storage-foundation)
+and [export instructions](development.md#export-a-sqlite-network-dataset).
+The API still loads JSON globally. This foundation does not complete the migration.
+
+1. Extend the prepared schema with spatially indexed display intervals and
+   versioned flat thresholds, building-access classifications, boundary restrictions,
+   directional policy information, projected geometry, and hill features.
+   Compute properties needing whole-network context during preparation, not on a
+   cropped request graph. Preserve dataset/measurement/model identities, exact
+   interval positions, validity/nulls, flags, and stable external IDs.
+2. Migrate static tiles, inspection, and snapping to selective database reads.
+   Add dataset metadata/config access and bounded connection/result caches.
+   Startup must not parse all measurements or rebuild full-network indexes.
+   Keep terrain rasters in the existing COG pipeline.
+3. Build packed local graphs for bounded exploration and run planning. Distinguish
+   stable dataset IDs from local dense indices; retain complete selected segments,
+   endpoint nodes, directed arcs, and original segment chainages. Detect unloaded
+   connections separately from true dead ends and source-coverage boundaries.
+   Exploration uses a conservative envelope derived from its forward distance
+   budget, accounting for snapping and coordinate distortion.
+4. For run planning, start with the endpoints' EPSG:3067 box enlarged by 50% in
+   total width and height (25% per side). Add configurable minimum dimensions in
+   metres; choose their defaults using representative routes. The viewport may
+   hint at useful initial coverage, but must not silently determine route legality.
+   Retry with a larger box when no route is found, a candidate approaches the
+   boundary, or search reaches unloaded connections. Track attempted area, retries,
+   and boundary involvement. Rerun all candidate legs against the same expanded
+   graph under one request deadline and configured maximum area/retry count.
+   Return an explicit area-limited outcome when expansion limits prevent resolving
+   relevant unloaded connections. Keep this distinct from genuinely unreachable
+   endpoints or missing source coverage. Define boundary proximity and retry
+   defaults before wiring the API. Boundary-triggered expansion is a heuristic:
+   a better route outside the area can remain undetected. Full-dataset optimality
+   is not promised; lower-bound-based expansion is a later improvement if needed.
+5. Remove global `PathData`/policy/measurement ownership after parity checks.
+   Keep JSON as an import/debug format during transition; publish new database
+   generations atomically and keep existing request/cache identities tied to one
+   generation. Selective runtime reads must not require full-dataset validation.
+
+Acceptance: compare tiles, inspection, snapping, exploration, and planner results
+against the current implementation on controlled fixtures and saved routes.
+Include barriers requiring detours, near/aligned endpoints, crossing segments,
+partial endpoint traversals, one-way/access rules, genuine dead ends, unloaded
+connections, source edges, and expansion/deadline limits. Benchmark import time,
+database size, startup time, peak/retained RAM, cold/warm p50/p95 interactions,
+and two concurrent planners. Grow total coverage while holding request area fixed
+to verify that startup and active memory no longer scale with the whole dataset.
+The initial exporter still parses the existing JSON and packs measurements during
+offline conversion; streaming/direct preparation is subsequent work.
+
+### Supporting work: shared integer indexing and compact prepared data
 
 Use the existing integer graph as the shared internal addressing system rather
 than retaining another independent representation for every subsystem. Keep
@@ -57,7 +116,8 @@ read-only segment views and sparse endpoint overlays; the
 Arcs and outgoing/incoming adjacency are now packed too, with lazy external views
 and shared policy masks. The [arc report](archive/history/40-packed-arcs.md) records
 the filtered-adjacency comparison and retained-memory/search-time tradeoff.
-Continue incrementally, removing each replaced representation:
+Continue incrementally, removing each replaced representation. Packing supports
+the local working set; it is not a prerequisite for database-backed delivery:
 
 Spatial cell lists now use immutable integer buffers, sharing unchanged rows
 between the complete and building-access-filtered views. The
@@ -71,10 +131,10 @@ candidate-query overhead, and output equivalence.
    Keep policy topology shared; revisit filtered adjacency if representative
    capital-area timings justify its additional storage. Acceptance: remove redundant data copies,
    preserve tile/inspection semantics, and measure memory plus bounded-search time.
-2. Persist the prepared arrays with format version, graph/measurement identities,
-   feature-model version, and explicit index ordering. Reject mismatched artifacts.
-   Acceptance: restart without JSON reparsing or index rebuilding, with measured
-   startup time, retained/peak memory, and cold/warm interaction latency.
+2. Persist prepared features in the SQLite schema above, with format/model
+   versions, graph/measurement identities, and explicit ordering. Reuse compact
+   arrays for loaded windows; do not make a whole-dataset array load the required
+   startup path. Separate mapped numeric sidecars require benchmark justification.
 
 Do not introduce a generic feature registry or move graph ownership/search into
 Rust as part of this migration. Those are separate decisions supported by later
@@ -174,7 +234,7 @@ absolute-elevation profiles need explicit scope before implementation.
   where useful. Follow [AGENTS.md](../AGENTS.md), preserve serialized contracts,
   and add static checking when domain types are coherent.
 - Add preparation implementation identity to provenance. Measure before adding
-  cross-request field caching or replacing inspectable JSON storage.
+  cross-request field caching; preserve inspectable exports during SQLite migration.
 - Continue frontend separation by extracting inspection/chart rendering and
   feature map layers from the interaction controllers. Make remaining feature
   state explicit where DOM values or status text currently carry it.

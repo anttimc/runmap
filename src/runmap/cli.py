@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 import os
+import sqlite3
 from pathlib import Path
 import sys
 from urllib.error import HTTPError, URLError
@@ -165,6 +166,9 @@ def _paths_command_parser() -> argparse.ArgumentParser:
         "--without-terrain", action="store_true",
         help="Prepare topology only when derived terrain tiles are unavailable",
     )
+    export = subparsers.add_parser("export-sqlite", help="Export a prepared graph to an indexed SQLite dataset")
+    export.add_argument("graph", type=Path)
+    export.add_argument("output", type=Path)
     return parser
 
 
@@ -181,8 +185,7 @@ class PathOptions:
     without_terrain: bool
 
 
-def _parse_path_options(parser: argparse.ArgumentParser, argv: Sequence[str]) -> PathOptions:
-    args = parser.parse_args(argv)
+def _parse_path_options(args: argparse.Namespace) -> PathOptions:
     return PathOptions(
         args.experiments, args.regions, args.data_root, args.elevation_root,
         args.catalog, args.experiment_id, args.input, args.dry_run, args.without_terrain,
@@ -306,7 +309,11 @@ def _report_paths(experiment_id: str, graph: GraphDocument, outputs: Mapping[str
 
 def paths_command(argv: Sequence[str]) -> None:
     parser = _paths_command_parser()
-    options = _parse_path_options(parser, argv)
+    args = parser.parse_args(argv)
+    if args.command == "export-sqlite":
+        _export_sqlite_command(args.graph, args.output, parser)
+        return
+    options = _parse_path_options(args)
     experiment = find_experiment(options.experiments, options.experiment_id)
     bounds_wgs84 = _wgs84_bounds(experiment.bounds)
     boundary_refs = tuple(
@@ -327,6 +334,16 @@ def paths_command(argv: Sequence[str]) -> None:
     except (ValueError, OSError, json.JSONDecodeError) as exc:
         parser.exit(1, f"Path graph preparation failed: {exc}\n")
     _report_paths(experiment.id, graph, outputs)
+
+
+def _export_sqlite_command(graph: Path, output: Path, parser: argparse.ArgumentParser) -> None:
+    from runmap.paths.database import export_network_database
+
+    try:
+        export_network_database(graph, output)
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        parser.exit(1, f"Network database export failed: {exc}\n")
+    print(f"Prepared network database: {output}")
 
 
 def _routes_command_parser() -> argparse.ArgumentParser:

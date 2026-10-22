@@ -4,8 +4,10 @@ Runmap is a local Python processing/API package with a Rust integration kernel
 and a TypeScript/MapLibre web application. Numerical work also uses NumPy, SciPy,
 and Rasterio/GDAL; the optional
 web dependencies add FastAPI, Shapely, ContourPy, Pillow, and an MVT encoder.
-Vite builds the frontend. SQLite catalogs elevation products; path artifacts
-are JSON files loaded into memory. There is no application database server.
+Vite builds the frontend. SQLite catalogs elevation products. The path API still
+loads JSON artifacts into memory; an initial SQLite path exporter/window reader
+is available for the selective-loading migration. There is no application
+database server.
 
 ## Data flow
 
@@ -32,6 +34,7 @@ and hosted storage are [future work](roadmap.md).
 | `regions.py`, `elevation/` | Region validation, source grid, raster inspection, catalog, and manifests |
 | `terrain/` | Replaceable smoothers and metric-aware derivatives |
 | `paths/graph.py`, `paths/terrain.py`, `paths/measurements.py` | Graph preparation, terrain sampling, artifact identity, and profile inspection |
+| `paths/database.py` | Offline SQLite export, read-only metadata access, and projected bounding-box network windows |
 | `paths/exploration.py`, `routing/profiles.py` | Shared eligibility, snapping, temporary start overlay, and forward-distance inclusion |
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
@@ -125,6 +128,45 @@ flags. Geometry offsets retain the file's interval vertices without reprojection
 Inspection materializes records for one segment. Hill preparation reads one
 segment at a time from the same store. Loading still parses the source JSON and
 temporarily holds its dictionaries; this is not a persistent prepared-array format.
+
+## SQLite storage foundation
+
+`paths export-sqlite` converts a published graph and its optional measurement
+sidecar into a versioned SQLite database. Export verifies measurement checksum
+and graph identity through the existing loader. The database retains original
+node/segment/arc records, non-topology graph metadata, ordered per-segment
+measurements, graph identity, measurement checksum, and terrain method. Records
+currently use JSON payloads inside indexed tables; this is an initial import and
+query boundary, not the final prepared-feature schema.
+
+An R-tree indexes physical-segment envelopes in EPSG:3067. Ordinary indexes
+support segment endpoints and arc segment/source lookups. `query_network` returns
+complete candidate segments, their endpoint records, directed arcs, and optionally
+their full measurements. Selection is conservative envelope overlap; callers
+perform exact geometry checks in the application. No geometry is clipped or
+reprojected in SQL, and source geometries/chainages are preserved.
+
+Returned `frontier_nodes` identify loaded endpoints incident to excluded physical
+segments. They are conservative topology markers, independent of request policy;
+they do not establish that a legal continuation or better route exists. They
+prevent treating an unloaded connection as a genuine network dead end. A complete
+selected segment can extend outside the query box, so boundary handling cannot
+rely only on endpoint coordinates or route-box intersection.
+
+Export writes a staging database beside the destination, closes it, then publishes
+without overwriting an existing file. Readers own a read-only connection with a
+configurable page-cache target (16 MiB by default); this is not a cap on total
+process or OS cache memory. A connection should stay with its owning thread and
+be closed by its caller. Opening checks schema version without reading the network.
+Offline import still parses the source JSON and packs its measurements in memory.
+
+The running API does not consume this database yet. The
+[migration plan](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
+defines prepared-feature persistence, selective delivery, bounded local search,
+and planner area expansion. Existing packed topology/geometry/measurement data
+remain useful for loaded areas; global dense indices must become local to each
+working set while external dataset IDs remain stable. Globally computed display
+and routing properties must be carried into local windows before API migration.
 
 ## Delivery and request lifetimes
 

@@ -37,6 +37,12 @@ Keep preparation separate from ordinary interaction. Prefer explicit data and
 focused functions, local files, and measured improvements over infrastructure
 introduced in anticipation of future scale.
 
+Keep interactive startup and active memory independent of total prepared path
+coverage: query the relevant area from a local SQLite dataset and process a
+bounded working set in the application. Retain compact numeric representations
+for that working set. See the [migration roadmap](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
+for implementation stages and planner area-expansion limits.
+
 ## Scope
 
 Terrain and path measurements inform route choice; they do not establish current

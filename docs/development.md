@@ -139,6 +139,36 @@ flags. The original `leppavaara-flat-10k` experiment remains available for small
 benchmarks and the anchor baseline. To run the app with that smaller graph, set
 `RUNMAP_PATH_GRAPH=data/paths/prepared/leppavaara-flat-10k/graph.json`.
 
+### Export a SQLite network dataset
+
+The initial storage layer can convert an existing prepared graph without new
+downloads or SpatiaLite:
+
+```sh
+uv run python -m runmap.cli paths export-sqlite \
+  data/paths/prepared/helsinki-capital-area/graph.json \
+  data/paths/prepared/helsinki-capital-area/network.sqlite
+```
+
+The output path must be new. Failed imports do not publish a partial database;
+existing databases are never overwritten. Terrain sidecars are optional for
+topology experiments and validated when present. Conversion still loads the
+existing JSON in memory, so allow comparable offline preparation resources.
+SQLite must include R-tree support; no additional Python dependency is needed.
+
+Programmatic readers use `open_network_database`, `network_metadata`, and
+`query_network` from `runmap.paths.database`. Bounds are `(west, south, east,
+north)` in EPSG:3067 metres. Close the returned connection explicitly (for example,
+with `contextlib.closing`); its transaction context manager does not close it.
+Queries return complete envelope candidates and frontier-node markers; callers
+apply precise geometry and policy checks. Measurements can be omitted for
+topology-only reads.
+
+The API still uses `RUNMAP_PATH_GRAPH` and the existing JSON loader. Exporting a
+database does not change backend startup memory or activate local routing yet.
+See the [migration roadmap](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
+for remaining work and the accepted area-expansion limitation.
+
 ## Configuration
 
 Region definitions live in `config/regions/`; path/baseline settings live in
