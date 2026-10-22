@@ -169,6 +169,9 @@ def _paths_command_parser() -> argparse.ArgumentParser:
     export = subparsers.add_parser("export-sqlite", help="Export a prepared graph to an indexed SQLite dataset")
     export.add_argument("graph", type=Path)
     export.add_argument("output", type=Path)
+    numeric = subparsers.add_parser("export-numeric", help="Export binary routing chunks from a prepared SQLite dataset")
+    numeric.add_argument("database", type=Path)
+    numeric.add_argument("output", type=Path)
     return parser
 
 
@@ -313,6 +316,9 @@ def paths_command(argv: Sequence[str]) -> None:
     if args.command == "export-sqlite":
         _export_sqlite_command(args.graph, args.output, parser)
         return
+    if args.command == "export-numeric":
+        _export_numeric_command(args.database, args.output, parser)
+        return
     options = _parse_path_options(args)
     experiment = find_experiment(options.experiments, options.experiment_id)
     bounds_wgs84 = _wgs84_bounds(experiment.bounds)
@@ -344,6 +350,16 @@ def _export_sqlite_command(graph: Path, output: Path, parser: argparse.ArgumentP
     except (OSError, ValueError, sqlite3.Error) as exc:
         parser.exit(1, f"Network database export failed: {exc}\n")
     print(f"Prepared network database: {output}")
+
+
+def _export_numeric_command(database: Path, output: Path, parser: argparse.ArgumentParser) -> None:
+    from runmap.paths.numeric_database import export_numeric_database
+
+    try:
+        export_numeric_database(database, output)
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        parser.exit(1, f"Numeric database export failed: {exc}\n")
+    print(f"Prepared numeric routing database: {output}")
 
 
 def _routes_command_parser() -> argparse.ArgumentParser:

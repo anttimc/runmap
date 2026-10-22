@@ -141,6 +141,9 @@ benchmarks and the anchor baseline. To run the app with that smaller graph, set
 
 ### Export a SQLite network dataset
 
+The new architecture also has an independent [numeric routing artifact](numeric-routing-format.md)
+and latency benchmarks. It is not yet the HTTP planning backend.
+
 The storage layer can convert an existing prepared graph without new
 downloads or SpatiaLite:
 

@@ -1,7 +1,9 @@
 # Routing toward a 100 ms request budget
 
-Status: proposed replacement for request-local JSON graph reconstruction. The
-current implementation does not meet this target. This document records the
+Status: numeric chunk export and loading are implemented as a separate artifact;
+native traversal and API integration remain outstanding. The active planner
+still uses the reference backend and does not meet this target. See the
+[numeric format and benchmark commands](numeric-routing-format.md). This document records the
 measured limitation and the implementation and acceptance criteria needed to
 replace it.
 
