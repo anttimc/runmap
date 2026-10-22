@@ -18,7 +18,7 @@ from runmap.paths.spatial import Cell, filter_cells, pack_cells
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                                    Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile, forbidden_reason, pedestrian_access_reason
-from runmap.routing.types import Bounds, Coordinate, EdgeProfile, MeasurementLocation
+from runmap.routing.types import Bounds, Coordinate, EdgeProfile, MeasurementLocation, Segment
 from runmap.routing.search import GraphData, build_graph_index, apply_profile
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import build_hill_data
@@ -35,7 +35,7 @@ CELL_DEGREES = 0.005
 class PathData:
     graph: dict
     measurements: MeasurementData
-    segments: dict
+    segments: Mapping[str, Segment]
     features: Sequence[DisplayInterval]
     cells: Mapping[Cell, Sequence[int]]
     coverage: dict
@@ -91,7 +91,7 @@ def load_path_data(graph_path: str | Path) -> PathData:
         raise FileNotFoundError("Graph has no prepared measurement reference")
     routing = build_graph_index(graph)
     measurements = load_measurements(graph_path, graph=graph, index=routing.integer)
-    segments = {segment["id"]: segment for segment in graph["segments"]}
+    segments = routing.segments
     features = []
     cells = defaultdict(list)
     for segment_number, segment_id in enumerate(measurements.segment_ids):
@@ -268,10 +268,11 @@ def path_policy_index(data, surface="all", avoid_stairs=True):
 
 def display_segment_reason(index: GraphData, segment_id: str, profile: EdgeProfile) -> str | None:
     """Tile eligibility needs local checks, not a new whole-network search index."""
-    reason = forbidden_reason(index.segments[segment_id], profile)
+    segment = index.segments[segment_id]
+    reason = forbidden_reason(segment, profile)
     if reason:
         return reason
-    for node in (index.segments[segment_id]["from"], index.segments[segment_id]["to"]):
+    for node in (segment["from"], segment["to"]):
         if reason := pedestrian_access_reason(index.nodes[node], profile):
             return f"node:{node}:{reason}"
     if segment_id in index.boundary_blocked_segments:

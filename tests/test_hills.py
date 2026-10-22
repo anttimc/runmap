@@ -83,7 +83,7 @@ class HillTests(unittest.TestCase):
 
 
     def test_hill_arrays_share_segment_order_and_are_read_only(self) -> None:
-        self.graph["segments"].reverse()
+        self.graph["segments"] = list(reversed(self.graph["segments"]))
         hills = self.hills([5, -10])
         self.assertIs(hills.index, self.index.integer)
         self.assertEqual(hills.index.segment_ids, ("ab", "ac", "cb"))
@@ -363,6 +363,7 @@ class HillTests(unittest.TestCase):
         with patch("runmap.routing.cost_preparation.indexed_traversal_hills", side_effect=AssertionError):
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0), hills=hills)
         self.assertEqual(result.candidates[0].distance_m, 200)
+        self.index = replace(self.index, segments=dict(self.index.segments))
         for segment_id in ("ac", "cb"):
             self.index.segments[segment_id]["tags"]["foot"] = "no"
         self.index = apply_profile(self.index, self.index.profile)

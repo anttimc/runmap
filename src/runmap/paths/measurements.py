@@ -12,7 +12,7 @@ import numpy as np
 from numpy.typing import NDArray
 from runmap.routing.integer_graph import IntegerGraph
 from runmap.routing.serialization import prepared_json
-from runmap.routing.types import Arc, Coordinate, GraphDocument, Measurement, MeasurementDocument, TerrainMetadata
+from runmap.routing.types import Coordinate, GraphDocument, Measurement, MeasurementDocument, TerrainMetadata
 
 
 def graph_digest(graph: GraphDocument) -> str:
@@ -25,8 +25,8 @@ def graph_digest(graph: GraphDocument) -> str:
         digest.update(("," if number else "").encode())
         digest.update(encoder.encode(key).encode())
         digest.update(b":")
-        if key == "arcs":
-            for payload in _arc_digest_chunks(graph["arcs"], encoder):
+        if key in {"nodes", "segments", "arcs"}:
+            for payload in _record_digest_chunks(graph[key], encoder):
                 digest.update(payload)
         else:
             digest.update(encoder.encode(document[key]).encode())
@@ -34,10 +34,10 @@ def graph_digest(graph: GraphDocument) -> str:
     return digest.hexdigest()
 
 
-def _arc_digest_chunks(arcs: Sequence[Arc], encoder: json.JSONEncoder) -> Iterator[bytes]:
-    """Keep hashing from recreating the entire packed arc dictionary tree."""
+def _record_digest_chunks(items: Sequence[object], encoder: json.JSONEncoder) -> Iterator[bytes]:
+    """Bound hashing's temporary materialization of packed public records."""
     yield b"["
-    records = iter(arcs)
+    records = iter(items)
     first = True
     while batch := list(islice(records, 1024)):
         yield ("" if first else ",").encode()

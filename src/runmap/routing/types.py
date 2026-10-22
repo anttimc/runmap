@@ -126,8 +126,8 @@ class MeasurementDocument(TypedDict):
 
 
 class GraphDocument(TypedDict):
-    nodes: list[Node]
-    segments: list[Segment]
+    nodes: Sequence[Node]
+    segments: Sequence[Segment]
     arcs: Sequence[Arc]
     schema_version: NotRequired[int]
     source: NotRequired[GraphSource]

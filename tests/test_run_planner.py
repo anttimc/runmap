@@ -119,6 +119,7 @@ class RunPlannerTests(unittest.TestCase):
         self.assertGreater(len(cache.shape_fields), 0)
 
     def test_pedestrian_oneway_prevents_return(self) -> None:
+        self.index = replace(self.index, segments=dict(self.index.segments))
         self.index.segments["ab"]["tags"]["oneway:foot"] = "yes"
         self.index = apply_profile(self.index, self.index.profile)
         result = plan_run(self.index, self.snap("ab", .2), self.snap("ab", .8), RunSettings())
@@ -147,6 +148,7 @@ class RunPlannerTests(unittest.TestCase):
                          list(reversed(route_coordinates(graph, candidate.returning.arc_ids))))
 
     def test_zero_avoidance_still_honours_oneway(self) -> None:
+        self.index = replace(self.index, segments=dict(self.index.segments))
         self.index.segments["ab"]["tags"]["oneway:foot"] = "yes"
         self.index = apply_profile(self.index, self.index.profile)
         result = plan_run(self.index, self.snap("ab", .2), self.snap("ab", .8),

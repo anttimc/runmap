@@ -118,9 +118,14 @@ between the complete and building-access-filtered views. The
 [spatial report](archive/history/41-packed-spatial.md) records memory savings,
 candidate-query overhead, and output equivalence.
 
-1. Move remaining node/segment metadata and per-interval display metadata
-   onto shared IDs and compact arrays.
-   Measurement interval coordinates are packed independently; evaluate sharing
+Display metadata now shares measurement offsets and packs thresholds; the
+[display report](archive/history/42-packed-display.md) records its retained-memory
+and tile-time tradeoff. Node/segment metadata now uses packed numeric columns,
+pooled strings, and lazy public records sharing ID maps and geometry; the
+[metadata report](archive/history/43-packed-metadata.md) records capital-area
+memory savings and output/search comparisons.
+
+1. Measurement interval coordinates are packed independently; evaluate sharing
    segment geometry without changing sampled positions or tile seams.
    Keep policy topology shared; revisit filtered adjacency if representative
    capital-area timings justify its additional storage. Acceptance: remove redundant data copies,

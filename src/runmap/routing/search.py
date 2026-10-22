@@ -12,6 +12,8 @@ from typing import TypeVar
 import numpy as np
 
 from runmap.routing.arc_storage import ArcLookup, ArcRecords
+from runmap.routing.node_storage import MetadataLookup, NodeRecords, pack_nodes
+from runmap.routing.segment_storage import SegmentRecords, pack_segments
 from runmap.routing.types import Arc, Coordinate, EdgeProfile, GraphDocument, Node, RouteMetrics, Segment
 from runmap.routing.geometry import ProjectedGeometry, prepare_projected_geometry
 from runmap.routing.integer_graph import (AdjacencyLookup, IntegerArc, IntegerGraph, apply_integer_policy,
@@ -219,7 +221,12 @@ def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) 
                       _boundary_blocked_segments(graph), {}, profile,
                       prepare_projected_geometry(nodes, segments, arcs.values(), integer), integer=integer)
     graph["arcs"] = ArcRecords(integer.arcs)
-    index = replace(index, arcs=ArcLookup(integer.arcs, integer.arc_indices))
+    graph["nodes"] = NodeRecords(pack_nodes(nodes, integer.node_ids))
+    graph["segments"] = SegmentRecords(pack_segments(
+        segments, integer.segment_ids, integer.node_ids, integer.node_indices, index.projected.wgs84))
+    index = replace(index, arcs=ArcLookup(integer.arcs, integer.arc_indices),
+                    nodes=MetadataLookup(graph["nodes"], integer.node_indices),
+                    segments=MetadataLookup(graph["segments"], integer.segment_indices))
     index.ineligible_segments.update(classify_segments(index, profile))
     return _prepare_traversals(index)
 

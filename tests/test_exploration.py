@@ -105,6 +105,7 @@ class InclusionTests(unittest.TestCase):
         self.assertEqual(shortest_distances(index, "b"), {})
         distances = distance_data(index, snap("ab", 50), 1000)
         self.assertEqual(interval_inclusion(index, distances, "ab", 0, 100, 1000)["inclusion_state"], "excluded")
+        document = copy.deepcopy(document)
         document["nodes"][1].update(foot="yes", access="private")
         self.assertIsNotNone(shortest_path(build_graph_index(document), "a", "b"))
 

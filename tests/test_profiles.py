@@ -1,3 +1,4 @@
+from dataclasses import replace
 import unittest
 
 from test_routing import graph_document
@@ -36,6 +37,7 @@ class PedestrianAccessProfileTests(unittest.TestCase):
                 for segment_id, first, second in (
                     ("ab", "a", "b"), ("bc", "b", "c"), ("be", "b", "e")
                 )], start="a"))
+        index = replace(index, nodes=dict(index.nodes))
         index.nodes["b"].update(barrier="gate", access="destination")
         reasons = classify_segments(index, STRICT_ACCESS)
         self.assertEqual(set(reasons), {"ab", "bc", "be"})

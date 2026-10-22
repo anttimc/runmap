@@ -1,6 +1,7 @@
 """Prepared policies preserve directed routing without parsing tags in searches."""
 
 import math
+from copy import deepcopy
 import unittest
 from unittest.mock import patch
 
@@ -68,6 +69,7 @@ class PreparedTraversalTests(unittest.TestCase):
         graph = direction_graph({})
         graph["segments"][0]["backward"] = False
         self.assertEqual(legal_directions(build_graph_index(graph), "ab"), {True})
+        graph = deepcopy(graph)
         graph["segments"][0]["backward"] = True
         graph["arcs"] = graph["arcs"][1:]
         self.assertEqual(legal_directions(build_graph_index(graph), "ab"), {False})

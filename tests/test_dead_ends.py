@@ -1,5 +1,6 @@
 """Visibility classification uses physical topology, never shortest-path trees."""
 
+from copy import deepcopy
 import unittest
 
 from runmap.paths.dead_ends import classify_building_access
@@ -79,6 +80,7 @@ class DeadEndTests(unittest.TestCase):
             for avoid_stairs in (False, True):
                 index = apply_profile(routing, exploration_profile(surface, avoid_stairs))
                 self.assertEqual(set(classify_building_access(index, lambda _: False, True)), {"ax", "xy", "xz"})
+        graph = deepcopy(graph)
         graph["nodes"][-1]["foot"] = "no"
         self.assertNotIn("xz", classify_building_access(build_graph_index(graph), lambda _: False, True))
 
@@ -111,8 +113,10 @@ class DeadEndTests(unittest.TestCase):
         graph = graph_fixture(CORE + [("ax", "a", "x", "driveway")])
         for tags in ({"access": "private"}, {"foot": "no"},
                      {"foot:forward": "no", "foot:backward": "no"}):
+            graph = deepcopy(graph)
             graph["segments"][-1]["tags"] = {"highway": "service", "service": "driveway", **tags}
             self.assertFalse(classify_building_access(build_graph_index(graph), lambda _: False, True))
+        graph = deepcopy(graph)
         graph["segments"][-1]["tags"] = {"highway": "service", "service": "driveway", "oneway:foot": "yes"}
         index = build_graph_index(graph)
         self.assertEqual(set(classify_building_access(index, lambda _: False, True)), {"ax"})

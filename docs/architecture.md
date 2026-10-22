@@ -41,6 +41,7 @@ and hosted storage are [future work](roadmap.md).
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
 | `routing/integer_graph.py` | Prepared dense node/segment/arc indices and shared sparse endpoint overlays |
 | `routing/arc_storage.py`, `routing/serialization.py` | Packed arc columns, lazy external record views, and explicit JSON boundaries |
+| `routing/node_storage.py`, `routing/segment_storage.py`, `routing/metadata_strings.py` | Packed node/segment metadata and pooled strings sharing IDs and geometry |
 | `routing/coordinates.py`, `routing/geometry.py` | Packed WGS84/projected coordinates, read-only segment views, and sparse overlay geometry |
 | `routing/cost_*`, `routing/costs.py`, `routing/hills.py`, `routing/fields.py` | Explicit request/leg data, settings, features, integration, and cost composition |
 | `rust/src/fields.rs`, `rust/src/bindings.rs` | Scalar integration kernel and its PyO3 adapter, built as `runmap._routing_native` |
@@ -266,8 +267,10 @@ All policies share outgoing/incoming arc-index buffers and int64 node offsets;
 searches skip disabled arcs without reparsing pedestrian tags. Request-specific
 segment blocks still apply. Endpoint splits inherit their physical segment's
 prepared directions. Applying a policy recomputes its mask from the full topology,
-so relaxing a policy restores connections. Rebuild the policy index after changing
-access or direction tags. Existing blocked-node and classification metadata remain
+so relaxing a policy restores connections. Prepared metadata lookups return
+detached dictionaries; editing one does not change the base. Make an editable
+document copy and rebuild after changing source access or direction tags.
+Existing blocked-node and classification metadata remain
 policy-local alongside the mask.
 
 A* uses prepared integer node, arc, and segment indices and packed adjacency,
@@ -290,8 +293,25 @@ lists remain. `ArcRecords`, `ArcLookup`, and `AdjacencyLookup` are on-demand vie
 for serialization and legacy consumers. Numeric search loops read buffers directly;
 indexed cost callbacks receive transient immutable `IntegerArc` named tuples.
 Endpoint overlays keep only their small extra records and row overrides. Canonical
-graph hashing batches arc materialization to avoid recreating the full dictionary
+graph hashing batches node, segment, and arc materialization to avoid recreating the full dictionary
 tree. Full artifact export materializes views at its serialization boundary.
+
+Node WGS84 coordinates use float64 values with integer-spelling flags. Sparse
+optional node strings and ordered segment tags use pooled strings with int64 row
+offsets and uint32 key/value codes. Segment endpoints share integer node IDs;
+numeric metrics use float64 columns, sample counts use int64, and separate
+presence, boolean, and integer-spelling flags preserve optional record semantics.
+Way IDs are pooled without changing their external strings. `NodeRecords`,
+`SegmentRecords`, and `MetadataLookup` reconstruct detached public records and
+reuse the integer graph's ID tuples/maps. Segment geometry shares the existing
+packed coordinate store; no retained record dictionaries or per-segment geometry
+views remain. Policies share these views, while endpoint overlays retain only
+their sparse additions. Deep-copying a prepared document materializes editable
+metadata records while keeping read-only geometry shared. These containers can
+also represent a locally loaded network window; they require no SQLite schema
+change or persistence sidecar. The [metadata report](archive/history/43-packed-metadata.md)
+records memory and equivalence measurements.
+
 Hill storage shares that integer graph's segment ordering and ID mapping. It
 retains read-only float64 arrays for directional segment totals, interval chainage,
 and directional interval features, with int64 offsets identifying each segment's
@@ -309,10 +329,8 @@ parts retain the original physical index and graph chainage. Shape features rema
 lazy per overlay segment and hill features per directed arc. Selected traversals
 are translated to external physical IDs when producing explanations and responses.
 Generic search retains record/string callback adapters for existing CLI and
-comparison callers. Both policy views and endpoint overlays share the base
-coordinate-reference tuples, with small appended tuples for temporary geometry.
-The existing string geometry maps remain for preparation and display; the tuples
-share their point objects rather than duplicating coordinate values.
+comparison callers. Both policy views and endpoint overlays share the packed base
+coordinates, retaining only small appended tuples for temporary geometry.
 
 Bounded exploration Dijkstra also traverses prepared integer adjacency. Its result
 contains immutable native float64 values indexed by node, plus int64 indices in
