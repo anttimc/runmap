@@ -254,10 +254,15 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       : turnaround;
     const features: Feature<LineString>[] = [];
     centreMarker.remove();
-    markers.forEach((marker) => marker.remove());
+    // Keep endpoint marker DOM attached while MapLibre is handling its drag.
+    // A concurrent state update can call draw() between drag events; removing
+    // the dragged marker there cancels the gesture.
+    if (!dragging) markers.forEach((marker) => marker.remove());
     if (active()) {
-      if (a) markers[0].setLngLat(a).addTo(map);
-      if (b) markers[1].setLngLat(b).addTo(map);
+      if (!dragging) {
+        if (a) markers[0].setLngLat(a).addTo(map);
+        if (b) markers[1].setLngLat(b).addTo(map);
+      }
       if (home && a) features.push(line([home, a], "guide"));
       if (turnaround && b) features.push(line([turnaround, b], "guide"));
       if (a && b) {
