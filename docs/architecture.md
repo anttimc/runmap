@@ -137,7 +137,10 @@ Path MVTs use buffered clipping, zoom-dependent simplification and grade/distanc
 bins, while keeping segment IDs, eligibility, quality, and inclusion boundaries.
 Inspection retains full measurements. Static tiles use immutable versioned URLs.
 Display intervals retain integer segment/local-interval references, surface class,
-and flat-run thresholds. Tiles read packed columns directly through native
+and flat-run thresholds. Spatial cell rows retain immutable int64 interval-index
+buffers; the building-access display view shares rows unchanged by filtering.
+Candidate queries materialize sorted Python indices only for requested cells.
+Tiles read packed columns directly through native
 memoryviews; GeoJSON is assembled only for viewport responses. Static tiles evaluate policy eligibility
 for candidate segments without constructing a whole-network routing index.
 Routing and exploration prepare and cache policy eligibility when a search needs it.

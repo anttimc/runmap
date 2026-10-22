@@ -1,7 +1,7 @@
 """File-backed path exploration; requests never import OSM or sample terrain."""
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
 import json
 import math
@@ -13,6 +13,7 @@ from runmap.paths.measurements import (MeasurementData, graph_digest, inspect_me
                                        load_measurements, indexed_measurement, segment_measurements)
 from runmap.paths.flat import GradeInterval, flat_run_thresholds
 from runmap.paths.display import DisplayInterval, display_feature
+from runmap.paths.spatial import Cell, filter_cells, pack_cells
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                                    Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile, forbidden_reason, pedestrian_access_reason
@@ -35,12 +36,12 @@ class PathData:
     measurements: MeasurementData
     segments: dict
     features: tuple[DisplayInterval, ...]
-    cells: dict
+    cells: Mapping[Cell, Sequence[int]]
     coverage: dict
     bounds: tuple
     dataset_id: str
     routing: GraphData
-    display_cells: dict[tuple[int, int], list[int]] = field(default_factory=dict)
+    display_cells: Mapping[Cell, Sequence[int]] = field(default_factory=dict)
     building_access: dict[str, Classification] = field(default_factory=dict)
     profile_indexes: dict = field(default_factory=dict)
     boundary_intervals: dict = field(default_factory=dict)
@@ -151,7 +152,9 @@ def load_path_data(graph_path: str | Path) -> PathData:
     if not features:
         raise ValueError("Path measurements contain no display intervals")
     coverage, kind = _coverage(graph)
-    data = PathData(graph, measurements, segments, tuple(features), dict(cells),
+    packed_cells = pack_cells(cells)
+    del cells
+    data = PathData(graph, measurements, segments, tuple(features), packed_cells,
                     {"geometry": coverage, "kind": kind},
                     _bounds(coverage["coordinates"][0]), graph_digest(graph), routing)
     return _build_display_index(replace(data, hills=build_hill_data(data.routing, measurements)))
@@ -163,7 +166,7 @@ def _build_display_index(data: PathData) -> PathData:
         data.coverage["kind"] == "prepared_extract")
     visible = {i for i, feature in enumerate(data.features)
                if data.measurements.segment_ids[feature.segment] not in classified}
-    cells = {cell: [i for i in indexes if i in visible] for cell, indexes in data.cells.items()}
+    cells = filter_cells(data.cells, visible)
     return replace(data, building_access=classified, display_cells=cells)
 
 

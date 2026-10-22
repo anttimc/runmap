@@ -1,0 +1,116 @@
+{
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "intervals": 278839,
+  "cells": 535,
+  "reference_bytes": 12664544,
+  "packed_bytes": 4310576,
+  "shared_rows": 194,
+  "identical_tiles": 16,
+  "queries": [
+    {
+      "zoom": 13,
+      "bounds": [
+        24.782,
+        60.206,
+        24.831999999999997,
+        60.232
+      ],
+      "hidden": false,
+      "candidates": 53723,
+      "reference_ms": 1.6473119903821498,
+      "packed_ms": 1.9717705145012587
+    },
+    {
+      "zoom": 13,
+      "bounds": [
+        24.782,
+        60.206,
+        24.831999999999997,
+        60.232
+      ],
+      "hidden": true,
+      "candidates": 50667,
+      "reference_ms": 1.5258544881362468,
+      "packed_ms": 1.8448540067765862
+    },
+    {
+      "zoom": 15,
+      "bounds": [
+        24.799,
+        60.215,
+        24.814999999999998,
+        60.223
+      ],
+      "hidden": false,
+      "candidates": 7658,
+      "reference_ms": 0.2407709980616346,
+      "packed_ms": 0.2865204878617078
+    },
+    {
+      "zoom": 15,
+      "bounds": [
+        24.799,
+        60.215,
+        24.814999999999998,
+        60.223
+      ],
+      "hidden": true,
+      "candidates": 7389,
+      "reference_ms": 0.23112550843507051,
+      "packed_ms": 0.27556200802791864
+    },
+    {
+      "zoom": 13,
+      "bounds": [
+        24.746000000000002,
+        60.229,
+        24.796,
+        60.254999999999995
+      ],
+      "hidden": false,
+      "candidates": 39636,
+      "reference_ms": 1.0534790053498,
+      "packed_ms": 1.326229001278989
+    },
+    {
+      "zoom": 13,
+      "bounds": [
+        24.746000000000002,
+        60.229,
+        24.796,
+        60.254999999999995
+      ],
+      "hidden": true,
+      "candidates": 35729,
+      "reference_ms": 0.9525625064270571,
+      "packed_ms": 1.1844999971799552
+    },
+    {
+      "zoom": 15,
+      "bounds": [
+        24.763,
+        60.238,
+        24.779,
+        60.245999999999995
+      ],
+      "hidden": false,
+      "candidates": 7470,
+      "reference_ms": 0.21733299945481122,
+      "packed_ms": 0.26641698786988854
+    },
+    {
+      "zoom": 15,
+      "bounds": [
+        24.763,
+        60.238,
+        24.779,
+        60.245999999999995
+      ],
+      "hidden": true,
+      "candidates": 6129,
+      "reference_ms": 0.18543800979387015,
+      "packed_ms": 0.22164599795360118
+    }
+  ],
+  "method": "Reconstructed previous list layout with one shared Python integer per feature; recursive sys.getsizeof with shared visited set, including immutable buffer owners. Excludes other dataset objects. Twenty alternating candidate-query timings; exact viewport and encoded-tile comparisons. Not process RSS or browser latency."
+}

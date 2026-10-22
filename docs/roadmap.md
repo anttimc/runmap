@@ -59,8 +59,13 @@ and shared policy masks. The [arc report](archive/history/40-packed-arcs.md) rec
 the filtered-adjacency comparison and retained-memory/search-time tradeoff.
 Continue incrementally, removing each replaced representation:
 
-1. Move remaining node/segment metadata, per-interval display metadata,
-   and spatial cell lists onto shared IDs and compact arrays.
+Spatial cell lists now use immutable integer buffers, sharing unchanged rows
+between the complete and building-access-filtered views. The
+[spatial report](archive/history/41-packed-spatial.md) records memory savings,
+candidate-query overhead, and output equivalence.
+
+1. Move remaining node/segment metadata and per-interval display metadata
+   onto shared IDs and compact arrays.
    Measurement interval coordinates are packed independently; evaluate sharing
    segment geometry without changing sampled positions or tile seams.
    Keep policy topology shared; revisit filtered adjacency if representative
