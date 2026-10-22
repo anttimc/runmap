@@ -303,7 +303,7 @@ double on retry. Each retry discards prior legs and reruns all side assignments
 against the same expanded local graph. This is a heuristic: a better route
 outside the window can remain undetected; global optimality is not promised.
 
-Defaults allow five retries, 2,500 km² query area, and 200,000 selected segments.
+Defaults allow five retries, 2,500 km² query area, and 650,000 selected segments.
 Area and bounded segment-count checks precede decoding. Run search metadata
 records each attempted box, node/segment counts, retry reason, reached-frontier
 and query-boundary involvement, and source-coverage proximity separately.

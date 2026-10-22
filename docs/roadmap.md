@@ -66,7 +66,7 @@ width and height (25% per side), with a configurable 1,000 m minimum in each
 dimension. Search visits to unloaded frontier nodes, candidate geometry in the
 boundary band, or incomplete assignments with unloaded connections trigger box
 doubling. The proximity band is the greater of 100 m and 5% of the shorter box
-dimension. Defaults allow five retries, 2,500 km² area, and 200,000 selected
+dimension. Defaults allow five retries, 2,500 km² area, and 650,000 selected
 segments, sharing one deadline across snapping/loading/all legs/retries.
 Attempts and boundary/source involvement are reported; exhausted limits return
 `area_limited`, distinct from unreachable endpoints and source coverage flags.

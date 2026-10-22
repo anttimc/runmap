@@ -47,12 +47,32 @@ class RoutingBenchmarkTests(unittest.TestCase):
             self.assertIs(sqlite_runs._snap, original_snap)
             self.assertTrue(report["equivalent"])
             self.assertEqual(report["first_request"]["status"], "complete")
+            candidate = report["first_request"]["candidates"][0]
+            self.assertAlmostEqual(candidate["distance_m"],
+                                   candidate["outbound_distance_m"] + candidate["returning_distance_m"])
+            self.assertGreater(candidate["expanded_nodes"], 0)
             self.assertEqual(report["first_request"]["phase_calls"]["snap"], 2)
             self.assertEqual(report["first_request"]["phase_calls"]["prepare"], 1)
             for phase in ("topology", "features", "index", "search", "render", "json_serialization"):
                 self.assertIn(phase, report["first_request"]["phases_ms"])
             self.assertEqual(len(report["repeated_requests"]), 2)
             self.assertLessEqual(report["repeated_summary"]["p50_ms"], report["repeated_summary"]["p99_ms"])
+
+    def test_full_request_benchmark_applies_explicit_limits(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, _, _ = publish_fixture(root)
+            database = root / "network.sqlite"
+            export_network_database(source, database)
+            lon, lat = transform("EPSG:3067", "EPSG:4326", [375025, 375075], [6675000, 6675000])
+            report = measure_worker(database, (lon[0], lat[0]), (lon[1], lat[1]), repeats=1,
+                                    limits=sqlite_runs.RunAreaLimits(max_segments=1, max_retries=0))
+            self.assertEqual(report["max_segments"], 1)
+            self.assertEqual(report["max_retries"], 0)
+            for sample in [report["first_request"], *report["repeated_requests"]]:
+                self.assertEqual(sample["status"], "area_limited")
+                self.assertEqual(sample["search"]["area_limited_reason"], "maximum_segments")
+                self.assertFalse(sample["candidates"])
 
     def test_numeric_probe_counts_exact_segments_and_separates_allocation_measurement(self) -> None:
         with TemporaryDirectory() as directory:

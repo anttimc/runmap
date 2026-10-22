@@ -32,7 +32,7 @@ from runmap.routing.types import Bounds
 @dataclass(frozen=True)
 class RunAreaLimits:
     max_area_km2: float = 2500
-    max_segments: int = 200000
+    max_segments: int = 650000
     max_retries: int = 5
     minimum_dimension_m: float = 1000
     boundary_margin_m: float = 100

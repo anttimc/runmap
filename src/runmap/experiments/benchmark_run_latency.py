@@ -69,38 +69,46 @@ def measure_phases() -> Iterator[PhaseTimes]:
         yield phases
 
 
-def _request_sample(data: SQLitePathData, options: RunRequest, timeout_s: float) -> dict[str, object]:
+def _request_sample(data: SQLitePathData, options: RunRequest, timeout_s: float,
+                    limits: sqlite_runs.RunAreaLimits = sqlite_runs.RunAreaLimits()) -> dict[str, object]:
     with measure_phases() as phases:
         started = perf_counter()
-        response = sqlite_runs.generate_database_run(data, options, timeout_s=timeout_s)
+        response = sqlite_runs.generate_database_run(data, options, timeout_s=timeout_s, limits=limits)
         output_started = perf_counter()
         payload = response.model_dump_json()
         phases.milliseconds["json_serialization"] = (perf_counter() - output_started) * 1000
         elapsed_ms = (perf_counter() - started) * 1000
     canonical = response.model_dump(mode="json", exclude={"elapsed_s"})
     return dict(elapsed_ms=elapsed_ms, phases_ms=phases.milliseconds, phase_calls=phases.calls,
-                status=response.status, response_bytes=len(payload.encode()),
+                status=response.status,
+                candidates=[dict(distance_m=c.distance_m, outbound_distance_m=c.outbound.distance_m,
+                                 returning_distance_m=c.returning.distance_m,
+                                 expanded_nodes=c.outbound.expanded_nodes+c.returning.expanded_nodes)
+                            for c in response.candidates], response_bytes=len(payload.encode()),
                 response_sha256=hashlib.sha256(json.dumps(canonical, sort_keys=True).encode()).hexdigest(),
                 search=None if response.search is None else response.search.model_dump(mode="json"))
 
 
 def measure_worker(database: Path, home: tuple[float, float], turnaround: tuple[float, float], *,
                    hills: PreferenceLevel = "off", avoidance_ratio: float = 0.18,
-                   repeats: int = 5, timeout_s: float = 15) -> dict[str, object]:
+                   repeats: int = 5, timeout_s: float = 15,
+                   limits: sqlite_runs.RunAreaLimits = sqlite_runs.RunAreaLimits()) -> dict[str, object]:
     if repeats < 1:
         raise ValueError("Repeat count must be positive")
+    sqlite_runs.validate_run_limits(limits)
     startup = perf_counter()
     with closing(SQLitePathData(database)) as data:
         startup_ms = (perf_counter() - startup) * 1000
         options = RunRequest(dataset_id=data.dataset_id, home=EndpointRequest(longitude=home[0], latitude=home[1]),
             turnaround=EndpointRequest(longitude=turnaround[0], latitude=turnaround[1]),
             preferences=PreferencesRequest(hills=hills), settings=SettingsRequest(avoidance_ratio=avoidance_ratio))
-        first = _request_sample(data, options, timeout_s)
-        samples = [_request_sample(data, options, timeout_s) for _ in range(repeats)]
+        first = _request_sample(data, options, timeout_s, limits)
+        samples = [_request_sample(data, options, timeout_s, limits) for _ in range(repeats)]
         elapsed = [cast(float, sample["elapsed_ms"]) for sample in samples]
         rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         return dict(backend="numeric" if data.numeric is not None else "reference",
                     numeric_resident_bytes=data.numeric.resident_bytes if data.numeric is not None else 0,
+                    max_segments=limits.max_segments, max_retries=limits.max_retries,
                     dataset_id=data.dataset_id, request=options.model_dump(mode="json"), startup_ms=startup_ms,
                     first_request=first, repeated_requests=samples, repeated_summary=latency_summary(elapsed),
                     equivalent=all(sample["response_sha256"] == first["response_sha256"] for sample in samples),
@@ -118,18 +126,22 @@ def main() -> None:
     parser.add_argument("--avoidance-ratio", type=float, default=.18)
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--timeout-s", type=float, default=15)
+    parser.add_argument("--max-segments", type=int, default=sqlite_runs.RunAreaLimits().max_segments)
+    parser.add_argument("--max-retries", type=int, default=sqlite_runs.RunAreaLimits().max_retries)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker:
         report = measure_worker(args.database, (args.home[0], args.home[1]),
                                 (args.turnaround[0], args.turnaround[1]), hills=args.hills,
-                                avoidance_ratio=args.avoidance_ratio, repeats=args.repeats, timeout_s=args.timeout_s)
+                                avoidance_ratio=args.avoidance_ratio, repeats=args.repeats, timeout_s=args.timeout_s,
+                                limits=sqlite_runs.RunAreaLimits(max_segments=args.max_segments, max_retries=args.max_retries))
     else:
         command = [sys.executable, "-m", "runmap.experiments.benchmark_run_latency", str(args.database),
                    "--home", *(str(v) for v in args.home), "--turnaround", *(str(v) for v in args.turnaround),
                    "--hills", args.hills, "--avoidance-ratio", str(args.avoidance_ratio),
-                   "--repeats", str(args.repeats), "--timeout-s", str(args.timeout_s), "--worker"]
+                   "--repeats", str(args.repeats), "--timeout-s", str(args.timeout_s),
+                   "--max-segments", str(args.max_segments), "--max-retries", str(args.max_retries), "--worker"]
         completed = subprocess.run(command, check=True, capture_output=True, text=True)
         report = cast(dict[str, object], json.loads(completed.stdout))
     payload = json.dumps(report, indent=2) + "\n"

@@ -30,6 +30,41 @@ uv run python -m runmap.experiments.benchmark_run_latency \
   --report artifacts/pathfinding-profile/native-api-high.json
 ```
 
+
+## Longer-run validation
+
+The API segment cap is now 650,000, with five retries, a 2,500 km² window
+limit, and the existing 15-second deadline. A request from `(24.795, 60.216)`
+to `(24.96, 60.25)` completed after windows of 96,953, 303,738, and 550,897
+segments, with hills off and default shape settings. The two candidate runs
+were each 29.87 km. Hills high produced 30.55 km and 31.02 km candidates.
+
+| Preference | First request | Three repeated requests, median | Peak process RSS |
+| --- | ---: | ---: | ---: |
+| Hills off | 4.00 s | 3.01 s | 0.93 GB |
+| Hills high | 5.76 s | 3.30 s | 0.95 GB |
+
+These single-worker observations include JSON serialization, exclude HTTP
+transport, and have uncontrolled OS cache state. Results were deterministic
+across repeats. Numeric preparation took about 1.5–1.8 seconds and searches
+about 0.4–0.6 seconds across all attempts in representative repeated samples;
+other time includes segment-count checks and rendering. The 128 MiB graph
+cache cannot retain these large working sets, so repeated requests reload them.
+Long runs are supported here, but remain outside the 100 ms envelope.
+
+Reproduce the request and record candidate lengths with:
+
+```sh
+uv run python -m runmap.experiments.benchmark_run_latency \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  --turnaround 24.96 60.25 --max-segments 650000 --hills high --repeats 3 \
+  --report artifacts/pathfinding-profile/long-runs/30km-high.json
+```
+
+The benchmark's `--max-segments` and `--max-retries` flags override only that
+benchmark. The server uses its defaults or the `RUNMAP_RUN_MAX_SEGMENTS` and
+`RUNMAP_RUN_MAX_RETRIES` environment overrides.
+
 ## Observed limits
 
 The representative request uses home `(24.795, 60.216)` and turnaround

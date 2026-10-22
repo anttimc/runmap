@@ -73,7 +73,7 @@ async def lifespan(application):
             if path_backend == "sqlite" else load_path_data(graph_path))
         application.state.run_limits = RunAreaLimits(
             max_area_km2=float(os.environ.get("RUNMAP_RUN_MAX_AREA_KM2", 2500)),
-            max_segments=int(os.environ.get("RUNMAP_RUN_MAX_SEGMENTS", 200000)),
+            max_segments=int(os.environ.get("RUNMAP_RUN_MAX_SEGMENTS", 650000)),
             max_retries=int(os.environ.get("RUNMAP_RUN_MAX_RETRIES", 5)),
             minimum_dimension_m=float(os.environ.get("RUNMAP_RUN_MIN_DIMENSION_M", 1000)),
             boundary_margin_m=float(os.environ.get("RUNMAP_RUN_BOUNDARY_MARGIN_M", 100)))

@@ -353,7 +353,7 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_NUMERIC_CACHE_BYTES` | 134,217,728 accounted bytes of retained numeric working sets per process |
 | `RUNMAP_RUN_DEADLINE` | 15 seconds per planner request |
 | `RUNMAP_RUN_MAX_AREA_KM2` | 2,500 km² maximum run-planning query area |
-| `RUNMAP_RUN_MAX_SEGMENTS` | 200,000 complete candidate segments per planning query |
+| `RUNMAP_RUN_MAX_SEGMENTS` | 650,000 complete candidate segments per planning query |
 | `RUNMAP_RUN_MAX_RETRIES` | 5 retries; double both box dimensions each time |
 | `RUNMAP_RUN_MIN_DIMENSION_M` | 1,000 m minimum initial box width and height |
 | `RUNMAP_RUN_BOUNDARY_MARGIN_M` | 100 m minimum candidate proximity band; also at least 5% of the shorter box dimension |
