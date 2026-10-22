@@ -6,7 +6,7 @@ from runmap.routing.cost_types import (
     PreferenceCapabilities, PreferenceCapability, PreferenceLevel, PreferenceSettings,
     PreferenceWeights, PreferenceWeightTable, PreferenceWeightTables, ResolvedPreferences,
 )
-from runmap.routing.hill_types import HillData
+from runmap.routing.hill_types import HillData, HillModel
 
 
 COST_MODEL_VERSION = "distance-preferences-v1"
@@ -15,9 +15,13 @@ COST_UNITS = "equivalent_metres"
 
 def preference_capabilities(hills: HillData | None = None) -> PreferenceCapabilities:
     """Advertise only implemented algorithms with verified feature support."""
+    return prepared_preference_capabilities(hills.model if hills else None, hills.valid_fraction if hills else None)
+
+
+def prepared_preference_capabilities(model: HillModel | None, valid_fraction: float | None) -> PreferenceCapabilities:
     return PreferenceCapabilities(
-        (PreferenceCapability(("off", "low", "high"), hills.model.version, hills.valid_fraction, None)
-         if hills is not None else PreferenceCapability(("off",), None, None, "Prepared hill measurements are unavailable.")),
+        (PreferenceCapability(("off", "low", "high"), model.version, valid_fraction, None)
+         if model is not None else PreferenceCapability(("off",), None, None, "Prepared hill measurements are unavailable.")),
         PreferenceCapability(("off",), None, None, "Crossing passage attribution is not prepared."),
         PreferenceCapability(("off",), None, None, "Buffered road context is not prepared."),
         PreferenceCapability(("off",), None, None, "Buffered green-area context is not prepared."),

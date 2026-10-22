@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from collections.abc import Sequence
 from typing import Literal, TypedDict, overload
 
-from runmap.routing.types import Coordinate
+from runmap.routing.types import Coordinate, Measurement
 from runmap.paths.measurements import MeasurementData, indexed_measurement
 
 
@@ -105,14 +105,18 @@ def measurement_quality(valid: bool, flags: Sequence[str]) -> Quality:
 
 def display_feature(data: MeasurementData, interval: DisplayInterval) -> DisplayFeature:
     item = indexed_measurement(data, interval.segment, interval.interval_index)
+    return measurement_feature(item, interval.surface_class, interval.flat_min_grade_50m)
+
+
+def measurement_feature(item: Measurement, surface_class: str, flat_min_grade_50m: float | None) -> DisplayFeature:
     return {
         "type": "Feature", "id": f"{item['segment_id']}:{item['interval_index']}",
         "geometry": {"type": "LineString", "coordinates": item["geometry"]},
         "properties": {
             "segment_id": item["segment_id"], "interval_index": item["interval_index"],
             "grade_percent": item["grade_percent"], "quality": measurement_quality(item["valid"], item["quality_flags"]),
-            "quality_flags": item["quality_flags"], "surface_class": interval.surface_class,
+            "quality_flags": item["quality_flags"], "surface_class": surface_class,
             "stairs": "stairs" in item["quality_flags"],
-            "flat_min_grade_50m": interval.flat_min_grade_50m,
+            "flat_min_grade_50m": flat_min_grade_50m,
         },
     }

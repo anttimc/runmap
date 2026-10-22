@@ -29,6 +29,9 @@ pnpm --dir web dev
 Open the URL printed by Vite. Data is not included in Git; follow
 [development and data preparation](docs/development.md) for a fresh checkout.
 Missing path artifacts leave terrain exploration available.
+An exported sibling `network.sqlite` enables selective path delivery; see
+[SQLite setup](docs/development.md#export-a-sqlite-network-dataset). Exploration
+and planning still load the matching JSON graph lazily during migration.
 
 ## Documentation
 

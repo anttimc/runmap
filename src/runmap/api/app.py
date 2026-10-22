@@ -2,6 +2,7 @@
 
 import logging
 import os
+import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 from hashlib import sha256
@@ -14,11 +15,14 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from runmap.api.paths import render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
+from runmap.api.paths import PathData, render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
+from runmap.api.sqlite_data import SQLitePathData, RoutingUnavailableError
+from runmap.api.sqlite_paths import database_path_config, database_viewport, database_inspection, database_snap
+from runmap.paths.database_pool import DatabaseBusyError
 from runmap.api.path_tiles import PathTileService, render_version as path_render_version, tile_template
 from runmap.api.terrain import TerrainRenderer
 from runmap.api.runs import PlannerConfiguration, RunRequest, RunResponse, generate_run
-from runmap.routing.cost_settings import preference_capabilities
+from runmap.routing.cost_settings import preference_capabilities, prepared_preference_capabilities
 from runmap.api.terrain_tiles import (
     CONTOUR_INTERVAL_M,
     CONTOUR_RENDER_VERSION,
@@ -52,8 +56,15 @@ async def lifespan(application):
     ))
     application.state.paths = None
     application.state.path_status = "unavailable"
+    database_path = os.environ.get("RUNMAP_PATH_DATABASE")
+    if database_path is None and graph_path.with_name("network.sqlite").is_file():
+        database_path = str(graph_path.with_name("network.sqlite"))
     try:
-        application.state.paths = load_path_data(graph_path)
+        application.state.paths = (SQLitePathData(
+            Path(database_path), graph_path,
+            pool_size=int(os.environ.get("RUNMAP_PATH_DATABASE_CONNECTIONS", "2")),
+            cache_kib=int(os.environ.get("RUNMAP_PATH_DATABASE_CACHE_KIB", "16384")))
+            if database_path is not None else load_path_data(graph_path))
         application.state.path_status = "ready"
         application.state.path_tiles = PathTileService(
             application.state.paths,
@@ -63,15 +74,28 @@ async def lifespan(application):
             tile_ttl=float(os.environ.get("RUNMAP_PATH_TILE_TTL", 900)),
             preparation_deadline=float(os.environ.get("RUNMAP_PATH_PREPARATION_DEADLINE", 10)))
     except FileNotFoundError:
-        logging.getLogger(__name__).info("Path artifacts unavailable: %s", graph_path)
-    except (ValueError, OSError, TypeError, KeyError):
+        logging.getLogger(__name__).info("Path artifacts unavailable: %s", database_path or graph_path)
+    except (ValueError, OSError, TypeError, KeyError, sqlite3.Error):
+        if isinstance(application.state.paths, SQLitePathData):
+            application.state.paths.close()
+        application.state.paths = None
         application.state.path_status = "failed"
-        logging.getLogger(__name__).exception("Cannot load path artifacts: %s", graph_path)
-    yield
+        logging.getLogger(__name__).exception("Cannot load path artifacts: %s", database_path or graph_path)
+    try:
+        yield
+    finally:
+        if isinstance(application.state.paths, SQLitePathData):
+            application.state.paths.close()
 
 
 app = FastAPI(title="Runmap", version="0.1.0", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
+
+
+@app.exception_handler(DatabaseBusyError)
+@app.exception_handler(RoutingUnavailableError)
+async def path_service_unavailable(request: Request, exc: RuntimeError) -> JSONResponse:
+    return JSONResponse({"detail": str(exc)}, status_code=503)
 
 
 @app.get("/api/config")
@@ -85,11 +109,16 @@ def paths_config(request: Request):
     if data is None:
         return {"status": request.app.state.path_status,
                 "message": "Path analysis is unavailable. Prepare graph measurements locally."}
-    return {**path_config(data), "tile_template": tile_template(data, "static/{policy}"),
+    sqlite = isinstance(data, SQLitePathData)
+    model = data.metadata.models.hill_model if sqlite else data.hills.model if data.hills else None
+    capabilities = (prepared_preference_capabilities(model, data.metadata.hill_valid_fraction)
+                    if sqlite else preference_capabilities(data.hills))
+    return {**(database_path_config(data) if sqlite else path_config(data)), "tile_template": tile_template(data, "static/{policy}"),
             "tile_min_zoom": 10, "tile_max_zoom": 16,
             "run_planner": PlannerConfiguration(
-                preference_capabilities=preference_capabilities(data.hills),
-                hill_model=data.hills.model if data.hills else None,
+                available=data.routing_error is None and data.graph_path.is_file() if sqlite else True,
+                preference_capabilities=capabilities,
+                hill_model=model,
                 deadline_s=float(os.environ.get("RUNMAP_RUN_DEADLINE", "15"))).model_dump()}
 
 
@@ -100,6 +129,10 @@ def _path_data(request, dataset_id):
     if dataset_id is not None and dataset_id != data.dataset_id:
         raise HTTPException(status_code=409, detail="Path dataset changed; reload the map")
     return data
+
+
+def _routing_data(data: PathData | SQLitePathData) -> PathData:
+    return data.routing_data() if isinstance(data, SQLitePathData) else data
 
 
 class SnapshotRequest(BaseModel):
@@ -117,7 +150,7 @@ class SnapshotRequest(BaseModel):
 def run_route(request: Request, options: RunRequest) -> RunResponse:
     data = _path_data(request, options.dataset_id)
     try:
-        return generate_run(data, options, float(os.environ.get("RUNMAP_RUN_DEADLINE", "15")))
+        return generate_run(_routing_data(data), options, float(os.environ.get("RUNMAP_RUN_DEADLINE", "15")))
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -193,7 +226,8 @@ def paths_viewport(
 ):
     data = _path_data(request, dataset_id)
     try:
-        result = viewport_paths(data, (west, south, east, north), zoom, surface, avoid_stairs=avoid_stairs,
+        reader = database_viewport if isinstance(data, SQLitePathData) else viewport_paths
+        result = reader(data, (west, south, east, north), zoom, surface, avoid_stairs=avoid_stairs,
                                 hide_building_access=hide_building_access)
         return JSONResponse(render_paths(result))
     except ValueError as exc:
@@ -207,16 +241,19 @@ def path_inspection(request: Request, segment_id: str, reverse: bool = False,
                     budget_km: float = Query(3, gt=0, le=50),
                     radius_m: float = Query(50, gt=0, le=200), start_segment_id: str = None):
     data = _path_data(request, dataset_id)
-    if segment_id not in data.segments:
+    if not isinstance(data, SQLitePathData) and segment_id not in data.segments:
         raise HTTPException(status_code=404, detail="Unknown path segment")
     try:
-        result = inspect_path(data, segment_id, reverse, surface, avoid_stairs, hide_building_access)
+        reader = database_inspection if isinstance(data, SQLitePathData) else inspect_path
+        result = reader(data, segment_id, reverse, surface, avoid_stairs, hide_building_access)
         if longitude is not None or latitude is not None:
             if longitude is None or latitude is None:
                 raise ValueError("Both start coordinates are required")
-            result = inspect_outing(data, result, longitude, latitude, budget_km, surface,
+            result = inspect_outing(_routing_data(data), result, longitude, latitude, budget_km, surface,
                                     avoid_stairs, radius_m, start_segment_id)
         return result
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Unknown path segment") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -228,7 +265,8 @@ def path_start_snap(request: Request, longitude: float, latitude: float,
                     dataset_id: str = None):
     data = _path_data(request, dataset_id)
     try:
-        return snap_path_start(data, longitude, latitude, surface, avoid_stairs, radius_m, segment_id)
+        reader = database_snap if isinstance(data, SQLitePathData) else snap_path_start
+        return reader(data, longitude, latitude, surface, avoid_stairs, radius_m, segment_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -242,7 +280,7 @@ def path_exploration(request: Request, west: float, south: float, east: float, n
                      dataset_id: str = None, metric: str = "gradient", hide_building_access: bool = True):
     data = _path_data(request, dataset_id)
     try:
-        result = explore_paths(data, (west, south, east, north), zoom, longitude, latitude,
+        result = explore_paths(_routing_data(data), (west, south, east, north), zoom, longitude, latitude,
                                budget_km, surface, avoid_stairs, radius_m, segment_id, hide_building_access)
         return JSONResponse(render_paths(result, metric))
     except ValueError as exc:

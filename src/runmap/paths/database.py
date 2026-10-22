@@ -1,6 +1,7 @@
 """Prepared SQLite network windows; geometry processing stays in Python."""
 
 from contextlib import closing
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 import hashlib
 import json
@@ -13,14 +14,16 @@ from typing import cast
 
 from runmap.paths.coverage import Coverage, geometry_bounds
 from runmap.paths.database_features import (create_feature_schema, read_display_intervals,
-                                           read_segment_features, write_prepared_features)
+                                           read_segment_features, write_prepared_features, iter_display_intervals,
+                                           decode_classification)
 from runmap.paths.measurements import graph_digest, segment_measurements
 from runmap.paths.preparation import (PreparedDisplayInterval, PreparedModels, PreparedNetwork,
-                                      PreparedSegment, prepare_network, prepared_models)
+                                      PreparedSegment, PreparedPolicy, prepare_network, prepared_models)
+from runmap.paths.dead_ends import Classification
 from runmap.routing.geometry import indexed_segment_points
 from runmap.routing.hill_types import HillModel
 from runmap.routing.serialization import prepared_json
-from runmap.routing.types import Arc, Bounds, EdgeProfile, GraphDocument, Measurement, Node, Segment, TerrainMetadata
+from runmap.routing.types import Arc, Bounds, EdgeProfile, GraphDocument, GraphSource, Measurement, Node, Segment, TerrainMetadata
 
 
 SCHEMA_VERSION = 2
@@ -50,6 +53,24 @@ class NetworkWindow:
     graph: GraphDocument
     measurements: dict[str, list[Measurement]]
     frontier_nodes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DatasetPresentation:
+    source: GraphSource
+    longitude: float | None
+    latitude: float | None
+    hidden_segments: int
+    hidden_intervals: int
+
+
+@dataclass(frozen=True)
+class SegmentInspection:
+    segment: Segment
+    measurements: list[Measurement]
+    surface_class: str
+    building_access: Classification | None
+    policy: PreparedPolicy
 
 
 def _encode(value: object) -> str:
@@ -117,6 +138,19 @@ def _write_metadata(connection: sqlite3.Connection, graph: GraphDocument,
         key: value for key, value in graph.items()
         if key not in {"nodes", "segments", "arcs", "_measurements"}
     })))
+    _write_presentation(connection, graph, prepared)
+
+
+def _write_presentation(connection: sqlite3.Connection, graph: GraphDocument, prepared: PreparedNetwork) -> None:
+    start = cast(dict[str, object], graph.get("start", {}))
+    measurements = prepared.measurements
+    hidden_intervals = sum(int(measurements.interval_offsets[i + 1] - measurements.interval_offsets[i])
+                           for segment in prepared.building_access
+                           for i in (measurements.segment_indices[segment],)) if measurements is not None else 0
+    value = {"source": graph.get("source", {}), "longitude": start.get("longitude"),
+             "latitude": start.get("latitude"), "hidden_segments": len(prepared.building_access),
+             "hidden_intervals": hidden_intervals}
+    connection.execute("INSERT INTO metadata VALUES ('presentation', ?)", (_encode(value),))
 
 
 def _write_bounds_and_measurements(connection: sqlite3.Connection, prepared: PreparedNetwork) -> None:
@@ -162,11 +196,12 @@ def export_network_database(graph_path: Path, destination: Path) -> None:
         staging.unlink(missing_ok=True)
 
 
-def open_network_database(path: Path, cache_kib: int = 16384) -> sqlite3.Connection:
+def open_network_database(path: Path, cache_kib: int = 16384, *,
+                          check_same_thread: bool = True) -> sqlite3.Connection:
     """Return a caller-owned read-only connection with a bounded page-cache target."""
     if cache_kib <= 0:
         raise ValueError("Page-cache target must be positive")
-    connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+    connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, check_same_thread=check_same_thread)
     try:
         if connection.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
             raise ValueError("Unsupported network database schema")
@@ -304,3 +339,38 @@ def _query_parameters(bounds: Bounds) -> dict[str, float]:
     _validate_bounds(bounds)
     west, south, east, north = bounds
     return dict(west=west, south=south, east=east, north=north)
+
+
+def dataset_presentation(connection: sqlite3.Connection) -> DatasetPresentation:
+    row = connection.execute("SELECT value FROM metadata WHERE key = 'presentation'").fetchone()
+    if row is None:
+        raise ValueError("API presentation metadata is missing; re-export the network database")
+    value = json.loads(row[0])
+    return DatasetPresentation(value["source"], value["longitude"], value["latitude"],
+                               value["hidden_segments"], value["hidden_intervals"])
+
+
+def iter_query_display_intervals(connection: sqlite3.Connection, bounds: Bounds, policy_id: str,
+                                 *, hide_building_access: bool = True) -> Iterator[PreparedDisplayInterval]:
+    return iter_display_intervals(connection, _query_parameters(bounds), hide_building_access, policy_id)
+
+
+def query_segment_inspection(connection: sqlite3.Connection, segment_id: str, policy_id: str) -> SegmentInspection:
+    row = connection.execute("""
+        SELECT s.payload, f.surface_class, f.building_access, p.forward, p.backward, p.reason
+        FROM segments s JOIN segment_features f ON f.segment_id = s.id
+        JOIN segment_policies p ON p.segment_id = s.id AND p.policy_id = ? WHERE s.id = ?
+    """, (policy_id, segment_id)).fetchone()
+    if row is None:
+        raise KeyError(segment_id)
+    measurements = [cast(Measurement, json.loads(item[0])) for item in connection.execute(
+        "SELECT payload FROM measurements WHERE segment_id = ? ORDER BY interval_index", (segment_id,))]
+    return SegmentInspection(cast(Segment, json.loads(row[0])), measurements, row[1], decode_classification(row[2]),
+                              PreparedPolicy(policy_id, bool(row[3]), bool(row[4]), row[5]))
+
+
+def query_segment_record(connection: sqlite3.Connection, segment_id: str) -> Segment:
+    row = connection.execute("SELECT payload FROM segments WHERE id = ?", (segment_id,)).fetchone()
+    if row is None:
+        raise KeyError(segment_id)
+    return cast(Segment, json.loads(row[0]))

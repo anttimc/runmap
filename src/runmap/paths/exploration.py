@@ -1,6 +1,9 @@
 """Eligible edge snapping and budgeted outing inclusion over prepared topology."""
 
 from collections import ChainMap, OrderedDict
+from collections.abc import Sequence
+
+from runmap.routing.types import Measurement
 from concurrent.futures import Future
 from time import monotonic
 from dataclasses import dataclass, field, replace
@@ -54,10 +57,7 @@ def segment_reason(index, segment_id):
 
 
 def snap_candidates(data, index, longitude, latitude, radius_m=50, preferred_segment=None):
-    if not all(math.isfinite(v) for v in (longitude, latitude, radius_m)) or not (
-        -180 <= longitude <= 180 and -85 <= latitude <= 85 and 0 < radius_m <= 200
-    ):
-        raise ValueError("Invalid snap location or radius (maximum 200 m)")
+    validate_snap(longitude, latitude, radius_m)
     # Same interval index as viewport delivery, with a conservative geographic envelope.
     delta_lat = radius_m / 100000
     delta_lon = delta_lat / max(.01, math.cos(math.radians(latitude)))
@@ -76,12 +76,24 @@ def snap_candidates(data, index, longitude, latitude, radius_m=50, preferred_seg
             reasons[segment_id] = segment_reason(index, segment_id)
         if not reasons[segment_id]:
             records.append(interval)
+    return snap_measurements(records, longitude, latitude, radius_m, preferred_segment)
+
+
+def validate_snap(longitude: float, latitude: float, radius_m: float) -> None:
+    if not all(math.isfinite(v) for v in (longitude, latitude, radius_m)) or not (
+        -180 <= longitude <= 180 and -85 <= latitude <= 85 and 0 < radius_m <= 200
+    ):
+        raise ValueError("Invalid snap location or radius (maximum 200 m)")
+
+
+def snap_measurements(records: Sequence[Measurement], longitude: float, latitude: float,
+                      radius_m: float, preferred_segment: str | None = None) -> tuple[Snap | None, list[Snap]]:
     if not records:
         return None, []
     coordinates = [(longitude, latitude)] + [point for item in records for point in item["geometry"]]
     xs, ys = transform("EPSG:4326", "EPSG:3067", *zip(*coordinates))
     px, py = xs[0], ys[0]
-    choices = {}
+    choices: dict[str, Snap] = {}
     for i, item in enumerate(records):
         a, b = 2 * i + 1, 2 * i + 2
         dx, dy = xs[b] - xs[a], ys[b] - ys[a]

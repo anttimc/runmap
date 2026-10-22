@@ -72,6 +72,7 @@ class PreparedDisplayInterval:
     flat_min_grade_50m: float | None
     coverage_limited: bool
     building_access: Classification | None
+    policy: PreparedPolicy | None = None
 
 
 def prepared_models(hill_model: HillModel | None) -> PreparedModels:

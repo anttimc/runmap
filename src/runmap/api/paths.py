@@ -7,7 +7,7 @@ import json
 import math
 from pathlib import Path
 
-from runmap.paths.coverage import (geometry_bounds as _bounds, point_in_ring as _point_in_ring,
+from runmap.paths.coverage import (Coverage, geometry_bounds as _bounds, point_in_ring as _point_in_ring,
                                    graph_coverage, near_coverage_boundary)
 
 from runmap.paths.measurements import (MeasurementData, graph_digest, inspect_measurements,
@@ -18,7 +18,7 @@ from runmap.paths.spatial import Cell, filter_cells, pack_cells
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                                    Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile, forbidden_reason, pedestrian_access_reason
-from runmap.routing.types import Bounds, Coordinate, EdgeProfile, MeasurementLocation, Segment
+from runmap.routing.types import Bounds, Coordinate, EdgeProfile, MeasurementLocation, Segment, TerrainMetadata
 from runmap.routing.search import GraphData, build_graph_index, apply_profile
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import build_hill_data
@@ -127,22 +127,29 @@ def _build_display_index(data: PathData) -> PathData:
 
 
 def path_config(data):
+    hidden_intervals = sum(int(data.measurements.interval_offsets[i + 1] - data.measurements.interval_offsets[i])
+                           for segment in data.building_access
+                           for i in (data.measurements.segment_indices[segment],))
+    return path_configuration(data.dataset_id, data.coverage, data.bounds, data.measurements.method,
+                              data.graph.get("start", {}), len(data.building_access), hidden_intervals)
+
+
+def path_configuration(dataset_id: str, coverage: Coverage, bounds: Bounds, method: TerrainMetadata,
+                        start: Mapping[str, float], hidden_segments: int, hidden_intervals: int) -> dict[str, object]:
     return {
-        "status": "ready", "dataset_id": data.dataset_id,
+        "status": "ready", "dataset_id": dataset_id,
         "building_access_filter": {
             "default": True, "classifier_version": CLASSIFIER_VERSION,
             "access_policy": ACCESS_POLICY, "entrance_limit_m": ENTRANCE_LIMIT_M,
-            "cache_identity": [data.dataset_id, ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M],
-            "hidden_segments": len(data.building_access),
-            "hidden_intervals": sum(int(data.measurements.interval_offsets[i + 1] - data.measurements.interval_offsets[i])
-                                    for segment in data.building_access
-                                    for i in (data.measurements.segment_indices[segment],)),
+            "cache_identity": [dataset_id, ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M],
+            "hidden_segments": hidden_segments,
+            "hidden_intervals": hidden_intervals,
         },
-        "coverage": data.coverage, "bounds_wgs84": data.bounds,
-        "method": data.measurements.method,
+        "coverage": coverage, "bounds_wgs84": bounds,
+        "method": method,
         "initial_view": {
-            "longitude": data.graph.get("start", {}).get("longitude", (data.bounds[0] + data.bounds[2]) / 2),
-            "latitude": data.graph.get("start", {}).get("latitude", (data.bounds[1] + data.bounds[3]) / 2),
+            "longitude": start.get("longitude", (bounds[0] + bounds[2]) / 2),
+            "latitude": start.get("latitude", (bounds[1] + bounds[3]) / 2),
             "zoom": 15,
         },
         "min_zoom": MIN_ZOOM, "max_area_km2": MAX_AREA_KM2, "max_features": MAX_FEATURES,
@@ -171,8 +178,8 @@ def candidate_path_indexes(data: PathData, bounds: tuple[float, float, float, fl
     return sorted({i for cell in _cells(clipped) for i in cells.get(cell, ())})
 
 
-def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES, avoid_stairs=True,
-                   hide_building_access: bool = True):
+def viewport_response(coverage: Coverage, coverage_bounds: Bounds, dataset_id: str,
+                      bounds: Bounds, zoom: float, surface: str) -> dict[str, object]:
     if len(bounds) != 4 or not all(math.isfinite(value) for value in bounds):
         raise ValueError("Viewport needs four finite WGS84 bounds")
     west, south, east, north = bounds
@@ -182,16 +189,25 @@ def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES,
         raise ValueError("Invalid zoom")
     if surface not in {"all", "surfaced"}:
         raise ValueError("Unknown surface filter")
-    ring = data.coverage["geometry"]["coordinates"][0]
+    ring = coverage["geometry"]["coordinates"][0]
     corners = [(west, south), (east, south), (east, north), (west, north)]
     inside = [_point_in_ring(point, ring) for point in corners]
-    response = {"type": "FeatureCollection", "features": [], "dataset_id": data.dataset_id,
+    response = {"type": "FeatureCollection", "features": [], "dataset_id": dataset_id,
                 "status": "ready", "coverage_limited": not all(inside)}
-    if not _overlap(bounds, data.bounds) or not (any(inside) or _line_intersects(ring, bounds)):
+    if not _overlap(bounds, coverage_bounds) or not (any(inside) or _line_intersects(ring, bounds)):
         return {**response, "status": "outside_coverage"}
     area = (east - west) * (north - south) * 111.32 ** 2 * math.cos(math.radians((north + south) / 2))
     if zoom < MIN_ZOOM or area > MAX_AREA_KM2:
         return {**response, "status": "zoom_in", "reason": "zoom" if zoom < MIN_ZOOM else "area"}
+    return response
+
+
+def viewport_paths(data, bounds, zoom, surface="all", max_features=MAX_FEATURES, avoid_stairs=True,
+                   hide_building_access: bool = True):
+    response = viewport_response(data.coverage, data.bounds, data.dataset_id, bounds, zoom, surface)
+    if response["status"] != "ready":
+        return response
+    ring = data.coverage["geometry"]["coordinates"][0]
     candidates = candidate_path_indexes(data, bounds, hide_building_access)
     policy_index = path_policy_index(data, surface, avoid_stairs)
     features = []
@@ -284,14 +300,20 @@ def snap_path_start(data, longitude, latitude, surface="all", avoid_stairs=True,
                     radius_m=50, segment_id=None):
     index = path_policy_index(data, surface, avoid_stairs)
     snap, alternatives = snap_candidates(data, index, longitude, latitude, radius_m, segment_id)
-    return {"dataset_id": data.dataset_id, "status": "ready" if snap else "no_eligible_snap",
+    return snap_response(data.dataset_id, snap, alternatives, longitude, latitude, radius_m, data.segments)
+
+
+def snap_response(dataset_id: str, snap: Snap | None, alternatives: Sequence[Snap],
+                  longitude: float, latitude: float, radius_m: float,
+                  segments: Mapping[str, Segment]) -> dict[str, object]:
+    return {"dataset_id": dataset_id, "status": "ready" if snap else "no_eligible_snap",
             "requested": [longitude, latitude], "snap": asdict(snap) if snap else None,
             "candidates": [{**asdict(candidate), "description":
                 " · ".join(str(value) for value in (
-                    data.segments[candidate.segment_id]["tags"].get("name", candidate.segment_id),
-                    data.segments[candidate.segment_id]["tags"].get("highway", "path"),
-                    "bridge" if data.segments[candidate.segment_id]["tags"].get("bridge") not in (None, "no") else "",
-                    "tunnel" if data.segments[candidate.segment_id]["tags"].get("tunnel") not in (None, "no") else "",
+                    segments[candidate.segment_id]["tags"].get("name", candidate.segment_id),
+                    segments[candidate.segment_id]["tags"].get("highway", "path"),
+                    "bridge" if segments[candidate.segment_id]["tags"].get("bridge") not in (None, "no") else "",
+                    "tunnel" if segments[candidate.segment_id]["tags"].get("tunnel") not in (None, "no") else "",
                 ) if value)} for candidate in alternatives], "radius_m": radius_m,
             "offset_note": "The offset is visual distance, not a validated access route."}
 

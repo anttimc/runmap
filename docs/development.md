@@ -191,10 +191,34 @@ It records offline export time/peak process RSS, database size, open time, and
 first/repeated display/segment-feature reads. It does not measure API latency
 or a cold disk cache.
 
-The API still uses `RUNMAP_PATH_GRAPH` and the existing JSON loader. Exporting a
-database does not change backend startup memory or activate local routing yet.
+The API automatically uses `network.sqlite` beside `RUNMAP_PATH_GRAPH` when it
+exists. For a differently named or located database, set `RUNMAP_PATH_DATABASE`.
+Keep `RUNMAP_PATH_GRAPH` pointing to the matching source dataset during this stage:
+config, static tiles, inspection, and snapping use SQLite immediately, but the
+first exploration/planning request still loads the JSON graph lazily. Those
+searches therefore still incur full-dataset loading time and memory. Missing or
+mismatched routing sources return HTTP 503 without breaking selective delivery.
+Restart after changing either dataset. An explicitly selected bad database does
+not silently switch to JSON. Without a database the existing JSON startup remains.
+
+Earlier schema-2 exports made before API presentation metadata was added must be
+re-exported into a new file for API use; the reader reports this requirement.
+Use `RUNMAP_PATH_DATABASE` to select the new filename if `network.sqlite` exists.
+
+To compare delivery in separate fresh SQLite/JSON reader processes, add `--api`
+to the storage probe and include the web dependencies:
+
+```sh
+uv run --extra web python -m runmap.experiments.benchmark_database \
+  data/paths/prepared/leppavaara-flat-10k/graph.json \
+  --bounds 374750 6674750 375250 6675250 --api \
+  --report data/experiments/sqlite-delivery.json
+```
+
+This measures dataset initialization, direct config/viewport/inspection/snap/tile
+delivery, and reader peak RSS. HTTP transport and cold OS caches are excluded.
 See the [migration roadmap](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
-for remaining work and the accepted area-expansion limitation.
+for bounded local searches and planner area expansion.
 
 ## Configuration
 
@@ -212,6 +236,9 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_CATALOG_PATH` | `catalog.sqlite` under the elevation root |
 | `RUNMAP_ELEVATION_PATH` | Optional complete single-band raster; overrides named-region terrain |
 | `RUNMAP_PATH_GRAPH` | Project `data/paths/prepared/helsinki-capital-area/graph.json` |
+| `RUNMAP_PATH_DATABASE` | Optional explicit prepared SQLite path; otherwise prefer sibling `network.sqlite` when present |
+| `RUNMAP_PATH_DATABASE_CONNECTIONS` | 2 exclusively leased read-only connections per worker |
+| `RUNMAP_PATH_DATABASE_CACHE_KIB` | 16,384 KiB page-cache target per connection; excludes decoded responses, tile caches, and OS caches |
 | `RUNMAP_RUN_DEADLINE` | 15 seconds per planner request |
 | `RUNMAP_PATH_PREPARATION_DEADLINE` | 10 seconds per exploration snapshot preparation |
 | `RUNMAP_PATH_TILE_CACHE_BYTES` | 67,108,864 bytes |

@@ -182,7 +182,14 @@ def inspect_measurements(data: MeasurementData, segment_id: str, reverse: bool =
     Gaps have null profile heights. Each following valid run starts at zero.
     Partial interval height changes use the interval's constant sampled grade.
     """
-    source = segment_measurements(data, segment_id)
+    return inspect_samples(segment_measurements(data, segment_id), segment_id,
+                           float(data.graph_lengths_m[data.segment_indices[segment_id]]),
+                           data.method, reverse, start_m, end_m)
+
+
+def inspect_samples(source: Sequence[Measurement], segment_id: str, graph_length: float,
+                    method: TerrainMetadata, reverse: bool = False, start_m: float = 0.0,
+                    end_m: float | None = None) -> dict[str, object]:
     length = source[-1]["end_m"] if source else 0.0
     end_m = length if end_m is None else end_m
     if not 0 <= start_m < end_m <= length:
@@ -208,7 +215,6 @@ def inspect_measurements(data: MeasurementData, segment_id: str, reverse: bool =
                           "height_change_m": None if not item["valid"] else
                           item["height_change_m"] * (hi - lo) / span})
     if reverse:
-        graph_length = float(data.graph_lengths_m[data.segment_indices[segment_id]])
         intervals.reverse()
         for item in intervals:
             item["start_m"], item["end_m"] = end_m - start_m - item["end_m"], end_m - start_m - item["start_m"]
@@ -239,4 +245,4 @@ def inspect_measurements(data: MeasurementData, segment_id: str, reverse: bool =
             "descent_m": sum(max(0, -i["height_change_m"]) for i in intervals if i["valid"]),
             "valid_length_fraction": valid_length / (end_m - start_m),
             "totals_complete": all(i["valid"] for i in intervals),
-            "method": data.method}
+            "method": method}

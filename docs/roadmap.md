@@ -41,19 +41,17 @@ network density, concurrency, and bounded caches rather than total coverage.
 The exporter, prepared-feature persistence, and local-network readers are implemented in
 `paths/database.py`; see [architecture](architecture.md#sqlite-storage-foundation)
 and [export instructions](development.md#export-a-sqlite-network-dataset).
-The API still loads JSON globally. This foundation does not complete the migration.
+The API supports selective SQLite config, static tiles, inspection, and snapping.
+Exploration/planning still use a lazy full-JSON compatibility bridge; those
+requests retain whole-dataset startup/memory costs until the next step lands.
 
-1. Migrate static tiles, inspection, and snapping to selective database reads.
-   Add dataset metadata/config access and bounded connection/result caches.
-   Startup must not parse all measurements or rebuild full-network indexes.
-   Keep terrain rasters in the existing COG pipeline.
-2. Build packed local graphs for bounded exploration and run planning. Distinguish
+1. Build packed local graphs for bounded exploration and run planning. Distinguish
    stable dataset IDs from local dense indices; retain complete selected segments,
    endpoint nodes, directed arcs, and original segment chainages. Detect unloaded
    connections separately from true dead ends and source-coverage boundaries.
    Exploration uses a conservative envelope derived from its forward distance
    budget, accounting for snapping and coordinate distortion.
-3. For run planning, start with the endpoints' EPSG:3067 box enlarged by 50% in
+2. For run planning, start with the endpoints' EPSG:3067 box enlarged by 50% in
    total width and height (25% per side). Add configurable minimum dimensions in
    metres; choose their defaults using representative routes. The viewport may
    hint at useful initial coverage, but must not silently determine route legality.
@@ -67,7 +65,8 @@ The API still loads JSON globally. This foundation does not complete the migrati
    defaults before wiring the API. Boundary-triggered expansion is a heuristic:
    a better route outside the area can remain undetected. Full-dataset optimality
    is not promised; lower-bound-based expansion is a later improvement if needed.
-4. Remove global `PathData`/policy/measurement ownership after parity checks.
+3. Remove the lazy full-JSON bridge and global `PathData`/policy/measurement
+   ownership after local-search parity checks.
    Keep JSON as an import/debug format during transition; publish new database
    generations atomically and keep existing request/cache identities tied to one
    generation. Selective runtime reads must not require full-dataset validation.

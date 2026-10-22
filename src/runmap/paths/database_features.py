@@ -1,6 +1,7 @@
 """SQLite persistence for globally prepared display and routing features."""
 
 from dataclasses import asdict
+from collections.abc import Iterator
 import json
 import sqlite3
 from typing import cast
@@ -156,14 +157,24 @@ def _read_segment(row: tuple[str, str, int, str | None, str, str | None, str | N
 
 
 def read_display_intervals(connection: sqlite3.Connection, parameters: dict[str, float],
-                           hide_building_access: bool) -> tuple[PreparedDisplayInterval, ...]:
-    return tuple(PreparedDisplayInterval(cast(Measurement, json.loads(row[0])), row[1], row[2],
-                                         bool(row[3]), decode_classification(row[4]))
-                 for row in connection.execute("""
-        SELECT m.payload, f.surface_class, d.flat_min_grade_50m, d.coverage_limited, f.building_access
+                           hide_building_access: bool, policy_id: str | None = None) -> tuple[PreparedDisplayInterval, ...]:
+    return tuple(iter_display_intervals(connection, parameters, hide_building_access, policy_id))
+
+
+def iter_display_intervals(connection: sqlite3.Connection, parameters: dict[str, float],
+                           hide_building_access: bool, policy_id: str | None = None) -> Iterator[PreparedDisplayInterval]:
+    for row in connection.execute("""
+        SELECT m.payload, f.surface_class, d.flat_min_grade_50m, d.coverage_limited, f.building_access,
+               p.forward, p.backward, p.reason
         FROM interval_bounds b JOIN display_intervals d ON d.number = b.number
         JOIN measurements m ON m.number = d.number
         JOIN segment_features f ON f.segment_id = m.segment_id
+        LEFT JOIN segment_policies p ON p.segment_id = m.segment_id AND p.policy_id = :policy
         WHERE b.west <= :east AND b.east >= :west AND b.south <= :north AND b.north >= :south
           AND (:hide = 0 OR f.building_access IS NULL) ORDER BY d.number
-    """, {**parameters, "hide": int(hide_building_access)}))
+    """, {**parameters, "hide": int(hide_building_access), "policy": policy_id}):
+        policy = PreparedPolicy(policy_id, bool(row[5]), bool(row[6]), row[7]) if policy_id is not None else None
+        if policy_id is not None and row[5] is None:
+            raise ValueError("Unknown prepared path policy")
+        yield PreparedDisplayInterval(cast(Measurement, json.loads(row[0])), row[1], row[2],
+                                      bool(row[3]), decode_classification(row[4]), policy)

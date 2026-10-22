@@ -1,0 +1,92 @@
+{
+  "graph": "data/paths/prepared/leppavaara-flat-10k/graph.json",
+  "bounds_epsg3067": [
+    374750.0,
+    6674750.0,
+    375250.0,
+    6675250.0
+  ],
+  "export_s": 25.492925792001188,
+  "database_bytes": 474775552,
+  "python": "3.14.6",
+  "sqlite": "3.53.4",
+  "system": "Darwin",
+  "machine": "arm64",
+  "open_ms": 14.379875006852672,
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "feature_identity": "f11961281e7eda7485d16345186de4aec6f9999358eac88c6deb5cef9f828c6c",
+  "first_display_ms": 6.750750006176531,
+  "first_features_ms": 16.5855830127839,
+  "selected_intervals": 649,
+  "selected_segments": 124,
+  "warm_display_ms": 2.630792005220428,
+  "warm_features_ms": 5.033834022469819,
+  "counts": {
+    "nodes": 55627,
+    "segments": 69707,
+    "measurements": 278839,
+    "display_intervals": 278839,
+    "hill_features": 69707
+  },
+  "process_peak_rss_bytes": 1063927808,
+  "cache_note": "Fresh connection after export; OS cache is warm. Peak RSS includes offline import.",
+  "delivery_readers": [
+    {
+      "storage": "sqlite",
+      "startup_ms": 9.66654100921005,
+      "bounds_epsg3067": [
+        374750.0,
+        6674750.0,
+        375250.0,
+        6675250.0
+      ],
+      "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+      "config_ms": 0.004415982402861118,
+      "first_viewport_ms": 12.901792011689395,
+      "viewport_intervals": 717,
+      "viewport_sha256": "6a5d67171d5f408d9ee102e590e75e694b6d7794c828620f0d45f9636530cd1f",
+      "first_snap_ms": 0.6598749896511436,
+      "first_inspection_ms": 0.8363329980056733,
+      "first_tile_ms": 28.123291995143518,
+      "first_tile_cache_hit": false,
+      "tile_bytes": 47484,
+      "tile_sha256": "2c0a6b81f2eb83e0ad646d70534be28a33066a3660398b260b755b1854552777",
+      "warm_viewport_ms": 5.022708006436005,
+      "warm_snap_ms": 0.6566660013049841,
+      "warm_inspection_ms": 0.8146670006681234,
+      "warm_tile_ms": 0.014417018974199891,
+      "warm_tile_cache_hit": true,
+      "reader_peak_rss_bytes": 86114304,
+      "legacy_loaded": false
+    },
+    {
+      "storage": "json",
+      "startup_ms": 8406.219915981637,
+      "bounds_epsg3067": [
+        374750.0,
+        6674750.0,
+        375250.0,
+        6675250.0
+      ],
+      "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+      "config_ms": 1.4024579722899944,
+      "first_viewport_ms": 418.3670409838669,
+      "viewport_intervals": 717,
+      "viewport_sha256": "6a5d67171d5f408d9ee102e590e75e694b6d7794c828620f0d45f9636530cd1f",
+      "first_snap_ms": 2.7517089911270887,
+      "first_inspection_ms": 0.7859579927753657,
+      "first_tile_ms": 35.801166988676414,
+      "first_tile_cache_hit": false,
+      "tile_bytes": 47484,
+      "tile_sha256": "2c0a6b81f2eb83e0ad646d70534be28a33066a3660398b260b755b1854552777",
+      "warm_viewport_ms": 5.371459003072232,
+      "warm_snap_ms": 2.6670839870348573,
+      "warm_inspection_ms": 0.7647500024177134,
+      "warm_tile_ms": 0.013999990187585354,
+      "warm_tile_cache_hit": true,
+      "reader_peak_rss_bytes": 1063501824,
+      "legacy_loaded": true
+    }
+  ],
+  "delivery_equivalent": true
+}

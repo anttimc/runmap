@@ -17,6 +17,7 @@ from shapely.geometry import LineString, box
 from shapely import transform
 
 from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, display_segment_reason, exploration_context, path_policy_index
+from runmap.api.sqlite_data import SQLitePathData
 from runmap.paths.display import measurement_quality
 from runmap.routing.types import MeasurementLocation
 from runmap.routing.profiles import exploration_profile
@@ -125,8 +126,14 @@ class DisplayRun:
     last_interval: int
 
 
-def render_version(data: PathData) -> str:
-    identity = (data.graph["measurements"]["sha256"], ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M)
+def measurement_identity(data: PathData | SQLitePathData) -> str:
+    return data.measurement_sha256 if isinstance(data, SQLitePathData) else data.graph["measurements"]["sha256"]
+
+
+def render_version(data: PathData | SQLitePathData) -> str:
+    identity: tuple[object, ...] = (measurement_identity(data), ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M)
+    if isinstance(data, SQLitePathData):
+        identity = (*identity, data.metadata.feature_identity)
     digest = sha256(repr(identity).encode()).hexdigest()[:32]
     return f"{RENDER_VERSION}-{digest}"
 
@@ -221,28 +228,39 @@ def _interval_coordinates(geometry: memoryview, offsets: memoryview, number: int
     return tuple((geometry[i, 0], geometry[i, 1]) for i in range(offsets[number], offsets[number + 1]))
 
 
-def encode_tile(data: PathData, policy: str, variant: str, z: int, x: int, y: int,
+def encode_tile(data: PathData | SQLitePathData, policy: str, variant: str, z: int, x: int, y: int,
                 snapshot: Snapshot | None = None) -> bytes:
     west, south, east, north = tile_bounds(z, x, y)
     _, hidden = variant_options(variant)
     policy_options(policy)
-    features = []
+    runs: list[DisplayRun] = []
     if z >= MIN_ZOOM:
         # Latitude expansion is conservative because Mercator's scale grows poleward.
         pad = (east - west) * BUFFER / EXTENT
         bounds = (west - pad, south - pad, east + pad, north + pad)
-        indexes = candidate_path_indexes(data, bounds, hidden)
-        clip = box(-BUFFER, -BUFFER, EXTENT + BUFFER, EXTENT + BUFFER)
-        tolerance = EXTENT / 512 * (1 if z <= 12 else .5 if z <= 14 else .125)
-        for run in display_runs(data, indexes, policy, variant, z, snapshot):
-            line = LineString([projected_point(lon, lat, z, x, y) for lon, lat in run.coordinates])
-            geometry = line.simplify(tolerance).intersection(clip)
-            if geometry.is_empty or geometry.geom_type not in {"LineString", "MultiLineString"}:
-                continue
-            geometry = transform(geometry, np.rint)
-            if geometry.length == 0:
-                continue
-            features.append({"geometry": geometry, "properties": run.properties})
+        if isinstance(data, SQLitePathData) and snapshot is None:
+            from runmap.api.sqlite_paths import database_tile_runs
+            runs = database_tile_runs(data, bounds, policy, variant, z)
+        else:
+            legacy = data.routing_data() if isinstance(data, SQLitePathData) else data
+            indexes = candidate_path_indexes(legacy, bounds, hidden)
+            runs = display_runs(legacy, indexes, policy, variant, z, snapshot)
+    return encode_runs(runs, z, x, y)
+
+
+def encode_runs(runs: list[DisplayRun], z: int, x: int, y: int) -> bytes:
+    features = []
+    clip = box(-BUFFER, -BUFFER, EXTENT + BUFFER, EXTENT + BUFFER)
+    tolerance = EXTENT / 512 * (1 if z <= 12 else .5 if z <= 14 else .125)
+    for run in runs:
+        line = LineString([projected_point(lon, lat, z, x, y) for lon, lat in run.coordinates])
+        geometry = line.simplify(tolerance).intersection(clip)
+        if geometry.is_empty or geometry.geom_type not in {"LineString", "MultiLineString"}:
+            continue
+        geometry = transform(geometry, np.rint)
+        if geometry.length == 0:
+            continue
+        features.append({"geometry": geometry, "properties": run.properties})
     return mapbox_vector_tile.encode({"name": "paths", "features": features},
                                     default_options={"y_coord_down": True, "extents": EXTENT})
 
@@ -250,7 +268,7 @@ def encode_tile(data: PathData, policy: str, variant: str, z: int, x: int, y: in
 class PathTileService:
     """Own cache lifetimes for one loaded dataset and one API worker."""
 
-    def __init__(self, data: PathData, tile_bytes: int = 64 * 1024 ** 2,
+    def __init__(self, data: PathData | SQLitePathData, tile_bytes: int = 64 * 1024 ** 2,
                  snapshot_bytes: int = 128 * 1024 ** 2, snapshot_ttl: float = 900,
                  tile_ttl: float = 900, preparation_deadline: float = 10) -> None:
         self.data = data
@@ -264,13 +282,14 @@ class PathTileService:
         policy = f"{surface}-{'no-stairs' if avoid_stairs else 'stairs'}"
         policy_options(policy)
         _, distances, start, distance_hit = exploration_context(
-            self.data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id,
+            self.data.routing_data() if isinstance(self.data, SQLitePathData) else self.data,
+            longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id,
             deadline=started + self.preparation_deadline)
         if distances is None:
             return start
         routing_ms = (monotonic() - started) * 1000
         snap = start["snap"]
-        key = sha256(repr((self.data.dataset_id, self.data.graph["measurements"]["sha256"], ALGORITHM_VERSION, policy,
+        key = sha256(repr((self.data.dataset_id, measurement_identity(self.data), ALGORITHM_VERSION, policy,
                           snap["segment_id"], snap["graph_offset_m"], budget_km)).encode()).hexdigest()
 
         def materialize() -> Snapshot:
@@ -305,12 +324,12 @@ class PathTileService:
         tile_bounds(z, x, y)
         variant_options(variant)
         policy_options(policy)
-        identity = (RENDER_VERSION, self.data.dataset_id, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
+        identity = (render_version(self.data), self.data.dataset_id, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                     snapshot.id if snapshot else policy, variant, z, x, y)
         encoded, hit = self.tiles.compute(repr(identity),
             lambda: encode_tile(self.data, policy, variant, z, x, y, snapshot), len)
         return encoded, hit, (monotonic() - started) * 1000
 
 
-def tile_template(data: PathData, context: str) -> str:
+def tile_template(data: PathData | SQLitePathData, context: str) -> str:
     return f"/api/paths/tiles/v{render_version(data)}/{data.dataset_id}/{context}/{{variant}}/{{z}}/{{x}}/{{y}}.mvt"

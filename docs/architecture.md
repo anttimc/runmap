@@ -4,10 +4,11 @@ Runmap is a local Python processing/API package with a Rust integration kernel
 and a TypeScript/MapLibre web application. Numerical work also uses NumPy, SciPy,
 and Rasterio/GDAL; the optional
 web dependencies add FastAPI, Shapely, ContourPy, Pillow, and an MVT encoder.
-Vite builds the frontend. SQLite catalogs elevation products. The path API still
-loads JSON artifacts into memory; an initial SQLite path exporter/window reader
-is available for the selective-loading migration. There is no application
-database server.
+Vite builds the frontend. SQLite catalogs elevation products and supports
+selective path delivery. With a prepared network database, config, static tiles,
+inspection, and snapping do not load the complete graph. Exploration/planning
+still load matching JSON lazily until bounded local searches are implemented.
+JSON-only deployments retain the previous loader. There is no database server.
 
 ## Data flow
 
@@ -18,7 +19,8 @@ MML elevation -> validated source COGs + immutable coverage manifest
 
 OSM extract -> directed pedestrian graph -> sampled gradient intervals
             -> graph.json + content-addressed measurements
-            -> path MVTs, inspection, forward-distance queries, run planning
+            -> prepared network.sqlite -> static path MVTs, inspection, snapping
+            -> lazy JSON graph -> forward-distance queries, run planning (temporary)
 ```
 
 Preparation is explicit. Browser panning reads local prepared data; it does not
@@ -36,6 +38,7 @@ and hosted storage are [future work](roadmap.md).
 | `paths/graph.py`, `paths/terrain.py`, `paths/measurements.py` | Graph preparation, terrain sampling, artifact identity, and profile inspection |
 | `paths/database.py`, `paths/database_features.py` | Offline SQLite export, prepared-feature persistence, and selective read-only queries |
 | `paths/preparation.py`, `paths/coverage.py` | Dataset-wide feature preparation and shared source-coverage semantics |
+| `paths/database_pool.py`, `api/sqlite_data.py`, `api/sqlite_paths.py` | Bounded connection leases, SQLite dataset lifetime, and selective API delivery |
 | `paths/exploration.py`, `routing/profiles.py` | Shared eligibility, snapping, temporary start overlay, and forward-distance inclusion |
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
@@ -117,7 +120,7 @@ between those chainages rather than assuming equal units imply equal lengths.
 
 `graph.json` references `measurements-<sha256>.json`, including checksum and
 size. It is published last; earlier measurement generations remain readable.
-Loading checks checksum and graph identity. The service builds spatial/display
+The JSON loader checks checksum and graph identity and builds spatial/display
 indexes and directional hill features once per dataset load. Path API identities
 and rendering URLs prevent stale datasets or changed measurements being reused.
 
@@ -185,13 +188,50 @@ rely only on endpoint coordinates or route-box intersection.
 Export writes a staging database beside the destination, closes it, then publishes
 without overwriting an existing file. Readers own a read-only connection with a
 configurable page-cache target (16 MiB by default); this is not a cap on total
-process or OS cache memory. A connection should stay with its owning thread and
-be closed by its caller. Offline import still parses the source JSON and prepares
+process or OS cache memory. Standalone connections stay with their owning thread
+unless explicitly opened for exclusive cross-thread leases. Offline import still parses the source JSON and prepares
 its complete routing, measurement, classification, and hill data in memory.
 
-The running API does not consume this database yet. The
-[migration plan](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
-defines selective delivery, bounded local search, and planner area expansion.
+The API selects `RUNMAP_PATH_DATABASE` when set, otherwise a `network.sqlite`
+beside `RUNMAP_PATH_GRAPH` when present. Without either it uses the JSON loader.
+A selected missing, corrupt, stale, or incompatible database reports unavailable
+or failed; it does not silently fall back to the global JSON loader.
+
+SQLite startup reads only versioned metadata, source coverage, provenance, initial
+view, and precomputed hidden-segment/interval counts. These presentation values
+are additive schema-2 metadata: earlier exports without them must be regenerated
+for API use. Startup performs no network-table count, source JSON read, spatial
+index rebuild, classification, or hill preparation.
+
+`DatabasePool` opens two read-only connections by default, each with a 16 MiB
+page-cache target. A bounded queue leases each connection exclusively to one
+request, including across API threads. Duplicate-generation checks protect pool
+creation. Exhausted leases time out after five seconds with HTTP 503. Shutdown
+closes idle connections and closes active ones when returned. No decoded network
+window is cached for display/inspection/snapping; encoded tiles retain their
+existing byte-bounded TTL/LRU cache.
+
+Viewport and static tile queries use projected interval envelopes plus persisted
+policy data; application geometry checks, styling, coalescing, and MVT encoding
+retain their existing semantics. Viewport iteration stops at the feature limit.
+Inspection reads one segment and its ordered samples by ID. Snapping queries a
+projected radius box and refines distances in Python, retaining hidden building
+access as legal snap candidates. Inspection/snap calculations are shared with the
+reference loader. Tile versions additionally include the prepared feature identity.
+
+Exploration, snapshots, inspection with start-distance information, and run
+planning use a temporary lazy compatibility bridge. The first such request loads
+and retains the complete graph/measurements from `RUNMAP_PATH_GRAPH`, verifies
+both graph identity and measurement checksum against SQLite, and reuses that
+single dataset. A missing/mismatched source returns HTTP 503 while selective
+delivery remains available; failed loads are remembered until restart. Config
+does not load that graph to discover hill capabilities and reports planner
+unavailability when the source file is absent. The initial JSON load is outside
+the legacy run planner's deadline; snapshot preparation's deadline includes the
+load. Search memory is still whole-dataset memory.
+
+The [remaining migration](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
+replaces this bridge with bounded local graphs and planner area expansion.
 Existing packed topology/geometry/measurement data
 remain useful for loaded areas; global dense indices must become local to each
 working set while external dataset IDs remain stable. Persisted global classifications
@@ -199,6 +239,8 @@ and source boundaries must be used directly rather than recomputed on those wind
 The [SQLite feature report](archive/history/43-sqlite-features.md) records fixture
 parity checks and an initial real-extract export/query probe; cold-cache and
 full-application benchmarks remain open.
+The [SQLite API report](archive/history/45-sqlite-api.md) compares selective delivery
+with the JSON reference in separate reader processes, excluding offline export.
 
 ## Delivery and request lifetimes
 
