@@ -178,8 +178,12 @@ distinct tile renders; derived-core generation has a separate process-local lock
 Path MVTs use buffered clipping, zoom-dependent simplification and grade/distance
 bins, while keeping segment IDs, eligibility, quality, and inclusion boundaries.
 Inspection retains full measurements. Static tiles use immutable versioned URLs.
-Display intervals retain integer segment/local-interval references, surface class,
-and flat-run thresholds. Spatial cell rows retain immutable int64 interval-index
+Display intervals share the measurement store's segment offsets, retain surface
+classes once per segment, and store flat-run thresholds and presence flags in
+read-only numeric buffers. `DisplayIntervals` reconstructs detached interval
+records on access; no per-interval Python records remain retained. This layout
+can be built for a loaded network window without persisting global dense indices.
+Spatial cell rows retain immutable int64 interval-index
 buffers; the building-access display view shares rows unchanged by filtering.
 Candidate queries materialize sorted Python indices only for requested cells.
 Tiles read packed columns directly through native

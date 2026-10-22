@@ -55,8 +55,8 @@ def main() -> None:
                 px, py = projected_point(lon, lat, z, 0, 0)
                 for policy in ('all-no-stairs', 'surfaced-no-stairs'):
                     variant = 'gradient-hidden' if hide else 'gradient-all'
-                    args = (policy, variant, z, int(px//4096), int(py//4096))
-                    assert encode_tile(reference, *args) == encode_tile(data, *args)
+                    tile_args = (policy, variant, z, int(px//4096), int(py//4096))
+                    assert encode_tile(reference, *tile_args) == encode_tile(data, *tile_args)
                     tiles += 1
     report = dict(dataset_id=data.dataset_id, intervals=len(ids), cells=len(cells),
                   reference_bytes=retained((cells, display), set()),

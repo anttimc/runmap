@@ -12,7 +12,7 @@ from rasterio.warp import transform
 from runmap.paths.measurements import (MeasurementData, graph_digest, inspect_measurements,
                                        load_measurements, indexed_measurement, segment_measurements)
 from runmap.paths.flat import GradeInterval, flat_run_thresholds
-from runmap.paths.display import DisplayInterval, display_feature
+from runmap.paths.display import DisplayInterval, display_feature, pack_display_intervals
 from runmap.paths.spatial import Cell, filter_cells, pack_cells
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                                    Classification, classify_building_access)
@@ -35,7 +35,7 @@ class PathData:
     graph: dict
     measurements: MeasurementData
     segments: dict
-    features: tuple[DisplayInterval, ...]
+    features: Sequence[DisplayInterval]
     cells: Mapping[Cell, Sequence[int]]
     coverage: dict
     bounds: tuple
@@ -154,7 +154,9 @@ def load_path_data(graph_path: str | Path) -> PathData:
     coverage, kind = _coverage(graph)
     packed_cells = pack_cells(cells)
     del cells
-    data = PathData(graph, measurements, segments, tuple(features), packed_cells,
+    packed_features = pack_display_intervals(measurements, features)
+    del features
+    data = PathData(graph, measurements, segments, packed_features, packed_cells,
                     {"geometry": coverage, "kind": kind},
                     _bounds(coverage["coordinates"][0]), graph_digest(graph), routing)
     return _build_display_index(replace(data, hills=build_hill_data(data.routing, measurements)))

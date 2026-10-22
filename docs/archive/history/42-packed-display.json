@@ -1,0 +1,155 @@
+{
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "intervals": 278839,
+  "python": "3.14.6",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "reference_bytes": 22028959,
+  "packed_bytes": 3068452,
+  "method": "Independent previous-layout reconstruction from measurements. Recursive sys.getsizeof includes buffer owners and excludes shared measurement offsets. Ten alternating uncached static tile encodes per case after equality checks; eight full viewport comparisons and sixteen byte-identical tile comparisons. Not process RSS, startup, routing, or browser latency.",
+  "tiles": [
+    {
+      "longitude": 24.807,
+      "latitude": 60.219,
+      "zoom": 13,
+      "hidden": false,
+      "policy": "all-no-stairs",
+      "reference_ms": 489.76577149005607,
+      "packed_ms": 476.95083350117784
+    },
+    {
+      "longitude": 24.807,
+      "latitude": 60.219,
+      "zoom": 13,
+      "hidden": false,
+      "policy": "surfaced-no-stairs",
+      "reference_ms": 422.98741650301963,
+      "packed_ms": 510.11379150440916
+    },
+    {
+      "longitude": 24.807,
+      "latitude": 60.219,
+      "zoom": 13,
+      "hidden": true,
+      "policy": "all-no-stairs",
+      "reference_ms": 462.1808540105121,
+      "packed_ms": 421.79706250317395
+    },
+    {
+      "longitude": 24.807,
+      "latitude": 60.219,
+      "zoom": 13,
+      "hidden": true,
+      "policy": "surfaced-no-stairs",
+      "reference_ms": 458.158937501139,
+      "packed_ms": 451.3089999963995
+    },
+    {
+      "longitude": 24.807,
+      "latitude": 60.219,
+      "zoom": 15,
+      "hidden": false,
+      "policy": "all-no-stairs",
+      "reference_ms": 36.02881249389611,
+      "packed_ms": 38.40972849866375
+    },
+    {
+      "longitude": 24.807,
+      "latitude": 60.219,
+      "zoom": 15,
+      "hidden": false,
+      "policy": "surfaced-no-stairs",
+      "reference_ms": 36.02210451208521,
+      "packed_ms": 38.170916988747194
+    },
+    {
+      "longitude": 24.807,
+      "latitude": 60.219,
+      "zoom": 15,
+      "hidden": true,
+      "policy": "all-no-stairs",
+      "reference_ms": 34.630438007297926,
+      "packed_ms": 36.79733349417802
+    },
+    {
+      "longitude": 24.807,
+      "latitude": 60.219,
+      "zoom": 15,
+      "hidden": true,
+      "policy": "surfaced-no-stairs",
+      "reference_ms": 34.54772899567615,
+      "packed_ms": 36.63281250919681
+    },
+    {
+      "longitude": 24.771,
+      "latitude": 60.242,
+      "zoom": 13,
+      "hidden": false,
+      "policy": "all-no-stairs",
+      "reference_ms": 217.76962498552166,
+      "packed_ms": 262.67245800409
+    },
+    {
+      "longitude": 24.771,
+      "latitude": 60.242,
+      "zoom": 13,
+      "hidden": false,
+      "policy": "surfaced-no-stairs",
+      "reference_ms": 215.83797900530044,
+      "packed_ms": 227.60689599090256
+    },
+    {
+      "longitude": 24.771,
+      "latitude": 60.242,
+      "zoom": 13,
+      "hidden": true,
+      "policy": "all-no-stairs",
+      "reference_ms": 183.83606200222857,
+      "packed_ms": 193.74431250616908
+    },
+    {
+      "longitude": 24.771,
+      "latitude": 60.242,
+      "zoom": 13,
+      "hidden": true,
+      "policy": "surfaced-no-stairs",
+      "reference_ms": 181.0882085119374,
+      "packed_ms": 191.5710414905334
+    },
+    {
+      "longitude": 24.771,
+      "latitude": 60.242,
+      "zoom": 15,
+      "hidden": false,
+      "policy": "all-no-stairs",
+      "reference_ms": 44.57220849872101,
+      "packed_ms": 47.660021009505726
+    },
+    {
+      "longitude": 24.771,
+      "latitude": 60.242,
+      "zoom": 15,
+      "hidden": false,
+      "policy": "surfaced-no-stairs",
+      "reference_ms": 43.75806250027381,
+      "packed_ms": 46.72114600543864
+    },
+    {
+      "longitude": 24.771,
+      "latitude": 60.242,
+      "zoom": 15,
+      "hidden": true,
+      "policy": "all-no-stairs",
+      "reference_ms": 37.37064599408768,
+      "packed_ms": 39.841978999902494
+    },
+    {
+      "longitude": 24.771,
+      "latitude": 60.242,
+      "zoom": 15,
+      "hidden": true,
+      "policy": "surfaced-no-stairs",
+      "reference_ms": 36.673499998869374,
+      "packed_ms": 39.291666995268315
+    }
+  ]
+}
