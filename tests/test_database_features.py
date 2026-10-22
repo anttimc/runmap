@@ -50,6 +50,33 @@ def driveway_graph() -> GraphDocument:
 
 
 class PreparedDatabaseTests(unittest.TestCase):
+    def test_routing_features_can_omit_geometry_hills_and_other_profiles(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, _, _ = publish_fixture(root)
+            database = root / "network.sqlite"
+            export_network_database(source, database)
+            with closing(open_network_database(database)) as connection:
+                expected = query_segment_features(connection, BOUNDS)
+                policy_id = next(iter(expected.values())).policies[0].policy_id
+
+                def authorize(action: int, table: str, column: str, database: str, trigger: str) -> int:
+                    if action == sqlite3.SQLITE_READ and (
+                            table == "hill_features" or (table == "segment_features" and column == "projected_geometry")):
+                        return sqlite3.SQLITE_DENY
+                    return sqlite3.SQLITE_OK
+
+                connection.set_authorizer(authorize)
+                actual = query_segment_features(connection, BOUNDS, include_hills=False,
+                                                 include_geometry=False, policy_id=policy_id)
+                self.assertEqual(actual.keys(), expected.keys())
+                for key, item in actual.items():
+                    self.assertEqual(item.policies, tuple(p for p in expected[key].policies if p.policy_id == policy_id))
+                    self.assertEqual(item.building_access, expected[key].building_access)
+                    self.assertEqual(item.boundary_blocked, expected[key].boundary_blocked)
+                    self.assertFalse(item.projected_geometry)
+                    self.assertFalse(item.hill_intervals)
+
     def test_display_queries_match_measurements_thresholds_and_source_boundary(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

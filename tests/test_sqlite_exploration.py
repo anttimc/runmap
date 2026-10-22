@@ -127,9 +127,12 @@ class SQLiteExplorationTests(unittest.TestCase):
         root.mkdir()
         source, _, _ = publish_fixture(root)
         database = root / "network.sqlite"
-        export_network_database(source, database)
+        with patch("runmap.paths.graph_chunks.MAX_CHUNK_SEGMENTS", 1):
+            export_network_database(source, database)
         lon, lat = transform("EPSG:3067", "EPSG:4326", [375050], [6675000])
         with closing(SQLitePathData(database)) as data:
+            with data.pool.connection() as connection:
+                self.assertEqual(connection.execute("SELECT count(*) FROM graph_chunks").fetchone()[0], 3)
             start = database_snap(data, lon[0], lat[0], avoid_stairs=False)
             snap = Snap(**start["snap"])
             # Deliberately undersize the initial envelope to exercise the safety net.

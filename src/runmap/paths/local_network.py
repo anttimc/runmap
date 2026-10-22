@@ -32,14 +32,15 @@ class LocalNetwork:
 
 def load_local_network(connection: sqlite3.Connection, bounds: Bounds,
                        profile: EdgeProfile | None = None, *, include_terrain: bool = True,
-                       include_measurements: bool = True) -> LocalNetwork:
+                       include_measurements: bool = True, include_coverage: bool = True) -> LocalNetwork:
     """Retain complete segments and distinguish unloaded links from source edges."""
     metadata = network_metadata(connection)
     profile = profile or exploration_profile(avoid_stairs=False)
     if profile not in metadata.models.profiles:
         raise ValueError("Local network requires a persisted routing profile")
     window = query_network(connection, bounds, include_measurements=include_terrain and include_measurements)
-    features = query_segment_features(connection, bounds, include_hills=include_terrain)
+    features = query_segment_features(connection, bounds, include_hills=include_terrain,
+                                      policy_id=profile["id"], include_geometry=False)
     if features.keys() != {item["id"] for item in window.graph["segments"]}:
         raise ValueError("Missing prepared segment features")
     policy = _graph_policy(features, profile["id"])
@@ -59,8 +60,9 @@ def load_local_network(connection: sqlite3.Connection, bounds: Bounds,
     classifications = {key: item.building_access for key, item in features.items()
                        if item.building_access is not None}
     frontier = frozenset(window.frontier_nodes)
-    limited = frozenset(key for key, segment in routing.segments.items()
+    limited = (frozenset(key for key, segment in routing.segments.items()
                         if metadata.coverage is None or near_coverage_boundary(metadata.coverage, segment["geometry"]))
+               if include_coverage else frozenset())
     return LocalNetwork(metadata, bounds, routing, measurements, hills, classifications,
                         frontier, frozenset(index.node_indices[node] for node in frontier), limited)
 

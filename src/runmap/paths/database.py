@@ -13,6 +13,7 @@ from tempfile import NamedTemporaryFile
 from typing import cast
 
 from runmap.paths.coverage import Coverage, geometry_bounds
+from runmap.paths.graph_chunks import query_graph_chunks, write_graph_chunks
 from runmap.paths.database_features import (create_feature_schema, read_display_intervals,
                                            read_segment_features, write_prepared_features, iter_display_intervals,
                                            decode_classification)
@@ -23,10 +24,10 @@ from runmap.paths.dead_ends import Classification
 from runmap.routing.geometry import indexed_segment_points
 from runmap.routing.hill_types import HillModel
 from runmap.routing.serialization import prepared_json
-from runmap.routing.types import Arc, Bounds, EdgeProfile, GraphDocument, GraphSource, Measurement, Node, Segment, TerrainMetadata
+from runmap.routing.types import Bounds, EdgeProfile, GraphDocument, GraphSource, Measurement, Segment, TerrainMetadata
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 SELECTION = """
     SELECT s.* FROM segment_bounds b JOIN segments s ON s.number = b.number
     WHERE b.west <= :east AND b.east >= :west
@@ -118,6 +119,7 @@ def _write_network(connection: sqlite3.Connection, graph_path: Path) -> None:
     _write_metadata(connection, graph, dataset_id, prepared)
     _write_bounds_and_measurements(connection, prepared)
     write_prepared_features(connection, prepared)
+    write_graph_chunks(connection)
 
 
 def _write_metadata(connection: sqlite3.Connection, graph: GraphDocument,
@@ -204,7 +206,7 @@ def open_network_database(path: Path, cache_kib: int = 16384, *,
     connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, check_same_thread=check_same_thread)
     try:
         if connection.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
-            raise ValueError("Unsupported network database schema")
+            raise ValueError("Unsupported network database schema; re-export the network database")
         connection.execute(f"PRAGMA cache_size = {-cache_kib}")
         network_metadata(connection)
         return connection
@@ -275,28 +277,9 @@ def query_network(connection: sqlite3.Connection, bounds: Bounds,
     west, south, east, north = bounds
     parameters = dict(west=west, south=south, east=east, north=north)
     prefix = f"WITH selected AS ({SELECTION}) "
-    segments = [cast(Segment, json.loads(row[0])) for row in connection.execute(
-        prefix + "SELECT payload FROM selected ORDER BY number", parameters)]
-    nodes = [cast(Node, json.loads(row[0])) for row in connection.execute(prefix + """
-        SELECT n.payload FROM nodes n JOIN (
-            SELECT source AS id FROM selected UNION SELECT target FROM selected
-        ) endpoints ON endpoints.id = n.id ORDER BY n.id
-    """, parameters)]
-    arcs = [cast(Arc, json.loads(row[0])) for row in connection.execute(prefix + """
-        SELECT a.payload FROM arcs a JOIN selected s ON s.id = a.segment_id ORDER BY a.number
-    """, parameters)]
-    frontier = tuple(row[0] for row in connection.execute(prefix + """
-        , endpoints AS (SELECT source AS id FROM selected UNION SELECT target FROM selected)
-        SELECT e.id FROM endpoints e WHERE EXISTS (
-            SELECT 1 FROM segments s WHERE s.source = e.id
-                AND NOT EXISTS (SELECT 1 FROM selected picked WHERE picked.number = s.number)
-        ) OR EXISTS (
-            SELECT 1 FROM segments s WHERE s.target = e.id
-                AND NOT EXISTS (SELECT 1 FROM selected picked WHERE picked.number = s.number)
-        ) ORDER BY e.id
-    """, parameters))
+    topology = query_graph_chunks(connection, bounds)
     measurements = _query_measurements(connection, prefix, parameters) if include_measurements else {}
-    return NetworkWindow(bounds, GraphDocument(nodes=nodes, segments=segments, arcs=arcs), measurements, frontier)
+    return NetworkWindow(bounds, topology.graph, measurements, topology.frontier_nodes)
 
 
 def _query_measurements(connection: sqlite3.Connection, prefix: str,
@@ -315,10 +298,13 @@ def _query_measurements(connection: sqlite3.Connection, prefix: str,
 
 
 def query_segment_features(connection: sqlite3.Connection, bounds: Bounds,
-                            *, include_hills: bool = True) -> dict[str, PreparedSegment]:
+                            *, include_hills: bool = True, policy_id: str | None = None,
+                            include_geometry: bool = True) -> dict[str, PreparedSegment]:
     """Fetch global features for complete segment-envelope candidates."""
     parameters = _query_parameters(bounds)
-    return read_segment_features(connection, f"WITH selected AS ({SELECTION}) ", parameters, include_hills=include_hills)
+    return read_segment_features(connection, f"WITH selected AS ({SELECTION}) ", parameters,
+                                 include_hills=include_hills, policy_id=policy_id,
+                                 include_geometry=include_geometry)
 
 
 def query_display_intervals(connection: sqlite3.Connection, bounds: Bounds,

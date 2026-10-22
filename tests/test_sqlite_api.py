@@ -163,6 +163,17 @@ class SQLiteDeliveryTests(unittest.TestCase):
 
 
 class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
+    async def test_default_startup_requires_database_without_loading_json(self) -> None:
+        with TemporaryDirectory() as directory:
+            graph = write_graph_outputs(fixture(), Path(directory))["graph"]
+            environment = {"RUNMAP_ELEVATION_PATH": "fixture", "RUNMAP_PATH_GRAPH": str(graph)}
+            with patch.dict(os.environ, environment, clear=True), \
+                    patch("runmap.api.app.TerrainRenderer.from_raster", return_value="terrain"), \
+                    patch("runmap.api.app.load_path_data", side_effect=AssertionError("loaded full graph")):
+                async with lifespan(app):
+                    self.assertIsNone(app.state.paths)
+                    self.assertEqual(app.state.path_status, "unavailable")
+
     async def test_lifespan_endpoints_and_etag_use_sqlite_with_no_source_reads(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

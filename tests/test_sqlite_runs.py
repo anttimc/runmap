@@ -98,6 +98,17 @@ class SQLiteRunTests(unittest.TestCase):
                             self.assertFalse(actual.search.area_limited_reason)
         self.assertFalse(hasattr(data, "routing_data"))
 
+    def test_hills_off_does_not_prepare_hill_buffers(self) -> None:
+        data, source = self.publish(fixture())
+        options = self.options(data)
+        expected = generate_run(load_path_data(source), options)
+        with patch("runmap.paths.local_network._pack_hills", side_effect=AssertionError("unused hills")), \
+                patch("runmap.paths.local_network.near_coverage_boundary", side_effect=AssertionError("whole-window coverage")):
+            actual = generate_database_run(data, options)
+        self.assertEqual(actual.status, expected.status)
+        self.assertEqual(actual.candidates, expected.candidates)
+        self.assertEqual(actual.cost_model, expected.cost_model)
+
     def test_detour_expands_all_candidates_under_one_deadline(self) -> None:
         data, source = self.publish(detour_graph())
         options = self.options(data, detour=True)

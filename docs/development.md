@@ -156,7 +156,7 @@ topology experiments and validated when present. Conversion still loads the
 existing JSON in memory, so allow comparable offline preparation resources.
 Export also computes full-network classifications, policy directions, projected
 geometry, flat thresholds, and hill features. SQLite must include R-tree support;
-no additional Python dependency is needed. The current format is schema version 2.
+no additional Python dependency is needed. The current format is schema version 3.
 Re-export older databases into a new filename; there is no in-place migration.
 Model-setting changes also require re-export, and readers reject stale features.
 
@@ -210,19 +210,34 @@ offline export but includes imports and temporary decoding buffers. OS cache is
 warm after export; these are individual observations, not latency percentiles or
 proof that a box contains a complete route.
 
-The API automatically uses `network.sqlite` beside `RUNMAP_PATH_GRAPH` when it
-exists. For a differently named or located database, set `RUNMAP_PATH_DATABASE`.
+The API defaults to `network.sqlite` beside `RUNMAP_PATH_GRAPH`.
+For a differently named or located database, set `RUNMAP_PATH_DATABASE`.
 Once the database is selected, every path endpoint works without the original
 graph JSON or measurement sidecar. Startup reads metadata only; exploration and
 run planning load bounded local graphs. Planning also loads saved hill features
 for the selected segments, without raw measurement arrays. Snapshots
 own their graph ordering and distance buffers under the configured byte/TTL limit;
 the viewport does not determine search legality.
-Restart after changing the selected dataset. An explicitly selected bad database does
-not silently switch to JSON. Without a database the existing JSON startup remains.
+Topology is persisted in spatial chunks grouped by 1 km cells, with at most 256
+complete segments per chunk. Each chunk includes endpoint records, directed arcs,
+and global endpoint incidence counts. An R-tree indexes the full segment envelopes,
+so long segments crossing a request window are retained even when their endpoints
+and owning cell are outside it. Run planning and distance exploration share the
+same chunk loader. Requests decode candidate chunks one at a time, filter to the
+exact segment envelopes, and assemble a dense local graph index.
+Global incidence counts distinguish unloaded connections from true dead ends.
+Prepared policies and hills remain in the indexed feature tables. Local requests
+read only their selected policy and omit the unused saved projected geometry.
+Run planning skips hill feature loading when the hill preference is off; distance
+exploration always skips it. Run coverage checks inspect candidate route segments
+rather than every segment in each attempted window.
 
-Earlier schema-2 exports made before API presentation metadata was added must be
-re-exported into a new file for API use; the reader reports this requirement.
+Restart after changing the selected dataset. A missing database leaves path services
+unavailable; startup never automatically loads the entire JSON graph.
+For explicit legacy comparisons only, set `RUNMAP_PATH_BACKEND=json`.
+
+Earlier exports must be re-exported into a new file to build the spatial chunks;
+the reader reports this requirement.
 Use `RUNMAP_PATH_DATABASE` to select the new filename if `network.sqlite` exists.
 
 To compare delivery in separate fresh SQLite/JSON reader processes, add `--api`
@@ -299,7 +314,8 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_CATALOG_PATH` | `catalog.sqlite` under the elevation root |
 | `RUNMAP_ELEVATION_PATH` | Optional complete single-band raster; overrides named-region terrain |
 | `RUNMAP_PATH_GRAPH` | Project `data/paths/prepared/helsinki-capital-area/graph.json` |
-| `RUNMAP_PATH_DATABASE` | Optional explicit prepared SQLite path; otherwise prefer sibling `network.sqlite` when present |
+| `RUNMAP_PATH_DATABASE` | Prepared SQLite path; defaults to sibling `network.sqlite` |
+| `RUNMAP_PATH_BACKEND` | `sqlite`; `json` explicitly enables the legacy full graph loader |
 | `RUNMAP_PATH_DATABASE_CONNECTIONS` | 2 exclusively leased read-only connections per worker |
 | `RUNMAP_PATH_DATABASE_CACHE_KIB` | 16,384 KiB page-cache target per connection; excludes decoded responses, tile caches, and OS caches |
 | `RUNMAP_RUN_DEADLINE` | 15 seconds per planner request |

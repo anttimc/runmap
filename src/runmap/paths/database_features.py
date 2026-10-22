@@ -128,21 +128,30 @@ def decode_classification(payload: str | None) -> Classification | None:
 
 
 def read_segment_features(connection: sqlite3.Connection, prefix: str,
-                          parameters: dict[str, float], *, include_hills: bool = True) -> dict[str, PreparedSegment]:
+                          parameters: dict[str, float], *, include_hills: bool = True,
+                          policy_id: str | None = None,
+                          include_geometry: bool = True) -> dict[str, PreparedSegment]:
+    """Stream features without sorting potentially large terrain payloads."""
     policies: dict[str, list[PreparedPolicy]] = {}
-    for row in connection.execute(prefix + """
+    query_parameters: dict[str, float | str] = dict(parameters)
+    policy_filter = "WHERE p.policy_id = :policy_id" if policy_id is not None else ""
+    if policy_id is not None:
+        query_parameters["policy_id"] = policy_id
+    for row in connection.execute(prefix + f"""
         SELECT p.segment_id, p.policy_id, p.forward, p.backward, p.reason
-        FROM segment_policies p JOIN selected s ON s.id = p.segment_id ORDER BY s.number, p.policy_id
-    """, parameters):
+        FROM segment_policies p JOIN selected s ON s.id = p.segment_id
+        {policy_filter} ORDER BY s.number, p.policy_id
+    """, query_parameters):
         policies.setdefault(row[0], []).append(PreparedPolicy(row[1], bool(row[2]), bool(row[3]), row[4]))
     hill_columns = "h.intervals, h.forward, h.backward" if include_hills else "NULL, NULL, NULL"
     hill_join = "LEFT JOIN hill_features h ON h.segment_id = f.segment_id" if include_hills else ""
+    geometry_column = "f.projected_geometry" if include_geometry else "'[]'"
     return {row[0]: _read_segment(row, tuple(policies.get(row[0], ()))) for row in connection.execute(prefix + f"""
-        SELECT f.segment_id, f.surface_class, f.boundary_blocked, f.building_access, f.projected_geometry,
+        SELECT f.segment_id, f.surface_class, f.boundary_blocked, f.building_access, {geometry_column},
                {hill_columns}
         FROM segment_features f JOIN selected s ON s.id = f.segment_id
-        {hill_join} ORDER BY s.number
-    """, parameters)}
+        {hill_join}
+    """, query_parameters)}
 
 
 def _read_segment(row: tuple[str, str, int, str | None, str, str | None, str | None, str | None],

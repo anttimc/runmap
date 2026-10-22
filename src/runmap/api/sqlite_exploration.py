@@ -75,7 +75,7 @@ def _search_windows(connection: sqlite3.Connection, snap: Snap, maximum_m: float
     for retry in range(limits.max_retries + 1):
         check_deadline(deadline)
         _check_window(connection, bounds, retry, limits)
-        local = load_local_network(connection, bounds, profile, include_terrain=False)
+        local = load_local_network(connection, bounds, profile, include_terrain=False, include_coverage=False)
         check_deadline(deadline)
         distances = distance_data(local.routing, snap, maximum_m, deadline)
         # Conservative: even a policy-blocked unloaded link triggers expansion.

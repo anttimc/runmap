@@ -284,7 +284,7 @@ class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_missing_or_corrupt_artifacts_do_not_break_terrain_startup(self):
         for error, expected in [(FileNotFoundError(), "unavailable"), (ValueError("identity mismatch"), "failed"), (KeyError("segments"), "failed")]:
-            with patch.dict("os.environ", {"RUNMAP_ELEVATION_PATH": "fixture"}), \
+            with patch.dict("os.environ", {"RUNMAP_ELEVATION_PATH": "fixture", "RUNMAP_PATH_BACKEND": "json"}), \
                  patch("runmap.api.app.TerrainRenderer.from_raster", return_value="terrain"), \
                  patch("runmap.api.app.load_path_data", side_effect=error), \
                  patch("runmap.api.app.logging.getLogger"):

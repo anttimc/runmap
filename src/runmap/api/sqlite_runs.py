@@ -117,13 +117,14 @@ def _plan_windows(data: SQLitePathData, options: RunRequest, response: RunRespon
             if count > limits.max_segments:
                 return _area_limited(response, "maximum_segments", attempt, started)
             local = load_local_network(connection, bounds,
-                exploration_profile(options.surface, options.avoid_stairs), include_measurements=False)
+                exploration_profile(options.surface, options.avoid_stairs),
+                include_terrain=preferences.hills != "off", include_measurements=False, include_coverage=False)
             attempt.nodes = len(local.routing.nodes)
             check_deadline(deadline)
             result = plan_run(local.routing, response.home, response.turnaround, settings, deadline,
                                preferences=preferences, hills=local.hills, frontier_nodes=local.frontier_indices)
             attempt.reached_frontier = bool(result.reached_frontier)
-            attempt.source_coverage_limited = _source_limited(data, local, result, response)
+            attempt.source_coverage_limited = _source_limited(data, result, response)
             if "deadline" in result.outcomes:
                 attempt.reason = "deadline"
                 # Preserve completed legs from this one working set, as the
@@ -184,10 +185,11 @@ def _retry_reason(local: LocalNetwork, result: RunResult, bounds: Bounds, limits
     return None
 
 
-def _source_limited(data: SQLitePathData, local: LocalNetwork, result: RunResult, response: RunResponse) -> bool:
+def _source_limited(data: SQLitePathData, result: RunResult, response: RunResponse) -> bool:
     segments = {traversal.segment_id for candidate in result.candidates
                 for traversal in (*candidate.outbound_traversals, *candidate.returning_traversals)}
-    if segments & local.coverage_limited_segments:
+    if any(near_coverage_boundary(data.coverage, result.overlay.graph.segments[key]["geometry"])
+           for key in segments):
         return True
     assert response.home is not None and response.turnaround is not None
     return near_coverage_boundary(data.coverage, [[snap.longitude, snap.latitude]

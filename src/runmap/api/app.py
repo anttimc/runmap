@@ -59,15 +59,16 @@ async def lifespan(application):
     ))
     application.state.paths = None
     application.state.path_status = "unavailable"
-    database_path = os.environ.get("RUNMAP_PATH_DATABASE")
-    if database_path is None and graph_path.with_name("network.sqlite").is_file():
-        database_path = str(graph_path.with_name("network.sqlite"))
+    database_path = os.environ.get("RUNMAP_PATH_DATABASE", str(graph_path.with_name("network.sqlite")))
+    path_backend = os.environ.get("RUNMAP_PATH_BACKEND", "sqlite")
     try:
+        if path_backend not in {"sqlite", "json"}:
+            raise ValueError("RUNMAP_PATH_BACKEND must be sqlite or json")
         application.state.paths = (SQLitePathData(
             Path(database_path),
             pool_size=int(os.environ.get("RUNMAP_PATH_DATABASE_CONNECTIONS", "2")),
             cache_kib=int(os.environ.get("RUNMAP_PATH_DATABASE_CACHE_KIB", "16384")))
-            if database_path is not None else load_path_data(graph_path))
+            if path_backend == "sqlite" else load_path_data(graph_path))
         application.state.run_limits = RunAreaLimits(
             max_area_km2=float(os.environ.get("RUNMAP_RUN_MAX_AREA_KM2", 2500)),
             max_segments=int(os.environ.get("RUNMAP_RUN_MAX_SEGMENTS", 50000)),
