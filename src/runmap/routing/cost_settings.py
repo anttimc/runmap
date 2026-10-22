@@ -56,6 +56,11 @@ def resolve_preferences(settings: PreferenceSettings,
                         tables: PreferenceWeightTables = PreferenceWeightTables(), *,
                         hills: HillData | None = None) -> ResolvedPreferences:
     capabilities = preference_capabilities(hills)
+    return resolve_prepared_preferences(settings, capabilities, tables)
+
+
+def resolve_prepared_preferences(settings: PreferenceSettings, capabilities: PreferenceCapabilities,
+                                  tables: PreferenceWeightTables = PreferenceWeightTables()) -> ResolvedPreferences:
     weights = PreferenceWeights(
         _resolve_weight("hills", settings.hills, capabilities.hills, tables.hills),
         _resolve_weight("signals", settings.signals, capabilities.signals, tables.signals),

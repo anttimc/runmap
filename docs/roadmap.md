@@ -43,8 +43,10 @@ The exporter, prepared-feature persistence, and local-network readers are implem
 and [export instructions](development.md#export-a-sqlite-network-dataset).
 The API supports selective SQLite config, static tiles, inspection, and snapping.
 Exploration, snapshots, and start-distance inspection use bounded local graphs.
-Run planning still uses a lazy full-JSON compatibility bridge and retains its
-whole-dataset startup/memory costs until the next step lands.
+Run planning uses expanding local graphs with persisted hill features. The
+full-JSON compatibility bridge is removed; selected SQLite deployments require
+no source graph or measurement JSON at runtime. Without a selected database,
+the existing JSON loader remains available for import/debug/reference use.
 
 Packed local graph loading is implemented in `paths/local_network.py`. It retains
 complete selected segments, endpoint nodes, directed arcs, original chainages,
@@ -59,25 +61,30 @@ connection leases to bound concurrency, skips terrain loading, and charges both
 the local graph and its distance buffers to the snapshot cache. See the
 [exploration report](archive/history/47-sqlite-exploration.md).
 
-1. For run planning, start with the endpoints' EPSG:3067 box enlarged by 50% in
-   total width and height (25% per side). Add configurable minimum dimensions in
-   metres; choose their defaults using representative routes. The viewport may
-   hint at useful initial coverage, but must not silently determine route legality.
-   Retry with a larger box when no route is found, a candidate approaches the
-   boundary, or search reaches unloaded connections. Track attempted area, retries,
-   and boundary involvement. Rerun all candidate legs against the same expanded
-   graph under one request deadline and configured maximum area/retry count.
-   Return an explicit area-limited outcome when expansion limits prevent resolving
-   relevant unloaded connections. Keep this distinct from genuinely unreachable
-   endpoints or missing source coverage. Define boundary proximity and retry
-   defaults before wiring the API. Boundary-triggered expansion is a heuristic:
-   a better route outside the area can remain undetected. Full-dataset optimality
-   is not promised; lower-bound-based expansion is a later improvement if needed.
-2. Remove the lazy full-JSON bridge and global `PathData`/policy/measurement
-   ownership after local-search parity checks.
-   Keep JSON as an import/debug format during transition; publish new database
-   generations atomically and keep existing request/cache identities tied to one
-   generation. Selective runtime reads must not require full-dataset validation.
+Run planning starts with the endpoints' EPSG:3067 box enlarged by 50% in total
+width and height (25% per side), with a configurable 1,000 m minimum in each
+dimension. Search visits to unloaded frontier nodes, candidate geometry in the
+boundary band, or incomplete assignments with unloaded connections trigger box
+doubling. The proximity band is the greater of 100 m and 5% of the shorter box
+dimension. Defaults allow three retries, 2,500 km² area, and 50,000 selected
+segments, sharing one deadline across snapping/loading/all legs/retries.
+Attempts and boundary/source involvement are reported; exhausted limits return
+`area_limited`, distinct from unreachable endpoints and source coverage flags.
+All candidate legs are rerun on the same expanded graph. See the
+[planner report](archive/history/48-sqlite-runs.md) for saved-route equivalence
+and the loading/retry tradeoff.
+
+Remaining validation and improvements:
+
+1. Benchmark representative capital-area short/long routes and concurrent
+   requests, cold-cache behavior, and browser interaction. Tune minimum box size,
+   retry growth/proximity bands, and deployment area/density limits from those
+   observations. Boundary expansion remains heuristic: a better route outside
+   the area can remain undetected. Lower-bound-based expansion is a later option.
+2. Reduce temporary hill/feature JSON decoding if measured request RSS or latency
+   justifies it; retain the existing schema/model identities and local dense
+   index semantics. Local window caching requires byte/concurrency/generation
+   bounds and evidence that repeated requests benefit.
 
 Acceptance: compare tiles, inspection, snapping, exploration, and planner results
 against the current implementation on controlled fixtures and saved routes.

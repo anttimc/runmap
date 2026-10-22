@@ -47,3 +47,4 @@ class RunResult:
     outcomes: tuple[Literal["complete", "unreachable", "deadline"], ...]
     elapsed_s: float
     preferences: ResolvedPreferences
+    reached_frontier: frozenset[int] = frozenset()

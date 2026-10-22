@@ -472,9 +472,11 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
           ? `${next.candidates.length} runs · ${next.elapsed_s.toFixed(2)} s.`
           : next.status === "deadline"
             ? "Search deadline reached. Any completed runs are shown."
-            : next.status === "no_eligible_snap"
-              ? `${!next.home ? "Home" : "Turnaround"} could not snap to an eligible path.`
-              : "No complete return run connects these points under the current path filters.";
+            : next.status === "area_limited"
+              ? "The search reached its area limit. Try closer endpoints."
+              : next.status === "no_eligible_snap"
+                ? `${!next.home ? "Home" : "Turnaround"} could not snap to an eligible path.`
+                : "No complete return run connects these points under the current path filters.";
       status.textContent = message;
       candidates();
       draw();

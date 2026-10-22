@@ -31,13 +31,14 @@ class LocalNetwork:
 
 
 def load_local_network(connection: sqlite3.Connection, bounds: Bounds,
-                       profile: EdgeProfile | None = None, *, include_terrain: bool = True) -> LocalNetwork:
+                       profile: EdgeProfile | None = None, *, include_terrain: bool = True,
+                       include_measurements: bool = True) -> LocalNetwork:
     """Retain complete segments and distinguish unloaded links from source edges."""
     metadata = network_metadata(connection)
     profile = profile or exploration_profile(avoid_stairs=False)
     if profile not in metadata.models.profiles:
         raise ValueError("Local network requires a persisted routing profile")
-    window = query_network(connection, bounds, include_measurements=include_terrain)
+    window = query_network(connection, bounds, include_measurements=include_terrain and include_measurements)
     features = query_segment_features(connection, bounds, include_hills=include_terrain)
     if features.keys() != {item["id"] for item in window.graph["segments"]}:
         raise ValueError("Missing prepared segment features")
@@ -50,7 +51,7 @@ def load_local_network(connection: sqlite3.Connection, bounds: Bounds,
     if index is None:
         raise ValueError("Local network has no integer graph")
     measurements = None
-    if include_terrain and metadata.method is not None:
+    if include_terrain and include_measurements and metadata.method is not None:
         document = MeasurementDocument(schema_version=1, graph_digest=metadata.dataset_id,
                                        method=metadata.method, segments=window.measurements)
         measurements = pack_measurement_data(routing.document, document, index=index)

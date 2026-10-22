@@ -1,0 +1,715 @@
+{
+  "graph": "data/paths/prepared/leppavaara-flat-10k/graph.json",
+  "export_s": 28.433263957995223,
+  "database_bytes": 474775552,
+  "python": "3.14.6",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "readers": [
+    {
+      "backend": "sqlite",
+      "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+      "startup_ms": 3.523459017742425,
+      "requests": [
+        {
+          "case": "initial-outing",
+          "hills": "off",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.795,
+              "latitude": 60.216,
+              "segment_id": null
+            },
+            "turnaround": {
+              "longitude": 24.815,
+              "latitude": 60.225,
+              "segment_id": null
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "off",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 5.52935370898922,
+          "candidates": 2,
+          "response_sha256": "7cefeefb6547ec03a30611e9d31836ee4b247e1e5ace1cba7a03667eca1ba34f",
+          "search": {
+            "attempts": [
+              {
+                "bounds_epsg3067": [
+                  377542.54194497276,
+                  6677265.633227564,
+                  379256.52552822296,
+                  6678712.646833498
+                ],
+                "nodes": 3308,
+                "segments": 4313,
+                "reason": "unloaded_connections",
+                "reached_frontier": true,
+                "near_boundary": true,
+                "source_coverage_limited": false
+              },
+              {
+                "bounds_epsg3067": [
+                  376685.55015334766,
+                  6676542.126424598,
+                  380113.51731984806,
+                  6679436.153636465
+                ],
+                "nodes": 11882,
+                "segments": 15354,
+                "reason": "unloaded_connections",
+                "reached_frontier": true,
+                "near_boundary": false,
+                "source_coverage_limited": false
+              },
+              {
+                "bounds_epsg3067": [
+                  374971.56657009746,
+                  6675095.112818664,
+                  381827.50090309826,
+                  6680883.1672423985
+                ],
+                "nodes": 27328,
+                "segments": 34688,
+                "reason": "settled",
+                "reached_frontier": false,
+                "near_boundary": false,
+                "source_coverage_limited": false
+              }
+            ],
+            "retries": 2,
+            "area_limited_reason": null,
+            "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+          }
+        },
+        {
+          "case": "initial-outing",
+          "hills": "high",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.795,
+              "latitude": 60.216,
+              "segment_id": null
+            },
+            "turnaround": {
+              "longitude": 24.815,
+              "latitude": 60.225,
+              "segment_id": null
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "high",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 5.669608625001274,
+          "candidates": 2,
+          "response_sha256": "5683e36b0acb043b8c9be3f364c3c2c5741d812caeae292968c52bf4580768ff",
+          "search": {
+            "attempts": [
+              {
+                "bounds_epsg3067": [
+                  377542.54194497276,
+                  6677265.633227564,
+                  379256.52552822296,
+                  6678712.646833498
+                ],
+                "nodes": 3308,
+                "segments": 4313,
+                "reason": "unloaded_connections",
+                "reached_frontier": true,
+                "near_boundary": true,
+                "source_coverage_limited": false
+              },
+              {
+                "bounds_epsg3067": [
+                  376685.55015334766,
+                  6676542.126424598,
+                  380113.51731984806,
+                  6679436.153636465
+                ],
+                "nodes": 11882,
+                "segments": 15354,
+                "reason": "unloaded_connections",
+                "reached_frontier": true,
+                "near_boundary": false,
+                "source_coverage_limited": false
+              },
+              {
+                "bounds_epsg3067": [
+                  374971.56657009746,
+                  6675095.112818664,
+                  381827.50090309826,
+                  6680883.1672423985
+                ],
+                "nodes": 27328,
+                "segments": 34688,
+                "reason": "settled",
+                "reached_frontier": false,
+                "near_boundary": false,
+                "source_coverage_limited": false
+              }
+            ],
+            "retries": 2,
+            "area_limited_reason": null,
+            "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+          }
+        },
+        {
+          "case": "school-directional-hill",
+          "hills": "off",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.8050071,
+              "latitude": 60.2164463,
+              "segment_id": "w642719209p1"
+            },
+            "turnaround": {
+              "longitude": 24.8058177,
+              "latitude": 60.2160201,
+              "segment_id": "w642719209p1"
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "off",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.167166166997049,
+          "candidates": 2,
+          "response_sha256": "7648bec6ed4b3e426f2cfc4b49f60090619422ab528013c192d2f26135c10d80",
+          "search": {
+            "attempts": [
+              {
+                "bounds_epsg3067": [
+                  377905.73673632974,
+                  6677014.4481765535,
+                  378905.73673632974,
+                  6678014.4481765535
+                ],
+                "nodes": 1792,
+                "segments": 2383,
+                "reason": "settled",
+                "reached_frontier": false,
+                "near_boundary": false,
+                "source_coverage_limited": false
+              }
+            ],
+            "retries": 0,
+            "area_limited_reason": null,
+            "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+          }
+        },
+        {
+          "case": "school-directional-hill",
+          "hills": "high",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.8050071,
+              "latitude": 60.2164463,
+              "segment_id": "w642719209p1"
+            },
+            "turnaround": {
+              "longitude": 24.8058177,
+              "latitude": 60.2160201,
+              "segment_id": "w642719209p1"
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "high",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.16841241699876264,
+          "candidates": 2,
+          "response_sha256": "b94a7239b7f26d6a01a9047b04f1c657a00ee6297582ae71cfbf927a430ae44c",
+          "search": {
+            "attempts": [
+              {
+                "bounds_epsg3067": [
+                  377905.73673632974,
+                  6677014.4481765535,
+                  378905.73673632974,
+                  6678014.4481765535
+                ],
+                "nodes": 1792,
+                "segments": 2383,
+                "reason": "settled",
+                "reached_frontier": false,
+                "near_boundary": false,
+                "source_coverage_limited": false
+              }
+            ],
+            "retries": 0,
+            "area_limited_reason": null,
+            "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+          }
+        },
+        {
+          "case": "bridge-to-underpass",
+          "hills": "off",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.8040928,
+              "latitude": 60.2164308,
+              "segment_id": "w171699102p0"
+            },
+            "turnaround": {
+              "longitude": 24.806707,
+              "latitude": 60.2147618,
+              "segment_id": "w16117809p0"
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "off",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.16593524999916553,
+          "candidates": 2,
+          "response_sha256": "f6f4a4401dc9bc7e12cad797c91dabafb22c161d78578fc37b63210214e0b5ec",
+          "search": {
+            "attempts": [
+              {
+                "bounds_epsg3067": [
+                  377902.6877419235,
+                  6676943.565737277,
+                  378902.6877419235,
+                  6677943.565737277
+                ],
+                "nodes": 1813,
+                "segments": 2414,
+                "reason": "settled",
+                "reached_frontier": false,
+                "near_boundary": false,
+                "source_coverage_limited": false
+              }
+            ],
+            "retries": 0,
+            "area_limited_reason": null,
+            "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+          }
+        },
+        {
+          "case": "bridge-to-underpass",
+          "hills": "high",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.8040928,
+              "latitude": 60.2164308,
+              "segment_id": "w171699102p0"
+            },
+            "turnaround": {
+              "longitude": 24.806707,
+              "latitude": 60.2147618,
+              "segment_id": "w16117809p0"
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "high",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.18312641698867083,
+          "candidates": 2,
+          "response_sha256": "a21b06ef55fac0c1f0030b5d556b020fb0009d2c81fd10337d8f2959f3d8cafb",
+          "search": {
+            "attempts": [
+              {
+                "bounds_epsg3067": [
+                  377902.6877419235,
+                  6676943.565737277,
+                  378902.6877419235,
+                  6677943.565737277
+                ],
+                "nodes": 1813,
+                "segments": 2414,
+                "reason": "settled",
+                "reached_frontier": false,
+                "near_boundary": false,
+                "source_coverage_limited": false
+              }
+            ],
+            "retries": 0,
+            "area_limited_reason": null,
+            "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+          }
+        }
+      ],
+      "reader_peak_rss_bytes": 642449408
+    },
+    {
+      "backend": "json",
+      "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+      "startup_ms": 9475.876834010705,
+      "requests": [
+        {
+          "case": "initial-outing",
+          "hills": "off",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.795,
+              "latitude": 60.216,
+              "segment_id": null
+            },
+            "turnaround": {
+              "longitude": 24.815,
+              "latitude": 60.225,
+              "segment_id": null
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "off",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.6365924580022693,
+          "candidates": 2,
+          "response_sha256": "7cefeefb6547ec03a30611e9d31836ee4b247e1e5ace1cba7a03667eca1ba34f",
+          "search": null
+        },
+        {
+          "case": "initial-outing",
+          "hills": "high",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.795,
+              "latitude": 60.216,
+              "segment_id": null
+            },
+            "turnaround": {
+              "longitude": 24.815,
+              "latitude": 60.225,
+              "segment_id": null
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "high",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.33628137499908917,
+          "candidates": 2,
+          "response_sha256": "5683e36b0acb043b8c9be3f364c3c2c5741d812caeae292968c52bf4580768ff",
+          "search": null
+        },
+        {
+          "case": "school-directional-hill",
+          "hills": "off",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.8050071,
+              "latitude": 60.2164463,
+              "segment_id": "w642719209p1"
+            },
+            "turnaround": {
+              "longitude": 24.8058177,
+              "latitude": 60.2160201,
+              "segment_id": "w642719209p1"
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "off",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.017112541012465954,
+          "candidates": 2,
+          "response_sha256": "7648bec6ed4b3e426f2cfc4b49f60090619422ab528013c192d2f26135c10d80",
+          "search": null
+        },
+        {
+          "case": "school-directional-hill",
+          "hills": "high",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.8050071,
+              "latitude": 60.2164463,
+              "segment_id": "w642719209p1"
+            },
+            "turnaround": {
+              "longitude": 24.8058177,
+              "latitude": 60.2160201,
+              "segment_id": "w642719209p1"
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "high",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.034190791979199275,
+          "candidates": 2,
+          "response_sha256": "b94a7239b7f26d6a01a9047b04f1c657a00ee6297582ae71cfbf927a430ae44c",
+          "search": null
+        },
+        {
+          "case": "bridge-to-underpass",
+          "hills": "off",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.8040928,
+              "latitude": 60.2164308,
+              "segment_id": "w171699102p0"
+            },
+            "turnaround": {
+              "longitude": 24.806707,
+              "latitude": 60.2147618,
+              "segment_id": "w16117809p0"
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "off",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.020186709007248282,
+          "candidates": 2,
+          "response_sha256": "f6f4a4401dc9bc7e12cad797c91dabafb22c161d78578fc37b63210214e0b5ec",
+          "search": null
+        },
+        {
+          "case": "bridge-to-underpass",
+          "hills": "high",
+          "request": {
+            "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+            "home": {
+              "longitude": 24.8040928,
+              "latitude": 60.2164308,
+              "segment_id": "w171699102p0"
+            },
+            "turnaround": {
+              "longitude": 24.806707,
+              "latitude": 60.2147618,
+              "segment_id": "w16117809p0"
+            },
+            "settings": {
+              "avoidance_ratio": 0.18,
+              "centre_enabled": true,
+              "radius_ratio": 0.15,
+              "transition_ratio": 0.05,
+              "side_strength": 2.0,
+              "reuse_strength": 4.0
+            },
+            "preferences": {
+              "hills": "high",
+              "signals": "off",
+              "busy_roads": "off",
+              "greenery": "off"
+            },
+            "radius_m": 50.0,
+            "surface": "all",
+            "avoid_stairs": true
+          },
+          "status": "complete",
+          "elapsed_s": 0.027813624998088926,
+          "candidates": 2,
+          "response_sha256": "a21b06ef55fac0c1f0030b5d556b020fb0009d2c81fd10337d8f2959f3d8cafb",
+          "search": null
+        }
+      ],
+      "reader_peak_rss_bytes": 867991552
+    }
+  ],
+  "comparisons": [
+    {
+      "case": "initial-outing",
+      "hills": "off",
+      "equivalent": true,
+      "sqlite_status": "complete",
+      "json_status": "complete"
+    },
+    {
+      "case": "initial-outing",
+      "hills": "high",
+      "equivalent": true,
+      "sqlite_status": "complete",
+      "json_status": "complete"
+    },
+    {
+      "case": "school-directional-hill",
+      "hills": "off",
+      "equivalent": true,
+      "sqlite_status": "complete",
+      "json_status": "complete"
+    },
+    {
+      "case": "school-directional-hill",
+      "hills": "high",
+      "equivalent": true,
+      "sqlite_status": "complete",
+      "json_status": "complete"
+    },
+    {
+      "case": "bridge-to-underpass",
+      "hills": "off",
+      "equivalent": true,
+      "sqlite_status": "complete",
+      "json_status": "complete"
+    },
+    {
+      "case": "bridge-to-underpass",
+      "hills": "high",
+      "equivalent": true,
+      "sqlite_status": "complete",
+      "json_status": "complete"
+    }
+  ],
+  "equivalent": true,
+  "note": "Separate fresh reader processes after offline export; warm OS cache. Six saved requests per reader, uncached local graphs. Hashes include status, snapped endpoints, costs, observations, and candidate geometry/traversals; exclude search expansion counts/timing/area metadata. Not HTTP, concurrent load, or a global optimality guarantee."
+}

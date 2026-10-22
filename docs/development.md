@@ -212,16 +212,13 @@ proof that a box contains a complete route.
 
 The API automatically uses `network.sqlite` beside `RUNMAP_PATH_GRAPH` when it
 exists. For a differently named or located database, set `RUNMAP_PATH_DATABASE`.
-Keep `RUNMAP_PATH_GRAPH` pointing to the matching source dataset during this stage:
-config, static tiles, inspection, and snapping use SQLite immediately, but the
-first run-planning request still loads the JSON graph lazily. Planning therefore
-still incurs full-dataset loading time and memory. Missing or mismatched routing
-sources return HTTP 503 for planning without breaking delivery or exploration.
-Exploration, snapshots, and inspection with start-distance metadata load only a
-local topology window and remain available without the original JSON. Snapshots
+Once the database is selected, every path endpoint works without the original
+graph JSON or measurement sidecar. Startup reads metadata only; exploration and
+run planning load bounded local graphs. Planning also loads saved hill features
+for the selected segments, without raw measurement arrays. Snapshots
 own their graph ordering and distance buffers under the configured byte/TTL limit;
 the viewport does not determine search legality.
-Restart after changing either dataset. An explicitly selected bad database does
+Restart after changing the selected dataset. An explicitly selected bad database does
 not silently switch to JSON. Without a database the existing JSON startup remains.
 
 Earlier schema-2 exports made before API presentation metadata was added must be
@@ -259,6 +256,33 @@ return HTTP 504; busy connection leases return HTTP 503. SQL progress handlers
 and lease waits share the preparation deadline. Source-coverage flags remain
 separate from unloaded local connections.
 
+SQLite run planning starts with the snapped endpoints' box enlarged by 50% in
+each dimension, with a configurable 1,000 m minimum width/height. It doubles both
+dimensions when a candidate reaches the boundary band, search visits an unloaded
+frontier, or an incomplete assignment leaves unloaded connections. The boundary
+band is `max(RUNMAP_RUN_BOUNDARY_MARGIN_M, 5% of the shorter box dimension)`.
+Every retry reruns all candidate legs under the original request deadline.
+`RunResponse.search` records attempts, counts, retry reasons, boundary involvement,
+and source coverage flags. Exhaustion returns HTTP 200 with
+`status=area_limited`, `search.area_limited_reason`, and no provisional routes;
+it remains distinct from `unreachable`, `deadline`, or `no_eligible_snap`.
+Area expansion is heuristic and does not promise whole-dataset optimality.
+
+To reproduce saved-route parity and separate reader memory/timing measurements:
+
+```sh
+uv run --extra web python -m runmap.experiments.benchmark_sqlite_runs \
+  data/paths/prepared/leppavaara-flat-10k/graph.json \
+  --report data/experiments/sqlite-runs.json
+```
+
+This exports a temporary database and runs SQLite/JSON readers in fresh processes
+for three saved routes with hills off/high. The JSON reference loads its whole
+graph once; SQLite reloads a local graph per request/expansion. Output hashes
+compare snapped endpoints, candidate geometry/traversals, costs, observations,
+and configuration, excluding search expansion counts and timing. See the
+[planner report](archive/history/48-sqlite-runs.md) for results and limitations.
+
 ## Configuration
 
 Region definitions live in `config/regions/`; path/baseline settings live in
@@ -279,6 +303,11 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_PATH_DATABASE_CONNECTIONS` | 2 exclusively leased read-only connections per worker |
 | `RUNMAP_PATH_DATABASE_CACHE_KIB` | 16,384 KiB page-cache target per connection; excludes decoded responses, tile caches, and OS caches |
 | `RUNMAP_RUN_DEADLINE` | 15 seconds per planner request |
+| `RUNMAP_RUN_MAX_AREA_KM2` | 2,500 km² maximum run-planning query area |
+| `RUNMAP_RUN_MAX_SEGMENTS` | 50,000 complete candidate segments per planning query |
+| `RUNMAP_RUN_MAX_RETRIES` | 3 retries; double both box dimensions each time |
+| `RUNMAP_RUN_MIN_DIMENSION_M` | 1,000 m minimum initial box width and height |
+| `RUNMAP_RUN_BOUNDARY_MARGIN_M` | 100 m minimum candidate proximity band; also at least 5% of the shorter box dimension |
 | `RUNMAP_PATH_PREPARATION_DEADLINE` | 10 seconds per exploration snapshot preparation |
 | `RUNMAP_PATH_SEARCH_MAX_AREA_KM2` | 2,500 km² maximum projected exploration query area |
 | `RUNMAP_PATH_SEARCH_MAX_SEGMENTS` | 50,000 complete candidate segments per exploration query |

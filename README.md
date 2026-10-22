@@ -31,7 +31,7 @@ Open the URL printed by Vite. Data is not included in Git; follow
 Missing path artifacts leave terrain exploration available.
 An exported sibling `network.sqlite` enables selective path delivery; see
 [SQLite setup](docs/development.md#export-a-sqlite-network-dataset). Exploration
-loads a bounded local graph; run planning still loads the matching JSON lazily.
+and run planning load bounded local graphs without the source JSON.
 
 ## Documentation
 

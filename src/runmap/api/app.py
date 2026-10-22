@@ -15,8 +15,9 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from runmap.api.paths import PathData, render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
-from runmap.api.sqlite_data import SQLitePathData, RoutingUnavailableError
+from runmap.api.paths import render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
+from runmap.api.sqlite_data import SQLitePathData
+from runmap.api.sqlite_runs import RunAreaLimits, generate_database_run, validate_run_limits
 from runmap.api.sqlite_paths import (database_path_config, database_viewport, database_inspection, database_snap,
                                     database_explore, database_inspect_outing)
 from runmap.api.sqlite_exploration import ExplorationAreaError, ExplorationLimits
@@ -63,10 +64,17 @@ async def lifespan(application):
         database_path = str(graph_path.with_name("network.sqlite"))
     try:
         application.state.paths = (SQLitePathData(
-            Path(database_path), graph_path,
+            Path(database_path),
             pool_size=int(os.environ.get("RUNMAP_PATH_DATABASE_CONNECTIONS", "2")),
             cache_kib=int(os.environ.get("RUNMAP_PATH_DATABASE_CACHE_KIB", "16384")))
             if database_path is not None else load_path_data(graph_path))
+        application.state.run_limits = RunAreaLimits(
+            max_area_km2=float(os.environ.get("RUNMAP_RUN_MAX_AREA_KM2", 2500)),
+            max_segments=int(os.environ.get("RUNMAP_RUN_MAX_SEGMENTS", 50000)),
+            max_retries=int(os.environ.get("RUNMAP_RUN_MAX_RETRIES", 3)),
+            minimum_dimension_m=float(os.environ.get("RUNMAP_RUN_MIN_DIMENSION_M", 1000)),
+            boundary_margin_m=float(os.environ.get("RUNMAP_RUN_BOUNDARY_MARGIN_M", 100)))
+        validate_run_limits(application.state.run_limits)
         application.state.path_status = "ready"
         application.state.path_tiles = PathTileService(
             application.state.paths,
@@ -99,7 +107,6 @@ app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 
 
 @app.exception_handler(DatabaseBusyError)
-@app.exception_handler(RoutingUnavailableError)
 async def path_service_unavailable(request: Request, exc: RuntimeError) -> JSONResponse:
     return JSONResponse({"detail": str(exc)}, status_code=503)
 
@@ -128,7 +135,7 @@ def paths_config(request: Request):
     return {**(database_path_config(data) if sqlite else path_config(data)), "tile_template": tile_template(data, "static/{policy}"),
             "tile_min_zoom": 10, "tile_max_zoom": 16,
             "run_planner": PlannerConfiguration(
-                available=data.routing_error is None and data.graph_path.is_file() if sqlite else True,
+                available=True,
                 preference_capabilities=capabilities,
                 hill_model=model,
                 deadline_s=float(os.environ.get("RUNMAP_RUN_DEADLINE", "15"))).model_dump()}
@@ -141,10 +148,6 @@ def _path_data(request, dataset_id):
     if dataset_id is not None and dataset_id != data.dataset_id:
         raise HTTPException(status_code=409, detail="Path dataset changed; reload the map")
     return data
-
-
-def _routing_data(data: PathData | SQLitePathData) -> PathData:
-    return data.routing_data() if isinstance(data, SQLitePathData) else data
 
 
 class SnapshotRequest(BaseModel):
@@ -162,7 +165,10 @@ class SnapshotRequest(BaseModel):
 def run_route(request: Request, options: RunRequest) -> RunResponse:
     data = _path_data(request, options.dataset_id)
     try:
-        return generate_run(_routing_data(data), options, float(os.environ.get("RUNMAP_RUN_DEADLINE", "15")))
+        timeout = float(os.environ.get("RUNMAP_RUN_DEADLINE", "15"))
+        if isinstance(data, SQLitePathData):
+            return generate_database_run(data, options, timeout, getattr(request.app.state, "run_limits", RunAreaLimits()))
+        return generate_run(data, options, timeout)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 

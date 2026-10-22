@@ -40,12 +40,12 @@ class SQLiteExplorationTests(unittest.TestCase):
         self.reference = load_path_data(self.source)
         self.database = self.root / "network.sqlite"
         export_network_database(self.source, self.database)
-        self.data = SQLitePathData(self.database, self.root / "absent.json")
+        self.data = SQLitePathData(self.database)
         self.addCleanup(self.data.close)
 
     def test_viewports_inspection_and_snapshot_tiles_match_reference_without_json(self) -> None:
         with patch.object(Path, "read_text", side_effect=AssertionError("JSON read")), \
-                patch("runmap.api.sqlite_data.load_path_data", side_effect=AssertionError("legacy bridge")):
+                patch("runmap.api.paths.load_path_data", side_effect=AssertionError("legacy bridge")):
             service = PathTileService(self.data)
             reference_service = PathTileService(self.reference)
             for surface in ("all", "surfaced"):
@@ -77,7 +77,7 @@ class SQLiteExplorationTests(unittest.TestCase):
                                 self.assertEqual(mapbox_vector_tile.decode(encode_tile(self.data, snapshot.policy,
                                     variant, z, x, y, snapshot)), mapbox_vector_tile.decode(encode_tile(
                                     self.reference, ref_snapshot.policy, variant, z, x, y, ref_snapshot)))
-            self.assertIsNone(self.data.legacy)
+            self.assertFalse(hasattr(self.data, "legacy"))
 
     def test_distant_segments_need_no_local_graph_membership(self) -> None:
         root = self.root / "chain"
@@ -88,7 +88,7 @@ class SQLiteExplorationTests(unittest.TestCase):
         export_network_database(source, database)
         lon, lat = transform("EPSG:3067", "EPSG:4326", [375050], [6675000])
         view = transform_bounds("EPSG:3067", "EPSG:4326", 374900, 6674900, 380200, 6675100)
-        with closing(SQLitePathData(database, source)) as data:
+        with closing(SQLitePathData(database)) as data:
             service = PathTileService(data)
             options = (lon[0], lat[0], .03, "all", True, 50, None)
             prepared = service.prepare(*options)
@@ -129,7 +129,7 @@ class SQLiteExplorationTests(unittest.TestCase):
         database = root / "network.sqlite"
         export_network_database(source, database)
         lon, lat = transform("EPSG:3067", "EPSG:4326", [375050], [6675000])
-        with closing(SQLitePathData(database, source)) as data:
+        with closing(SQLitePathData(database)) as data:
             start = database_snap(data, lon[0], lat[0], avoid_stairs=False)
             snap = Snap(**start["snap"])
             # Deliberately undersize the initial envelope to exercise the safety net.
@@ -203,7 +203,7 @@ class SQLiteExplorationEndpointTests(unittest.IsolatedAsyncioTestCase):
             source = write_graph_outputs(fixture(), root)["graph"]
             database = root / "network.sqlite"
             export_network_database(source, database)
-            with closing(SQLitePathData(database, root / "absent.json")) as data, \
+            with closing(SQLitePathData(database)) as data, \
                     patch.object(Path, "read_text", side_effect=AssertionError("source read")):
                 app.state.paths = data
                 app.state.path_tiles = PathTileService(data)
@@ -221,4 +221,4 @@ class SQLiteExplorationEndpointTests(unittest.IsolatedAsyncioTestCase):
                 app.state.path_tiles = PathTileService(data, preparation_deadline=-1)
                 self.assertEqual((await get("/api/paths/explore?" + query))[0], 504)
                 self.assertEqual((await get("/api/paths/segments/s?" + query))[0], 504)
-                self.assertIsNone(data.legacy)
+                self.assertFalse(hasattr(data, "legacy"))

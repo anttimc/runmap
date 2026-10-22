@@ -293,7 +293,7 @@ class PathTileService:
             return self._prepare_database(longitude, latitude, budget_km, surface, avoid_stairs,
                                            radius_m, segment_id, started, policy)
         _, distances, start, distance_hit = exploration_context(
-            self.data.routing_data() if isinstance(self.data, SQLitePathData) else self.data,
+            self.data,
             longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id,
             deadline=started + self.preparation_deadline)
         if distances is None:

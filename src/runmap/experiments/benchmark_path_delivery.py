@@ -24,7 +24,7 @@ from runmap.routing.types import Bounds
 def probe_delivery(database: Path, graph: Path, bounds: Bounds, legacy: bool,
                     exploration_budget_km: float | None = None) -> dict[str, object]:
     started = perf_counter()
-    data = load_path_data(graph) if legacy else SQLitePathData(database, graph)
+    data = load_path_data(graph) if legacy else SQLitePathData(database)
     report: dict[str, object] = {"storage": "json" if legacy else "sqlite", "startup_ms": (perf_counter() - started) * 1000,
                                  "bounds_epsg3067": bounds, "dataset_id": data.dataset_id}
     try:
@@ -33,7 +33,7 @@ def probe_delivery(database: Path, graph: Path, bounds: Bounds, legacy: bool,
             report["exploration"] = _probe_exploration(data, bounds, exploration_budget_km)
         peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         report["reader_peak_rss_bytes"] = peak if sys.platform == "darwin" else peak * 1024
-        report["legacy_loaded"] = True if legacy else data.legacy is not None
+        report["legacy_loaded"] = legacy
         return report
     finally:
         if isinstance(data, SQLitePathData):

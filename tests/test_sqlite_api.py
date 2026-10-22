@@ -17,7 +17,8 @@ from runmap.api.app import app, lifespan, static_path_tile
 from runmap.api.paths import inspect_path, load_path_data, path_config, snap_path_start, viewport_paths
 from runmap.api.path_tiles import PathTileService, encode_tile, render_version
 from runmap.api.runs import RunRequest, generate_run
-from runmap.api.sqlite_data import RoutingUnavailableError, SQLitePathData
+from runmap.api.sqlite_runs import generate_database_run
+from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.sqlite_paths import database_inspection, database_path_config, database_snap, database_viewport
 from runmap.paths.database import export_network_database
 from runmap.paths.database_pool import DatabaseBusyError, DatabasePool
@@ -43,7 +44,7 @@ class SQLiteDeliveryTests(unittest.TestCase):
         self.reference = load_path_data(self.graph)
         self.database = self.root / "network.sqlite"
         export_network_database(self.graph, self.database)
-        self.data = SQLitePathData(self.database, self.graph)
+        self.data = SQLitePathData(self.database)
         self.addCleanup(self.data.close)
 
     def test_config_inspection_viewport_and_snapping_match_reference(self) -> None:
@@ -60,10 +61,10 @@ class SQLiteDeliveryTests(unittest.TestCase):
                 for longitude, preferred in ((24.801, None), (24.802, "s"), (24.802, "missing"), (20, None)):
                     self.assertEqual(database_snap(self.data, longitude, 60.2, surface, stairs, 50, preferred),
                                      snap_path_start(self.reference, longitude, 60.2, surface, stairs, 50, preferred))
-        self.assertIsNone(self.data.legacy)
+        self.assertFalse(hasattr(self.data, "legacy"))
 
     def test_static_tiles_preserve_decoded_geometry_properties_and_cache(self) -> None:
-        with patch("runmap.api.sqlite_data.load_path_data", side_effect=AssertionError("loaded routing")):
+        with patch("runmap.api.paths.load_path_data", side_effect=AssertionError("loaded routing")):
             for z in (10, 12, 14, 16):
                 x, y = xyz(24.801, 60.2, z)
                 for policy in ("all-stairs", "all-no-stairs", "surfaced-stairs", "surfaced-no-stairs"):
@@ -79,13 +80,13 @@ class SQLiteDeliveryTests(unittest.TestCase):
 
     def test_delivery_and_startup_do_not_read_source_or_rebuild_graph(self) -> None:
         with patch.object(Path, "read_text", side_effect=AssertionError("source read")), \
-                patch("runmap.api.sqlite_data.load_path_data", side_effect=AssertionError("loaded graph")):
-            with closing(SQLitePathData(self.database, self.graph)) as data:
+                patch("runmap.api.paths.load_path_data", side_effect=AssertionError("loaded graph")):
+            with closing(SQLitePathData(self.database)) as data:
                 self.assertEqual(database_path_config(data)["status"], "ready")
                 self.assertTrue(database_viewport(data, VIEW, 15)["features"])
                 self.assertTrue(database_inspection(data, "s")["intervals"])
                 self.assertEqual(database_snap(data, 24.801, 60.2)["status"], "ready")
-                self.assertIsNone(data.legacy)
+                self.assertFalse(hasattr(data, "legacy"))
 
     def test_startup_sql_reads_only_metadata(self) -> None:
         statements: list[str] = []
@@ -97,17 +98,17 @@ class SQLiteDeliveryTests(unittest.TestCase):
             return connection
 
         with patch("runmap.paths.database.sqlite3.connect", side_effect=traced), \
-                closing(SQLitePathData(self.database, self.graph)):
+                closing(SQLitePathData(self.database)):
             pass
         selects = [statement for statement in statements if statement.lstrip().upper().startswith("SELECT")]
         self.assertTrue(selects)
         self.assertTrue(all("FROM metadata" in statement for statement in selects))
 
-    def test_lazy_routing_validates_identity_and_preserves_plans_and_snapshots(self) -> None:
-        with patch("runmap.api.sqlite_data.load_path_data", wraps=load_path_data) as loader:
+    def test_planning_and_snapshots_need_no_json_bridge(self) -> None:
+        with patch.object(Path, "read_text", side_effect=AssertionError("JSON read")):
             options = RunRequest(dataset_id=self.data.dataset_id, home={"longitude": 24.801, "latitude": 60.2},
                                  turnaround={"longitude": 24.803, "latitude": 60.2})
-            self.assertEqual(generate_run(self.data.routing_data(), options).candidates,
+            self.assertEqual(generate_database_run(self.data, options).candidates,
                              generate_run(self.reference, options).candidates)
             service = PathTileService(self.data)
             result = service.prepare(24.801, 60.2, .1, "all", True, 50, None)
@@ -119,14 +120,7 @@ class SQLiteDeliveryTests(unittest.TestCase):
             reference_snapshot = reference_service.snapshot(prepared["snapshot_id"])
             expected = encode_tile(self.reference, snapshot.policy, "gradient-all", 15, x, y, reference_snapshot)
             self.assertEqual(mapbox_vector_tile.decode(actual), mapbox_vector_tile.decode(expected))
-            self.assertEqual(loader.call_count, 1)
-        graph = fixture()
-        graph["segments"][0]["tags"]["name"] = "Changed dataset"
-        write_graph_outputs(graph, self.root)
-        with closing(SQLitePathData(self.database, self.graph)) as data:
-            with self.assertRaisesRegex(RoutingUnavailableError, "do not match"):
-                data.routing_data()
-            self.assertIsNone(data.legacy)
+        self.assertFalse(hasattr(self.data, "routing_data"))
 
     def test_pool_bounds_concurrent_readers_and_closes_returned_connections(self) -> None:
         def inspect(_: int) -> str:
@@ -156,7 +150,7 @@ class SQLiteDeliveryTests(unittest.TestCase):
         export_network_database(source, database)
         bounds = transform_bounds("EPSG:3067", "EPSG:4326", 375071, 6674999, 375079, 6675001, densify_pts=21)
         lon, lat = transform("EPSG:3067", "EPSG:4326", [375075], [6675000])
-        with closing(SQLitePathData(database, source)) as data:
+        with closing(SQLitePathData(database)) as data:
             self.assertEqual(database_path_config(data), path_config(reference))
             for hidden in (False, True):
                 self.assertEqual(database_viewport(data, bounds, 15, hide_building_access=hidden),
@@ -200,7 +194,7 @@ class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
                                        "headers": [(b"if-none-match", response.headers["etag"].encode())]})
                     self.assertEqual(static_path_tile(request, render_version(data), data.dataset_id,
                                                       "all-no-stairs", "gradient-hidden", 15, x, y).status_code, 304)
-                    self.assertIsNone(data.legacy)
+                    self.assertFalse(hasattr(data, "legacy"))
                 self.assertTrue(data.pool.closed)
                 self.assertEqual(data.pool.connections.qsize(), 0)
 
@@ -229,15 +223,15 @@ class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
             graph = write_graph_outputs(fixture(), root)["graph"]
             database = root / "network.sqlite"
             export_network_database(graph, database)
-            with closing(SQLitePathData(database, root / "missing.json")) as data:
+            with closing(SQLitePathData(database)) as data:
                 app.state.paths = data
                 status, config = await get("/api/paths/config")
                 self.assertEqual(status, 200)
-                self.assertFalse(config["run_planner"]["available"])
+                self.assertTrue(config["run_planner"]["available"])
                 self.assertEqual((await get("/api/paths/segments/s"))[0], 200)
                 query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&longitude=24.801&latitude=60.2"
                 self.assertEqual((await get("/api/paths/explore?" + query))[0], 200)
-                self.assertIsNone(data.legacy)
+                self.assertFalse(hasattr(data, "legacy"))
 
 
 if __name__ == "__main__":

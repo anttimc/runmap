@@ -137,7 +137,8 @@ def indexed_distance_heuristic(graph: GraphData, deadline: float | None) -> Call
 def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettings,
              deadline: float | None = None, *,
              preferences: PreferenceSettings = PreferenceSettings(),
-             hills: HillData | None = None) -> RunResult:
+             hills: HillData | None = None,
+             frontier_nodes: frozenset[int] = frozenset()) -> RunResult:
     """Construct both side assignments, retaining completed runs on deadline expiry."""
     started = monotonic()
     validate_settings(settings)
@@ -153,6 +154,12 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
     zero_width = cost_data.shape_disabled
 
     candidates: list[RunCandidate] = []
+    reached_frontier: set[int] = set()
+
+    def observe(node: int) -> None:
+        if node in frontier_nodes:
+            reached_frontier.add(node)
+
     outcomes: list[Literal["complete", "unreachable", "deadline"]] = []
     for left in ((True,) if zero_width else (True, False)):
         try:
@@ -160,7 +167,8 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
             outbound = shortest_path(graph, overlay.home, overlay.turnaround,
                                      indexed_arc_cost=partial(indexed_arc_cost, data=cost_data, cache=cost_cache,
                                                       leg=outbound_context, deadline=deadline),
-                                     indexed_heuristic=heuristic, deadline=deadline)
+                                     indexed_heuristic=heuristic, deadline=deadline,
+                                     visit_node=observe if frontier_nodes else None)
             if outbound is None:
                 outcomes.append("unreachable")
                 continue
@@ -172,7 +180,8 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
                 returning = shortest_path(graph, overlay.turnaround, overlay.home,
                                       indexed_arc_cost=partial(indexed_arc_cost, data=cost_data, cache=cost_cache,
                                                        leg=return_context, deadline=deadline),
-                                      indexed_heuristic=heuristic, deadline=deadline)
+                                      indexed_heuristic=heuristic, deadline=deadline,
+                                      visit_node=observe if frontier_nodes else None)
             if returning is None:
                 outcomes.append("unreachable")
                 continue
@@ -192,7 +201,7 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
         except TimeoutError:
             outcomes.append("deadline")
     return RunResult(overlay, tuple(candidates), tuple(outcomes), monotonic() - started,
-                     cost_data.preferences)
+                     cost_data.preferences, frozenset(reached_frontier))
 
 
 def reverse_path(graph: GraphData, path: PathResult) -> PathResult | None:

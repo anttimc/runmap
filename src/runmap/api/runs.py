@@ -21,7 +21,10 @@ from runmap.routing.cost_types import (
     PreferenceWeightTables, ResolvedPreferences, ShapeStrengths,
 )
 from runmap.routing.search import route_coordinates
+from runmap.routing.run_types import RunResult
 from runmap.routing.hill_types import HillModel
+from runmap.routing.types import Bounds
+from runmap.routing.deadlines import check_deadline
 
 RUN_SLOTS = BoundedSemaphore(2)
 
@@ -112,16 +115,34 @@ class CandidateResponse(BaseModel):
     equivalent_to: int | None = None
 
 
+class RunSearchAttempt(BaseModel):
+    bounds_epsg3067: Bounds
+    nodes: int = 0
+    segments: int = 0
+    reason: str = "settled"
+    reached_frontier: bool = False
+    near_boundary: bool = False
+    source_coverage_limited: bool = False
+
+
+class RunSearchMetadata(BaseModel):
+    attempts: list[RunSearchAttempt] = Field(default_factory=list)
+    retries: int = 0
+    area_limited_reason: str | None = None
+    optimality_note: str = "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+
+
 class RunResponse(BaseModel):
     dataset_id: str
     cost_model: CostConfigurationResponse
-    status: Literal["complete", "unreachable", "deadline", "no_eligible_snap"]
+    status: Literal["complete", "unreachable", "deadline", "no_eligible_snap", "area_limited"]
     home: Snap | None = None
     turnaround: Snap | None = None
     candidates: list[CandidateResponse] = Field(default_factory=list)
     outcomes: list[str] = Field(default_factory=list)
     elapsed_s: float = 0
     coverage_note: str = "Routes use the prepared network; missing coverage can omit better connections."
+    search: RunSearchMetadata | None = None
 
 
 def generate_run(data: PathData, options: RunRequest, timeout_s: float = 15) -> RunResponse:
@@ -158,10 +179,19 @@ def _generate_run(data: PathData, options: RunRequest, deadline: float) -> RunRe
         result = plan_run(index, home, turnaround, settings, deadline, preferences=preferences, hills=data.hills)
     except TimeoutError:
         return response.model_copy(update={"status": "deadline", "elapsed_s": monotonic() - started})
+    return render_run_result(response, result, started)
+
+
+def render_run_result(response: RunResponse, result: RunResult, started: float,
+                        deadline: float | None = None) -> RunResponse:
+    """Serialize complete candidate legs using the same physical traversal semantics."""
+    home, turnaround = response.home, response.turnaround
+    assert home is not None and turnaround is not None
     graph = result.overlay.graph
     home_point, end_point = projected_points([[home.longitude, home.latitude], [turnaround.longitude, turnaround.latitude]])
     centre = Point((home_point[0] + end_point[0]) / 2, (home_point[1] + end_point[1]) / 2)
     for candidate in result.candidates:
+        check_deadline(deadline)
         legs = [LegResponse(coordinates=[list(p) for p in route_coordinates(graph, leg.arc_ids)],
                             distance_m=sum(graph.arcs[a]["length_m"] for a in leg.arc_ids),
                             cost=leg.cost, expanded_nodes=leg.expanded_nodes, cost_breakdown=costs,

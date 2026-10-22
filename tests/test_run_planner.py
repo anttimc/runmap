@@ -176,13 +176,14 @@ class RunPlannerTests(unittest.TestCase):
 
         def bounded_search(index: GraphData, start: str, destination: str, *,
                            indexed_arc_cost: Callable[[IntegerArc], float], deadline: float | None,
-                           indexed_heuristic: Callable[[int, int], float]) -> PathResult | None:
+                           indexed_heuristic: Callable[[int, int], float],
+                           visit_node: Callable[[int], None] | None = None) -> PathResult | None:
             nonlocal calls
             calls += 1
             if calls > 2:
                 raise TimeoutError
             return shortest_path(index, start, destination, indexed_arc_cost=indexed_arc_cost,
-                                 deadline=deadline, indexed_heuristic=indexed_heuristic)
+                                 deadline=deadline, indexed_heuristic=indexed_heuristic, visit_node=visit_node)
 
         with patch("runmap.routing.run_planner.shortest_path", side_effect=bounded_search):
             result = plan_run(self.index, self.snap("ab", .2), self.snap("ab", .8), RunSettings())

@@ -310,6 +310,7 @@ def shortest_path(
     indexed_arc_cost: Callable[[IntegerArc], float] | None = None,
     indexed_heuristic: Callable[[int, int], float] | None = None,
     deadline: float | None = None,
+    visit_node: Callable[[int], None] | None = None,
 ) -> PathResult | None:
     """Find a least-cost path; an optional lower-bound heuristic enables A*.
 
@@ -357,6 +358,8 @@ def shortest_path(
         _, distance, _, node = heapq.heappop(queue)
         if distance != distances[node]:
             continue
+        if visit_node is not None:
+            visit_node(node)
         if node == destination_index:
             break
         expanded += 1

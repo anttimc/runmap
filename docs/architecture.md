@@ -6,8 +6,8 @@ and Rasterio/GDAL; the optional
 web dependencies add FastAPI, Shapely, ContourPy, Pillow, and an MVT encoder.
 Vite builds the frontend. SQLite catalogs elevation products and supports
 selective path delivery. With a prepared network database, config, static tiles,
-inspection, and snapping do not load the complete graph. Exploration/planning
-still load matching JSON lazily until bounded local searches are implemented.
+inspection, and snapping do not load the complete graph. Exploration and planning
+load bounded local graphs without reading the source JSON.
 JSON-only deployments retain the previous loader. There is no database server.
 
 ## Data flow
@@ -20,7 +20,7 @@ MML elevation -> validated source COGs + immutable coverage manifest
 OSM extract -> directed pedestrian graph -> sampled gradient intervals
             -> graph.json + content-addressed measurements
             -> prepared network.sqlite -> static path MVTs, inspection, snapping
-            -> lazy JSON graph -> forward-distance queries, run planning (temporary)
+                                       -> local graphs -> forward-distance queries, run planning
 ```
 
 Preparation is explicit. Browser panning reads local prepared data; it does not
@@ -41,6 +41,7 @@ and hosted storage are [future work](roadmap.md).
 | `paths/preparation.py`, `paths/coverage.py` | Dataset-wide feature preparation and shared source-coverage semantics |
 | `paths/database_pool.py`, `api/sqlite_data.py`, `api/sqlite_paths.py` | Bounded connection leases, SQLite dataset lifetime, and selective API delivery |
 | `api/sqlite_exploration.py` | Local exploration envelopes, frontier retries, request limits, and retained graph accounting |
+| `api/sqlite_runs.py` | Local run-planning windows, candidate boundary checks, expansion attempts, and area-limited outcomes |
 | `paths/exploration.py`, `routing/profiles.py` | Shared eligibility, snapping, temporary start overlay, and forward-distance inclusion |
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
@@ -275,19 +276,43 @@ policy exclusions, styling, inspection direction, and tile LOD retain reference
 semantics. Direct exploration and start-distance inspection share the same
 snapshot cache. These operations need no source JSON.
 
-Run planning uses a temporary lazy compatibility bridge. The first such request loads
-and retains the complete graph/measurements from `RUNMAP_PATH_GRAPH`, verifies
-both graph identity and measurement checksum against SQLite, and reuses that
-single dataset. A missing/mismatched source returns HTTP 503 while selective
-delivery remains available; failed loads are remembered until restart. Config
-does not load that graph to discover hill capabilities and reports planner
-unavailability when the source file is absent. The initial JSON load is outside
-the legacy run planner's deadline. Planner memory is still whole-dataset memory.
+SQLite run planning snaps both endpoints using indexed interval queries and
+starts with their EPSG:3067 box expanded by 50% total in each dimension (25% per
+side), floored to 1,000 m width and height by default. The viewport does not
+determine legality. Each attempt loads complete local topology and persisted
+directional hill features in the same dense ordering, without loading raw
+measurement arrays. Preference capabilities and configuration retain dataset-wide
+coverage fractions; actual traversal observations describe the selected route.
 
-The [remaining migration](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
-replaces this bridge with planner area expansion over bounded local graphs.
-Existing packed topology/geometry/measurement data
-are reused for loaded areas; dense indices belong to each working set while
+Shortest-path search reports popped frontier nodes, including the destination.
+Run planning retries when a candidate search reaches an unloaded connection,
+when any candidate geometry enters the query-boundary band, or when an incomplete
+candidate assignment leaves unloaded connections in the window. The boundary
+band is the larger of 100 m and 5% of the shorter box dimension. Both dimensions
+double on retry. Each retry discards prior legs and reruns all side assignments
+against the same expanded local graph. This is a heuristic: a better route
+outside the window can remain undetected; global optimality is not promised.
+
+Defaults allow three retries, 2,500 km² query area, and 50,000 selected segments.
+Area and bounded segment-count checks precede decoding. Run search metadata
+records each attempted box, node/segment counts, retry reason, reached-frontier
+and query-boundary involvement, and source-coverage proximity separately.
+Exhaustion returns `status=area_limited`, an explicit reason, and no candidate
+legs from discarded windows. A graph with no relevant unloaded connections may
+return `unreachable`; source coverage limitations remain a separate flag/note.
+The UI distinguishes area limits from unreachable endpoints.
+
+The existing two run slots bound concurrent preparation/search. One deadline
+covers endpoint snapping, connection waits, SQL, local packing, every retry,
+cost preparation, and search. Completed candidates from a deadline-interrupted
+attempt can still be serialized and returned with `status=deadline`. Busy planner
+slots return HTTP 429; busy connection leases return HTTP 503. Local graph and
+hill stores are request-owned and released after response construction, with no
+retained planner graph cache.
+
+The lazy full-JSON bridge has been removed. With SQLite selected, all path API
+operations work without the source graph/measurement files, and config advertises
+planning from database metadata. Dense indices belong to each working set while
 external dataset IDs remain stable. Persisted global classifications and source
 boundaries are used directly rather than recomputed on those windows.
 The [SQLite feature report](archive/history/43-sqlite-features.md) records fixture
@@ -297,6 +322,8 @@ The [SQLite API report](archive/history/45-sqlite-api.md) compares selective del
 with the JSON reference in separate reader processes, excluding offline export.
 The [SQLite exploration report](archive/history/47-sqlite-exploration.md) records
 local-search parity, request limits, snapshot ownership, and reader measurements.
+The [SQLite planner report](archive/history/48-sqlite-runs.md) compares six saved
+route requests, including hill preferences, and records expansion/memory costs.
 
 ## Delivery and request lifetimes
 
