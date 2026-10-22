@@ -141,8 +141,36 @@ benchmarks and the anchor baseline. To run the app with that smaller graph, set
 
 ### Export a SQLite network dataset
 
-The new architecture also has an independent [numeric routing artifact](numeric-routing-format.md)
-and latency benchmarks. It is not yet the HTTP planning backend.
+Run planning uses the [numeric routing artifact](numeric-routing-format.md) when
+`numeric-routing-v2.sqlite` is present beside `network.sqlite`, or when
+`RUNMAP_NUMERIC_DATABASE` names it explicitly. Export it once from the matching
+prepared network, then restart the API:
+
+```sh
+uv run python -m runmap.cli paths export-numeric \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite
+```
+
+Startup validates metadata without loading graph chunks. A mismatched or explicitly
+configured missing artifact fails startup; re-export after replacing the source
+network. Without a numeric artifact, planning uses the existing local SQLite
+backend. Distance exploration still uses that backend.
+
+`RUNMAP_NUMERIC_CACHE_BYTES` defaults to 134217728 (128 MiB) per API process.
+The LRU retains immutable graphs for exact working-area bounds, including their
+chunk buffers and an allowance for native indexes. Zero disables retention.
+This is a cache accounting budget, not a process RSS cap: active requests retain
+evicted graphs safely, SQLite has its own page caches, and each search allocates
+request state. Two planning slots continue to bound simultaneous searches.
+Graphs hold their immutable buffers independently of the database connection.
+The cache belongs to one opened artifact generation and is cleared on shutdown;
+request costs and overlays are never cached.
+
+Changing working areas or expanding a window currently builds a new native index
+and rereads its selected BLOBs. Chunks are not yet reused between different bounds.
+No full graph is loaded at startup, and no per-edge Python graph is constructed
+on the numeric planning path. Only selected route segments are decoded for output.
 
 The storage layer can convert an existing prepared graph without new
 downloads or SpatiaLite:
@@ -321,10 +349,12 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_PATH_BACKEND` | `sqlite`; `json` explicitly enables the legacy full graph loader |
 | `RUNMAP_PATH_DATABASE_CONNECTIONS` | 2 exclusively leased read-only connections per worker |
 | `RUNMAP_PATH_DATABASE_CACHE_KIB` | 16,384 KiB page-cache target per connection; excludes decoded responses, tile caches, and OS caches |
+| `RUNMAP_NUMERIC_DATABASE` | Optional numeric artifact override; otherwise auto-detect sibling `numeric-routing-v2.sqlite` |
+| `RUNMAP_NUMERIC_CACHE_BYTES` | 134,217,728 accounted bytes of retained numeric working sets per process |
 | `RUNMAP_RUN_DEADLINE` | 15 seconds per planner request |
 | `RUNMAP_RUN_MAX_AREA_KM2` | 2,500 km² maximum run-planning query area |
-| `RUNMAP_RUN_MAX_SEGMENTS` | 50,000 complete candidate segments per planning query |
-| `RUNMAP_RUN_MAX_RETRIES` | 3 retries; double both box dimensions each time |
+| `RUNMAP_RUN_MAX_SEGMENTS` | 200,000 complete candidate segments per planning query |
+| `RUNMAP_RUN_MAX_RETRIES` | 5 retries; double both box dimensions each time |
 | `RUNMAP_RUN_MIN_DIMENSION_M` | 1,000 m minimum initial box width and height |
 | `RUNMAP_RUN_BOUNDARY_MARGIN_M` | 100 m minimum candidate proximity band; also at least 5% of the shorter box dimension |
 | `RUNMAP_PATH_PREPARATION_DEADLINE` | 10 seconds per exploration snapshot preparation |

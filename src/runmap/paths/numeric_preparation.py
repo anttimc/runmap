@@ -10,7 +10,7 @@ from runmap.paths.graph_chunks import TopologyChunk
 from runmap.paths.numeric_format import ChunkCounts, NumericArray, NumericChunk
 from runmap.paths.preparation import PreparedSegment
 from runmap.routing.hill_types import HillFeatures
-from runmap.routing.profiles import arc_forward
+from runmap.routing.profiles import arc_forward, pedestrian_access_reason
 from runmap.routing.types import EdgeProfile
 
 
@@ -21,7 +21,8 @@ def _prepared_segments(connection: sqlite3.Connection, chunk: TopologyChunk) -> 
     return read_segment_features(connection, prefix, numbers)
 
 
-def _node_arrays(connection: sqlite3.Connection, chunk: TopologyChunk) -> dict[str, NumericArray]:
+def _node_arrays(connection: sqlite3.Connection, chunk: TopologyChunk,
+                 profiles: tuple[EdgeProfile, ...]) -> dict[str, NumericArray]:
     records = [item["record"] for item in chunk["nodes"]]
     keys = [item["id"] for item in records]
     placeholders = ",".join("?" for _ in keys)
@@ -35,6 +36,8 @@ def _node_arrays(connection: sqlite3.Connection, chunk: TopologyChunk) -> dict[s
         "node_ids": np.array([rows[key][0] for key in keys], dtype="<i8"),
         "node_xy": np.array([rows[key][1:] for key in keys], dtype="<f8").reshape(-1, 2),
         "node_degree": np.array([item["degree"] for item in chunk["nodes"]], dtype="<i8"),
+        "node_allowed": np.array([[pedestrian_access_reason(node, profile) is None for profile in profiles]
+                                  for node in records], dtype=np.uint8).reshape(len(records), len(profiles)),
     }
 
 
@@ -115,7 +118,7 @@ def prepare_numeric_chunk(connection: sqlite3.Connection, chunk: TopologyChunk,
     nodes = {item["record"]["id"]: i for i, item in enumerate(chunk["nodes"])}
     if set(features) != {item["record"]["id"] for item in chunk["segments"]}:
         raise ValueError("Missing prepared numeric chunk features")
-    arrays = _node_arrays(connection, chunk)
+    arrays = _node_arrays(connection, chunk, profiles)
     arrays.update(_segment_arrays(chunk, features, nodes))
     arrays.update(_arc_arrays(chunk, features, nodes, profiles))
     arrays.update(_adjacency_arrays(arrays["arc_nodes"], len(nodes)))

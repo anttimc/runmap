@@ -1,4 +1,4 @@
-"""Measure complete reference requests with preparation, search, and output phases."""
+"""Measure complete planning requests with preparation, search, and output phases."""
 
 import argparse
 from collections.abc import Callable, Iterator
@@ -19,6 +19,7 @@ from unittest.mock import patch
 
 from runmap.api.runs import EndpointRequest, PreferencesRequest, RunRequest, SettingsRequest
 from runmap.api.sqlite_data import SQLitePathData
+from runmap.api.numeric_data import NumericRoutingData
 from runmap.api import sqlite_runs
 from runmap.experiments.latency import latency_summary
 from runmap.paths import local_network
@@ -61,6 +62,10 @@ def measure_phases() -> Iterator[PhaseTimes]:
         stack.enter_context(patch.object(sqlite_runs, "plan_run", _timed("search", sqlite_runs.plan_run, phases)))
         stack.enter_context(patch.object(sqlite_runs, "_retry_reason", _timed("boundary_check", sqlite_runs._retry_reason, phases)))
         stack.enter_context(patch.object(sqlite_runs, "render_run_result", _timed("render", sqlite_runs.render_run_result, phases)))
+        stack.enter_context(patch.object(NumericRoutingData, "prepare", _timed("numeric_prepare", NumericRoutingData.prepare, phases)))
+        stack.enter_context(patch.object(sqlite_runs, "numeric_plan_run", _timed("numeric_search", sqlite_runs.numeric_plan_run, phases)))
+        stack.enter_context(patch.object(sqlite_runs, "load_route_segments", _timed("route_metadata", sqlite_runs.load_route_segments, phases)))
+        stack.enter_context(patch.object(sqlite_runs, "render_numeric_result", _timed("render", sqlite_runs.render_numeric_result, phases)))
         yield phases
 
 
@@ -94,7 +99,9 @@ def measure_worker(database: Path, home: tuple[float, float], turnaround: tuple[
         samples = [_request_sample(data, options, timeout_s) for _ in range(repeats)]
         elapsed = [cast(float, sample["elapsed_ms"]) for sample in samples]
         rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        return dict(dataset_id=data.dataset_id, request=options.model_dump(mode="json"), startup_ms=startup_ms,
+        return dict(backend="numeric" if data.numeric is not None else "reference",
+                    numeric_resident_bytes=data.numeric.resident_bytes if data.numeric is not None else 0,
+                    dataset_id=data.dataset_id, request=options.model_dump(mode="json"), startup_ms=startup_ms,
                     first_request=first, repeated_requests=samples, repeated_summary=latency_summary(elapsed),
                     equivalent=all(sample["response_sha256"] == first["response_sha256"] for sample in samples),
                     peak_rss_bytes=rss if sys.platform == "darwin" else rss * 1024,

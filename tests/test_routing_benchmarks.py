@@ -10,6 +10,7 @@ from rasterio.warp import transform
 from runmap.api import sqlite_runs
 from runmap.experiments.benchmark_numeric_chunks import probe_numeric_window
 from runmap.experiments.benchmark_run_latency import measure_worker
+from runmap.experiments.benchmark_native_routing import benchmark_native_routing
 from runmap.paths.database import export_network_database
 from runmap.paths.numeric_database import export_numeric_database
 from test_database_features import BOUNDS
@@ -17,6 +18,23 @@ from test_path_database import publish_fixture
 
 
 class RoutingBenchmarkTests(unittest.TestCase):
+    def test_native_benchmark_compares_run_costs_and_labels_preparation(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, _, _ = publish_fixture(root)
+            database, numeric = root / "network.sqlite", root / "numeric.sqlite"
+            export_network_database(source, database)
+            export_numeric_database(database, numeric)
+            lon, lat = transform("EPSG:3067", "EPSG:4326", [375025, 375075], [6675000, 6675000])
+            report = benchmark_native_routing(database, numeric, BOUNDS,
+                home=(lon[0], lat[0]), turnaround=(lon[1], lat[1]), repeats=2, compare_reference=True)
+            self.assertTrue(report["deterministic"])
+            self.assertTrue(report["comparison"]["equivalent_costs"])
+            self.assertEqual(report["outcomes"], ("complete", "complete"))
+            self.assertEqual(len(report["native_run_ms"]), 2)
+            self.assertGreater(report["native_index_ms"], 0)
+            self.assertGreater(report["distance_reached_nodes"], 0)
+
     def test_full_request_phases_preserve_results_and_restore_instrumented_functions(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

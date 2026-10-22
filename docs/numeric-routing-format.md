@@ -1,23 +1,29 @@
-# Numeric routing artifact, version 1
+# Numeric routing artifact, version 2
 
 This is the first storage implementation for the
 [100 ms routing architecture](100ms-routing-architecture.md). It is an offline
 artifact alongside the reference database. The HTTP planner and exploration
-endpoints still use the reference backend; native traversal and bounded chunk
-residency have not been connected yet.
+endpoints still use the reference backend. Native traversal, endpoint overlays,
+and experimental run candidates are implemented; bounded chunk residency and API
+integration remain outstanding.
 
 ## Export and read
 
 ```sh
 uv run python -m runmap.cli paths export-numeric \
   data/paths/prepared/helsinki-capital-area/network.sqlite \
-  data/paths/prepared/helsinki-capital-area/numeric-routing-v1.sqlite
+  data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite
 ```
 
 The source must be a current prepared SQLite network. Export processes its spatial
 chunks individually, including prepared features; it never loads the complete
 JSON graph. The destination must be new. Staging and atomic no-overwrite publication
 preserve both existing artifacts and failed-export cleanup.
+
+Version 2 adds explicit node eligibility masks. Arc eligibility alone cannot
+represent the reference behavior for a search starting at a blocked node.
+Version-1 experimental artifacts must be re-exported into a new filename. This
+does not change the reference network database schema or active HTTP backend.
 
 The artifact is read-only SQLite with a bounded page-cache target. Opening reads
 metadata only. `iter_numeric_chunks` selects full chunk envelopes through an
@@ -26,6 +32,9 @@ of array descriptors per chunk, without per-node, per-edge, or per-interval Pyth
 records. It does not build a dense regional graph. Consumers must filter
 `segment_bounds` for exact window membership; candidate chunks may include other
 segments. This conservative candidate behavior retains long crossing segments.
+
+`iter_numeric_payloads` supplies the same immutable bytes directly to Rust,
+avoiding the intermediate NumPy descriptors when a native graph is loaded.
 
 SQLite materializes a bytes payload per loaded chunk. Array views retain that
 immutable bytes owner and remain valid after the cursor or connection closes.
@@ -58,7 +67,7 @@ must remain distinguishable from source coverage boundaries and true dead ends.
 `numeric_chunks` stores a payload, byte count, and SHA-256 per chunk. An unsigned
 little-endian header, described by `struct.Struct("<8sI4x6Q")`, contains:
 
-- Eight-byte magic `RUNNUM01` and format version `1`.
+- Eight-byte magic `RUNNUM02` and format version `2`.
 - Node, segment, arc, profile, projected point, and hill interval counts.
 
 Header size is 64 bytes. Each following column starts at an offset divisible by
@@ -70,6 +79,7 @@ The ordered layout is defined by `array_layouts` in
 | Columns | Meaning |
 | --- | --- |
 | `node_ids`, `node_xy`, `node_degree` | Global numeric identities, projected coordinates, global incidence |
+| `node_allowed` | Node eligibility in metadata profile order, including access restrictions |
 | `segment_ids`, `segment_nodes`, `segment_bounds` | Global segment identities, local node indices, projected envelopes |
 | `geometry_offsets`, `geometry_xy` | Segment polylines as offsets into projected point columns |
 | `arc_ids`, `arc_nodes`, `arc_segments`, `arc_lengths`, `arc_reverse` | Global arc identities, local endpoint/segment indices, physical lengths, direction |
@@ -118,7 +128,7 @@ Measure numeric chunk retrieval and view creation independently:
 
 ```sh
 uv run python -m runmap.experiments.benchmark_numeric_chunks \
-  data/paths/prepared/helsinki-capital-area/numeric-routing-v1.sqlite \
+  data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite \
   --bounds 374971.5666 6675095.1128 381827.5009 6680883.1673 \
   --repeats 10 --trace-allocations \
   --report artifacts/pathfinding-profile/numeric-buffer-latency.json
@@ -129,7 +139,7 @@ buffer-access times, and an optional separate allocation measurement. Chunk
 references are released between samples. No application chunk cache is involved.
 Buffer-loading times must not be presented as complete planning latency.
 
-An initial local measurement on the Helsinki artifact selected 44,366 segments
+An initial local measurement on the version-1 Helsinki artifact selected 44,366 segments
 from 221 candidate chunks, reading 47,011,360 payload bytes including hills.
 The first buffer load took approximately 140 ms; ten repeated loads had a median
 of approximately 50 ms. A separate traced allocation load peaked at approximately
@@ -137,3 +147,66 @@ of approximately 50 ms. A separate traced allocation load peaked at approximatel
 uncontrolled, and no application cache was used. These results establish a
 storage baseline; native search, incremental loading, and residency caching are
 still required to evaluate the complete 100 ms request target.
+
+## Native traversal milestone
+
+Rebuild the extension after changing the Rust sources using the development
+instructions (`uv run --no-sync maturin develop --release --locked --uv` with the
+Rust toolchain in PATH).
+
+`load_numeric_graph` in `runmap.routing.numeric_search` loads candidate bytes and
+builds a Rust node lookup. The native graph owns references to immutable Python
+bytes; native search borrows checked column slices and releases the GIL. There
+is no payload copy into per-edge Rust or Python graph records. Rust validates
+shape/offset/reference consistency and shares cross-chunk nodes by numeric ID.
+Native lookup and search state are numeric Rust allocations, not Python records.
+
+`numeric_distances` supports forward/reverse traversal, distance budgets, partial
+segment starts, profile masks, and unloaded-frontier output. `numeric_shortest_path`
+adds A*, partial start/destination overlays, complete/partial hill integration,
+shape-field integration, and physical-span reuse costs. `numeric_plan_run`
+constructs both side assignments and both legs under one deadline. Result arrays
+are immutable byte-backed NumPy views. Overlay nodes use negative request-local
+IDs; reuse a segment endpoint rather than passing an overlay node ID to another
+request.
+
+The native graph is immutable and can serve concurrent searches. Each search owns
+its distances, predecessors, endpoint overlay, and field cache. There are no
+Python callbacks in the visited-edge loop. Equal-cost ties are deterministic by
+numeric node identity and can select different routes than the reference's string
+identity ties. The experimental planner does not use the reference's special
+zero-width reverse-path shortcut. Native-versus-reference validation therefore
+compares legality, costs, spans, and observations rather than requiring every
+equal-cost arc sequence to match.
+
+The run-planning HTTP endpoint uses this layer when a matching artifact is
+available. It preserves validation, working-area limits, expansion, and response
+rendering, and caches immutable graphs in a byte-accounted LRU per artifact
+lifetime. API endpoint overlays pass snapped projected coordinates as well as
+chainage so shape integration uses the reference endpoint geometry. The graph
+still loads all selected BLOBs, including hill arrays, before traversal. Different
+bounds do not share retained chunks yet; distance exploration and snapshot
+integration remain pending. See [API setup](development.md#export-a-sqlite-network-dataset)
+and [complete request timings](100ms-routing-architecture.md).
+
+```sh
+uv run python -m runmap.experiments.benchmark_native_routing \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite \
+  --hills high --repeats 10 --compare-reference \
+  --report artifacts/pathfinding-profile/native-routing-high.json
+```
+
+For the representative Leppävaara case on 44,366 selected segments, ten local
+native run samples had medians of approximately 5 ms with hills off and 9 ms
+with hills high. Both include two side assignments, their outbound/return
+searches, shape costs, and reuse costs. The 1 km distance exploration reached
+2,251 nodes in approximately 0.24 ms median. Run costs differed from the reference
+by less than `1e-9` metres in these two observations.
+
+Payload loading varied from approximately 67 to 165 ms with uncontrolled OS cache
+state; native validation/indexing took approximately 10–12 ms, and snapping took
+approximately 32–38 ms. The first fixed working set, including snapping,
+preparation, and initial native run, took approximately 122–224 ms. These are
+primitive measurements, exclude HTTP rendering/serialization and automatic
+window expansion, and do not establish a complete 100 ms request guarantee.

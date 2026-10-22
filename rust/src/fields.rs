@@ -110,15 +110,14 @@ fn integrate_segment(
 }
 
 fn side_penalty(x: &f64, y: &f64, frame: &FieldFrame) -> f64 {
-    let signed = (frame.direction.0 * (y - frame.home.1)
-            - frame.direction.1 * (x - frame.home.0))
-            / frame.separation;
+    let signed = (frame.direction.0 * (y - frame.home.1) - frame.direction.1 * (x - frame.home.0))
+        / frame.separation;
     (1.0 - (signed / frame.transition_width).tanh()) / 2.0
 }
 
 fn radial_penalty(x: &f64, y: &f64, frame: &FieldFrame) -> f64 {
     let squared_distance = (x - frame.centre.0).powi(2) + (y - frame.centre.1).powi(2);
-    (-squared_distance / frame.radius_denominator).exp() 
+    (-squared_distance / frame.radius_denominator).exp()
 }
 
 /// Preserve midpoint integration while keeping the sample loop outside Python.

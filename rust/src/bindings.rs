@@ -37,5 +37,6 @@ fn integrate_fields(
 
 #[pymodule]
 fn _routing_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
-    module.add_function(wrap_pyfunction!(integrate_fields, module)?)
+    module.add_function(wrap_pyfunction!(integrate_fields, module)?)?;
+    module.add_class::<crate::native_graph::NumericGraph>()
 }

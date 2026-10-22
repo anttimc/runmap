@@ -285,6 +285,16 @@ measurement arrays. Preference capabilities and configuration retain dataset-wid
 coverage fractions; actual traversal observations describe the selected route.
 
 Shortest-path search reports popped frontier nodes, including the destination.
+When a matching `numeric-routing-v2.sqlite` artifact is available, run planning
+uses Rust traversal over immutable numeric chunk buffers. Startup reads metadata
+only. A per-artifact LRU retains working sets within a configurable accounting
+budget; searches own their overlays, costs, and mutable state. Expansion constructs
+a new numeric working set; chunks are not yet shared between different bounds.
+The renderer reads only selected physical segment records and produces the same
+API response schema. Equal-cost ties use numeric identities and can select a
+different equivalent route. Without a numeric artifact the reference SQLite
+planner remains available. Distance exploration currently uses the reference path.
+
 Run planning retries when a candidate search reaches an unloaded connection,
 when any candidate geometry enters the query-boundary band, or when an incomplete
 candidate assignment leaves unloaded connections in the window. The boundary
@@ -293,7 +303,7 @@ double on retry. Each retry discards prior legs and reruns all side assignments
 against the same expanded local graph. This is a heuristic: a better route
 outside the window can remain undetected; global optimality is not promised.
 
-Defaults allow three retries, 2,500 km² query area, and 50,000 selected segments.
+Defaults allow five retries, 2,500 km² query area, and 200,000 selected segments.
 Area and bounded segment-count checks precede decoding. Run search metadata
 records each attempted box, node/segment counts, retry reason, reached-frontier
 and query-boundary involvement, and source-coverage proximity separately.

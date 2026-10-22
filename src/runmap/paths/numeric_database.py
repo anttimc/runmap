@@ -22,10 +22,18 @@ NUMERIC_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
+class NumericPayload:
+    number: int
+    byte_size: int
+    payload: bytes
+
+
+@dataclass(frozen=True)
 class StoredNumericChunk:
     number: int
     byte_size: int
     chunk: NumericChunk
+    payload: bytes
 
 
 def _create_schema(connection: sqlite3.Connection) -> None:
@@ -99,11 +107,11 @@ def export_numeric_database(source_path: Path, destination: Path) -> None:
         staging.unlink(missing_ok=True)
 
 
-def open_numeric_database(path: Path, cache_kib: int = 16384) -> sqlite3.Connection:
+def open_numeric_database(path: Path, cache_kib: int = 16384, *, check_same_thread: bool = True) -> sqlite3.Connection:
     """Open metadata only; numeric chunk buffers are read on demand."""
     if cache_kib <= 0:
         raise ValueError("Page-cache target must be positive")
-    connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+    connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, check_same_thread=check_same_thread)
     try:
         if connection.execute("PRAGMA user_version").fetchone()[0] != NUMERIC_SCHEMA_VERSION:
             raise ValueError("Unsupported numeric database schema")
@@ -118,9 +126,9 @@ def open_numeric_database(path: Path, cache_kib: int = 16384) -> sqlite3.Connect
         raise
 
 
-def iter_numeric_chunks(connection: sqlite3.Connection, bounds: Bounds, *,
-                        verify_checksums: bool = False) -> Iterator[StoredNumericChunk]:
-    """Read bounded immutable array batches without decoding topology or features."""
+def iter_numeric_payloads(connection: sqlite3.Connection, bounds: Bounds, *,
+                          verify_checksums: bool = False) -> Iterator[NumericPayload]:
+    """Supply immutable bytes directly to native traversal without NumPy wrappers."""
     _validate_bounds(bounds)
     west, south, east, north = bounds
     rows = connection.execute("""
@@ -131,8 +139,17 @@ def iter_numeric_chunks(connection: sqlite3.Connection, bounds: Bounds, *,
     for number, payload, checksum, byte_size in rows:
         if byte_size != len(payload):
             raise ValueError("Numeric chunk byte count mismatch")
-        chunk = decode_numeric_chunk(payload, sha256=checksum if verify_checksums else None)
-        yield StoredNumericChunk(number, byte_size, chunk)
+        if verify_checksums and hashlib.sha256(payload).hexdigest() != checksum:
+            raise ValueError("Numeric chunk checksum mismatch")
+        yield NumericPayload(number, byte_size, payload)
+
+
+def iter_numeric_chunks(connection: sqlite3.Connection, bounds: Bounds, *,
+                        verify_checksums: bool = False) -> Iterator[StoredNumericChunk]:
+    """Read bounded immutable array batches without decoding topology or features."""
+    for stored in iter_numeric_payloads(connection, bounds, verify_checksums=verify_checksums):
+        chunk = decode_numeric_chunk(stored.payload)
+        yield StoredNumericChunk(stored.number, stored.byte_size, chunk, stored.payload)
 
 
 def node_chunk_ids(connection: sqlite3.Connection, node_id: int) -> tuple[int, ...]:

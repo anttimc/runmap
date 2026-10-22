@@ -1,11 +1,34 @@
 # Routing toward a 100 ms request budget
 
-Status: numeric chunk export and loading are implemented as a separate artifact;
-native traversal and API integration remain outstanding. The active planner
-still uses the reference backend and does not meet this target. See the
-[numeric format and benchmark commands](numeric-routing-format.md). This document records the
-measured limitation and the implementation and acceptance criteria needed to
-replace it.
+Status: run planning now uses native numeric traversal when a matching numeric
+artifact is available. The API preserves snapping, costs, response fields,
+request deadlines, and automatic window expansion. Immutable working sets have
+a bounded LRU cache. Distance exploration integration and chunk reuse between
+different working areas remain outstanding. See the
+[numeric format and benchmark commands](numeric-routing-format.md).
+
+The representative Leppävaara API request, including all three window attempts,
+route rendering, and JSON serialization, measured 48 ms median with hills off
+and 62 ms with hills high across ten repeated requests. Corresponding p95 values
+were 50 ms and 64 ms; first requests were 505 ms and 464 ms. Startup was about
+4 ms, accounted retained working sets about 103 MiB, and peak process RSS about
+266 MiB. OS cache was uncontrolled. Samples recompute searches and responses;
+there is no exact-response cache. HTTP transport/compression is excluded. These
+observations establish a cached-case improvement, not a general 100 ms guarantee. A farther
+turnaround at `(24.84, 60.24)` completed using 71,326 selected segments with the
+raised 200,000-segment API cap (five retries). Three repeated requests measured
+229 ms median and the first request 814 ms. The default 128 MiB working-set cache
+cannot retain both expanded graphs in that case, illustrating why shared chunk
+residency remains necessary for longer runs.
+
+Reproduce with `benchmark_run_latency` and the numeric sibling artifact present:
+
+```sh
+uv run python -m runmap.experiments.benchmark_run_latency \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  --hills high --repeats 10 \
+  --report artifacts/pathfinding-profile/native-api-high.json
+```
 
 ## Observed limits
 
@@ -30,7 +53,7 @@ and 75 MiB respectively. Tracemalloc includes tracked numeric buffers; these
 figures are neither object counts nor total process RSS and exclude SQLite and
 OS caches. Timing and traced allocation runs were separate.
 
-Current chunks store JSON topology. Each request decodes dictionaries, lists,
+The reference backend chunks store JSON topology. Each request decodes dictionaries, lists,
 strings, coordinates, and scalars; collects all selected records; builds dense
 indices; projects coordinates; and packs metadata into arrays. Hill data also
 passes through interval and feature dataclasses before becoming arrays. Retries

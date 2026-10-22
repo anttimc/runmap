@@ -11,8 +11,8 @@ from numpy.typing import NDArray
 
 
 NumericArray = NDArray[np.int64] | NDArray[np.float64] | NDArray[np.uint8]
-FORMAT_VERSION = 1
-MAGIC = b"RUNNUM01"
+FORMAT_VERSION = 2
+MAGIC = b"RUNNUM02"
 HEADER = struct.Struct("<8sI4x6Q")
 ALIGNMENT = 64
 
@@ -47,6 +47,7 @@ def array_layouts(counts: ChunkCounts) -> tuple[ArrayLayout, ...]:
         ArrayLayout("node_ids", "<i8", (n,)),
         ArrayLayout("node_xy", "<f8", (n, 2)),
         ArrayLayout("node_degree", "<i8", (n,)),
+        ArrayLayout("node_allowed", "u1", (n, p)),
         ArrayLayout("segment_ids", "<i8", (s,)),
         ArrayLayout("segment_nodes", "<i8", (s, 2)),
         ArrayLayout("segment_bounds", "<f8", (s, 4)),
@@ -151,7 +152,8 @@ def validate_numeric_chunk(chunk: NumericChunk) -> None:
     _validate_indices(data["arc_segments"], c.segments)
     _validate_offsets(data["geometry_offsets"], c.points)
     _validate_offsets(data["hill_offsets"], c.intervals)
-    if np.any(data["arc_lengths"] < 0) or np.any(data["arc_allowed"] > 1) or np.any(data["arc_reverse"] > 1):
+    if (np.any(data["arc_lengths"] < 0) or np.any(data["arc_allowed"] > 1)
+            or np.any(data["arc_reverse"] > 1) or np.any(data["node_allowed"] > 1)):
         raise ValueError("Invalid numeric arc lengths or policy flags")
     for direction, column in (("outgoing", 0), ("incoming", 1)):
         offsets, entries = data[direction + "_offsets"], data[direction + "_arcs"]
