@@ -34,7 +34,8 @@ and hosted storage are [future work](roadmap.md).
 | `regions.py`, `elevation/` | Region validation, source grid, raster inspection, catalog, and manifests |
 | `terrain/` | Replaceable smoothers and metric-aware derivatives |
 | `paths/graph.py`, `paths/terrain.py`, `paths/measurements.py` | Graph preparation, terrain sampling, artifact identity, and profile inspection |
-| `paths/database.py` | Offline SQLite export, read-only metadata access, and projected bounding-box network windows |
+| `paths/database.py`, `paths/database_features.py` | Offline SQLite export, prepared-feature persistence, and selective read-only queries |
+| `paths/preparation.py`, `paths/coverage.py` | Dataset-wide feature preparation and shared source-coverage semantics |
 | `paths/exploration.py`, `routing/profiles.py` | Shared eligibility, snapping, temporary start overlay, and forward-distance inclusion |
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
@@ -132,18 +133,45 @@ temporarily holds its dictionaries; this is not a persistent prepared-array form
 ## SQLite storage foundation
 
 `paths export-sqlite` converts a published graph and its optional measurement
-sidecar into a versioned SQLite database. Export verifies measurement checksum
+sidecar into a schema version 2 SQLite database. Export verifies measurement checksum
 and graph identity through the existing loader. The database retains original
 node/segment/arc records, non-topology graph metadata, ordered per-segment
-measurements, graph identity, measurement checksum, and terrain method. Records
-currently use JSON payloads inside indexed tables; this is an initial import and
-query boundary, not the final prepared-feature schema.
+measurements, graph identity, measurement checksum, and terrain method. Source
+records and variable-length feature data use JSON payloads inside indexed tables;
+query keys, directions, flags, projected node points, and flat thresholds use
+ordinary SQLite columns. Measurement rows are indexed by segment and interval
+order, with no repeated per-segment measurement document.
+
+Export prepares the complete source network before persisting features:
+
+- Physical segments retain projected geometry, surface class, prepared boundary
+  blocking, and full building-access classification evidence/attachment metadata.
+- All four supported surface/stair policies retain forward/backward permissions
+  and rejection reasons, including node restrictions and boundary blocking.
+- Display intervals reference their original measurements and retain flat-run
+  thresholds plus source-coverage-band flags. A separate EPSG:3067 R-tree indexes
+  interval envelopes, allowing small display queries without reading every sample
+  on a long segment. Building-access hiding filters candidates before decoding.
+- Hill records retain directional segment totals and ordered interval features
+  with original graph chainages, sufficient for full and partial traversals.
+  Missing-sample segments retain the same conservative fallback features as the
+  reference loader. Topology-only exports have no hill or display records.
+
+Metadata includes source coverage, the globally calibrated heuristic distance
+scale, terrain valid/trusted fractions, and a feature identity derived from graph
+identity, measurement checksum, and model settings. Flatness thresholds/length,
+classification policy/limit, pedestrian policy definitions, coverage/boundary
+versions, and complete hill-model settings are versioned. Opening rejects schema
+or model mismatches and inconsistent feature identity without scanning the network;
+schema version 1 databases must be re-exported into a new destination.
 
 An R-tree indexes physical-segment envelopes in EPSG:3067. Ordinary indexes
 support segment endpoints and arc segment/source lookups. `query_network` returns
 complete candidate segments, their endpoint records, directed arcs, and optionally
-their full measurements. Selection is conservative envelope overlap; callers
-perform exact geometry checks in the application. No geometry is clipped or
+their full measurements. `query_segment_features`, `query_projected_nodes`, and
+`query_display_intervals` retrieve prepared subsets independently. Selection uses
+conservative envelope overlap; callers perform exact geometry checks in the
+application. No geometry is clipped or
 reprojected in SQL, and source geometries/chainages are preserved.
 
 Returned `frontier_nodes` identify loaded endpoints incident to excluded physical
@@ -157,16 +185,19 @@ Export writes a staging database beside the destination, closes it, then publish
 without overwriting an existing file. Readers own a read-only connection with a
 configurable page-cache target (16 MiB by default); this is not a cap on total
 process or OS cache memory. A connection should stay with its owning thread and
-be closed by its caller. Opening checks schema version without reading the network.
-Offline import still parses the source JSON and packs its measurements in memory.
+be closed by its caller. Offline import still parses the source JSON and prepares
+its complete routing, measurement, classification, and hill data in memory.
 
 The running API does not consume this database yet. The
 [migration plan](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
-defines prepared-feature persistence, selective delivery, bounded local search,
-and planner area expansion. Existing packed topology/geometry/measurement data
+defines selective delivery, bounded local search, and planner area expansion.
+Existing packed topology/geometry/measurement data
 remain useful for loaded areas; global dense indices must become local to each
-working set while external dataset IDs remain stable. Globally computed display
-and routing properties must be carried into local windows before API migration.
+working set while external dataset IDs remain stable. Persisted global classifications
+and source boundaries must be used directly rather than recomputed on those windows.
+The [SQLite feature report](archive/history/43-sqlite-features.md) records fixture
+parity checks and an initial real-extract export/query probe; cold-cache and
+full-application benchmarks remain open.
 
 ## Delivery and request lifetimes
 

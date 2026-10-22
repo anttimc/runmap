@@ -1,6 +1,7 @@
 """Reusable pedestrian access, surface, and stair profile filtering."""
 
 
+POLICY_VERSION = "public-pedestrian-v1"
 PUBLIC_ACCESS_DENIED = ("no", "private", "destination", "customers", "permit", "delivery")
 
 

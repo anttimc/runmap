@@ -4,6 +4,9 @@ from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 import math
 
+from runmap.routing.types import Measurement
+
+FLAT_MODEL_VERSION = "flat-run-thresholds-v1"
 MINIMUM_FLAT_LENGTH_M = 50.0
 FLAT_GRADE_THRESHOLDS = tuple(step / 2 for step in range(2, 21))
 
@@ -13,6 +16,15 @@ class GradeInterval:
     start_m: float
     end_m: float
     grade_percent: float | None
+
+
+def measurement_flat_thresholds(intervals: Sequence[Measurement]) -> list[float | None]:
+    return flat_run_thresholds([
+        GradeInterval(item["start_m"], item["end_m"], item["grade_percent"]
+                      if item["valid"] and not {"bridge", "tunnel", "stairs"}.intersection(item["quality_flags"])
+                      else None)
+        for item in intervals
+    ])
 
 
 def flat_spans(intervals: Sequence[GradeInterval], threshold: float) -> Iterator[tuple[int, int]]:

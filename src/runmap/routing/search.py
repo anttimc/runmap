@@ -24,6 +24,7 @@ from runmap.routing.profiles import (
 
 
 NodeKey = TypeVar("NodeKey", str, int)
+BOUNDARY_VERSION = "prepared-route-boundaries-v1"
 
 
 def _is_grade_separated(segment: Segment) -> bool:

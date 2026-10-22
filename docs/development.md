@@ -141,7 +141,7 @@ benchmarks and the anchor baseline. To run the app with that smaller graph, set
 
 ### Export a SQLite network dataset
 
-The initial storage layer can convert an existing prepared graph without new
+The storage layer can convert an existing prepared graph without new
 downloads or SpatiaLite:
 
 ```sh
@@ -154,7 +154,11 @@ The output path must be new. Failed imports do not publish a partial database;
 existing databases are never overwritten. Terrain sidecars are optional for
 topology experiments and validated when present. Conversion still loads the
 existing JSON in memory, so allow comparable offline preparation resources.
-SQLite must include R-tree support; no additional Python dependency is needed.
+Export also computes full-network classifications, policy directions, projected
+geometry, flat thresholds, and hill features. SQLite must include R-tree support;
+no additional Python dependency is needed. The current format is schema version 2.
+Re-export older databases into a new filename; there is no in-place migration.
+Model-setting changes also require re-export, and readers reject stale features.
 
 Programmatic readers use `open_network_database`, `network_metadata`, and
 `query_network` from `runmap.paths.database`. Bounds are `(west, south, east,
@@ -163,6 +167,29 @@ with `contextlib.closing`); its transaction context manager does not close it.
 Queries return complete envelope candidates and frontier-node markers; callers
 apply precise geometry and policy checks. Measurements can be omitted for
 topology-only reads.
+
+Additional selective readers are `query_display_intervals` (individual measurement
+intervals and prepared display attributes), `query_segment_features` (classification,
+policies, projected geometry, and directional hill features), and
+`query_projected_nodes` (endpoint coordinates). Each takes the same projected bounds.
+Display queries hide classified building-access intervals by default; pass
+`hide_building_access=False` to inspect them. Metadata exposes feature/model
+identities, full source coverage, heuristic scale, and hill coverage fractions.
+Queries do not rebuild these properties from the selected local graph or read
+the original JSON files.
+
+To reproduce the initial storage probe (temporary database, warm OS cache):
+
+```sh
+uv run python -m runmap.experiments.benchmark_database \
+  data/paths/prepared/leppavaara-flat-10k/graph.json \
+  --bounds 374750 6674750 375250 6675250 \
+  --report data/experiments/sqlite-features.json
+```
+
+It records offline export time/peak process RSS, database size, open time, and
+first/repeated display/segment-feature reads. It does not measure API latency
+or a cold disk cache.
 
 The API still uses `RUNMAP_PATH_GRAPH` and the existing JSON loader. Exporting a
 database does not change backend startup memory or activate local routing yet.

@@ -1,8 +1,8 @@
 """Prepared SQLite network windows; geometry processing stays in Python."""
 
-from collections.abc import Iterator
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import hashlib
 import json
 import math
 import os
@@ -11,14 +11,19 @@ import sqlite3
 from tempfile import NamedTemporaryFile
 from typing import cast
 
-from rasterio.warp import transform
-
-from runmap.paths.measurements import graph_digest, load_measurements, segment_measurements
+from runmap.paths.coverage import Coverage, geometry_bounds
+from runmap.paths.database_features import (create_feature_schema, read_display_intervals,
+                                           read_segment_features, write_prepared_features)
+from runmap.paths.measurements import graph_digest, segment_measurements
+from runmap.paths.preparation import (PreparedDisplayInterval, PreparedModels, PreparedNetwork,
+                                      PreparedSegment, prepare_network, prepared_models)
+from runmap.routing.geometry import indexed_segment_points
+from runmap.routing.hill_types import HillModel
 from runmap.routing.serialization import prepared_json
-from runmap.routing.types import Arc, Bounds, GraphDocument, Measurement, Node, Segment, TerrainMetadata
+from runmap.routing.types import Arc, Bounds, EdgeProfile, GraphDocument, Measurement, Node, Segment, TerrainMetadata
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SELECTION = """
     SELECT s.* FROM segment_bounds b JOIN segments s ON s.number = b.number
     WHERE b.west <= :east AND b.east >= :west
@@ -31,6 +36,12 @@ class NetworkMetadata:
     dataset_id: str
     measurement_sha256: str | None
     method: TerrainMetadata | None
+    feature_identity: str
+    models: PreparedModels
+    coverage: Coverage | None
+    distance_scale: float
+    hill_valid_fraction: float | None
+    hill_trusted_fraction: float | None
 
 
 @dataclass(frozen=True)
@@ -67,22 +78,13 @@ def _create_schema(connection: sqlite3.Connection) -> None:
         CREATE INDEX arcs_segment ON arcs(segment_id);
         CREATE INDEX arcs_source ON arcs(source);
         CREATE TABLE measurements (
-            segment_id TEXT PRIMARY KEY REFERENCES segments(id), payload TEXT NOT NULL
+            number INTEGER PRIMARY KEY, segment_id TEXT NOT NULL REFERENCES segments(id),
+            interval_index INTEGER NOT NULL, payload TEXT NOT NULL,
+            UNIQUE(segment_id, interval_index)
         );
     """)
+    create_feature_schema(connection)
     connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-
-
-def _segment_rows(graph: GraphDocument) -> Iterator[tuple[int, str, str, str, str, Bounds]]:
-    for number, segment in enumerate(graph["segments"]):
-        coordinates = segment["geometry"]
-        if not coordinates:
-            raise ValueError("Segment geometry is empty")
-        longitude, latitude = zip(*coordinates)
-        eastings, northings = transform("EPSG:4326", "EPSG:3067", longitude, latitude)
-        bounds = min(eastings), min(northings), max(eastings), max(northings)
-        _validate_bounds(bounds)
-        yield number, segment["id"], segment["from"], segment["to"], _encode(segment), bounds
 
 
 def _write_network(connection: sqlite3.Connection, graph_path: Path) -> None:
@@ -90,27 +92,53 @@ def _write_network(connection: sqlite3.Connection, graph_path: Path) -> None:
     if graph.get("schema_version", 1) != 1:
         raise ValueError("Unsupported graph schema")
     dataset_id = graph_digest(graph)
-    measurements = load_measurements(graph_path, graph=graph) if "measurements" in graph else None
+    _write_topology(connection, graph)
+    prepared = prepare_network(graph, graph_path)
+    _write_metadata(connection, graph, dataset_id, prepared)
+    _write_bounds_and_measurements(connection, prepared)
+    write_prepared_features(connection, prepared)
+
+
+def _write_metadata(connection: sqlite3.Connection, graph: GraphDocument,
+                    dataset_id: str, prepared: PreparedNetwork) -> None:
+    measurements, hills = prepared.measurements, prepared.hills
     reference = cast(dict[str, str | int], graph.get("measurements", {}))
+    models = prepared_models(hills.model if hills else None)
     metadata = {"dataset_id": dataset_id, "measurement_sha256": reference.get("sha256"),
-                "method": measurements.method if measurements else None, "crs": "EPSG:3067"}
+                "method": measurements.method if measurements else None, "crs": "EPSG:3067",
+                "models": asdict(models), "coverage": prepared.coverage,
+                "distance_scale": prepared.routing.projected.distance_scale,
+                "hill_valid_fraction": hills.valid_fraction if hills else None,
+                "hill_trusted_fraction": hills.trusted_fraction if hills else None,
+                "feature_identity": _feature_identity(dataset_id, cast(str | None, reference.get("sha256")), models)}
     connection.executemany("INSERT INTO metadata VALUES (?, ?)",
                            ((key, _encode(value)) for key, value in metadata.items()))
     connection.execute("INSERT INTO metadata VALUES (?, ?)", ("graph_metadata", _encode({
         key: value for key, value in graph.items()
         if key not in {"nodes", "segments", "arcs", "_measurements"}
     })))
-    connection.executemany("INSERT INTO nodes VALUES (?, ?)",
-                           ((node["id"], _encode(node)) for node in graph["nodes"]))
-    for number, segment_id, source, target, payload, bounds in _segment_rows(graph):
-        connection.execute("INSERT INTO segments VALUES (?, ?, ?, ?, ?)",
-                           (number, segment_id, source, target, payload))
-        west, south, east, north = bounds
+
+
+def _write_bounds_and_measurements(connection: sqlite3.Connection, prepared: PreparedNetwork) -> None:
+    routing, measurements = prepared.routing, prepared.measurements
+    for number, segment_id in enumerate(routing.segments):
+        west, south, east, north = geometry_bounds(indexed_segment_points(routing.projected, number))
+        _validate_bounds((west, south, east, north))
         connection.execute("INSERT INTO segment_bounds VALUES (?, ?, ?, ?, ?)",
                            (number, west, east, south, north))
         if measurements is not None:
-            connection.execute("INSERT INTO measurements VALUES (?, ?)",
-                               (segment_id, _encode(segment_measurements(measurements, segment_id))))
+            offset = int(measurements.interval_offsets[number])
+            connection.executemany("INSERT INTO measurements VALUES (?, ?, ?, ?)", (
+                (offset + local, segment_id, local, _encode(item))
+                for local, item in enumerate(segment_measurements(measurements, segment_id))))
+
+
+def _write_topology(connection: sqlite3.Connection, graph: GraphDocument) -> None:
+    connection.executemany("INSERT INTO nodes VALUES (?, ?)",
+                           ((node["id"], _encode(node)) for node in graph["nodes"]))
+    connection.executemany("INSERT INTO segments VALUES (?, ?, ?, ?, ?)",
+                           ((number, segment["id"], segment["from"], segment["to"], _encode(segment))
+                            for number, segment in enumerate(graph["segments"])))
     connection.executemany("INSERT INTO arcs VALUES (?, ?, ?, ?, ?, ?)",
                            ((number, arc["id"], arc["segment_id"], arc["from"], arc["to"], _encode(arc))
                             for number, arc in enumerate(graph["arcs"])))
@@ -143,6 +171,7 @@ def open_network_database(path: Path, cache_kib: int = 16384) -> sqlite3.Connect
         if connection.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
             raise ValueError("Unsupported network database schema")
         connection.execute(f"PRAGMA cache_size = {-cache_kib}")
+        network_metadata(connection)
         return connection
     except BaseException:
         connection.close()
@@ -154,7 +183,48 @@ def network_metadata(connection: sqlite3.Connection) -> NetworkMetadata:
         "SELECT key, value FROM metadata WHERE key != 'graph_metadata'")}
     if values["crs"] != "EPSG:3067":
         raise ValueError("Unsupported network database CRS")
-    return NetworkMetadata(values["dataset_id"], values["measurement_sha256"], values["method"])
+    models = _decode_models(values["models"])
+    if models != prepared_models(HillModel() if models.hill_model is not None else None):
+        raise ValueError("Prepared feature models changed; re-export the network database")
+    identity = _feature_identity(values["dataset_id"], values["measurement_sha256"], models)
+    if identity != values["feature_identity"]:
+        raise ValueError("Prepared feature identity mismatch")
+    return NetworkMetadata(values["dataset_id"], values["measurement_sha256"], values["method"],
+                           identity, models, values["coverage"], values["distance_scale"],
+                           values["hill_valid_fraction"], values["hill_trusted_fraction"])
+
+
+def _decode_models(value: dict[str, object]) -> PreparedModels:
+    return PreparedModels(
+        version=cast(str, value["version"]), flat_version=cast(str, value["flat_version"]),
+        flat_minimum_length_m=cast(float, value["flat_minimum_length_m"]),
+        flat_grade_thresholds=tuple(cast(list[float], value["flat_grade_thresholds"])),
+        coverage_version=cast(str, value["coverage_version"]),
+        classifier_version=cast(str, value["classifier_version"]), access_policy=cast(str, value["access_policy"]),
+        entrance_limit_m=cast(float, value["entrance_limit_m"]), policy_version=cast(str, value["policy_version"]),
+        boundary_version=cast(str, value["boundary_version"]),
+        profiles=tuple(cast(list[EdgeProfile], value["profiles"])),
+        hill_model=_decode_hill_model(cast(dict[str, object] | None, value["hill_model"])),
+    )
+
+
+def _decode_hill_model(value: dict[str, object] | None) -> HillModel | None:
+    if value is None:
+        return None
+    return HillModel(
+        version=cast(str, value["version"]), source_doi=cast(str, value["source_doi"]),
+        coefficients=tuple(cast(list[float], value["coefficients"])),
+        fitted_grade_limit=cast(float, value["fitted_grade_limit"]),
+        outside_fit_policy=cast(str, value["outside_fit_policy"]),
+        uncertain_grade_percent=cast(float, value["uncertain_grade_percent"]),
+        uphill_reference_grade_percent=cast(float, value["uphill_reference_grade_percent"]),
+        uphill_grade_power=cast(float, value["uphill_grade_power"]),
+    )
+
+
+def _feature_identity(dataset_id: str, checksum: str | None, models: PreparedModels) -> str:
+    payload = json.dumps([dataset_id, checksum, asdict(models)], sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode()).hexdigest()
 
 
 def _validate_bounds(bounds: Bounds) -> None:
@@ -196,7 +266,41 @@ def query_network(connection: sqlite3.Connection, bounds: Bounds,
 
 def _query_measurements(connection: sqlite3.Connection, prefix: str,
                         parameters: dict[str, float]) -> dict[str, list[Measurement]]:
-    return {row[0]: cast(list[Measurement], json.loads(row[1])) for row in connection.execute(prefix + """
+    result: dict[str, list[Measurement]] = {}
+    for row in connection.execute(prefix + """
         SELECT m.segment_id, m.payload FROM measurements m
-        JOIN selected s ON s.id = m.segment_id ORDER BY s.number
-    """, parameters)}
+        JOIN selected s ON s.id = m.segment_id ORDER BY s.number, m.interval_index
+    """, parameters):
+        result.setdefault(row[0], []).append(cast(Measurement, json.loads(row[1])))
+    # Preserve empty measurement lists for segments with no samples.
+    if network_metadata(connection).method is not None:
+        for row in connection.execute(prefix + "SELECT id FROM selected ORDER BY number", parameters):
+            result.setdefault(row[0], [])
+    return result
+
+
+def query_segment_features(connection: sqlite3.Connection, bounds: Bounds) -> dict[str, PreparedSegment]:
+    """Fetch global features for complete segment-envelope candidates."""
+    parameters = _query_parameters(bounds)
+    return read_segment_features(connection, f"WITH selected AS ({SELECTION}) ", parameters)
+
+
+def query_display_intervals(connection: sqlite3.Connection, bounds: Bounds,
+                            *, hide_building_access: bool = True) -> tuple[PreparedDisplayInterval, ...]:
+    """Read individual interval candidates without loading their whole segments."""
+    return read_display_intervals(connection, _query_parameters(bounds), hide_building_access)
+
+
+def query_projected_nodes(connection: sqlite3.Connection, bounds: Bounds) -> dict[str, tuple[float, float]]:
+    """Fetch projected endpoints, including those outside the selected box."""
+    return {row[0]: (row[1], row[2]) for row in connection.execute(f"WITH selected AS ({SELECTION}) " + """
+        SELECT p.node_id, p.x, p.y FROM projected_nodes p JOIN (
+            SELECT source AS id FROM selected UNION SELECT target FROM selected
+        ) e ON e.id = p.node_id ORDER BY p.node_id
+    """, _query_parameters(bounds))}
+
+
+def _query_parameters(bounds: Bounds) -> dict[str, float]:
+    _validate_bounds(bounds)
+    west, south, east, north = bounds
+    return dict(west=west, south=south, east=east, north=north)

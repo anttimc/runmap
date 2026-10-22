@@ -1,17 +1,18 @@
 """File-backed path exploration; requests never import OSM or sample terrain."""
 
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
 import json
 import math
 from pathlib import Path
 
-from rasterio.warp import transform
+from runmap.paths.coverage import (geometry_bounds as _bounds, point_in_ring as _point_in_ring,
+                                   graph_coverage, near_coverage_boundary)
 
 from runmap.paths.measurements import (MeasurementData, graph_digest, inspect_measurements,
                                        load_measurements, indexed_measurement, segment_measurements)
-from runmap.paths.flat import GradeInterval, flat_run_thresholds
+from runmap.paths.flat import measurement_flat_thresholds
 from runmap.paths.display import DisplayInterval, display_feature, pack_display_intervals
 from runmap.paths.spatial import Cell, filter_cells, pack_cells
 from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
@@ -50,19 +51,6 @@ class PathData:
     hills: HillData | None = None
 
 
-def _bounds(coordinates: Iterable[Coordinate]) -> Bounds:
-    points = iter(coordinates)
-    try:
-        west, south = next(points)
-    except StopIteration:
-        raise ValueError("Geometry has no coordinates") from None
-    east, north = west, south
-    for x, y in points:
-        west, south = min(west, x), min(south, y)
-        east, north = max(east, x), max(north, y)
-    return west, south, east, north
-
-
 def _cells(bounds):
     west, south, east, north = bounds
     for x in range(math.floor(west / CELL_DEGREES), math.floor(east / CELL_DEGREES) + 1):
@@ -96,35 +84,6 @@ def _line_intersects(coordinates, bounds):
     return False
 
 
-def _point_in_ring(point, ring):
-    x, y = point
-    inside = False
-    for a, b in zip(ring, ring[1:]):
-        cross = (x - a[0]) * (b[1] - a[1]) - (y - a[1]) * (b[0] - a[0])
-        if abs(cross) < 1e-12 and min(a[0], b[0]) <= x <= max(a[0], b[0]) and min(a[1], b[1]) <= y <= max(a[1], b[1]):
-            return True
-        if (a[1] > y) != (b[1] > y):
-            intersection = a[0] + (y - a[1]) * (b[0] - a[0]) / (b[1] - a[1])
-            if x < intersection:
-                inside = not inside
-    return inside
-
-
-def _coverage(graph):
-    bounds = graph.get("experiment", {}).get("bounds_epsg3067")
-    if bounds:
-        west, south, east, north = bounds
-        lon, lat = transform("EPSG:3067", "EPSG:4326",
-                             [west, east, east, west, west], [south, south, north, north, south])
-        ring = [list(point) for point in zip(lon, lat)]
-        return {"type": "Polygon", "coordinates": [ring]}, "prepared_extract"
-    bounds = _bounds(point for segment in graph["segments"] for point in segment["geometry"])
-    west, south, east, north = bounds
-    return {"type": "Polygon", "coordinates": [[
-        [west, south], [east, south], [east, north], [west, north], [west, south],
-    ]]}, "geometry_envelope"
-
-
 def load_path_data(graph_path: str | Path) -> PathData:
     graph_path = Path(graph_path)
     graph = json.loads(graph_path.read_text())
@@ -138,12 +97,7 @@ def load_path_data(graph_path: str | Path) -> PathData:
     for segment_number, segment_id in enumerate(measurements.segment_ids):
         intervals = segment_measurements(measurements, segment_id)
         category = surface_category(segments[segment_id])
-        flat_thresholds = flat_run_thresholds([
-            GradeInterval(item["start_m"], item["end_m"], item["grade_percent"]
-                          if item["valid"] and not {"bridge", "tunnel", "stairs"}.intersection(item["quality_flags"])
-                          else None)
-            for item in intervals
-        ])
+        flat_thresholds = measurement_flat_thresholds(intervals)
         for interval, flat_threshold in zip(intervals, flat_thresholds):
             feature_index = len(features)
             features.append(DisplayInterval(segment_number, interval["interval_index"], category, flat_threshold))
@@ -151,14 +105,14 @@ def load_path_data(graph_path: str | Path) -> PathData:
                 cells[cell].append(feature_index)
     if not features:
         raise ValueError("Path measurements contain no display intervals")
-    coverage, kind = _coverage(graph)
+    coverage = graph_coverage(graph)
     packed_cells = pack_cells(cells)
     del cells
     packed_features = pack_display_intervals(measurements, features)
     del features
     data = PathData(graph, measurements, segments, packed_features, packed_cells,
-                    {"geometry": coverage, "kind": kind},
-                    _bounds(coverage["coordinates"][0]), graph_digest(graph), routing)
+                    coverage,
+                    _bounds(coverage["geometry"]["coordinates"][0]), graph_digest(graph), routing)
     return _build_display_index(replace(data, hills=build_hill_data(data.routing, measurements)))
 
 
@@ -341,21 +295,8 @@ def snap_path_start(data, longitude, latitude, surface="all", avoid_stairs=True,
             "offset_note": "The offset is visual distance, not a validated access route."}
 
 
-def _near_boundary(data, geometry):
-    # Conservative 100 m band; extract coverage may omit better return connections.
-    ring = data.coverage["geometry"]["coordinates"][0]
-    for x, y in geometry:
-        if not _point_in_ring((x, y), ring):
-            return True
-        cos_lat = math.cos(math.radians(y))
-        for a, b in zip(ring, ring[1:]):
-            ax, ay = (a[0] - x) * cos_lat * 111320, (a[1] - y) * 111320
-            bx, by = (b[0] - x) * cos_lat * 111320, (b[1] - y) * 111320
-            dx, dy = bx - ax, by - ay
-            fraction = max(0, min(1, -(ax * dx + ay * dy) / (dx * dx + dy * dy))) if dx or dy else 0
-            if math.hypot(ax + fraction * dx, ay + fraction * dy) <= 100:
-                return True
-    return False
+def _near_boundary(data: PathData, geometry: Sequence[Coordinate]) -> bool:
+    return near_coverage_boundary(data.coverage, geometry)
 
 
 def exploration_context(data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id,

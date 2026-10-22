@@ -1,0 +1,33 @@
+{
+  "graph": "data/paths/prepared/leppavaara-flat-10k/graph.json",
+  "bounds_epsg3067": [
+    374750.0,
+    6674750.0,
+    375250.0,
+    6675250.0
+  ],
+  "export_s": 26.257442457979778,
+  "database_bytes": 474775552,
+  "python": "3.14.6",
+  "sqlite": "3.53.4",
+  "system": "Darwin",
+  "machine": "arm64",
+  "open_ms": 13.952291978057474,
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "feature_identity": "f11961281e7eda7485d16345186de4aec6f9999358eac88c6deb5cef9f828c6c",
+  "first_display_ms": 7.766416994854808,
+  "first_features_ms": 28.081374999601394,
+  "selected_intervals": 649,
+  "selected_segments": 124,
+  "warm_display_ms": 2.6181669963989407,
+  "warm_features_ms": 5.176833015866578,
+  "counts": {
+    "nodes": 55627,
+    "segments": 69707,
+    "measurements": 278839,
+    "display_intervals": 278839,
+    "hill_features": 69707
+  },
+  "process_peak_rss_bytes": 939442176,
+  "cache_note": "Fresh connection after export; OS cache is warm. Peak RSS includes offline import."
+}
