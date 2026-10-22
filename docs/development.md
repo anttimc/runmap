@@ -178,6 +178,17 @@ identities, full source coverage, heuristic scale, and hill coverage fractions.
 Queries do not rebuild these properties from the selected local graph or read
 the original JSON files.
 
+`load_local_network(connection, bounds, profile=None)` from
+`runmap.paths.local_network` returns a packed local routing graph with shared
+measurement/hill ordering, original dataset identity, saved classifications, and
+separate frontier/source-coverage markers. The default profile allows stairs;
+pass `exploration_profile(surface, avoid_stairs)` for another persisted policy.
+Only the four exported profiles are accepted. Its dense indices belong to this
+window: use stable IDs when relating results from different windows. Loading a
+window does not establish route completeness or automatically expand its bounds.
+Pass `include_terrain=False` for topology-only request preparation without decoding
+measurement or hill stores. SQLite exploration uses this mode automatically.
+
 To reproduce the initial storage probe (temporary database, warm OS cache):
 
 ```sh
@@ -191,13 +202,25 @@ It records offline export time/peak process RSS, database size, open time, and
 first/repeated display/segment-feature reads. It does not measure API latency
 or a cold disk cache.
 
+Add `--local` to the same probe to load packed local graphs in separate fresh
+reader processes at 1x, 3x, and 6x the supplied box dimensions. It records
+open/query/packing latency, selected topology/sample counts, frontier counts,
+peak reader RSS, and a 1 km node-distance search. Peak reader memory excludes
+offline export but includes imports and temporary decoding buffers. OS cache is
+warm after export; these are individual observations, not latency percentiles or
+proof that a box contains a complete route.
+
 The API automatically uses `network.sqlite` beside `RUNMAP_PATH_GRAPH` when it
 exists. For a differently named or located database, set `RUNMAP_PATH_DATABASE`.
 Keep `RUNMAP_PATH_GRAPH` pointing to the matching source dataset during this stage:
 config, static tiles, inspection, and snapping use SQLite immediately, but the
-first exploration/planning request still loads the JSON graph lazily. Those
-searches therefore still incur full-dataset loading time and memory. Missing or
-mismatched routing sources return HTTP 503 without breaking selective delivery.
+first run-planning request still loads the JSON graph lazily. Planning therefore
+still incurs full-dataset loading time and memory. Missing or mismatched routing
+sources return HTTP 503 for planning without breaking delivery or exploration.
+Exploration, snapshots, and inspection with start-distance metadata load only a
+local topology window and remain available without the original JSON. Snapshots
+own their graph ordering and distance buffers under the configured byte/TTL limit;
+the viewport does not determine search legality.
 Restart after changing either dataset. An explicitly selected bad database does
 not silently switch to JSON. Without a database the existing JSON startup remains.
 
@@ -218,7 +241,23 @@ uv run --extra web python -m runmap.experiments.benchmark_database \
 This measures dataset initialization, direct config/viewport/inspection/snap/tile
 delivery, and reader peak RSS. HTTP transport and cold OS caches are excluded.
 See the [migration roadmap](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
-for bounded local searches and planner area expansion.
+for planner area expansion.
+
+Add `--explore-budget-km 3` to compare exploration preparation, viewport inclusion,
+and snapshot distance tiles in the SQLite/JSON reader subprocesses. The probe
+checks output hashes, includes reader RSS, and reports selected local graph size
+and snapshot cache ownership. SQLite preparation includes loading its local graph;
+JSON preparation follows whole-dataset initialization and static-delivery work.
+Those startup costs are reported separately. See the
+[exploration report](archive/history/47-sqlite-exploration.md).
+
+SQLite exploration returns HTTP 422 with `status=area_limited`, attempted bounds,
+retry count, and `reason=maximum_area`, `maximum_segments`, or
+`unloaded_connections` when the configured limits prevent a complete budgeted
+search. Request a smaller budget or adjust deployment limits. Deadline failures
+return HTTP 504; busy connection leases return HTTP 503. SQL progress handlers
+and lease waits share the preparation deadline. Source-coverage flags remain
+separate from unloaded local connections.
 
 ## Configuration
 
@@ -241,6 +280,9 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_PATH_DATABASE_CACHE_KIB` | 16,384 KiB page-cache target per connection; excludes decoded responses, tile caches, and OS caches |
 | `RUNMAP_RUN_DEADLINE` | 15 seconds per planner request |
 | `RUNMAP_PATH_PREPARATION_DEADLINE` | 10 seconds per exploration snapshot preparation |
+| `RUNMAP_PATH_SEARCH_MAX_AREA_KM2` | 2,500 km² maximum projected exploration query area |
+| `RUNMAP_PATH_SEARCH_MAX_SEGMENTS` | 50,000 complete candidate segments per exploration query |
+| `RUNMAP_PATH_SEARCH_MAX_RETRIES` | 2 retries; double both box dimensions after a reached frontier |
 | `RUNMAP_PATH_TILE_CACHE_BYTES` | 67,108,864 bytes |
 | `RUNMAP_PATH_SNAPSHOT_CACHE_BYTES` | 134,217,728 bytes |
 | `RUNMAP_PATH_TILE_TTL` | 900 seconds |

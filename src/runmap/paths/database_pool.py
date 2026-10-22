@@ -6,6 +6,7 @@ from pathlib import Path
 from queue import Empty, LifoQueue
 import sqlite3
 from threading import Lock
+from time import monotonic
 
 from runmap.paths.database import network_metadata, open_network_database
 
@@ -36,17 +37,36 @@ class DatabasePool:
             raise
 
     @contextmanager
-    def connection(self) -> Iterator[sqlite3.Connection]:
+    def connection(self, *, timeout_s: float | None = None,
+                     deadline: float | None = None) -> Iterator[sqlite3.Connection]:
         with self.lock:
             if self.closed:
                 raise DatabaseBusyError("Path service is shutting down")
+        if deadline is not None:
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
+            timeout_s = remaining if timeout_s is None else min(remaining, timeout_s)
         try:
-            connection = self.connections.get(timeout=self.timeout_s)
+            wait_s = self.timeout_s if timeout_s is None else min(self.timeout_s, max(0, timeout_s))
+            connection = self.connections.get(timeout=wait_s)
         except Empty as exc:
+            if deadline is not None and monotonic() >= deadline:
+                raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget") from exc
             raise DatabaseBusyError("Path service is busy; try again shortly") from exc
         try:
+            if deadline is not None:
+                connection.set_progress_handler(lambda: int(monotonic() >= deadline), 1000)
             yield connection
+            if deadline is not None and monotonic() >= deadline:
+                raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
+        except sqlite3.OperationalError as exc:
+            if deadline is not None and monotonic() >= deadline:
+                raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget") from exc
+            raise
         finally:
+            if deadline is not None:
+                connection.set_progress_handler(None, 0)
             with self.lock:
                 if self.closed:
                     connection.close()

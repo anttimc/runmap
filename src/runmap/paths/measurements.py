@@ -80,6 +80,12 @@ def build_measurement_data(graph: GraphDocument, document: MeasurementDocument,
                            *, index: IntegerGraph | None = None) -> MeasurementData:
     """Discard per-sample dictionaries after packing lossless numeric columns."""
     validate_measurements(graph, document)
+    return pack_measurement_data(graph, document, index=index)
+
+
+def pack_measurement_data(graph: GraphDocument, document: MeasurementDocument,
+                          *, index: IntegerGraph | None = None) -> MeasurementData:
+    """Pack validated records, including subsets read from a prepared database."""
     ids = tuple(segment["id"] for segment in graph["segments"]) if index is None else index.segment_ids
     if set(ids) != document["segments"].keys() or (index is not None and (
             index.extra_node_ids or index.extra_segment_ids or index.extra_arcs or index.arc_overrides)):

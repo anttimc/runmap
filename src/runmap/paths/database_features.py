@@ -128,18 +128,20 @@ def decode_classification(payload: str | None) -> Classification | None:
 
 
 def read_segment_features(connection: sqlite3.Connection, prefix: str,
-                          parameters: dict[str, float]) -> dict[str, PreparedSegment]:
+                          parameters: dict[str, float], *, include_hills: bool = True) -> dict[str, PreparedSegment]:
     policies: dict[str, list[PreparedPolicy]] = {}
     for row in connection.execute(prefix + """
         SELECT p.segment_id, p.policy_id, p.forward, p.backward, p.reason
         FROM segment_policies p JOIN selected s ON s.id = p.segment_id ORDER BY s.number, p.policy_id
     """, parameters):
         policies.setdefault(row[0], []).append(PreparedPolicy(row[1], bool(row[2]), bool(row[3]), row[4]))
-    return {row[0]: _read_segment(row, tuple(policies.get(row[0], ()))) for row in connection.execute(prefix + """
+    hill_columns = "h.intervals, h.forward, h.backward" if include_hills else "NULL, NULL, NULL"
+    hill_join = "LEFT JOIN hill_features h ON h.segment_id = f.segment_id" if include_hills else ""
+    return {row[0]: _read_segment(row, tuple(policies.get(row[0], ()))) for row in connection.execute(prefix + f"""
         SELECT f.segment_id, f.surface_class, f.boundary_blocked, f.building_access, f.projected_geometry,
-               h.intervals, h.forward, h.backward
+               {hill_columns}
         FROM segment_features f JOIN selected s ON s.id = f.segment_id
-        LEFT JOIN hill_features h ON h.segment_id = f.segment_id ORDER BY s.number
+        {hill_join} ORDER BY s.number
     """, parameters)}
 
 

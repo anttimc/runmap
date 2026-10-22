@@ -114,7 +114,10 @@ class SQLiteDeliveryTests(unittest.TestCase):
             snapshot = service.snapshot(result["snapshot_id"])
             x, y = xyz(24.801, 60.2, 15)
             actual = service.tile(snapshot.policy, "gradient-all", 15, x, y, snapshot)[0]
-            expected = encode_tile(self.data.routing_data(), snapshot.policy, "gradient-all", 15, x, y, snapshot)
+            reference_service = PathTileService(self.reference)
+            prepared = reference_service.prepare(24.801, 60.2, .1, "all", True, 50, None)
+            reference_snapshot = reference_service.snapshot(prepared["snapshot_id"])
+            expected = encode_tile(self.reference, snapshot.policy, "gradient-all", 15, x, y, reference_snapshot)
             self.assertEqual(mapbox_vector_tile.decode(actual), mapbox_vector_tile.decode(expected))
             self.assertEqual(loader.call_count, 1)
         graph = fixture()
@@ -220,7 +223,7 @@ class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
                         self.assertIsNone(app.state.paths)
                         self.assertEqual(app.state.path_status, expected)
 
-    async def test_missing_routing_source_keeps_display_ready_and_returns_503_for_search(self) -> None:
+    async def test_missing_routing_source_keeps_display_and_exploration_ready(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)
             graph = write_graph_outputs(fixture(), root)["graph"]
@@ -233,7 +236,8 @@ class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(config["run_planner"]["available"])
                 self.assertEqual((await get("/api/paths/segments/s"))[0], 200)
                 query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&longitude=24.801&latitude=60.2"
-                self.assertEqual((await get("/api/paths/explore?" + query))[0], 503)
+                self.assertEqual((await get("/api/paths/explore?" + query))[0], 200)
+                self.assertIsNone(data.legacy)
 
 
 if __name__ == "__main__":

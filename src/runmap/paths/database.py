@@ -314,10 +314,11 @@ def _query_measurements(connection: sqlite3.Connection, prefix: str,
     return result
 
 
-def query_segment_features(connection: sqlite3.Connection, bounds: Bounds) -> dict[str, PreparedSegment]:
+def query_segment_features(connection: sqlite3.Connection, bounds: Bounds,
+                            *, include_hills: bool = True) -> dict[str, PreparedSegment]:
     """Fetch global features for complete segment-envelope candidates."""
     parameters = _query_parameters(bounds)
-    return read_segment_features(connection, f"WITH selected AS ({SELECTION}) ", parameters)
+    return read_segment_features(connection, f"WITH selected AS ({SELECTION}) ", parameters, include_hills=include_hills)
 
 
 def query_display_intervals(connection: sqlite3.Connection, bounds: Bounds,

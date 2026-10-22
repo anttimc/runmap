@@ -42,16 +42,24 @@ The exporter, prepared-feature persistence, and local-network readers are implem
 `paths/database.py`; see [architecture](architecture.md#sqlite-storage-foundation)
 and [export instructions](development.md#export-a-sqlite-network-dataset).
 The API supports selective SQLite config, static tiles, inspection, and snapping.
-Exploration/planning still use a lazy full-JSON compatibility bridge; those
-requests retain whole-dataset startup/memory costs until the next step lands.
+Exploration, snapshots, and start-distance inspection use bounded local graphs.
+Run planning still uses a lazy full-JSON compatibility bridge and retains its
+whole-dataset startup/memory costs until the next step lands.
 
-1. Build packed local graphs for bounded exploration and run planning. Distinguish
-   stable dataset IDs from local dense indices; retain complete selected segments,
-   endpoint nodes, directed arcs, and original segment chainages. Detect unloaded
-   connections separately from true dead ends and source-coverage boundaries.
-   Exploration uses a conservative envelope derived from its forward distance
-   budget, accounting for snapping and coordinate distortion.
-2. For run planning, start with the endpoints' EPSG:3067 box enlarged by 50% in
+Packed local graph loading is implemented in `paths/local_network.py`. It retains
+complete selected segments, endpoint nodes, directed arcs, original chainages,
+prepared policy/classification/hill features, and dataset-wide heuristic scale.
+Stable IDs map to each window's dense indices. Unloaded connections and source
+coverage bands are separate markers. See the [local-network probe](archive/history/46-sqlite-local-network.md).
+
+Bounded exploration uses the complete snapped segment's envelope plus the forward
+distance budget divided by the global endpoint-distance scale. Reached frontiers
+trigger retries under area, segment-count, and deadline limits. Preparation uses
+connection leases to bound concurrency, skips terrain loading, and charges both
+the local graph and its distance buffers to the snapshot cache. See the
+[exploration report](archive/history/47-sqlite-exploration.md).
+
+1. For run planning, start with the endpoints' EPSG:3067 box enlarged by 50% in
    total width and height (25% per side). Add configurable minimum dimensions in
    metres; choose their defaults using representative routes. The viewport may
    hint at useful initial coverage, but must not silently determine route legality.
@@ -65,7 +73,7 @@ requests retain whole-dataset startup/memory costs until the next step lands.
    defaults before wiring the API. Boundary-triggered expansion is a heuristic:
    a better route outside the area can remain undetected. Full-dataset optimality
    is not promised; lower-bound-based expansion is a later improvement if needed.
-3. Remove the lazy full-JSON bridge and global `PathData`/policy/measurement
+2. Remove the lazy full-JSON bridge and global `PathData`/policy/measurement
    ownership after local-search parity checks.
    Keep JSON as an import/debug format during transition; publish new database
    generations atomically and keep existing request/cache identities tied to one
@@ -129,10 +137,11 @@ memory savings and output/search comparisons.
    Keep policy topology shared; revisit filtered adjacency if representative
    capital-area timings justify its additional storage. Acceptance: remove redundant data copies,
    preserve tile/inspection semantics, and measure memory plus bounded-search time.
-2. Persist prepared features in the SQLite schema above, with format/model
-   versions, graph/measurement identities, and explicit ordering. Reuse compact
-   arrays for loaded windows; do not make a whole-dataset array load the required
-   startup path. Separate mapped numeric sidecars require benchmark justification.
+2. Reduce temporary record decoding during SQLite local graph loading if
+   representative latency/RSS measurements justify it. Versioned prepared
+   features and packed local arrays are implemented; temporary JSON/feature
+   records still contribute to peak request memory. Separate mapped numeric
+   sidecars require benchmark justification.
 
 Do not introduce a generic feature registry or move graph ownership/search into
 Rust as part of this migration. Those are separate decisions supported by later

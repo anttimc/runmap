@@ -18,14 +18,16 @@ from shapely import transform
 
 from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, display_segment_reason, exploration_context, path_policy_index
 from runmap.api.sqlite_data import SQLitePathData
+from runmap.api.sqlite_exploration import (ExplorationLimits, LocalExploration,
+                                          prepare_local_exploration, retained_exploration_bytes)
 from runmap.paths.display import measurement_quality
 from runmap.routing.types import MeasurementLocation
 from runmap.routing.profiles import exploration_profile
 from runmap.paths.dead_ends import ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M
-from runmap.paths.exploration import DistanceData, segment_reason
+from runmap.paths.exploration import DistanceData, Snap, segment_reason
 
 RENDER_VERSION = 3
-ALGORITHM_VERSION = 3
+ALGORITHM_VERSION = 4
 MIN_ZOOM = 10
 MAX_ZOOM = 16
 EXTENT = 4096
@@ -66,7 +68,8 @@ class ByteCache(Generic[T]):
             self.entries.move_to_end(key)
             return entry.value
 
-    def compute(self, key: str, factory: Callable[[], T], size: Callable[[T], int]) -> tuple[T, bool]:
+    def compute(self, key: str, factory: Callable[[], T], size: Callable[[T], int],
+                *, deadline: float | None = None) -> tuple[T, bool]:
         with self.lock:
             existing = self.get(key)
             if existing is not None:
@@ -77,7 +80,7 @@ class ByteCache(Generic[T]):
                 future = Future()
                 self.pending[key] = future
         if not owner:
-            return future.result(), True
+            return future.result(timeout=None if deadline is None else max(0, deadline - monotonic())), True
         try:
             result = factory()
             retained = size(result)
@@ -109,6 +112,7 @@ class Snapshot:
     preparation_ms: float
     routing_ms: float
     retained_bytes: int
+    local: LocalExploration | None = None
 
 
 def snapshot_distances(distances: DistanceData) -> tuple[DistanceData, int]:
@@ -238,13 +242,12 @@ def encode_tile(data: PathData | SQLitePathData, policy: str, variant: str, z: i
         # Latitude expansion is conservative because Mercator's scale grows poleward.
         pad = (east - west) * BUFFER / EXTENT
         bounds = (west - pad, south - pad, east + pad, north + pad)
-        if isinstance(data, SQLitePathData) and snapshot is None:
+        if isinstance(data, SQLitePathData):
             from runmap.api.sqlite_paths import database_tile_runs
-            runs = database_tile_runs(data, bounds, policy, variant, z)
+            runs = database_tile_runs(data, bounds, policy, variant, z, snapshot)
         else:
-            legacy = data.routing_data() if isinstance(data, SQLitePathData) else data
-            indexes = candidate_path_indexes(legacy, bounds, hidden)
-            runs = display_runs(legacy, indexes, policy, variant, z, snapshot)
+            indexes = candidate_path_indexes(data, bounds, hidden)
+            runs = display_runs(data, indexes, policy, variant, z, snapshot)
     return encode_runs(runs, z, x, y)
 
 
@@ -270,17 +273,25 @@ class PathTileService:
 
     def __init__(self, data: PathData | SQLitePathData, tile_bytes: int = 64 * 1024 ** 2,
                  snapshot_bytes: int = 128 * 1024 ** 2, snapshot_ttl: float = 900,
-                 tile_ttl: float = 900, preparation_deadline: float = 10) -> None:
+                 tile_ttl: float = 900, preparation_deadline: float = 10,
+                 exploration_limits: ExplorationLimits = ExplorationLimits()) -> None:
+        if (exploration_limits.max_area_km2 <= 0
+                or exploration_limits.max_segments <= 0 or exploration_limits.max_retries < 0):
+            raise ValueError("Invalid exploration limits")
         self.data = data
         self.tiles: ByteCache[bytes] = ByteCache(tile_bytes, tile_ttl)
         self.snapshots: ByteCache[Snapshot] = ByteCache(snapshot_bytes, snapshot_ttl)
         self.preparation_deadline = preparation_deadline
+        self.exploration_limits = exploration_limits
 
     def prepare(self, longitude: float, latitude: float, budget_km: float, surface: str,
                 avoid_stairs: bool, radius_m: float, segment_id: str | None) -> dict:
         started = monotonic()
         policy = f"{surface}-{'no-stairs' if avoid_stairs else 'stairs'}"
         policy_options(policy)
+        if isinstance(self.data, SQLitePathData):
+            return self._prepare_database(longitude, latitude, budget_km, surface, avoid_stairs,
+                                           radius_m, segment_id, started, policy)
         _, distances, start, distance_hit = exploration_context(
             self.data.routing_data() if isinstance(self.data, SQLitePathData) else self.data,
             longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id,
@@ -300,7 +311,8 @@ class PathTileService:
                             time() + self.snapshots.ttl, (monotonic() - started) * 1000,
                             routing_ms, retained)
 
-        snapshot, hit = self.snapshots.compute(key, materialize, lambda item: item.retained_bytes)
+        snapshot, hit = self.snapshots.compute(key, materialize, lambda item: item.retained_bytes,
+                                                deadline=started + self.preparation_deadline)
         return {"status": "ready", "dataset_id": self.data.dataset_id, "snapshot_id": snapshot.id,
                 "start": start, "coverage": self.data.coverage, "bounds_wgs84": self.data.bounds,
                 "tile_template": tile_template(self.data, f"snapshots/{snapshot.id}"),
@@ -308,6 +320,44 @@ class PathTileService:
                 "request_ms": (monotonic() - started) * 1000, "retained_bytes": snapshot.retained_bytes,
                 "routing_ms": snapshot.routing_ms, "interval_preparation_ms": 0.0,
                 "snapshot_cache_hit": hit, "distance_cache_hit": distance_hit}
+
+    def _prepare_database(self, longitude: float, latitude: float, budget_km: float, surface: str,
+                           avoid_stairs: bool, radius_m: float, segment_id: str | None,
+                           started: float, policy: str) -> dict[str, object]:
+        from runmap.api.sqlite_paths import database_snap
+        data = self.data
+        assert isinstance(data, SQLitePathData)
+        if not math.isfinite(budget_km) or not 0 < budget_km <= 50:
+            raise ValueError("Budget must be greater than zero and at most 50 km")
+        start = database_snap(data, longitude, latitude, surface, avoid_stairs, radius_m, segment_id,
+                               deadline=started + self.preparation_deadline)
+        if start["snap"] is None:
+            return start
+        snap = Snap(**start["snap"])
+        key = repr((data.metadata.feature_identity, ALGORITHM_VERSION, policy, snap.segment_id,
+                    snap.graph_offset_m, budget_km))
+
+        def materialize() -> Snapshot:
+            local = prepare_local_exploration(data, snap, budget_km, surface, avoid_stairs,
+                                               started + self.preparation_deadline, self.exploration_limits)
+            retained = retained_exploration_bytes(local) + 1024
+            if monotonic() - started > self.preparation_deadline:
+                raise TimeoutError("Path preparation exceeded its deadline; try a smaller budget")
+            elapsed = (monotonic() - started) * 1000
+            return Snapshot(uuid4().hex, local.distances, budget_km, policy, time() + self.snapshots.ttl,
+                            elapsed, elapsed, retained, local)
+
+        snapshot, hit = self.snapshots.compute(key, materialize, lambda item: item.retained_bytes,
+                                                deadline=started + self.preparation_deadline)
+        assert snapshot.local is not None
+        return {"status": "ready", "dataset_id": data.dataset_id, "snapshot_id": snapshot.id,
+                "start": start, "coverage": data.coverage, "bounds_wgs84": data.bounds,
+                "tile_template": tile_template(data, f"snapshots/{snapshot.id}"),
+                "expires_at": snapshot.expires_at, "preparation_ms": snapshot.preparation_ms,
+                "request_ms": (monotonic() - started) * 1000, "retained_bytes": snapshot.retained_bytes,
+                "routing_ms": snapshot.routing_ms, "interval_preparation_ms": 0.0,
+                "snapshot_cache_hit": hit, "distance_cache_hit": hit,
+                "search_bounds_epsg3067": snapshot.local.bounds, "search_retries": snapshot.local.retries}
 
     def snapshot(self, snapshot_id: str) -> Snapshot:
         with self.snapshots.lock:

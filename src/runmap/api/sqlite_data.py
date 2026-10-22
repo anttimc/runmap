@@ -1,4 +1,4 @@
-"""SQLite dataset lifetime and a temporary lazy bridge for legacy graph searches."""
+"""SQLite dataset lifetime and a temporary lazy bridge for run planning."""
 
 from pathlib import Path
 from threading import Lock

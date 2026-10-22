@@ -37,8 +37,10 @@ and hosted storage are [future work](roadmap.md).
 | `terrain/` | Replaceable smoothers and metric-aware derivatives |
 | `paths/graph.py`, `paths/terrain.py`, `paths/measurements.py` | Graph preparation, terrain sampling, artifact identity, and profile inspection |
 | `paths/database.py`, `paths/database_features.py` | Offline SQLite export, prepared-feature persistence, and selective read-only queries |
+| `paths/local_network.py` | Request-sized packed routing, measurements, hills, and unloaded/source-boundary markers |
 | `paths/preparation.py`, `paths/coverage.py` | Dataset-wide feature preparation and shared source-coverage semantics |
 | `paths/database_pool.py`, `api/sqlite_data.py`, `api/sqlite_paths.py` | Bounded connection leases, SQLite dataset lifetime, and selective API delivery |
+| `api/sqlite_exploration.py` | Local exploration envelopes, frontier retries, request limits, and retained graph accounting |
 | `paths/exploration.py`, `routing/profiles.py` | Shared eligibility, snapping, temporary start overlay, and forward-distance inclusion |
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
 | `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
@@ -185,6 +187,28 @@ prevent treating an unloaded connection as a genuine network dead end. A complet
 selected segment can extend outside the query box, so boundary handling cannot
 rely only on endpoint coordinates or route-box intersection.
 
+`load_local_network` packs these selected records into the existing integer graph,
+metadata, geometry, measurement, and hill containers. Each window owns dense local
+node/segment/arc indices while preserving external IDs and dataset/feature identity.
+Measurements and hill arrays share the local graph ordering and retain complete
+segment chainages, including partial endpoint traversal support. Stored policy
+permissions, rejection reasons, route-boundary blocking, building-access evidence,
+and directional hill features are used directly; cropped topology is not
+reclassified. Local coordinates are projected in the application, while heuristic
+distance scale retains the dataset-wide lower bound. Hill valid/trusted fractions
+describe the loaded subset; dataset fractions remain in metadata.
+
+The window exposes both stable frontier IDs and their local node indices, plus
+source-coverage-limited segment IDs evaluated against the original coverage.
+Frontier markers remain independent of policy, physical dead ends, and source
+coverage. An empty window has valid empty packed buffers; topology-only databases
+omit measurements and hills. Raw query records and decoded prepared-feature
+objects are temporary and released after packing. Exploration requests use
+`include_terrain=False`, avoiding local sample/hill loading entirely; display and
+inspection continue to query individual intervals separately. The
+[local-network report](archive/history/46-sqlite-local-network.md) records fixture
+parity and fresh-process area/memory measurements.
+
 Export writes a staging database beside the destination, closes it, then publishes
 without overwriting an existing file. Readers own a read-only connection with a
 configurable page-cache target (16 MiB by default); this is not a cap on total
@@ -219,28 +243,60 @@ projected radius box and refines distances in Python, retaining hidden building
 access as legal snap candidates. Inspection/snap calculations are shared with the
 reference loader. Tile versions additionally include the prepared feature identity.
 
-Exploration, snapshots, inspection with start-distance information, and run
-planning use a temporary lazy compatibility bridge. The first such request loads
+SQLite exploration, snapshots, and inspection with start-distance information
+prepare a local graph around the full snapped segment's EPSG:3067 envelope,
+expanded by `budget_m / distance_scale + 1 m` in every direction. The complete
+start geometry protects partial starts even on long/bent segments. The persisted
+global distance scale bounds subsequent arc endpoint displacement; selecting
+complete incident segments preserves continuations without relying on the
+viewport or on a clipped geometry's apparent dead ends.
+
+The request runs forward distance search and checks whether any unloaded frontier
+node was reached within budget. If so, it discards that working set, doubles both
+box dimensions, and repeats under one deadline. Defaults allow two retries,
+2,500 km² query area, and 50,000 selected segments. Segment count is checked with
+a bounded spatial count before decoding network records. Reaching configured
+limits returns HTTP 422 with explicit `area_limited` status, reason, attempted
+bounds, and retry count; it does not report a genuine dead end or lack of source
+coverage. Preparation timeout returns HTTP 504. Exclusive connection leases bound
+concurrent local preparation; lease waiting, SQLite progress callbacks, packing
+checks, and Dijkstra share the preparation deadline.
+
+Each exploration snapshot retains its local routing graph and sealed distance
+buffers together. Recursive storage accounting charges packed buffer owners, ID
+maps, policy data, and distance buffers once per snapshot; byte/TTL eviction
+releases cache ownership of both. Identical pending preparations coalesce before
+graph loading, and waiting callers retain their own deadlines. Snapshot keys
+include prepared feature identity, policy, snapped segment/offset, and budget.
+Distances are never reused across independently loaded graph orderings. Static
+and snapshot tiles query display intervals from SQLite; an eligible interval
+outside the complete local search area is beyond budget. Source-coverage flags,
+policy exclusions, styling, inspection direction, and tile LOD retain reference
+semantics. Direct exploration and start-distance inspection share the same
+snapshot cache. These operations need no source JSON.
+
+Run planning uses a temporary lazy compatibility bridge. The first such request loads
 and retains the complete graph/measurements from `RUNMAP_PATH_GRAPH`, verifies
 both graph identity and measurement checksum against SQLite, and reuses that
 single dataset. A missing/mismatched source returns HTTP 503 while selective
 delivery remains available; failed loads are remembered until restart. Config
 does not load that graph to discover hill capabilities and reports planner
 unavailability when the source file is absent. The initial JSON load is outside
-the legacy run planner's deadline; snapshot preparation's deadline includes the
-load. Search memory is still whole-dataset memory.
+the legacy run planner's deadline. Planner memory is still whole-dataset memory.
 
 The [remaining migration](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
-replaces this bridge with bounded local graphs and planner area expansion.
+replaces this bridge with planner area expansion over bounded local graphs.
 Existing packed topology/geometry/measurement data
-remain useful for loaded areas; global dense indices must become local to each
-working set while external dataset IDs remain stable. Persisted global classifications
-and source boundaries must be used directly rather than recomputed on those windows.
+are reused for loaded areas; dense indices belong to each working set while
+external dataset IDs remain stable. Persisted global classifications and source
+boundaries are used directly rather than recomputed on those windows.
 The [SQLite feature report](archive/history/43-sqlite-features.md) records fixture
 parity checks and an initial real-extract export/query probe; cold-cache and
 full-application benchmarks remain open.
 The [SQLite API report](archive/history/45-sqlite-api.md) compares selective delivery
 with the JSON reference in separate reader processes, excluding offline export.
+The [SQLite exploration report](archive/history/47-sqlite-exploration.md) records
+local-search parity, request limits, snapshot ownership, and reader measurements.
 
 ## Delivery and request lifetimes
 
@@ -269,7 +325,8 @@ bounded search results. Interval states, midpoint distances, and boundary flags
 are calculated only for the spatial candidates of requested buffered tiles.
 Navigation and tile variants reuse the same search; encoded tiles are cached.
 Snapshot memory accounting charges the shared immutable distance buffers to each
-entry conservatively; creating a snapshot does not copy search results. Snapshots and tiles have
+entry conservatively; SQLite entries also charge their owned local graph.
+Creating a snapshot does not copy search results. Snapshots and tiles have
 byte-bounded TTL/LRU caches. Expired snapshots return 410; the client recreates
 once. Use one API worker until snapshots can be shared or reconstructed.
 

@@ -18,7 +18,8 @@ from runmap.paths.database import (export_network_database, network_metadata, op
 from runmap.routing.types import Bounds
 
 
-def probe_database(graph_path: Path, bounds: Bounds, *, include_api: bool = False) -> dict[str, object]:
+def probe_database(graph_path: Path, bounds: Bounds, *, include_api: bool = False,
+                    include_local: bool = False, exploration_budget_km: float | None = None) -> dict[str, object]:
     with TemporaryDirectory(prefix="runmap-sqlite-probe-") as directory:
         destination = Path(directory) / "network.sqlite"
         started = perf_counter()
@@ -41,21 +42,41 @@ def probe_database(graph_path: Path, bounds: Bounds, *, include_api: bool = Fals
         peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         report["process_peak_rss_bytes"] = peak if sys.platform == "darwin" else peak * 1024
         report["cache_note"] = "Fresh connection after export; OS cache is warm. Peak RSS includes offline import."
-        if include_api:
-            readers = [_probe_delivery(destination, graph_path, bounds, legacy) for legacy in (False, True)]
+        if include_api or exploration_budget_km is not None:
+            readers = [_probe_delivery(destination, graph_path, bounds, legacy, exploration_budget_km) for legacy in (False, True)]
             report["delivery_readers"] = readers
             equivalent = all(readers[0][key] == readers[1][key] for key in ("dataset_id", "viewport_sha256", "tile_sha256"))
             report["delivery_equivalent"] = equivalent
             if not equivalent:
                 raise ValueError("SQLite and JSON delivery outputs differ")
+            if exploration_budget_km is not None:
+                equivalent = all(readers[0]["exploration"][key] == readers[1]["exploration"][key]
+                                 for key in ("viewport_sha256", "tile_sha256"))
+                report["exploration_equivalent"] = equivalent
+                if not equivalent:
+                    raise ValueError("SQLite and JSON exploration outputs differ")
+        if include_local:
+            report["local_readers"] = [_probe_local(destination, bounds, scale) for scale in (1, 3, 6)]
         return report
 
 
-def _probe_delivery(database: Path, graph: Path, bounds: Bounds, legacy: bool) -> dict[str, object]:
+def _probe_delivery(database: Path, graph: Path, bounds: Bounds, legacy: bool,
+                      exploration_budget_km: float | None = None) -> dict[str, object]:
     command = [sys.executable, "-m", "runmap.experiments.benchmark_path_delivery", str(database),
                "--graph", str(graph), "--bounds", *(str(value) for value in bounds)]
     if legacy:
         command.append("--legacy")
+    if exploration_budget_km is not None:
+        command.extend(("--explore-budget-km", str(exploration_budget_km)))
+    result = subprocess.run(command, check=True, capture_output=True, text=True)
+    return cast(dict[str, object], json.loads(result.stdout))
+
+
+def _probe_local(database: Path, bounds: Bounds, scale: float) -> dict[str, object]:
+    x, y = (bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2
+    dx, dy = (bounds[2] - bounds[0]) * scale / 2, (bounds[3] - bounds[1]) * scale / 2
+    command = [sys.executable, "-m", "runmap.experiments.benchmark_local_network", str(database),
+               "--bounds", *(str(value) for value in (x - dx, y - dy, x + dx, y + dy))]
     result = subprocess.run(command, check=True, capture_output=True, text=True)
     return cast(dict[str, object], json.loads(result.stdout))
 
@@ -80,8 +101,12 @@ def main() -> None:
     parser.add_argument("--bounds", type=float, nargs=4, required=True, metavar=("WEST", "SOUTH", "EAST", "NORTH"))
     parser.add_argument("--report", type=Path)
     parser.add_argument("--api", action="store_true", help="Compare delivery and reader RSS in fresh SQLite/JSON processes")
+    parser.add_argument("--local", action="store_true", help="Measure local graphs in fresh processes at 1x/3x/6x box dimensions")
+    parser.add_argument("--explore-budget-km", type=float, help="Compare SQLite/JSON exploration and snapshot delivery")
     args = parser.parse_args()
-    payload = json.dumps(probe_database(args.graph, cast(Bounds, tuple(args.bounds)), include_api=args.api), indent=2) + "\n"
+    payload = json.dumps(probe_database(args.graph, cast(Bounds, tuple(args.bounds)),
+                                     include_api=args.api, include_local=args.local,
+                                     exploration_budget_km=args.explore_budget_km), indent=2) + "\n"
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(payload)

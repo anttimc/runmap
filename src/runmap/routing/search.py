@@ -206,7 +206,15 @@ class GraphData:
     integer: IntegerGraph | None = None
 
 
-def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) -> GraphData:
+@dataclass(frozen=True)
+class PreparedGraphPolicy:
+    boundary_blocked_segments: set[str]
+    ineligible_segments: dict[str, str]
+    directions: Mapping[str, tuple[bool, bool]]
+
+
+def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None,
+                      *, prepared_policy: PreparedGraphPolicy | None = None) -> GraphData:
     profile = profile or exploration_profile(avoid_stairs=False)
     nodes = {node["id"]: node for node in graph["nodes"]}
     segments = {segment["id"]: segment for segment in graph["segments"]}
@@ -218,7 +226,8 @@ def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) 
     integer = prepare_integer_graph(nodes, segments, arcs)
     index = GraphData(graph, nodes, segments, arcs, {}, {}, degree,
                       {node_id for node_id, node in nodes.items() if pedestrian_access_reason(node, profile)},
-                      _boundary_blocked_segments(graph), {}, profile,
+                      (_boundary_blocked_segments(graph) if prepared_policy is None
+                       else prepared_policy.boundary_blocked_segments), {}, profile,
                       prepare_projected_geometry(nodes, segments, arcs.values(), integer), integer=integer)
     graph["arcs"] = ArcRecords(integer.arcs)
     graph["nodes"] = NodeRecords(pack_nodes(nodes, integer.node_ids))
@@ -227,11 +236,13 @@ def build_graph_index(graph: GraphDocument, profile: EdgeProfile | None = None) 
     index = replace(index, arcs=ArcLookup(integer.arcs, integer.arc_indices),
                     nodes=MetadataLookup(graph["nodes"], integer.node_indices),
                     segments=MetadataLookup(graph["segments"], integer.segment_indices))
-    index.ineligible_segments.update(classify_segments(index, profile))
-    return _prepare_traversals(index)
+    index.ineligible_segments.update(classify_segments(index, profile) if prepared_policy is None
+                                     else prepared_policy.ineligible_segments)
+    return _prepare_traversals(index, None if prepared_policy is None else prepared_policy.directions)
 
 
-def _prepare_traversals(index: GraphData) -> GraphData:
+def _prepare_traversals(index: GraphData,
+                        prepared_directions: Mapping[str, tuple[bool, bool]] | None = None) -> GraphData:
     """Resolve policy and direction tags before any search traverses the graph."""
     base = index.integer
     if base is None or base.extra_arcs or base.extra_node_ids or base.arc_overrides:
@@ -241,8 +252,11 @@ def _prepare_traversals(index: GraphData) -> GraphData:
         segment = index.segments[segment_id]
         if segment_id in index.ineligible_segments or segment_id in index.boundary_blocked_segments:
             continue
-        forward, backward = pedestrian_directions(segment.get("tags", {}), index.profile)
-        allowed[number] = (forward and segment.get("forward", True), backward and segment.get("backward", True))
+        if prepared_directions is None:
+            forward, backward = pedestrian_directions(segment.get("tags", {}), index.profile)
+            allowed[number] = (forward and segment.get("forward", True), backward and segment.get("backward", True))
+        else:
+            allowed[number] = prepared_directions[segment_id]
     sources, targets = np.asarray(base.arcs.sources), np.asarray(base.arcs.targets)
     segments = np.asarray(base.arcs.segments)
     reverse = np.asarray(base.arcs.reverse)

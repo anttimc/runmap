@@ -7,15 +7,16 @@ from rasterio.warp import transform_bounds, transform
 
 from runmap.api.paths import (MAX_FEATURES, _bounds, _line_intersects, _overlap, _point_in_ring,
                               path_configuration, snap_response, uphill_sections, viewport_response)
-from runmap.api.path_tiles import DisplayRun, Property, policy_options, variant_options
+from runmap.api.path_tiles import DisplayRun, Property, Snapshot, policy_options, variant_options
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.paths.database import (iter_query_display_intervals, query_segment_inspection, query_segment_record)
 from runmap.paths.display import measurement_feature, measurement_quality
-from runmap.paths.exploration import snap_measurements, validate_snap
+from runmap.paths.coverage import near_coverage_boundary
+from runmap.paths.exploration import distance_from_start, interval_inclusion, snap_measurements, validate_snap
 from runmap.paths.measurements import inspect_samples
 from runmap.paths.preparation import PreparedDisplayInterval, PreparedPolicy
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.types import Bounds
+from runmap.routing.types import Bounds, Measurement
 
 
 def database_path_config(data: SQLitePathData) -> dict[str, object]:
@@ -35,7 +36,7 @@ def _projected_candidates(data: SQLitePathData, bounds: Bounds) -> Bounds | None
 
 def database_viewport(data: SQLitePathData, bounds: Bounds, zoom: float, surface: str = "all",
                       avoid_stairs: bool = True, hide_building_access: bool = True,
-                      max_features: int = MAX_FEATURES) -> dict[str, object]:
+                      max_features: int = MAX_FEATURES, snapshot: Snapshot | None = None) -> dict[str, object]:
     response = viewport_response(data.coverage, data.bounds, data.dataset_id, bounds, zoom, surface)
     if response["status"] != "ready":
         return response
@@ -58,7 +59,8 @@ def database_viewport(data: SQLitePathData, bounds: Bounds, zoom: float, surface
             feature = measurement_feature(item, stored.surface_class, stored.flat_min_grade_50m)
             reason = _policy(stored).reason
             features.append({**feature, "properties": {**feature["properties"],
-                                                       "eligibility_reason": reason, "eligible": reason is None}})
+                                                       "eligibility_reason": reason, "eligible": reason is None,
+                **(database_interval_state(data, snapshot, item, _policy(stored)) if snapshot is not None else {})}})
             if len(features) > max_features:
                 return {**response, "status": "zoom_in", "reason": "feature_limit"}
     return {**response, "features": features}
@@ -83,12 +85,13 @@ def database_inspection(data: SQLitePathData, segment_id: str, reverse: bool = F
 
 
 def database_snap(data: SQLitePathData, longitude: float, latitude: float, surface: str = "all",
-                   avoid_stairs: bool = True, radius_m: float = 50, segment_id: str | None = None) -> dict[str, object]:
+                   avoid_stairs: bool = True, radius_m: float = 50, segment_id: str | None = None,
+                   *, deadline: float | None = None) -> dict[str, object]:
     validate_snap(longitude, latitude, radius_m)
     profile = exploration_profile(surface, avoid_stairs)
     x, y = transform("EPSG:4326", "EPSG:3067", [longitude], [latitude])
     bounds = (x[0] - radius_m, y[0] - radius_m, x[0] + radius_m, y[0] + radius_m)
-    with data.pool.connection() as connection:
+    with data.pool.connection(deadline=deadline) as connection:
         records = [stored.measurement for stored in iter_query_display_intervals(
             connection, bounds, profile["id"], hide_building_access=False) if _policy(stored).reason is None]
         snap, alternatives = snap_measurements(records, longitude, latitude, radius_m, segment_id)
@@ -96,7 +99,8 @@ def database_snap(data: SQLitePathData, longitude: float, latitude: float, surfa
     return snap_response(data.dataset_id, snap, alternatives, longitude, latitude, radius_m, segments)
 
 
-def database_tile_runs(data: SQLitePathData, bounds: Bounds, policy: str, variant: str, z: int) -> list[DisplayRun]:
+def database_tile_runs(data: SQLitePathData, bounds: Bounds, policy: str, variant: str, z: int,
+                        snapshot: Snapshot | None = None) -> list[DisplayRun]:
     metric, hidden = variant_options(variant)
     profile = exploration_profile(*policy_options(policy))
     projected = _projected_candidates(data, bounds)
@@ -106,6 +110,14 @@ def database_tile_runs(data: SQLitePathData, bounds: Bounds, policy: str, varian
     with data.pool.connection() as connection:
         for stored in iter_query_display_intervals(connection, projected, profile["id"], hide_building_access=hidden):
             properties = _tile_properties(stored, metric, z)
+            if snapshot is not None:
+                state = database_interval_state(data, snapshot, stored.measurement, _policy(stored))
+                properties["inclusion_state"] = state["inclusion_state"]
+                properties["coverage_limited"] = stored.coverage_limited
+                distance = state["distance_from_start_m"]
+                if metric == "distance" and distance is not None:
+                    distance_bin = 250 if z <= 12 else 125 if z <= 14 else 0
+                    properties["distance_from_start_m"] = round(distance / distance_bin) * distance_bin if distance_bin else distance
             coordinates = tuple((float(point[0]), float(point[1])) for point in stored.measurement["geometry"])
             interval = stored.measurement["interval_index"]
             if (runs and runs[-1].properties == properties and runs[-1].last_interval + 1 == interval
@@ -114,6 +126,58 @@ def database_tile_runs(data: SQLitePathData, bounds: Bounds, policy: str, varian
             else:
                 runs.append(DisplayRun(coordinates, properties, interval))
     return runs
+
+
+def database_interval_state(data: SQLitePathData, snapshot: Snapshot, item: Measurement,
+                             policy: PreparedPolicy) -> dict[str, object]:
+    local = snapshot.local
+    if local is None:
+        raise ValueError("SQLite snapshot has no local graph")
+    key = item["segment_id"]
+    if key in local.routing.segments:
+        state = interval_inclusion(local.routing, snapshot.distances, key,
+                                   item["graph_start_m"], item["graph_end_m"], snapshot.budget_km * 1000)
+        distance = distance_from_start(local.routing, snapshot.distances, key,
+                                        (item["graph_start_m"] + item["graph_end_m"]) / 2)
+    elif policy.reason is not None:
+        state = {"inclusion_state": "excluded", "inclusion_reason": policy.reason,
+                 "minimum_inclusion_m": None, "directions": []}
+        distance = None
+    else:
+        state = {"inclusion_state": "beyond_budget", "inclusion_reason": "beyond_distance_budget",
+                 "minimum_inclusion_m": None, "distance_lower_bound_m": snapshot.budget_km * 1000,
+                 "directions": [{"direction": direction, "minimum_inclusion_m": None}
+                                for direction, allowed in (("forward", policy.forward), ("backward", policy.backward)) if allowed]}
+        distance = None
+    return {**state, "distance_from_start_m": distance,
+            "coverage_limited": near_coverage_boundary(data.coverage, item["geometry"])}
+
+
+def database_explore(response: dict[str, object], prepared: dict[str, object],
+                      snapshot: Snapshot | None, budget_km: float) -> dict[str, object]:
+    response.update(start=prepared.get("start", prepared), budget_km=budget_km,
+                    label=f"Within {budget_km:g} km of the start",
+                    semantics="Each entire highlighted interval is reachable within the forward distance budget; no return distance is included.")
+    if snapshot is None:
+        return {**response, "status": "no_eligible_snap", "features": []}
+    return {**response, "distance_cache_hit": prepared["distance_cache_hit"],
+            "search_limit_m": snapshot.distances.maximum_m, "interval_resolution_note":
+            "Whole display intervals are tested conservatively. Paths not reached within the budget share one state, including disconnected paths. Exact minima beyond the bounded search may be unavailable."}
+
+
+def database_inspect_outing(data: SQLitePathData, result: dict[str, object], prepared: dict[str, object],
+                             snapshot: Snapshot | None, budget_km: float, surface: str,
+                             avoid_stairs: bool) -> dict[str, object]:
+    result = {**result, "start": prepared.get("start", prepared), "budget_km": budget_km,
+              "outing_label": f"Within {budget_km:g} km of the start"}
+    if snapshot is None:
+        return result
+    profile = exploration_profile(surface, avoid_stairs)
+    with data.pool.connection() as connection:
+        stored = query_segment_inspection(connection, result["segment_id"], profile["id"])
+    result["intervals"] = [{**interval, **database_interval_state(
+        data, snapshot, stored.measurements[interval["interval_index"]], stored.policy)} for interval in result["intervals"]]
+    return result
 
 
 def _tile_properties(stored: PreparedDisplayInterval, metric: str, z: int) -> dict[str, Property]:

@@ -17,9 +17,11 @@ from fastapi.staticfiles import StaticFiles
 
 from runmap.api.paths import PathData, render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
 from runmap.api.sqlite_data import SQLitePathData, RoutingUnavailableError
-from runmap.api.sqlite_paths import database_path_config, database_viewport, database_inspection, database_snap
+from runmap.api.sqlite_paths import (database_path_config, database_viewport, database_inspection, database_snap,
+                                    database_explore, database_inspect_outing)
+from runmap.api.sqlite_exploration import ExplorationAreaError, ExplorationLimits
 from runmap.paths.database_pool import DatabaseBusyError
-from runmap.api.path_tiles import PathTileService, render_version as path_render_version, tile_template
+from runmap.api.path_tiles import PathTileService, Snapshot, render_version as path_render_version, tile_template
 from runmap.api.terrain import TerrainRenderer
 from runmap.api.runs import PlannerConfiguration, RunRequest, RunResponse, generate_run
 from runmap.routing.cost_settings import preference_capabilities, prepared_preference_capabilities
@@ -72,7 +74,11 @@ async def lifespan(application):
             snapshot_bytes=int(os.environ.get("RUNMAP_PATH_SNAPSHOT_CACHE_BYTES", 128 * 1024 ** 2)),
             snapshot_ttl=float(os.environ.get("RUNMAP_PATH_SNAPSHOT_TTL", 900)),
             tile_ttl=float(os.environ.get("RUNMAP_PATH_TILE_TTL", 900)),
-            preparation_deadline=float(os.environ.get("RUNMAP_PATH_PREPARATION_DEADLINE", 10)))
+            preparation_deadline=float(os.environ.get("RUNMAP_PATH_PREPARATION_DEADLINE", 10)),
+            exploration_limits=ExplorationLimits(
+                max_area_km2=float(os.environ.get("RUNMAP_PATH_SEARCH_MAX_AREA_KM2", 2500)),
+                max_segments=int(os.environ.get("RUNMAP_PATH_SEARCH_MAX_SEGMENTS", 50000)),
+                max_retries=int(os.environ.get("RUNMAP_PATH_SEARCH_MAX_RETRIES", 2))))
     except FileNotFoundError:
         logging.getLogger(__name__).info("Path artifacts unavailable: %s", database_path or graph_path)
     except (ValueError, OSError, TypeError, KeyError, sqlite3.Error):
@@ -96,6 +102,12 @@ app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 @app.exception_handler(RoutingUnavailableError)
 async def path_service_unavailable(request: Request, exc: RuntimeError) -> JSONResponse:
     return JSONResponse({"detail": str(exc)}, status_code=503)
+
+
+@app.exception_handler(ExplorationAreaError)
+async def exploration_area_limited(request: Request, exc: ExplorationAreaError) -> JSONResponse:
+    return JSONResponse({"detail": str(exc), "status": "area_limited", "reason": exc.reason,
+                         "search_bounds_epsg3067": exc.bounds, "search_retries": exc.retries}, status_code=422)
 
 
 @app.get("/api/config")
@@ -162,6 +174,18 @@ def _tile_service(request: Request, dataset_id: str) -> PathTileService:
         service = PathTileService(data)
         request.app.state.path_tiles = service
     return service
+
+
+def _local_snapshot(request: Request, data: SQLitePathData, longitude: float, latitude: float,
+                     budget_km: float, surface: str, avoid_stairs: bool, radius_m: float,
+                     segment_id: str | None) -> tuple[dict[str, object], Snapshot | None]:
+    service = _tile_service(request, data.dataset_id)
+    prepared = service.prepare(longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id)
+    try:
+        snapshot = service.snapshot(prepared["snapshot_id"]) if "snapshot_id" in prepared else None
+    except KeyError as exc:
+        raise HTTPException(410, "Exploration snapshot evicted; try again") from exc
+    return prepared, snapshot
 
 
 @app.post("/api/paths/snapshots")
@@ -249,13 +273,20 @@ def path_inspection(request: Request, segment_id: str, reverse: bool = False,
         if longitude is not None or latitude is not None:
             if longitude is None or latitude is None:
                 raise ValueError("Both start coordinates are required")
-            result = inspect_outing(_routing_data(data), result, longitude, latitude, budget_km, surface,
-                                    avoid_stairs, radius_m, start_segment_id)
+            if isinstance(data, SQLitePathData):
+                prepared, snapshot = _local_snapshot(request, data, longitude, latitude, budget_km, surface,
+                                                      avoid_stairs, radius_m, start_segment_id)
+                result = database_inspect_outing(data, result, prepared, snapshot, budget_km, surface, avoid_stairs)
+            else:
+                result = inspect_outing(data, result, longitude, latitude, budget_km, surface,
+                                        avoid_stairs, radius_m, start_segment_id)
         return result
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Unknown path segment") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
 
 
 @app.get("/api/paths/snap")
@@ -280,11 +311,20 @@ def path_exploration(request: Request, west: float, south: float, east: float, n
                      dataset_id: str = None, metric: str = "gradient", hide_building_access: bool = True):
     data = _path_data(request, dataset_id)
     try:
-        result = explore_paths(_routing_data(data), (west, south, east, north), zoom, longitude, latitude,
-                               budget_km, surface, avoid_stairs, radius_m, segment_id, hide_building_access)
+        if isinstance(data, SQLitePathData):
+            prepared, snapshot = _local_snapshot(request, data, longitude, latitude, budget_km, surface,
+                                                  avoid_stairs, radius_m, segment_id)
+            response = database_viewport(data, (west, south, east, north), zoom, surface, avoid_stairs,
+                                         hide_building_access, snapshot=snapshot)
+            result = database_explore(response, prepared, snapshot, budget_km)
+        else:
+            result = explore_paths(data, (west, south, east, north), zoom, longitude, latitude,
+                                   budget_km, surface, avoid_stairs, radius_m, segment_id, hide_building_access)
         return JSONResponse(render_paths(result, metric))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
 
 
 @app.get("/api/terrain.png")

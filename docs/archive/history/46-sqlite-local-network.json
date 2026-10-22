@@ -1,0 +1,104 @@
+{
+  "graph": "data/paths/prepared/leppavaara-flat-10k/graph.json",
+  "bounds_epsg3067": [
+    374750.0,
+    6674750.0,
+    375250.0,
+    6675250.0
+  ],
+  "export_s": 24.72983062500134,
+  "database_bytes": 474775552,
+  "python": "3.14.6",
+  "sqlite": "3.53.4",
+  "system": "Darwin",
+  "machine": "arm64",
+  "open_ms": 8.634166995761916,
+  "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+  "feature_identity": "f11961281e7eda7485d16345186de4aec6f9999358eac88c6deb5cef9f828c6c",
+  "first_display_ms": 2.8000839811284095,
+  "first_features_ms": 5.310167005518451,
+  "selected_intervals": 649,
+  "selected_segments": 124,
+  "warm_display_ms": 2.5413749972358346,
+  "warm_features_ms": 5.046834005042911,
+  "counts": {
+    "nodes": 55627,
+    "segments": 69707,
+    "measurements": 278839,
+    "display_intervals": 278839,
+    "hill_features": 69707
+  },
+  "process_peak_rss_bytes": 1062092800,
+  "cache_note": "Fresh connection after export; OS cache is warm. Peak RSS includes offline import.",
+  "local_readers": [
+    {
+      "bounds_epsg3067": [
+        374750.0,
+        6674750.0,
+        375250.0,
+        6675250.0
+      ],
+      "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+      "feature_identity": "f11961281e7eda7485d16345186de4aec6f9999358eac88c6deb5cef9f828c6c",
+      "load_ms": 34.337124990997836,
+      "nodes": 114,
+      "segments": 124,
+      "arcs": 248,
+      "measurement_intervals": 832,
+      "frontier_nodes": 28,
+      "coverage_limited_segments": 0,
+      "search_start": "459476967",
+      "search_budget_m": 1000,
+      "search_ms": 0.060708000091835856,
+      "reached_nodes": 80,
+      "reader_peak_rss_bytes": 82264064,
+      "note": "Fresh process; warm OS cache after export. Load includes open/query/packing. RSS includes imports and temporary decode buffers. Search starts at the nearest loaded node to box centre; it can hit unloaded connections. This is not an API or route-completeness benchmark."
+    },
+    {
+      "bounds_epsg3067": [
+        374250.0,
+        6674250.0,
+        375750.0,
+        6675750.0
+      ],
+      "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+      "feature_identity": "f11961281e7eda7485d16345186de4aec6f9999358eac88c6deb5cef9f828c6c",
+      "load_ms": 179.85929100541398,
+      "nodes": 1437,
+      "segments": 1844,
+      "arcs": 3688,
+      "measurement_intervals": 8652,
+      "frontier_nodes": 84,
+      "coverage_limited_segments": 0,
+      "search_start": "459476967",
+      "search_budget_m": 1000,
+      "search_ms": 0.6049160147085786,
+      "reached_nodes": 831,
+      "reader_peak_rss_bytes": 142098432,
+      "note": "Fresh process; warm OS cache after export. Load includes open/query/packing. RSS includes imports and temporary decode buffers. Search starts at the nearest loaded node to box centre; it can hit unloaded connections. This is not an API or route-completeness benchmark."
+    },
+    {
+      "bounds_epsg3067": [
+        373500.0,
+        6673500.0,
+        376500.0,
+        6676500.0
+      ],
+      "dataset_id": "b74d86e5dcebdb20802ec502ed024214d8950f46fa2b0d7c9c589188d028d81d",
+      "feature_identity": "f11961281e7eda7485d16345186de4aec6f9999358eac88c6deb5cef9f828c6c",
+      "load_ms": 680.1214170118328,
+      "nodes": 5735,
+      "segments": 7119,
+      "arcs": 14238,
+      "measurement_intervals": 33148,
+      "frontier_nodes": 148,
+      "coverage_limited_segments": 2,
+      "search_start": "459476967",
+      "search_budget_m": 1000,
+      "search_ms": 0.6475829868577421,
+      "reached_nodes": 866,
+      "reader_peak_rss_bytes": 285884416,
+      "note": "Fresh process; warm OS cache after export. Load includes open/query/packing. RSS includes imports and temporary decode buffers. Search starts at the nearest loaded node to box centre; it can hit unloaded connections. This is not an API or route-completeness benchmark."
+    }
+  ]
+}
