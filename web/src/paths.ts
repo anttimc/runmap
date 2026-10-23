@@ -24,6 +24,7 @@ import { element } from "./dom";
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
 const distanceBandM = 500;
+const neutralPathColor = "#727980";
 
 function distanceBands(maximumM: number): { startM: number; color: string }[] {
   const count = Math.max(1, Math.ceil(maximumM / distanceBandM));
@@ -43,7 +44,7 @@ function distanceExpression(maximumM: number): ExpressionSpecification {
       ["!=", ["get", "inclusion_state"], "included"],
       ["==", ["get", "distance_from_start_m"], null],
     ],
-    "#727980",
+    neutralPathColor,
     [
       "step",
       ["coalesce", ["get", "distance_from_start_m"], 0],
@@ -67,29 +68,10 @@ function renderDistanceLegend(maximumKm: number): void {
     `0–${formatter.format(maximumKm)} km · each color = 0.5 km`;
 }
 
-function gradientOpacity(): ExpressionSpecification {
-  return [
-    "let",
-    "ratio",
-    ["min", 1, ["/", ["abs", ["coalesce", ["get", "grade_percent"], 0]], 15]],
-    [
-      "+",
-      0.2,
-      ["*", 0.8, ["var", "ratio"], ["var", "ratio"], ["-", 3, ["*", 2, ["var", "ratio"]]]],
-    ],
-  ];
-}
-
-function gradientLegendColor(stop: ColorStop): string {
-  const ratio = Math.min(1, Math.max(0, stop.percent / 15));
-  const opacity = 0.2 + 0.8 * ratio * ratio * (3 - 2 * ratio);
-  return `color-mix(in srgb, ${stop.color} ${100 * opacity}%, transparent)`;
-}
-
 function renderGradientLegend(stops: ColorStop[]): void {
   const maximum = stops[stops.length - 1].percent;
   element("path-gradient-ramp").style.background =
-    `linear-gradient(to right, ${stops.map((stop) => `${gradientLegendColor(stop)} ${(100 * stop.percent) / maximum}%`).join(", ")})`;
+    `linear-gradient(to right, ${stops.map((stop) => `${stop.color} ${(100 * stop.percent) / maximum}%`).join(", ")})`;
   const labeledStops = stops.filter((stop, index) => index === 0 || stop.percent / maximum >= 0.25);
   element("path-gradient-ticks").replaceChildren(
     ...labeledStops.map((stop, index) => {
@@ -198,7 +180,7 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
       minzoom: config.tile_min_zoom,
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#fffdf5",
+        "line-color": "#a6a6a6",
         "line-width": pathWidth(["literal", 1], true),
         "line-opacity": pathCasingOpacity(),
       },
@@ -423,9 +405,9 @@ function pathWidth(scale: ExpressionSpecification, casing = false): ExpressionSp
     12,
     ["*", casing ? 1 : 0.7, scale],
     14,
-    ["*", casing ? 4.875 : 2.875, scale],
+    ["*", casing ? 2.8 : 1.8, scale],
     15,
-    ["*", casing ? 6 : 3.5, scale],
+    ["*", casing ? 3.2 : 2.2, scale],
   ];
 }
 
@@ -437,7 +419,6 @@ function applyPathEmphasis(
   map: Map,
   highlightFlat: boolean,
   threshold: number,
-  distance = false,
 ): void {
   const alpha: ExpressionSpecification = [
     "case",
@@ -466,18 +447,11 @@ function applyPathEmphasis(
   ];
   for (const layer of ["path-uncertain", "path-stairs"])
     map.setPaintProperty(layer, "line-opacity", alpha);
-  const gradeOpacity: ExpressionSpecification = highlightFlat
-    ? ["case", flat, 0.8, gradientOpacity()]
-    : gradientOpacity();
-  map.setPaintProperty(
-    "path-grades",
-    "line-opacity",
-    distance ? alpha : ["*", alpha, gradeOpacity],
-  );
+  map.setPaintProperty("path-grades", "line-opacity", alpha);
   map.setPaintProperty(
     "path-casing",
     "line-opacity",
-    pathCasingOpacity(["*", alpha, highlightFlat ? ["case", flat, 0.8, 1] : 1]),
+    pathCasingOpacity(alpha),
   );
   const scale: ExpressionSpecification = highlightFlat ? ["case", flat, 1.5, 1] : ["literal", 1];
   map.setPaintProperty("path-grades", "line-width", pathWidth(scale));
@@ -637,10 +611,13 @@ interface Options {
 
 export function startPaths(
   map: Map,
-  stops: ColorStop[],
+  slopeStops: ColorStop[],
   config: PathConfig,
   options: Options,
 ): PathControls {
+  const stops = slopeStops.map((stop) =>
+    stop.percent <= 2 ? { ...stop, color: neutralPathColor } : stop,
+  );
   const status = element("path-status");
   const panel = element("path-inspection");
   const reverse = element<HTMLInputElement>("path-reverse");
@@ -1002,6 +979,7 @@ export function startPaths(
         : "Compare path steepness. Click a path to inspect its profile.";
     renderDistanceLegend(maximumKm);
     const gradeColor: ExpressionSpecification = gradientExpression(stops);
+    map.setPaintProperty("path-casing", "line-color", distance ? "#fffdf5" : "#a6a6a6");
     map.setPaintProperty(
       "path-grades",
       "line-color",
@@ -1017,10 +995,10 @@ export function startPaths(
     updateLegendVisibility();
     element("metric-note").textContent = distance
       ? "Shortest legal network distance from the snapped start to each interval midpoint. Turbo colors mark 0.5 km bands (0–0.5, 0.5–1 km, and so on), from purple through blue, green, and yellow to red across the forward distance budget. The final band may be shorter. Gray: beyond budget, excluded, unreachable, or distance unavailable. Terrain uncertainty remains in inspection."
-      : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use 80% opacity and thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
+      : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
     flatter.disabled = distance;
     flatThreshold.disabled = distance;
-    applyPathEmphasis(map, highlightFlat, threshold, distance);
+    applyPathEmphasis(map, highlightFlat, threshold);
     if (options.state.mode === "plan") map.setPaintProperty("path-grades", "line-opacity", 0.4);
   }
   function updateLegendVisibility(): void {
