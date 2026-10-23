@@ -13,6 +13,8 @@ from runmap.paths.database import SELECTION, query_segment_record
 from runmap.paths.exploration import DistanceData, Snap, distance_data
 from runmap.paths.local_network import load_local_network
 from runmap.routing.deadlines import check_deadline
+from runmap.routing.numeric_exploration import NumericDistanceData
+from runmap.routing.numeric_search import numeric_distances
 from runmap.routing.geometry import projected_points
 from runmap.routing.profiles import exploration_profile
 from runmap.routing.search import GraphData
@@ -42,9 +44,20 @@ class LocalExploration:
     retries: int
 
 
+@dataclass(frozen=True)
+class NumericExploration:
+    distances: NumericDistanceData
+    bounds: Bounds
+    retries: int
+    nodes: int
+    segments: int
+    chunks: int
+    buffer_bytes: int
+
+
 def prepare_local_exploration(data: SQLitePathData, snap: Snap, budget_km: float,
                                surface: str, avoid_stairs: bool, deadline: float,
-                               limits: ExplorationLimits) -> LocalExploration:
+                               limits: ExplorationLimits) -> LocalExploration | NumericExploration:
     if not math.isfinite(budget_km) or not 0 < budget_km <= 50:
         raise ValueError("Budget must be greater than zero and at most 50 km")
     check_deadline(deadline)
@@ -54,8 +67,9 @@ def prepare_local_exploration(data: SQLitePathData, snap: Snap, budget_km: float
         segment = query_segment_record(connection, snap.segment_id)
         bounds = exploration_bounds(projected_points(segment["geometry"]), budget_km * 1000,
                                      data.metadata.distance_scale)
-        return _search_windows(connection, snap, budget_km * 1000, profile,
-                                bounds, deadline, limits)
+        if data.numeric is None:
+            return _search_windows(connection, snap, budget_km * 1000, profile, bounds, deadline, limits)
+        return _search_numeric_windows(data, connection, snap, budget_km * 1000, profile, bounds, deadline, limits)
 
 
 def exploration_bounds(points: list[tuple[float, float]], budget_m: float, distance_scale: float) -> Bounds:
@@ -88,6 +102,27 @@ def _search_windows(connection: sqlite3.Connection, snap: Snap, maximum_m: float
         dx, dy = (east - west) / 2, (north - south) / 2
         bounds = west - dx, south - dy, east + dx, north + dy
         del local, distances
+    raise AssertionError("Exploration retry loop did not run")
+
+
+def _search_numeric_windows(data: SQLitePathData, connection: sqlite3.Connection, snap: Snap, maximum_m: float,
+                            profile: EdgeProfile, bounds: Bounds, deadline: float,
+                            limits: ExplorationLimits) -> NumericExploration:
+    assert data.numeric is not None
+    for retry in range(limits.max_retries + 1):
+        check_deadline(deadline)
+        _check_window(connection, bounds, retry, limits)
+        graph, start = data.numeric.prepare_start(bounds, snap, deadline)
+        outward = numeric_distances(graph, start, maximum_m, profile=profile, deadline=deadline)
+        if not len(outward.frontier_node_ids):
+            return NumericExploration(NumericDistanceData(snap, maximum_m, outward), bounds, retry,
+                graph.native.node_count, graph.native.segment_count, graph.chunk_count, graph.buffer_bytes)
+        if retry == limits.max_retries:
+            raise ExplorationAreaError("unloaded_connections", bounds, retry)
+        west, south, east, north = bounds
+        dx, dy = (east-west)/2, (north-south)/2
+        bounds = west-dx, south-dy, east+dx, north+dy
+        del graph, outward
     raise AssertionError("Exploration retry loop did not run")
 
 

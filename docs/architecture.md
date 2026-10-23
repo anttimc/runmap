@@ -239,6 +239,12 @@ existing byte-bounded TTL/LRU cache.
 Viewport and static tile queries use projected interval envelopes plus persisted
 policy data; application geometry checks, styling, coalescing, and MVT encoding
 retain their existing semantics. Viewport iteration stops at the feature limit.
+Tiles first collect ordered interval IDs in a packed integer buffer, then fetch
+at most 512 records per connection lease. Styling, interval-state calculation,
+coalescing, and MVT encoding run outside those leases, allowing concurrent tiles
+to share the bounded pool. Tiles use the saved coverage flags. Large low-zoom
+tiles can still take seconds to encode; batching prevents that CPU work from
+monopolizing database connections.
 Inspection reads one segment and its ordered samples by ID. Snapping queries a
 projected radius box and refines distances in Python, retaining hidden building
 access as legal snap candidates. Inspection/snap calculations are shared with the
@@ -263,22 +269,31 @@ coverage. Preparation timeout returns HTTP 504. Exclusive connection leases boun
 concurrent local preparation; lease waiting, SQLite progress callbacks, packing
 checks, and Dijkstra share the preparation deadline.
 
-Each exploration snapshot retains its local routing graph and sealed distance
-buffers together. Recursive storage accounting charges packed buffer owners, ID
-maps, policy data, and distance buffers once per snapshot; byte/TTL eviction
-releases cache ownership of both. Identical pending preparations coalesce before
-graph loading, and waiting callers retain their own deadlines. Snapshot keys
-include prepared feature identity, policy, snapped segment/offset, and budget.
-Distances are never reused across independently loaded graph orderings. Static
-and snapshot tiles query display intervals from SQLite; an eligible interval
-outside the complete local search area is beyond budget. Source-coverage flags,
-policy exclusions, styling, inspection direction, and tile LOD retain reference
-semantics. Direct exploration and start-distance inspection share the same
-snapshot cache. These operations need no source JSON.
+With a matching numeric artifact, exploration uses the same immutable chunk
+buffers, native graph index, and per-artifact LRU cache as run planning. Native
+forward Dijkstra returns sparse reached-node IDs and distances, independent of
+native graph ordering and buffer lifetime. Snapshots retain these sealed result
+bytes and search metadata; they do not retain graph chunks, per-edge Python
+records, or native graph owners. Recursive storage accounting charges distance
+buffer owners once per snapshot. Closing or evicting the graph cache leaves
+existing snapshots usable. Byte/TTL snapshot eviction releases result ownership.
+The reference backend retains its local graph and sealed distance buffers together.
+
+Identical pending preparations coalesce before graph loading, and waiting callers
+retain their own deadlines. Snapshot keys include prepared feature identity,
+algorithm version, policy, snapped segment/offset, and budget. Static and snapshot
+tiles query display intervals from SQLite. Numeric snapshot queries also select
+persisted numeric endpoint identities and physical segment length, resolving
+point distances and whole-interval inclusion using sparse distance lookups plus
+the virtual start anchor. No graph or measurement sidecar is reconstructed.
+Source-coverage flags, policy exclusions, styling, inspection direction, and tile
+LOD retain reference semantics. Direct exploration and start-distance inspection
+share the same snapshot cache. These operations need no source JSON.
 
 SQLite run planning snaps both endpoints using indexed interval queries and
-starts with their EPSG:3067 box expanded by 50% total in each dimension (25% per
-side), floored to 1,000 m width and height by default. The viewport does not
+starts with an EPSG:3067 square centred at their midpoint, enclosing the circle
+whose diameter is their straight-line separation enlarged by 50%. The square's
+side is floored to 1,000 m by default. The viewport does not
 determine legality. Each attempt loads complete local topology and persisted
 directional hill features in the same dense ordering, without loading raw
 measurement arrays. Preference capabilities and configuration retain dataset-wide
@@ -293,7 +308,7 @@ a new numeric working set; chunks are not yet shared between different bounds.
 The renderer reads only selected physical segment records and produces the same
 API response schema. Equal-cost ties use numeric identities and can select a
 different equivalent route. Without a numeric artifact the reference SQLite
-planner remains available. Distance exploration currently uses the reference path.
+planner remains available. Distance exploration uses the same numeric graph service.
 
 Run planning retries when a candidate search reaches an unloaded connection,
 when any candidate geometry enters the query-boundary band, or when an incomplete
@@ -362,7 +377,8 @@ bounded search results. Interval states, midpoint distances, and boundary flags
 are calculated only for the spatial candidates of requested buffered tiles.
 Navigation and tile variants reuse the same search; encoded tiles are cached.
 Snapshot memory accounting charges the shared immutable distance buffers to each
-entry conservatively; SQLite entries also charge their owned local graph.
+entry conservatively; reference SQLite entries also charge their owned local graph,
+while numeric SQLite snapshots charge only their independent sparse distances.
 Creating a snapshot does not copy search results. Snapshots and tiles have
 byte-bounded TTL/LRU caches. Expired snapshots return 410; the client recreates
 once. Use one API worker until snapshots can be shared or reconstructed.

@@ -179,14 +179,18 @@ zero-width reverse-path shortcut. Native-versus-reference validation therefore
 compares legality, costs, spans, and observations rather than requiring every
 equal-cost arc sequence to match.
 
-The run-planning HTTP endpoint uses this layer when a matching artifact is
+Run planning and distance-exploration HTTP endpoints use this layer when a matching artifact is
 available. It preserves validation, working-area limits, expansion, and response
 rendering, and caches immutable graphs in a byte-accounted LRU per artifact
 lifetime. API endpoint overlays pass snapped projected coordinates as well as
 chainage so shape integration uses the reference endpoint geometry. The graph
 still loads all selected BLOBs, including hill arrays, before traversal. Different
-bounds do not share retained chunks yet; distance exploration and snapshot
-integration remain pending. See [API setup](development.md#export-a-sqlite-network-dataset)
+bounds do not share retained chunks yet. Exploration snapshots retain only sparse
+reached-node IDs/distances; numeric endpoint metadata for visible intervals is
+queried on demand from the source database. Their byte/TTL budget excludes graph
+owners because snapshot result bytes remain valid independently of graph-cache
+eviction or shutdown. Profiles, partial starts, whole-interval inclusion, and
+frontier expansion retain reference semantics. See [API setup](development.md#export-a-sqlite-network-dataset)
 and [complete request timings](100ms-routing-architecture.md).
 
 ```sh

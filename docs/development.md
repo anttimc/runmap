@@ -141,7 +141,7 @@ benchmarks and the anchor baseline. To run the app with that smaller graph, set
 
 ### Export a SQLite network dataset
 
-Run planning uses the [numeric routing artifact](numeric-routing-format.md) when
+Run planning and distance exploration use the [numeric routing artifact](numeric-routing-format.md) when
 `numeric-routing-v2.sqlite` is present beside `network.sqlite`, or when
 `RUNMAP_NUMERIC_DATABASE` names it explicitly. Export it once from the matching
 prepared network, then restart the API:
@@ -154,8 +154,8 @@ uv run python -m runmap.cli paths export-numeric \
 
 Startup validates metadata without loading graph chunks. A mismatched or explicitly
 configured missing artifact fails startup; re-export after replacing the source
-network. Without a numeric artifact, planning uses the existing local SQLite
-backend. Distance exploration still uses that backend.
+network. Without a numeric artifact, both use the existing local SQLite backend.
+Existing version-2 numeric artifacts work without re-export.
 
 `RUNMAP_NUMERIC_CACHE_BYTES` defaults to 134217728 (128 MiB) per API process.
 The LRU retains immutable graphs for exact working-area bounds, including their
@@ -170,7 +170,12 @@ request costs and overlays are never cached.
 Changing working areas or expanding a window currently builds a new native index
 and rereads its selected BLOBs. Chunks are not yet reused between different bounds.
 No full graph is loaded at startup, and no per-edge Python graph is constructed
-on the numeric planning path. Only selected route segments are decoded for output.
+on the numeric search path. Only selected route segments are decoded for run
+output. Exploration snapshots retain sparse reached-node IDs and distances,
+independent of the graph cache. Display and inspection queries read numeric
+endpoint IDs alongside the requested intervals, without a Python routing graph.
+The snapshot byte/TTL budget charges these independent buffers; graph-cache
+eviction does not invalidate a snapshot.
 
 The storage layer can convert an existing prepared graph without new
 downloads or SpatiaLite:
@@ -247,20 +252,21 @@ Once the database is selected, every path endpoint works without the original
 graph JSON or measurement sidecar. Startup reads metadata only; exploration and
 run planning load bounded local graphs. Planning also loads saved hill features
 for the selected segments, without raw measurement arrays. Snapshots
-own their graph ordering and distance buffers under the configured byte/TTL limit;
+retain distance buffers under the configured byte/TTL limit;
 the viewport does not determine search legality.
 Topology is persisted in spatial chunks grouped by 1 km cells, with at most 256
 complete segments per chunk. Each chunk includes endpoint records, directed arcs,
 and global endpoint incidence counts. An R-tree indexes the full segment envelopes,
 so long segments crossing a request window are retained even when their endpoints
 and owning cell are outside it. Run planning and distance exploration share the
-same chunk loader. Requests decode candidate chunks one at a time, filter to the
-exact segment envelopes, and assemble a dense local graph index.
+same chunk loader within each backend. Numeric requests pass immutable binary
+buffers directly to native indexing and traversal. The reference backend decodes
+candidate JSON chunks one at a time and assembles a local Python graph.
 Global incidence counts distinguish unloaded connections from true dead ends.
 Prepared policies and hills remain in the indexed feature tables. Local requests
 read only their selected policy and omit the unused saved projected geometry.
-Run planning skips hill feature loading when the hill preference is off; distance
-exploration always skips it. Run coverage checks inspect candidate route segments
+The reference backend skips hill feature loading when unused. Numeric buffers
+currently include hill arrays, but distance exploration does not evaluate them. Run coverage checks inspect candidate route segments
 rather than every segment in each attempted window.
 
 Restart after changing the selected dataset. A missing database leaves path services
@@ -289,8 +295,9 @@ for planner area expansion.
 Add `--explore-budget-km 3` to compare exploration preparation, viewport inclusion,
 and snapshot distance tiles in the SQLite/JSON reader subprocesses. The probe
 checks output hashes, includes reader RSS, and reports selected local graph size
-and snapshot cache ownership. SQLite preparation includes loading its local graph;
-JSON preparation follows whole-dataset initialization and static-delivery work.
+and snapshot cache ownership. SQLite preparation includes loading its bounded working set; numeric snapshots
+retain only sparse distances. Warm samples in this delivery probe reuse the
+snapshot cache. JSON preparation follows whole-dataset initialization and static-delivery work.
 Those startup costs are reported separately. See the
 [exploration report](archive/history/47-sqlite-exploration.md).
 
@@ -302,8 +309,16 @@ return HTTP 504; busy connection leases return HTTP 503. SQL progress handlers
 and lease waits share the preparation deadline. Source-coverage flags remain
 separate from unloaded local connections.
 
-SQLite run planning starts with the snapped endpoints' box enlarged by 50% in
-each dimension, with a configurable 1,000 m minimum width/height. It doubles both
+Tile reads select ordered interval IDs, fetch records in batches of 512, and
+release the connection before processing each batch. Parallel map tiles can
+share the pool while interval styling and MVT encoding run. This prevents slow
+tile processing from holding database leases through the five-second wait limit;
+it does not set a latency bound for large low-zoom tile output.
+
+SQLite run planning starts with a square centred at the snapped endpoints'
+midpoint. Its side is 1.5 times their straight-line EPSG:3067 distance, enclosing
+the endpoint-diameter circle with 50% margin, with a configurable 1,000 m minimum
+side length. It doubles both
 dimensions when a candidate reaches the boundary band, search visits an unloaded
 frontier, or an incomplete assignment leaves unloaded connections. The boundary
 band is `max(RUNMAP_RUN_BOUNDARY_MARGIN_M, 5% of the shorter box dimension)`.

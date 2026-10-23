@@ -18,16 +18,17 @@ from shapely import transform
 
 from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, display_segment_reason, exploration_context, path_policy_index
 from runmap.api.sqlite_data import SQLitePathData
-from runmap.api.sqlite_exploration import (ExplorationLimits, LocalExploration,
+from runmap.api.sqlite_exploration import (ExplorationLimits, LocalExploration, NumericExploration,
                                           prepare_local_exploration, retained_exploration_bytes)
 from runmap.paths.display import measurement_quality
 from runmap.routing.types import MeasurementLocation
 from runmap.routing.profiles import exploration_profile
 from runmap.paths.dead_ends import ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M
 from runmap.paths.exploration import DistanceData, Snap, segment_reason
+from runmap.routing.numeric_exploration import NumericDistanceData
 
 RENDER_VERSION = 3
-ALGORITHM_VERSION = 4
+ALGORITHM_VERSION = 5
 MIN_ZOOM = 10
 MAX_ZOOM = 16
 EXTENT = 4096
@@ -105,14 +106,14 @@ class ByteCache(Generic[T]):
 @dataclass(frozen=True)
 class Snapshot:
     id: str
-    distances: DistanceData
+    distances: DistanceData | NumericDistanceData
     budget_km: float
     policy: str
     expires_at: float
     preparation_ms: float
     routing_ms: float
     retained_bytes: int
-    local: LocalExploration | None = None
+    local: LocalExploration | NumericExploration | None = None
 
 
 def snapshot_distances(distances: DistanceData) -> tuple[DistanceData, int]:

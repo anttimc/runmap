@@ -1,10 +1,10 @@
 # Routing toward a 100 ms request budget
 
-Status: run planning now uses native numeric traversal when a matching numeric
+Status: run planning and distance exploration use native numeric traversal when a matching numeric
 artifact is available. The API preserves snapping, costs, response fields,
 request deadlines, and automatic window expansion. Immutable working sets have
-a bounded LRU cache. Distance exploration integration and chunk reuse between
-different working areas remain outstanding. See the
+a bounded LRU cache. Exploration snapshots retain sparse distance buffers.
+Chunk reuse between different working areas remains outstanding. See the
 [numeric format and benchmark commands](numeric-routing-format.md).
 
 The representative Leppävaara API request, including all three window attempts,
@@ -64,6 +64,38 @@ uv run python -m runmap.experiments.benchmark_run_latency \
 The benchmark's `--max-segments` and `--max-retries` flags override only that
 benchmark. The server uses its defaults or the `RUNMAP_RUN_MAX_SEGMENTS` and
 `RUNMAP_RUN_MAX_RETRIES` environment overrides.
+
+## Native distance-exploration integration
+
+Snapshot preparation, viewport highlighting, start-distance inspection, and
+snapshot tiles now use numeric exploration when a matching artifact is present.
+The source database and version-2 numeric artifact need no format migration.
+Snapshot outputs retain only immutable reached-node IDs/distances and metadata,
+so a graph-cache eviction or shutdown does not invalidate them. The existing
+50,000-segment exploration cap, two retries, 2,500 km² area cap, and preparation
+deadline are unchanged.
+
+At Leppävaara start `(24.795, 60.216)`, fresh snapshot preparations reusing native
+graphs had these observations (five repeated samples, no snapshot-cache hits):
+
+| Forward budget | First preparation | Repeated preparation median | Native search median | Snapshot bytes |
+| --- | ---: | ---: | ---: | ---: |
+| 0.5 km | 91 ms | 2.5 ms | 0.11 ms | 9,788 |
+| 1 km | 41 ms | 4.6 ms | 0.38 ms | 39,100 |
+| 2 km | 195 ms | 10 ms | 1.22 ms | 135,836 |
+
+OS caches were uncontrolled, and the samples ran sequentially in one worker.
+These are snapshot-preparation timings, excluding map delivery/encoding and HTTP
+transport. A separate real-data comparison across 1,501 displayed intervals at
+1 km matched all geometry, inclusion states, directional minima, and point
+distances exactly. Native snapshot ownership was about 39 KB versus 6.7 MB for
+the reference snapshot. That comparison's combined snapshot and viewport times
+were 149 ms and 458 ms, respectively (single observations).
+
+A larger 27,487-interval GeoJSON viewport produced roughly 21–22 MB of JSON and
+took 0.6–1.4 seconds to generate in the same probe. Fast search does not establish
+a corresponding latency bound for arbitrarily large display output. The normal
+snapshot-tile path and display limits remain available.
 
 ## Observed limits
 

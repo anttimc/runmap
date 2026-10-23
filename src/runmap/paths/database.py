@@ -1,7 +1,10 @@
 """Prepared SQLite network windows; geometry processing stays in Python."""
 
+from __future__ import annotations
+
 from contextlib import closing
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
+from array import array
 from dataclasses import asdict, dataclass
 import hashlib
 import json
@@ -16,10 +19,10 @@ from runmap.paths.coverage import Coverage, geometry_bounds
 from runmap.paths.graph_chunks import query_graph_chunks, write_graph_chunks
 from runmap.paths.database_features import (create_feature_schema, read_display_intervals,
                                            read_segment_features, write_prepared_features, iter_display_intervals,
-                                           decode_classification)
+                                           decode_classification, display_interval_ids, iter_display_intervals_by_ids)
 from runmap.paths.measurements import graph_digest, segment_measurements
 from runmap.paths.preparation import (PreparedDisplayInterval, PreparedModels, PreparedNetwork,
-                                      PreparedSegment, PreparedPolicy, prepare_network, prepared_models)
+                                      PreparedSegment, PreparedPolicy, PreparedEndpoints, prepare_network, prepared_models)
 from runmap.paths.dead_ends import Classification
 from runmap.routing.geometry import indexed_segment_points
 from runmap.routing.hill_types import HillModel
@@ -338,8 +341,30 @@ def dataset_presentation(connection: sqlite3.Connection) -> DatasetPresentation:
 
 
 def iter_query_display_intervals(connection: sqlite3.Connection, bounds: Bounds, policy_id: str,
-                                 *, hide_building_access: bool = True) -> Iterator[PreparedDisplayInterval]:
-    return iter_display_intervals(connection, _query_parameters(bounds), hide_building_access, policy_id)
+                                 *, hide_building_access: bool = True,
+                                 include_endpoints: bool = False) -> Iterator[PreparedDisplayInterval]:
+    return iter_display_intervals(connection, _query_parameters(bounds), hide_building_access, policy_id,
+                                  include_endpoints=include_endpoints)
+
+
+def query_display_interval_ids(connection: sqlite3.Connection, bounds: Bounds, *,
+                                hide_building_access: bool = True) -> array[int]:
+    return display_interval_ids(connection, _query_parameters(bounds), hide_building_access)
+
+
+def query_display_interval_batch(connection: sqlite3.Connection, numbers: Sequence[int], policy_id: str, *,
+                                 include_endpoints: bool = False) -> tuple[PreparedDisplayInterval, ...]:
+    return tuple(iter_display_intervals_by_ids(connection, numbers, policy_id, include_endpoints=include_endpoints))
+
+
+def query_segment_endpoints(connection: sqlite3.Connection, segment_id: str) -> PreparedEndpoints:
+    row = connection.execute("""
+        SELECT n1.rowid, n2.rowid, json_extract(s.payload, '$.length_m') FROM segments s
+        JOIN nodes n1 ON n1.id = s.source JOIN nodes n2 ON n2.id = s.target WHERE s.id = ?
+    """, (segment_id,)).fetchone()
+    if row is None:
+        raise KeyError(segment_id)
+    return PreparedEndpoints(row[0], row[1], row[2])
 
 
 def query_segment_inspection(connection: sqlite3.Connection, segment_id: str, policy_id: str) -> SegmentInspection:

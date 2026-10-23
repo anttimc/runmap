@@ -42,8 +42,11 @@ The exporter, prepared-feature persistence, and local-network readers are implem
 `paths/database.py`; see [architecture](architecture.md#sqlite-storage-foundation)
 and [export instructions](development.md#export-a-sqlite-network-dataset).
 The API supports selective SQLite config, static tiles, inspection, and snapping.
-Exploration, snapshots, and start-distance inspection use bounded local graphs.
-Run planning uses expanding local graphs with persisted hill features. The
+Exploration and run planning use native traversal over bounded numeric working
+sets when a matching artifact is present, with the local Python graph backend
+retained for compatibility. Numeric exploration snapshots retain independent
+sparse distances instead of graph owners. Run planning uses expanding windows
+with persisted hill features. Chunk reuse between different bounds remains open. The
 full-JSON compatibility bridge is removed; selected SQLite deployments require
 no source graph or measurement JSON at runtime. Without a selected database,
 the existing JSON loader remains available for import/debug/reference use.
@@ -57,13 +60,15 @@ coverage bands are separate markers. See the [local-network probe](archive/histo
 Bounded exploration uses the complete snapped segment's envelope plus the forward
 distance budget divided by the global endpoint-distance scale. Reached frontiers
 trigger retries under area, segment-count, and deadline limits. Preparation uses
-connection leases to bound concurrency, skips terrain loading, and charges both
-the local graph and its distance buffers to the snapshot cache. See the
+connection leases to bound concurrency. The reference backend skips terrain loading
+and charges its local graph and distances to the snapshot cache; numeric snapshots
+retain only sparse distances, with chunk ownership charged to the graph cache. See the
 [exploration report](archive/history/47-sqlite-exploration.md).
 
-Run planning starts with the endpoints' EPSG:3067 box enlarged by 50% in total
-width and height (25% per side), with a configurable 1,000 m minimum in each
-dimension. Search visits to unloaded frontier nodes, candidate geometry in the
+Run planning starts with an EPSG:3067 square centred at the endpoints' midpoint,
+enclosing their endpoint-diameter circle enlarged by 50%. Its side is 1.5 times
+their straight-line separation, with a configurable 1,000 m minimum.
+Search visits to unloaded frontier nodes, candidate geometry in the
 boundary band, or incomplete assignments with unloaded connections trigger box
 doubling. The proximity band is the greater of 100 m and 5% of the shorter box
 dimension. Defaults allow five retries, 2,500 km² area, and 650,000 selected

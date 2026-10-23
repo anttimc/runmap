@@ -1,7 +1,10 @@
 """SQLite persistence for globally prepared display and routing features."""
 
+from __future__ import annotations
+
 from dataclasses import asdict
-from collections.abc import Iterator
+from array import array
+from collections.abc import Iterator, Sequence
 import json
 import sqlite3
 from typing import cast
@@ -10,7 +13,7 @@ from runmap.paths.coverage import geometry_bounds, near_coverage_boundary
 from runmap.paths.dead_ends import Classification
 from runmap.paths.flat import measurement_flat_thresholds
 from runmap.paths.measurements import segment_measurements
-from runmap.paths.preparation import (PreparedDisplayInterval, PreparedNetwork, PreparedPolicy,
+from runmap.paths.preparation import (PreparedDisplayInterval, PreparedEndpoints, PreparedNetwork, PreparedPolicy,
                                       PreparedSegment, prepared_models)
 from runmap.routing.geometry import indexed_node_point, indexed_segment_points, projected_points
 from runmap.routing.hill_types import HillData, HillFeatures, HillInterval
@@ -172,20 +175,55 @@ def read_display_intervals(connection: sqlite3.Connection, parameters: dict[str,
     return tuple(iter_display_intervals(connection, parameters, hide_building_access, policy_id))
 
 
-def iter_display_intervals(connection: sqlite3.Connection, parameters: dict[str, float],
-                           hide_building_access: bool, policy_id: str | None = None) -> Iterator[PreparedDisplayInterval]:
-    for row in connection.execute("""
-        SELECT m.payload, f.surface_class, d.flat_min_grade_50m, d.coverage_limited, f.building_access,
-               p.forward, p.backward, p.reason
-        FROM interval_bounds b JOIN display_intervals d ON d.number = b.number
+def display_interval_ids(connection: sqlite3.Connection, parameters: dict[str, float],
+                         hide_building_access: bool) -> array[int]:
+    rows = connection.execute("""
+        SELECT d.number FROM interval_bounds b JOIN display_intervals d ON d.number = b.number
         JOIN measurements m ON m.number = d.number
         JOIN segment_features f ON f.segment_id = m.segment_id
-        LEFT JOIN segment_policies p ON p.segment_id = m.segment_id AND p.policy_id = :policy
         WHERE b.west <= :east AND b.east >= :west AND b.south <= :north AND b.north >= :south
+          AND (:hide = 0 OR f.building_access IS NULL) ORDER BY d.number
+    """, {**parameters, "hide": int(hide_building_access)})
+    return array("q", (row[0] for row in rows))
+
+
+def iter_display_intervals(connection: sqlite3.Connection, parameters: dict[str, float],
+                           hide_building_access: bool, policy_id: str | None = None, *,
+                           include_endpoints: bool = False) -> Iterator[PreparedDisplayInterval]:
+    selection = """JOIN interval_bounds b ON b.number = d.number
+        WHERE b.west <= :east AND b.east >= :west AND b.south <= :north AND b.north >= :south"""
+    return _display_intervals(connection, selection, dict(parameters), hide_building_access, policy_id,
+                              include_endpoints)
+
+
+def iter_display_intervals_by_ids(connection: sqlite3.Connection, numbers: Sequence[int],
+                                  policy_id: str, *, include_endpoints: bool = False
+                                  ) -> Iterator[PreparedDisplayInterval]:
+    if not numbers:
+        return iter(())
+    parameters = {f"number_{i}": number for i, number in enumerate(numbers)}
+    selection = "WHERE d.number IN (" + ",".join(f":{key}" for key in parameters) + ")"
+    return _display_intervals(connection, selection, dict(parameters), False, policy_id, include_endpoints)
+
+
+def _display_intervals(connection: sqlite3.Connection, selection: str,
+                       parameters: dict[str, float | int | str | None], hide_building_access: bool,
+                       policy_id: str | None, include_endpoints: bool) -> Iterator[PreparedDisplayInterval]:
+    columns = ", n1.rowid, n2.rowid, json_extract(s.payload, '$.length_m')" if include_endpoints else ""
+    joins = ("JOIN segments s ON s.id = m.segment_id JOIN nodes n1 ON n1.id = s.source "
+             "JOIN nodes n2 ON n2.id = s.target") if include_endpoints else ""
+    for row in connection.execute(f"""
+        SELECT m.payload, f.surface_class, d.flat_min_grade_50m, d.coverage_limited, f.building_access,
+               p.forward, p.backward, p.reason {columns}
+        FROM display_intervals d JOIN measurements m ON m.number = d.number
+        JOIN segment_features f ON f.segment_id = m.segment_id
+        LEFT JOIN segment_policies p ON p.segment_id = m.segment_id AND p.policy_id = :policy
+        {joins} {selection}
           AND (:hide = 0 OR f.building_access IS NULL) ORDER BY d.number
     """, {**parameters, "hide": int(hide_building_access), "policy": policy_id}):
         policy = PreparedPolicy(policy_id, bool(row[5]), bool(row[6]), row[7]) if policy_id is not None else None
         if policy_id is not None and row[5] is None:
             raise ValueError("Unknown prepared path policy")
         yield PreparedDisplayInterval(cast(Measurement, json.loads(row[0])), row[1], row[2],
-                                      bool(row[3]), decode_classification(row[4]), policy)
+                                      bool(row[3]), decode_classification(row[4]), policy,
+                                      PreparedEndpoints(row[8], row[9], row[10]) if include_endpoints else None)

@@ -93,12 +93,12 @@ def _snap(data: SQLitePathData, options: RunRequest, home: bool, deadline: float
 
 
 def initial_run_bounds(points: list[tuple[float, float]], minimum_dimension_m: float) -> Bounds:
-    """Expand the endpoint box by 50% total in each dimension, with a metric floor."""
+    """Bound the endpoint-diameter circle with 50% margin and a metric floor."""
     xs, ys = zip(*points)
     x, y = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
-    dx = max((max(xs) - min(xs)) * 1.5, minimum_dimension_m) / 2
-    dy = max((max(ys) - min(ys)) * 1.5, minimum_dimension_m) / 2
-    return x - dx, y - dy, x + dx, y + dy
+    half_side = max(math.hypot(max(xs) - min(xs), max(ys) - min(ys)) * 1.5,
+                    minimum_dimension_m) / 2
+    return x - half_side, y - half_side, x + half_side, y + half_side
 
 
 def _plan_windows(data: SQLitePathData, options: RunRequest, response: RunResponse, settings: RunSettings,

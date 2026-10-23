@@ -16,6 +16,7 @@ from runmap.api.paths import (PathData, explore_paths, inspect_path, load_path_d
                               snap_path_start, viewport_paths)
 from runmap.api.path_tiles import PathTileService, projected_point
 from runmap.api.sqlite_data import SQLitePathData
+from runmap.api.sqlite_exploration import NumericExploration
 from runmap.api.sqlite_paths import (database_explore, database_inspection, database_path_config,
                                     database_snap, database_viewport)
 from runmap.routing.types import Bounds
@@ -106,8 +107,14 @@ def _probe_exploration(data: PathData | SQLitePathData, bounds: Bounds, budget_k
         report["tile_sha256"] = sha256(tile).hexdigest()
         report["snapshot_bytes"] = snapshot.retained_bytes
         if snapshot.local is not None:
-            report["local_nodes"] = len(snapshot.local.routing.nodes)
-            report["local_segments"] = len(snapshot.local.routing.segments)
+            if isinstance(snapshot.local, NumericExploration):
+                report["local_nodes"] = snapshot.local.nodes
+                report["local_segments"] = snapshot.local.segments
+                report["routing_backend"] = "numeric"
+            else:
+                report["local_nodes"] = len(snapshot.local.routing.nodes)
+                report["local_segments"] = len(snapshot.local.routing.segments)
+                report["routing_backend"] = "reference"
             report["search_bounds_epsg3067"] = snapshot.local.bounds
             report["search_retries"] = snapshot.local.retries
     return report

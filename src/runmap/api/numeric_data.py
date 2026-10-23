@@ -33,6 +33,16 @@ class NumericRoutingData:
 
     def prepare(self, bounds: Bounds, snaps: tuple[Snap, Snap], deadline: float
                 ) -> tuple[LoadedNumericGraph, NumericEndpoint, NumericEndpoint]:
+        graph, endpoints = self._prepare(bounds, snaps, deadline)
+        return graph, endpoints[0], endpoints[1]
+
+    def prepare_start(self, bounds: Bounds, snap: Snap, deadline: float
+                      ) -> tuple[LoadedNumericGraph, NumericEndpoint]:
+        graph, endpoints = self._prepare(bounds, (snap,), deadline)
+        return graph, endpoints[0]
+
+    def _prepare(self, bounds: Bounds, snaps: tuple[Snap, ...], deadline: float
+                 ) -> tuple[LoadedNumericGraph, tuple[NumericEndpoint, ...]]:
         if not self.lock.acquire(timeout=max(0, deadline - monotonic())):
             raise TimeoutError("Numeric graph preparation deadline")
         try:
@@ -41,7 +51,7 @@ class NumericRoutingData:
             cached = self.graphs.get(bounds)
             if cached is not None:
                 self.graphs.move_to_end(bounds)
-                return cached[0], endpoints[0], endpoints[1]
+                return cached[0], endpoints
             self.connection.set_progress_handler(lambda: int(monotonic() >= deadline), 1000)
             try:
                 graph = load_numeric_graph(self.connection, bounds, deadline=deadline)
@@ -58,7 +68,7 @@ class NumericRoutingData:
             if size <= self.cache_bytes:
                 self.graphs[bounds] = graph, size
                 self.resident_bytes += size
-            return graph, endpoints[0], endpoints[1]
+            return graph, endpoints
         finally:
             self.lock.release()
 

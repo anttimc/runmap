@@ -117,8 +117,8 @@ class SQLiteRunTests(unittest.TestCase):
             result = generate_database_run(data, options)
         self.assertEqual(result.status, "complete")
         self.assertEqual(result.candidates, reference.candidates)
-        self.assertEqual(result.search.retries, 2)
-        self.assertEqual(len(result.search.attempts), 3)
+        self.assertEqual(result.search.retries, 1)
+        self.assertEqual(len(result.search.attempts), 2)
         self.assertTrue(result.search.attempts[0].reached_frontier)
         self.assertEqual(result.search.attempts[-1].reason, "settled")
         self.assertEqual(len({call.args[4] for call in planner.call_args_list}), 1)
@@ -223,7 +223,9 @@ class SQLiteRunTests(unittest.TestCase):
         self.assertEqual(result.search.attempts[-1].reason, "deadline")
 
     def test_initial_box_and_limit_validation(self) -> None:
-        self.assertEqual(initial_run_bounds([(0, 0), (2000, 4000)], 1000), (-500, -1000, 2500, 5000))
+        self.assertEqual(initial_run_bounds([(0, 0), (3000, 4000)], 1000), (-2250, -1750, 5250, 5750))
+        self.assertEqual(initial_run_bounds([(0, 0), (4000, 0)], 1000), (-1000, -3000, 5000, 3000))
+        self.assertEqual(initial_run_bounds([(0, 0), (0, 4000)], 1000), (-3000, -1000, 3000, 5000))
         self.assertEqual(initial_run_bounds([(0, 0), (0, 1)], 1000), (-500, -499.5, 500, 500.5))
         data, _ = self.publish(detour_graph())
         for limits in (RunAreaLimits(max_segments=0), RunAreaLimits(max_area_km2=float("nan")),

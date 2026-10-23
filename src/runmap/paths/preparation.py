@@ -66,6 +66,13 @@ class PreparedSegment:
 
 
 @dataclass(frozen=True)
+class PreparedEndpoints:
+    source: int
+    target: int
+    length_m: float
+
+
+@dataclass(frozen=True)
 class PreparedDisplayInterval:
     measurement: Measurement
     surface_class: str
@@ -73,6 +80,7 @@ class PreparedDisplayInterval:
     coverage_limited: bool
     building_access: Classification | None
     policy: PreparedPolicy | None = None
+    endpoints: PreparedEndpoints | None = None
 
 
 def prepared_models(hill_model: HillModel | None) -> PreparedModels:
