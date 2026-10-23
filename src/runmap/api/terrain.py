@@ -18,9 +18,9 @@ from runmap.terrain.smoothing import PreparedThinPlateSmoother
 
 SLOPE_STOPS_PERCENT = np.array([0, 2, 5, 10, 20, 40], dtype=np.float64)
 SLOPE_COLORS = np.array([
-    [17, 24, 39],
-    [24, 61, 89],
-    [8, 127, 140],
+    [39, 39, 39],
+    [89, 89, 89],
+    [140, 140, 140],
     [244, 211, 94],
     [238, 150, 75],
     [209, 73, 91],

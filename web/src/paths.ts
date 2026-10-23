@@ -69,23 +69,20 @@ function renderDistanceLegend(maximumKm: number): void {
 
 function gradientOpacity(): ExpressionSpecification {
   return [
-    "interpolate",
-    ["linear"],
-    ["abs", ["coalesce", ["get", "grade_percent"], 0]],
-    0,
-    0.2,
-    2,
-    0.5,
-    5,
-    1,
+    "let",
+    "ratio",
+    ["min", 1, ["/", ["abs", ["coalesce", ["get", "grade_percent"], 0]], 15]],
+    [
+      "+",
+      0.2,
+      ["*", 0.8, ["var", "ratio"], ["var", "ratio"], ["-", 3, ["*", 2, ["var", "ratio"]]]],
+    ],
   ];
 }
 
 function gradientLegendColor(stop: ColorStop): string {
-  const opacity =
-    stop.percent <= 2
-      ? 0.2 + (0.3 * stop.percent) / 2
-      : Math.min(1, 0.5 + (0.5 * (stop.percent - 2)) / 3);
+  const ratio = Math.min(1, Math.max(0, stop.percent / 15));
+  const opacity = 0.2 + 0.8 * ratio * ratio * (3 - 2 * ratio);
   return `color-mix(in srgb, ${stop.color} ${100 * opacity}%, transparent)`;
 }
 
