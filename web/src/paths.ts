@@ -415,11 +415,7 @@ function pathCasingOpacity(opacity: ExpressionSpecification | number = 1): Expre
   return ["interpolate", ["linear"], ["zoom"], 13, 0, 14, opacity];
 }
 
-function applyPathEmphasis(
-  map: Map,
-  highlightFlat: boolean,
-  threshold: number,
-): void {
+function applyPathEmphasis(map: Map, highlightFlat: boolean, threshold: number): void {
   const alpha: ExpressionSpecification = [
     "case",
     ["==", ["get", "eligible"], false],
@@ -448,11 +444,7 @@ function applyPathEmphasis(
   for (const layer of ["path-uncertain", "path-stairs"])
     map.setPaintProperty(layer, "line-opacity", alpha);
   map.setPaintProperty("path-grades", "line-opacity", alpha);
-  map.setPaintProperty(
-    "path-casing",
-    "line-opacity",
-    pathCasingOpacity(alpha),
-  );
+  map.setPaintProperty("path-casing", "line-opacity", pathCasingOpacity(alpha));
   const scale: ExpressionSpecification = highlightFlat ? ["case", flat, 1.5, 1] : ["literal", 1];
   map.setPaintProperty("path-grades", "line-width", pathWidth(scale));
   map.setPaintProperty("path-casing", "line-width", pathWidth(scale, true));
@@ -688,6 +680,9 @@ export function startPaths(
   let inspectionAbort: AbortController | undefined;
   let viewportSequence = 0;
   let activeSource = "path-intervals";
+  let activeTemplate = config.tile_template
+    .replace("{policy}", "all-no-stairs")
+    .replace("{variant}", "gradient-hidden");
   let sourceGeneration = 0;
   let snapshotKey = "";
   let currentSnapshot: SnapshotResponse | undefined;
@@ -753,19 +748,20 @@ export function startPaths(
     return true;
   }
   function installTiles(template?: string): void {
+    const nextTemplate =
+      template ||
+      config.tile_template
+        .replace("{policy}", policy())
+        .replace("{variant}", "gradient-hidden")
+        .replace("{z}", "0")
+        .replace("{x}", "0")
+        .replace("{y}", "0");
+    if (nextTemplate === activeTemplate && !tileFailed) return;
     const oldSource = activeSource;
     activeSource = `path-tiles-${++sourceGeneration}`;
     map.addSource(activeSource, {
       type: "vector",
-      tiles: [
-        template ||
-          config.tile_template
-            .replace("{policy}", policy())
-            .replace("{variant}", "gradient-hidden")
-            .replace("{z}", "0")
-            .replace("{x}", "0")
-            .replace("{y}", "0"),
-      ],
+      tiles: [nextTemplate],
       bounds: config.bounds_wgs84,
       minzoom: config.tile_min_zoom,
       maxzoom: config.tile_max_zoom,
@@ -779,6 +775,7 @@ export function startPaths(
       map.addLayer({ ...layer, source: activeSource } as AddLayerObject, before);
     }
     map.removeSource(oldSource);
+    activeTemplate = nextTemplate;
     tileFailed = false;
   }
   function variant(): string {

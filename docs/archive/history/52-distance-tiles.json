@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-23",
+  "baseline_commit": "3d38515",
+  "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+  "feature_identity": "f3f52c96764f4107f33dccf94361d9bb13578f1057b7e02e91a518f775c01098",
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "rows": [
+    {
+      "zoom": 13,
+      "budget_km": 2,
+      "before_ms": 923.1611249851994,
+      "after_ms": 413.8939999975264,
+      "input_cache_warm": false,
+      "encoded_tile_cache_hit": false,
+      "equivalent": true,
+      "bytes": 349556,
+      "input_cache_bytes": 6921658
+    },
+    {
+      "zoom": 13,
+      "budget_km": 3,
+      "before_ms": 512.217499956023,
+      "after_ms": 178.02583397133276,
+      "input_cache_warm": true,
+      "encoded_tile_cache_hit": false,
+      "equivalent": true,
+      "bytes": 361866,
+      "input_cache_bytes": 6921658
+    },
+    {
+      "zoom": 13,
+      "budget_km": 4,
+      "before_ms": 517.8287500166334,
+      "after_ms": 169.39595801522955,
+      "input_cache_warm": true,
+      "encoded_tile_cache_hit": false,
+      "equivalent": true,
+      "bytes": 361811,
+      "input_cache_bytes": 6921658
+    },
+    {
+      "zoom": 13,
+      "budget_km": 5,
+      "before_ms": 511.75974996294826,
+      "after_ms": 177.57037503179163,
+      "input_cache_warm": true,
+      "encoded_tile_cache_hit": false,
+      "equivalent": true,
+      "bytes": 361811,
+      "input_cache_bytes": 6921658
+    },
+    {
+      "zoom": 12,
+      "budget_km": 2,
+      "before_ms": 2794.2772089736536,
+      "after_ms": 2049.3311249883845,
+      "input_cache_warm": false,
+      "encoded_tile_cache_hit": false,
+      "equivalent": true,
+      "bytes": 1253962,
+      "input_cache_bytes": 34151682
+    },
+    {
+      "zoom": 12,
+      "budget_km": 3,
+      "before_ms": 2051.5332500217482,
+      "after_ms": 650.6614169920795,
+      "input_cache_warm": true,
+      "encoded_tile_cache_hit": false,
+      "equivalent": true,
+      "bytes": 1285256,
+      "input_cache_bytes": 34151682
+    },
+    {
+      "zoom": 12,
+      "budget_km": 4,
+      "before_ms": 2217.032208049204,
+      "after_ms": 652.2567499778233,
+      "input_cache_warm": true,
+      "encoded_tile_cache_hit": false,
+      "equivalent": true,
+      "bytes": 1306621,
+      "input_cache_bytes": 34151682
+    },
+    {
+      "zoom": 12,
+      "budget_km": 5,
+      "before_ms": 2447.0723339472897,
+      "after_ms": 692.6443749689497,
+      "input_cache_warm": true,
+      "encoded_tile_cache_hit": false,
+      "equivalent": true,
+      "bytes": 1331783,
+      "input_cache_bytes": 34151682
+    }
+  ],
+  "exploration_limits": [
+    {
+      "budget_km": 5,
+      "previous_status": "maximum_segments",
+      "status": "ready",
+      "elapsed_ms": 418.5359579860233,
+      "reached_nodes": 42467,
+      "selected_segments": 103941,
+      "graph_bytes": 48629136
+    },
+    {
+      "budget_km": 10,
+      "previous_status": "maximum_segments",
+      "status": "ready",
+      "elapsed_ms": 934.4222089857794,
+      "reached_nodes": 162141,
+      "selected_segments": 324789,
+      "graph_bytes": 139916784
+    },
+    {
+      "budget_km": 20,
+      "previous_status": "maximum_segments",
+      "status": "ready",
+      "elapsed_ms": 1086.4812500076368,
+      "reached_nodes": 346111,
+      "selected_segments": 561529,
+      "graph_bytes": 239367536
+    }
+  ],
+  "http": {
+    "snapshot_ms": 280.41479195235297,
+    "rows": [
+      {
+        "elapsed_ms": 2995.0770419673063,
+        "status": 200,
+        "bytes": 1331783,
+        "headers": {
+          "date": "Fri, 23 Oct 2026 13:01:36 GMT",
+          "server": "uvicorn",
+          "cache-control": "private, max-age=897",
+          "etag": "W/\"e82cfba338c7033bed96f70c21000e56ecc3caafc52813429e98536b7da34143\"",
+          "x-runmap-compute-ms": "2993.22",
+          "x-runmap-cache-hit": "false",
+          "x-runmap-tile-cache-bytes": "1331783",
+          "x-runmap-tile-input-cache-bytes": "27230032",
+          "x-runmap-snapshot-cache-bytes": "682700",
+          "vary": "Accept-Encoding, Accept-Encoding",
+          "content-length": "1331783",
+          "content-type": "application/vnd.mapbox-vector-tile",
+          "connection": "close"
+        }
+      },
+      {
+        "elapsed_ms": 1.6202919650822878,
+        "status": 200,
+        "bytes": 1331783,
+        "headers": {
+          "date": "Fri, 23 Oct 2026 13:01:39 GMT",
+          "server": "uvicorn",
+          "cache-control": "private, max-age=897",
+          "etag": "W/\"e82cfba338c7033bed96f70c21000e56ecc3caafc52813429e98536b7da34143\"",
+          "x-runmap-compute-ms": "0.01",
+          "x-runmap-cache-hit": "true",
+          "x-runmap-tile-cache-bytes": "1331783",
+          "x-runmap-tile-input-cache-bytes": "27230032",
+          "x-runmap-snapshot-cache-bytes": "682700",
+          "vary": "Accept-Encoding, Accept-Encoding",
+          "content-length": "1331783",
+          "content-type": "application/vnd.mapbox-vector-tile",
+          "connection": "close"
+        }
+      }
+    ]
+  },
+  "note": "Same snapshot and XYZ per paired comparison; legacy renderer first, uncontrolled OS cache. First sample at each zoom prepares compact inputs; subsequent budgets are new snapshots/encoded tiles sharing inputs. JSON/SQL included in baseline, no browser/network in these pairs. Small diagnostic samples, not production percentiles. HTTP cold tile observation retained separately."
+}

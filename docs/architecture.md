@@ -261,7 +261,7 @@ viewport or on a clipped geometry's apparent dead ends.
 The request runs forward distance search and checks whether any unloaded frontier
 node was reached within budget. If so, it discards that working set, doubles both
 box dimensions, and repeats under one deadline. Defaults allow two retries,
-2,500 km² query area, and 50,000 selected segments. Segment count is checked with
+10,000 km² query area, and 650,000 selected segments. Segment count is checked with
 a bounded spatial count before decoding network records. Reaching configured
 limits returns HTTP 422 with explicit `area_limited` status, reason, attempted
 bounds, and retry count; it does not report a genuine dead end or lack of source
@@ -389,6 +389,23 @@ Start/policy/budget queries prepare process-local snapshots containing immutable
 bounded search results. Interval states, midpoint distances, and boundary flags
 are calculated only for the spatial candidates of requested buffered tiles.
 Navigation and tile variants reuse the same search; encoded tiles are cached.
+SQLite delivery also caches compact immutable tile inputs independently of the
+start and distance budget. Numeric segment/interval indices, chainage, display
+flags, and geometry use sealed buffers; eligibility and endpoint metadata are
+retained once per segment. Cache byte accounting includes buffer owners and
+metadata. Identical pending input reads coalesce, database leases are released
+before rendering, and inputs larger than the byte budget render without being
+retained. This cache owns no snapshot distances or graph owners.
+
+Numeric tile rendering resolves endpoint distances once per segment, skips
+unreachable segment calculations, and avoids constructing inspection-only
+direction records. Python retains projection, clipping, simplification, and
+rounding; a native line-only MVT encoder writes geometry commands and typed
+properties while releasing the GIL. Inspection and contour encoding retain their
+existing paths. The browser retains an installed vector source when its tile
+template has not changed, preserving worker results across unrelated refreshes.
+The [distance-tile report](archive/history/52-distance-tiles.md) records paired
+tile equivalence/timings, cache ownership, and larger exploration examples.
 Snapshot memory accounting charges the shared immutable distance buffers to each
 entry conservatively; reference SQLite entries also charge their owned local graph,
 while numeric SQLite snapshots charge only their independent sparse distances.

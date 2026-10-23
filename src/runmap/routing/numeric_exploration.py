@@ -17,6 +17,43 @@ class NumericDistanceData:
     outward: NumericDistances
 
 
+@dataclass(frozen=True)
+class NumericSegmentDistances:
+    anchors: tuple[tuple[float, float], ...]
+    policy: PreparedPolicy
+    maximum_m: float
+    reachable: bool
+
+
+def numeric_segment_distances(distances: NumericDistanceData, segment_id: str, endpoints: PreparedEndpoints,
+                              policy: PreparedPolicy) -> NumericSegmentDistances:
+    if policy.reason is not None:
+        return NumericSegmentDistances((), policy, distances.maximum_m, False)
+    anchors = [(0.0, _node_distance(distances.outward, endpoints.source)),
+               (endpoints.length_m, _node_distance(distances.outward, endpoints.target))]
+    if segment_id == distances.snap.segment_id:
+        anchors.append((distances.snap.graph_offset_m, 0.0))
+    return NumericSegmentDistances(tuple(anchors), policy, distances.maximum_m,
+                                   any(base <= distances.maximum_m for _, base in anchors))
+
+
+def numeric_tile_interval(distances: NumericSegmentDistances, start_m: float, end_m: float,
+                           budget_m: float) -> tuple[str, float | None]:
+    """Compute display state without constructing inspection-only direction records."""
+    if distances.policy.reason is not None:
+        return "excluded", None
+    if not distances.reachable:
+        return "beyond_budget", None
+    included = False
+    for allowed, position in ((distances.policy.forward, start_m), (distances.policy.backward, end_m)):
+        if allowed:
+            start = _point_distance(distances, position)
+            included |= start <= distances.maximum_m and start + abs(end_m-start_m) <= budget_m + 1e-8
+    midpoint = _point_distance(distances, (start_m+end_m)/2)
+    distance = midpoint if math.isfinite(midpoint) and midpoint <= distances.maximum_m else None
+    return "included" if included else "beyond_budget", distance
+
+
 def _node_distance(distances: NumericDistances, node: int) -> float:
     nodes = distances.node_ids
     # Native results list sorted original IDs followed by any virtual start.
@@ -28,33 +65,30 @@ def _node_distance(distances: NumericDistances, node: int) -> float:
     return float(distances.values[index])
 
 
-def _point_distance(distances: NumericDistanceData, segment_id: str, endpoints: PreparedEndpoints,
-                    policy: PreparedPolicy, offset: float) -> float:
+def _point_distance(distances: NumericSegmentDistances, offset: float) -> float:
     choices: list[float] = []
-    anchors = [(endpoints.source, 0.0), (endpoints.target, endpoints.length_m)]
-    if segment_id == distances.snap.segment_id:
-        anchors.append((-1, distances.snap.graph_offset_m))
-    for node, position in anchors:
+    policy = distances.policy
+    for position, base in distances.anchors:
         delta = offset - position
         if (policy.forward and delta >= -1e-8) or (policy.backward and delta <= 1e-8):
-            base = 0.0 if node == -1 else _node_distance(distances.outward, node)
             choices.append(base + abs(delta))
     return min(choices, default=math.inf)
 
 
 def numeric_interval_inclusion(distances: NumericDistanceData, segment_id: str, endpoints: PreparedEndpoints,
                                policy: PreparedPolicy, start_m: float, end_m: float,
-                               budget_m: float) -> dict[str, object]:
+                               budget_m: float, *, prepared: NumericSegmentDistances | None = None) -> dict[str, object]:
     if policy.reason is not None:
         return {"inclusion_state": "excluded", "inclusion_reason": policy.reason,
                 "minimum_inclusion_m": None, "directions": []}
+    prepared = prepared or numeric_segment_distances(distances, segment_id, endpoints, policy)
     directions: list[dict[str, str | float | None]] = []
     finite: list[float] = []
     for forward, allowed in ((True, policy.forward), (False, policy.backward)):
         if not allowed:
             continue
         start = start_m if forward else end_m
-        outward = _point_distance(distances, segment_id, endpoints, policy, start)
+        outward = _point_distance(prepared, start)
         total = outward + abs(end_m-start_m) if outward <= distances.maximum_m else math.inf
         if math.isfinite(total):
             finite.append(total)
@@ -69,8 +103,10 @@ def numeric_interval_inclusion(distances: NumericDistanceData, segment_id: str, 
 
 
 def numeric_distance_from_start(distances: NumericDistanceData, segment_id: str, endpoints: PreparedEndpoints,
-                                policy: PreparedPolicy, offset_m: float) -> float | None:
+                                policy: PreparedPolicy, offset_m: float, *,
+                                prepared: NumericSegmentDistances | None = None) -> float | None:
     if policy.reason is not None:
         return None
-    value = _point_distance(distances, segment_id, endpoints, policy, offset_m)
+    prepared = prepared or numeric_segment_distances(distances, segment_id, endpoints, policy)
+    value = _point_distance(prepared, offset_m)
     return value if math.isfinite(value) and value <= distances.maximum_m else None

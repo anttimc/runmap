@@ -378,10 +378,11 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_RUN_MIN_DIMENSION_M` | 1,000 m minimum initial box width and height |
 | `RUNMAP_RUN_BOUNDARY_MARGIN_M` | 100 m minimum candidate proximity band; also at least 5% of the shorter box dimension |
 | `RUNMAP_PATH_PREPARATION_DEADLINE` | 10 seconds per exploration snapshot preparation |
-| `RUNMAP_PATH_SEARCH_MAX_AREA_KM2` | 2,500 km² maximum projected exploration query area |
-| `RUNMAP_PATH_SEARCH_MAX_SEGMENTS` | 50,000 complete candidate segments per exploration query |
+| `RUNMAP_PATH_SEARCH_MAX_AREA_KM2` | 10,000 km² maximum projected exploration query area |
+| `RUNMAP_PATH_SEARCH_MAX_SEGMENTS` | 650,000 complete candidate segments per exploration query |
 | `RUNMAP_PATH_SEARCH_MAX_RETRIES` | 2 retries; double both box dimensions after a reached frontier |
 | `RUNMAP_PATH_TILE_CACHE_BYTES` | 67,108,864 bytes |
+| `RUNMAP_PATH_TILE_INPUT_CACHE_BYTES` | 67,108,864 bytes of compact immutable display samples, shared across snapshots; zero disables retention |
 | `RUNMAP_PATH_SNAPSHOT_CACHE_BYTES` | 134,217,728 bytes |
 | `RUNMAP_PATH_TILE_TTL` | 900 seconds |
 | `RUNMAP_PATH_SNAPSHOT_TTL` | 900 seconds |

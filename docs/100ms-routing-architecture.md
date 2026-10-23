@@ -71,9 +71,9 @@ Snapshot preparation, viewport highlighting, start-distance inspection, and
 snapshot tiles now use numeric exploration when a matching artifact is present.
 The source database and version-2 numeric artifact need no format migration.
 Snapshot outputs retain only immutable reached-node IDs/distances and metadata,
-so a graph-cache eviction or shutdown does not invalidate them. The existing
-50,000-segment exploration cap, two retries, 2,500 km² area cap, and preparation
-deadline are unchanged.
+so a graph-cache eviction or shutdown does not invalidate them. The measurements
+below used the then-current 50,000-segment cap, two retries, 2,500 km² area cap,
+and preparation deadline. See [current settings](development.md#configuration).
 
 At Leppävaara start `(24.795, 60.216)`, fresh snapshot preparations reusing native
 graphs had these observations (five repeated samples, no snapshot-cache hits):

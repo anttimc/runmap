@@ -23,8 +23,8 @@ from runmap.routing.types import Bounds, EdgeProfile
 
 @dataclass(frozen=True)
 class ExplorationLimits:
-    max_area_km2: float = 2500
-    max_segments: int = 50000
+    max_area_km2: float = 10000
+    max_segments: int = 650000
     max_retries: int = 2
 
 

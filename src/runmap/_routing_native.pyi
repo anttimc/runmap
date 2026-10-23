@@ -1,5 +1,10 @@
 from collections.abc import Sequence
 
+def encode_line_tile(
+    features: Sequence[tuple[Sequence[Sequence[tuple[float, float]]], dict[str, str | float | bool | int]]],
+    extent: int,
+) -> bytes: ...
+
 def integrate_fields(
     points: Sequence[tuple[float, float]],
     home: tuple[float, float],

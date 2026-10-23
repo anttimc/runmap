@@ -11,10 +11,10 @@ from time import monotonic, time
 from typing import Callable, Generic, TypeVar
 from uuid import uuid4
 
-import mapbox_vector_tile
 import numpy as np
 from shapely.geometry import LineString, box
 from shapely import transform
+from runmap import _routing_native
 
 from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, display_segment_reason, exploration_context, path_policy_index
 from runmap.api.sqlite_data import SQLitePathData
@@ -26,6 +26,7 @@ from runmap.routing.profiles import exploration_profile
 from runmap.paths.dead_ends import ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M
 from runmap.paths.exploration import DistanceData, Snap, segment_reason
 from runmap.routing.numeric_exploration import NumericDistanceData
+from runmap.paths.tile_inputs import TileInputs
 
 RENDER_VERSION = 3
 ALGORITHM_VERSION = 5
@@ -70,7 +71,7 @@ class ByteCache(Generic[T]):
             return entry.value
 
     def compute(self, key: str, factory: Callable[[], T], size: Callable[[T], int],
-                *, deadline: float | None = None) -> tuple[T, bool]:
+                *, deadline: float | None = None, allow_oversized: bool = False) -> tuple[T, bool]:
         with self.lock:
             existing = self.get(key)
             if existing is not None:
@@ -86,7 +87,10 @@ class ByteCache(Generic[T]):
             result = factory()
             retained = size(result)
             if retained > self.capacity:
-                raise ValueError("Prepared result exceeds configured cache memory budget")
+                if not allow_oversized:
+                    raise ValueError("Prepared result exceeds configured cache memory budget")
+                future.set_result(result)
+                return result, False
             with self.lock:
                 self._prune()
                 while self.entries and self.bytes + retained > self.capacity:
@@ -234,7 +238,7 @@ def _interval_coordinates(geometry: memoryview, offsets: memoryview, number: int
 
 
 def encode_tile(data: PathData | SQLitePathData, policy: str, variant: str, z: int, x: int, y: int,
-                snapshot: Snapshot | None = None) -> bytes:
+                snapshot: Snapshot | None = None, *, input_cache: ByteCache[TileInputs] | None = None) -> bytes:
     west, south, east, north = tile_bounds(z, x, y)
     _, hidden = variant_options(variant)
     policy_options(policy)
@@ -245,7 +249,7 @@ def encode_tile(data: PathData | SQLitePathData, policy: str, variant: str, z: i
         bounds = (west - pad, south - pad, east + pad, north + pad)
         if isinstance(data, SQLitePathData):
             from runmap.api.sqlite_paths import database_tile_runs
-            runs = database_tile_runs(data, bounds, policy, variant, z, snapshot)
+            runs = database_tile_runs(data, bounds, policy, variant, z, snapshot, input_cache=input_cache)
         else:
             indexes = candidate_path_indexes(data, bounds, hidden)
             runs = display_runs(data, indexes, policy, variant, z, snapshot)
@@ -253,7 +257,7 @@ def encode_tile(data: PathData | SQLitePathData, policy: str, variant: str, z: i
 
 
 def encode_runs(runs: list[DisplayRun], z: int, x: int, y: int) -> bytes:
-    features = []
+    features: list[tuple[list[list[tuple[float, float]]], dict[str, Property]]] = []
     clip = box(-BUFFER, -BUFFER, EXTENT + BUFFER, EXTENT + BUFFER)
     tolerance = EXTENT / 512 * (1 if z <= 12 else .5 if z <= 14 else .125)
     for run in runs:
@@ -264,9 +268,9 @@ def encode_runs(runs: list[DisplayRun], z: int, x: int, y: int) -> bytes:
         geometry = transform(geometry, np.rint)
         if geometry.length == 0:
             continue
-        features.append({"geometry": geometry, "properties": run.properties})
-    return mapbox_vector_tile.encode({"name": "paths", "features": features},
-                                    default_options={"y_coord_down": True, "extents": EXTENT})
+        lines = [geometry] if geometry.geom_type == "LineString" else list(geometry.geoms)
+        features.append(([list(line.coords) for line in lines], run.properties))
+    return _routing_native.encode_line_tile(features, EXTENT)
 
 
 class PathTileService:
@@ -275,13 +279,17 @@ class PathTileService:
     def __init__(self, data: PathData | SQLitePathData, tile_bytes: int = 64 * 1024 ** 2,
                  snapshot_bytes: int = 128 * 1024 ** 2, snapshot_ttl: float = 900,
                  tile_ttl: float = 900, preparation_deadline: float = 10,
-                 exploration_limits: ExplorationLimits = ExplorationLimits()) -> None:
+                 exploration_limits: ExplorationLimits = ExplorationLimits(),
+                 tile_input_bytes: int = 64 * 1024**2) -> None:
         if (exploration_limits.max_area_km2 <= 0
                 or exploration_limits.max_segments <= 0 or exploration_limits.max_retries < 0):
             raise ValueError("Invalid exploration limits")
+        if tile_input_bytes < 0:
+            raise ValueError("Tile input cache bytes must be nonnegative")
         self.data = data
         self.tiles: ByteCache[bytes] = ByteCache(tile_bytes, tile_ttl)
         self.snapshots: ByteCache[Snapshot] = ByteCache(snapshot_bytes, snapshot_ttl)
+        self.tile_inputs: ByteCache[TileInputs] = ByteCache(tile_input_bytes, tile_ttl)
         self.preparation_deadline = preparation_deadline
         self.exploration_limits = exploration_limits
 
@@ -378,7 +386,7 @@ class PathTileService:
         identity = (render_version(self.data), self.data.dataset_id, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
                     snapshot.id if snapshot else policy, variant, z, x, y)
         encoded, hit = self.tiles.compute(repr(identity),
-            lambda: encode_tile(self.data, policy, variant, z, x, y, snapshot), len)
+            lambda: encode_tile(self.data, policy, variant, z, x, y, snapshot, input_cache=self.tile_inputs), len)
         return encoded, hit, (monotonic() - started) * 1000
 
 

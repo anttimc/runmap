@@ -90,6 +90,11 @@ Remaining validation and improvements:
    justifies it; retain the existing schema/model identities and local dense
    index semantics. Local window caching requires byte/concurrency/generation
    bounds and evidence that repeated requests benefit.
+3. Reduce first-load display preparation for zoomed-out tiles. Compact tile-input
+   caching improves subsequent snapshots, but cold SQL/JSON reads remain costly;
+   see the [distance-tile measurements](archive/history/52-distance-tiles.md).
+   Evaluate prepared compact display chunks and complete browser tile-set timing,
+   preserving inspection, coverage, policy flags, and distance boundaries.
 
 Acceptance: compare tiles, inspection, snapping, exploration, and planner results
 against the current implementation on controlled fixtures and saved routes.

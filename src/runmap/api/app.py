@@ -79,6 +79,7 @@ async def lifespan(application):
             boundary_margin_m=float(os.environ.get("RUNMAP_RUN_BOUNDARY_MARGIN_M", 100)))
         validate_run_limits(application.state.run_limits)
         application.state.path_status = "ready"
+        exploration_defaults = ExplorationLimits()
         application.state.path_tiles = PathTileService(
             application.state.paths,
             tile_bytes=int(os.environ.get("RUNMAP_PATH_TILE_CACHE_BYTES", 64 * 1024 ** 2)),
@@ -87,9 +88,10 @@ async def lifespan(application):
             tile_ttl=float(os.environ.get("RUNMAP_PATH_TILE_TTL", 900)),
             preparation_deadline=float(os.environ.get("RUNMAP_PATH_PREPARATION_DEADLINE", 10)),
             exploration_limits=ExplorationLimits(
-                max_area_km2=float(os.environ.get("RUNMAP_PATH_SEARCH_MAX_AREA_KM2", 2500)),
-                max_segments=int(os.environ.get("RUNMAP_PATH_SEARCH_MAX_SEGMENTS", 50000)),
-                max_retries=int(os.environ.get("RUNMAP_PATH_SEARCH_MAX_RETRIES", 2))))
+                max_area_km2=float(os.environ.get("RUNMAP_PATH_SEARCH_MAX_AREA_KM2", exploration_defaults.max_area_km2)),
+                max_segments=int(os.environ.get("RUNMAP_PATH_SEARCH_MAX_SEGMENTS", exploration_defaults.max_segments)),
+                max_retries=int(os.environ.get("RUNMAP_PATH_SEARCH_MAX_RETRIES", exploration_defaults.max_retries))),
+            tile_input_bytes=int(os.environ.get("RUNMAP_PATH_TILE_INPUT_CACHE_BYTES", 64 * 1024**2)))
     except FileNotFoundError:
         logging.getLogger(__name__).info("Path artifacts unavailable: %s", database_path or graph_path)
     except (ValueError, OSError, TypeError, KeyError, sqlite3.Error):
@@ -228,6 +230,7 @@ def _path_tile_response(request: Request, service: PathTileService, version: str
         "ETag": 'W/"' + sha256(encoded).hexdigest() + '"',
         "X-Runmap-Compute-Ms": f"{elapsed:.2f}", "X-Runmap-Cache-Hit": str(hit).lower(),
         "X-Runmap-Tile-Cache-Bytes": str(service.tiles.bytes),
+        "X-Runmap-Tile-Input-Cache-Bytes": str(service.tile_inputs.bytes),
         "X-Runmap-Snapshot-Cache-Bytes": str(service.snapshots.bytes),
         "Vary": "Accept-Encoding",
     }
