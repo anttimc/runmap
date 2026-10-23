@@ -15,10 +15,11 @@ from runmap.paths.database import NetworkMetadata, _validate_bounds, network_met
 from runmap.paths.graph_chunks import TopologyChunk
 from runmap.paths.numeric_format import FORMAT_VERSION, NumericChunk, decode_numeric_chunk, encode_numeric_chunk
 from runmap.paths.numeric_preparation import prepare_numeric_chunk
+from runmap.paths.numeric_hills import separate_hill_intervals
 from runmap.routing.types import Bounds
 
 
-NUMERIC_SCHEMA_VERSION = 1
+NUMERIC_SCHEMA_VERSION = 2
 PREPROCESSING_VERSION = "policy-union-v1"
 
 
@@ -53,6 +54,11 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             kind TEXT NOT NULL, number INTEGER NOT NULL, external_id TEXT NOT NULL,
             PRIMARY KEY(kind, number), UNIQUE(kind, external_id)
         ) WITHOUT ROWID;
+        CREATE TABLE hill_intervals (
+            segment_id INTEGER PRIMARY KEY, payload BLOB NOT NULL,
+            sha256 TEXT NOT NULL, byte_size INTEGER NOT NULL CHECK(byte_size > 0),
+            raw_size INTEGER NOT NULL CHECK(raw_size > 0)
+        );
     """)
     connection.execute(f"PRAGMA user_version = {NUMERIC_SCHEMA_VERSION}")
 
@@ -130,6 +136,7 @@ def _write_chunks(source: sqlite3.Connection, target: sqlite3.Connection,
         if not records["segments"]:
             continue
         chunk = prepare_numeric_chunk(source, records, metadata.models.profiles)
+        chunk = separate_hill_intervals(target, chunk)
         payload = encode_numeric_chunk(chunk)
         target.execute("INSERT INTO numeric_chunks VALUES (?, ?, ?, ?)",
                        (number, payload, hashlib.sha256(payload).hexdigest(), len(payload)))
@@ -167,7 +174,7 @@ def open_numeric_database(path: Path, cache_kib: int = 16384, *, check_same_thre
         raise ValueError("Page-cache target must be positive")
     connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, check_same_thread=check_same_thread)
     try:
-        if connection.execute("PRAGMA user_version").fetchone()[0] != NUMERIC_SCHEMA_VERSION:
+        if connection.execute("PRAGMA user_version").fetchone()[0] not in (1, NUMERIC_SCHEMA_VERSION):
             raise ValueError("Unsupported numeric database schema")
         row = connection.execute("SELECT value FROM metadata WHERE key = 'numeric_format_version'").fetchone()
         if row is None or int(row[0]) != FORMAT_VERSION:

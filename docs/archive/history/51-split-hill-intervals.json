@@ -1,0 +1,281 @@
+{
+  "date": "2026-10-23",
+  "python": "3.14.6",
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "before": {
+    "path": "data/paths/prepared/helsinki-capital-area/numeric-routing-policy-union.sqlite",
+    "file_bytes": 740032512,
+    "graph_payload_bytes": 582072800
+  },
+  "after": {
+    "path": "data/paths/prepared/helsinki-capital-area/numeric-routing-split-hills.sqlite",
+    "file_bytes": 619126784,
+    "graph_payload_bytes": 246980448,
+    "interval_storage": [
+      586218,
+      123759656,
+      334924288
+    ]
+  },
+  "cases": [
+    {
+      "route": "short",
+      "hills": "off",
+      "request": {
+        "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+        "home": {
+          "longitude": 24.795,
+          "latitude": 60.216,
+          "segment_id": null
+        },
+        "turnaround": {
+          "longitude": 24.815,
+          "latitude": 60.225,
+          "segment_id": null
+        },
+        "settings": {
+          "avoidance_ratio": 0.18,
+          "centre_enabled": true,
+          "radius_ratio": 0.15,
+          "transition_ratio": 0.05,
+          "side_strength": 2.0,
+          "reuse_strength": 4.0
+        },
+        "preferences": {
+          "hills": "off",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off"
+        },
+        "radius_m": 50.0,
+        "surface": "all",
+        "avoid_stairs": true
+      },
+      "maximum_response_float_difference": 0,
+      "summary": {
+        "before": {
+          "first_ms": 252.1607920061797,
+          "repeated_median_ms": 22.56345801288262,
+          "repeated_prepare_median_ms": 0.14316599117591977
+        },
+        "after": {
+          "first_ms": 102.67270798794925,
+          "repeated_median_ms": 21.718708041589707,
+          "repeated_prepare_median_ms": 0.13537402264773846
+        }
+      }
+    },
+    {
+      "route": "short",
+      "hills": "high",
+      "request": {
+        "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+        "home": {
+          "longitude": 24.795,
+          "latitude": 60.216,
+          "segment_id": null
+        },
+        "turnaround": {
+          "longitude": 24.815,
+          "latitude": 60.225,
+          "segment_id": null
+        },
+        "settings": {
+          "avoidance_ratio": 0.18,
+          "centre_enabled": true,
+          "radius_ratio": 0.15,
+          "transition_ratio": 0.05,
+          "side_strength": 2.0,
+          "reuse_strength": 4.0
+        },
+        "preferences": {
+          "hills": "high",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off"
+        },
+        "radius_m": 50.0,
+        "surface": "all",
+        "avoid_stairs": true
+      },
+      "maximum_response_float_difference": 0,
+      "summary": {
+        "after": {
+          "first_ms": 61.485166021157056,
+          "repeated_median_ms": 30.477625026833266,
+          "repeated_prepare_median_ms": 0.19920902559533715
+        },
+        "before": {
+          "first_ms": 96.69812495121732,
+          "repeated_median_ms": 31.981625012122095,
+          "repeated_prepare_median_ms": 0.1740000443533063
+        }
+      }
+    },
+    {
+      "route": "long",
+      "hills": "off",
+      "request": {
+        "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+        "home": {
+          "longitude": 24.795,
+          "latitude": 60.216,
+          "segment_id": null
+        },
+        "turnaround": {
+          "longitude": 24.96,
+          "latitude": 60.25,
+          "segment_id": null
+        },
+        "settings": {
+          "avoidance_ratio": 0.18,
+          "centre_enabled": true,
+          "radius_ratio": 0.15,
+          "transition_ratio": 0.05,
+          "side_strength": 2.0,
+          "reuse_strength": 4.0
+        },
+        "preferences": {
+          "hills": "off",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off"
+        },
+        "radius_m": 50.0,
+        "surface": "all",
+        "avoid_stairs": true
+      },
+      "maximum_response_float_difference": 0,
+      "summary": {
+        "before": {
+          "first_ms": 3677.6112090446986,
+          "repeated_median_ms": 1852.348125015851,
+          "repeated_prepare_median_ms": 1305.57983397739
+        },
+        "after": {
+          "first_ms": 2317.1194579917938,
+          "repeated_median_ms": 1009.6350410021842,
+          "repeated_prepare_median_ms": 562.6438759500161
+        }
+      }
+    },
+    {
+      "route": "long",
+      "hills": "high",
+      "request": {
+        "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+        "home": {
+          "longitude": 24.795,
+          "latitude": 60.216,
+          "segment_id": null
+        },
+        "turnaround": {
+          "longitude": 24.96,
+          "latitude": 60.25,
+          "segment_id": null
+        },
+        "settings": {
+          "avoidance_ratio": 0.18,
+          "centre_enabled": true,
+          "radius_ratio": 0.15,
+          "transition_ratio": 0.05,
+          "side_strength": 2.0,
+          "reuse_strength": 4.0
+        },
+        "preferences": {
+          "hills": "high",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off"
+        },
+        "radius_m": 50.0,
+        "surface": "all",
+        "avoid_stairs": true
+      },
+      "maximum_response_float_difference": 0,
+      "summary": {
+        "after": {
+          "first_ms": 1410.8546249917708,
+          "repeated_median_ms": 1157.4527919874527,
+          "repeated_prepare_median_ms": 605.0547499908134
+        },
+        "before": {
+          "first_ms": 2355.281041993294,
+          "repeated_median_ms": 1733.344791980926,
+          "repeated_prepare_median_ms": 1175.2798749948852
+        }
+      }
+    }
+  ],
+  "note": "One first and three repeated handler requests plus JSON per variant. OS cache uncontrolled; variant order alternates by hill setting. No HTTP/browser transport. Float tolerance 1e-8 absolute / 1e-12 relative; all other response fields exact. Small diagnostic sample, not production percentiles.",
+  "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+  "feature_identity": "f3f52c96764f4107f33dccf94361d9bb13578f1057b7e02e91a518f775c01098",
+  "exploration": [
+    {
+      "budget_km": 1,
+      "exact_node_and_distance_match": true,
+      "samples": {
+        "before": {
+          "first_ms": 53.927708009723574,
+          "repeated_ms": [
+            0.7559999939985573,
+            0.5619999719783664,
+            0.5301249912008643
+          ],
+          "repeated_median_ms": 0.5619999719783664,
+          "buffer_bytes": 10936048,
+          "nodes": 5076,
+          "segments": 6441,
+          "retries": 0
+        },
+        "after": {
+          "first_ms": 30.22529202280566,
+          "repeated_ms": [
+            0.6850410136394203,
+            0.5682919872924685,
+            0.5535000236704946
+          ],
+          "repeated_median_ms": 0.5682919872924685,
+          "buffer_bytes": 5240944,
+          "nodes": 5076,
+          "segments": 6441,
+          "retries": 0
+        }
+      }
+    },
+    {
+      "budget_km": 2,
+      "exact_node_and_distance_match": true,
+      "samples": {
+        "before": {
+          "first_ms": 110.0160829955712,
+          "repeated_ms": [
+            1.8892909865826368,
+            1.5954579575918615,
+            1.5842500142753124
+          ],
+          "repeated_median_ms": 1.5954579575918615,
+          "buffer_bytes": 25912192,
+          "nodes": 16484,
+          "segments": 20987,
+          "retries": 0
+        },
+        "after": {
+          "first_ms": 40.99737497745082,
+          "repeated_ms": [
+            1.8236659816466272,
+            1.7230410012416542,
+            1.6697910032235086
+          ],
+          "repeated_median_ms": 1.7230410012416542,
+          "buffer_bytes": 11913920,
+          "nodes": 16484,
+          "segments": 20987,
+          "retries": 0
+        }
+      }
+    }
+  ],
+  "active_artifact": "data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite",
+  "previous_artifact": "data/paths/prepared/helsinki-capital-area/numeric-routing-v2-before-split-hills.sqlite"
+}

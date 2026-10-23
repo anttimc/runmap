@@ -140,6 +140,7 @@ class NumericExplorationTests(unittest.TestCase):
         from runmap.api.numeric_data import load_numeric_graph
         service = PathTileService(self.data)
         with patch("runmap.api.numeric_data.load_numeric_graph", wraps=load_numeric_graph) as loader, \
+                patch("runmap.api.numeric_data.read_hill_intervals", side_effect=AssertionError("exploration hill detail")), \
                 ThreadPoolExecutor(max_workers=8) as workers:
             prepared = list(workers.map(lambda _: service.prepare(24.801, 60.2, .1, "all", True, 50, None), range(16)))
         self.assertEqual(loader.call_count, 1)

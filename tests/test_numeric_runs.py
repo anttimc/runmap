@@ -6,7 +6,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from runmap.api.numeric_data import NumericRoutingData
+from runmap.api.numeric_data import NumericRoutingData, read_hill_intervals
 from runmap.api.paths import load_path_data
 from runmap.api.runs import PreferencesRequest, SettingsRequest, RunResponse, generate_run
 from runmap.api.app import app, run_route
@@ -109,6 +109,21 @@ class NumericRunTests(unittest.TestCase):
         data.numeric.cache_bytes = 0
         self.assertEqual(generate_database_run(data, options).status, "complete")
         self.assertFalse(data.numeric.graphs)
+
+    def test_hill_details_are_request_local_and_off_reuses_the_same_graph(self) -> None:
+        data, _ = self.publish(detour_graph())
+        options = self.options(data, detour=True)
+        with patch("runmap.api.numeric_data.read_hill_intervals", side_effect=AssertionError("hill detail read")):
+            first = generate_database_run(data, options)
+        self.assertEqual(first.status, "complete")
+        graphs = tuple(entry[0] for entry in data.numeric.graphs.values())
+        high = options.model_copy(update={"preferences": PreferencesRequest(hills="high")})
+        with patch("runmap.api.numeric_data.load_numeric_graph", side_effect=AssertionError("graph changed")), \
+                patch("runmap.api.numeric_data.read_hill_intervals", wraps=read_hill_intervals) as reader:
+            response = generate_database_run(data, high)
+        self.assertEqual(response.status, "complete")
+        self.assertEqual(tuple(entry[0] for entry in data.numeric.graphs.values()), graphs)
+        self.assertEqual(reader.call_count, 2 * len(response.search.attempts))
 
     def test_endpoint_dispatch_validation_and_density_limits(self) -> None:
         data, _ = self.publish(detour_graph())

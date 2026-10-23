@@ -312,6 +312,11 @@ planner remains available. Distance exploration uses the same numeric graph serv
 Numeric exports omit segments forbidden by every supported profile, rebuilding
 node incidence and chunk envelopes over the retained policy union; see
 [numeric preprocessing](numeric-routing-format.md#export-and-read).
+New artifacts retain full-segment hill totals in shared graph buffers and store
+compressed interval detail separately. Only hills-enabled endpoint traversals
+load that detail into request-local storage; graph caches remain independent of
+endpoint positions and hill preferences. See
+[endpoint interval storage](numeric-routing-format.md#separate-endpoint-intervals).
 
 Run planning retries when a candidate search reaches an unloaded connection,
 when any candidate geometry enters the query-boundary band, or when an incomplete

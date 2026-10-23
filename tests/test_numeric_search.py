@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 from time import monotonic
 import unittest
 from unittest.mock import patch
+from typing import cast
 
 import numpy as np
 from rasterio.warp import transform
@@ -20,7 +21,10 @@ from runmap.paths.exploration import Snap, split_start_graph
 from runmap.paths.local_network import load_local_network
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.numeric_database import export_numeric_database, iter_numeric_chunks, open_numeric_database
-from runmap.paths.numeric_format import decode_numeric_chunk
+from runmap.paths.numeric_format import decode_numeric_chunk, encode_numeric_chunk
+from runmap.paths.numeric_hills import read_hill_intervals
+from runmap.paths.numeric_preparation import prepare_numeric_chunk
+from runmap.paths.graph_chunks import TopologyChunk
 from runmap.routing.cost_preparation import build_request_cost_data
 from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
 from runmap.routing.costs import indexed_arc_cost, path_cost_breakdown
@@ -54,10 +58,15 @@ class NumericSearchTests(unittest.TestCase):
                 "SELECT number, external_id FROM identities WHERE kind='node'")}
             self.segments = {key: number for number, key in connection.execute(
                 "SELECT number, external_id FROM identities WHERE kind='segment'")}
+            self.hill_intervals = {key: read_hill_intervals(connection, number) for key, number in self.segments.items()}
         self.keys = {number: key for key, number in self.nodes.items()}
 
     def _endpoint(self, key: str) -> NumericEndpoint:
         return NumericEndpoint(node_id=self.nodes[key])
+
+    def _segment_endpoint(self, key: str, offset: float) -> NumericEndpoint:
+        return NumericEndpoint(segment_id=self.segments[key], graph_offset_m=offset,
+                               hill_intervals=self.hill_intervals[key])
 
     def _snap(self, segment: str, offset: float, x: float) -> Snap:
         lon, lat = transform("EPSG:3067", "EPSG:4326", [x], [6675000])
@@ -109,8 +118,8 @@ class NumericSearchTests(unittest.TestCase):
     def test_shape_hills_reuse_and_partial_costs_match_reference(self) -> None:
         home, turnaround = self._snap("sb", 25, 375025), self._snap("bc", 75, 375175)
         points = projected_points([[home.longitude, home.latitude], [turnaround.longitude, turnaround.latitude]])
-        native_home = NumericEndpoint(segment_id=self.segments["sb"], graph_offset_m=25, chainage_m=25)
-        native_turnaround = NumericEndpoint(segment_id=self.segments["bc"], graph_offset_m=75, chainage_m=75)
+        native_home = replace(self._segment_endpoint("sb", 25), chainage_m=25)
+        native_turnaround = replace(self._segment_endpoint("bc", 75), chainage_m=75)
         profile = exploration_profile(avoid_stairs=False)
         with closing(open_network_database(self.reference)) as connection:
             local = load_local_network(connection, BOUNDS, profile)
@@ -170,8 +179,8 @@ class NumericSearchTests(unittest.TestCase):
     def test_native_run_candidates_match_reference_costs_and_preferences(self) -> None:
         home, turnaround = self._snap("sb", 25, 375025), self._snap("bc", 75, 375175)
         points = projected_points([[home.longitude, home.latitude], [turnaround.longitude, turnaround.latitude]])
-        start = NumericEndpoint(segment_id=self.segments["sb"], graph_offset_m=25, chainage_m=25)
-        end = NumericEndpoint(segment_id=self.segments["bc"], graph_offset_m=75, chainage_m=75)
+        start = replace(self._segment_endpoint("sb", 25), chainage_m=25)
+        end = replace(self._segment_endpoint("bc", 75), chainage_m=75)
         with closing(open_network_database(self.reference)) as connection:
             local = load_local_network(connection, BOUNDS)
             for width in (0, .18):
@@ -187,6 +196,55 @@ class NumericSearchTests(unittest.TestCase):
                         self.assertEqual(a.outbound_left, e.outbound_left)
                         self.assertAlmostEqual(a.outbound.cost, e.outbound.cost, delta=1e-4)
                         self.assertAlmostEqual(a.returning.cost, e.returning.cost, delta=1e-4)
+
+    def test_same_segment_partial_hills_match_reference_in_both_directions(self) -> None:
+        profile = exploration_profile(avoid_stairs=False)
+        with closing(open_network_database(self.reference)) as connection:
+            local = load_local_network(connection, BOUNDS, profile)
+            for low, high in ((25, 75), (75, 25), (25, 25), (0, 100)):
+                home, end = self._snap("sb", low, 375000 + low), self._snap("sb", high, 375000 + high)
+                if low != high:
+                    overlay = endpoint_overlay(local.routing, home, end)
+                    request = build_request_cost_data(overlay.graph, home, end, RunSettings(avoidance_ratio=0),
+                        parts=overlay.parts, preferences=PreferenceSettings(hills="high"), hills=local.hills)
+                    cache, leg = RequestCostCache(), LegCostContext(True)
+                    expected = shortest_path(overlay.graph, overlay.home, overlay.turnaround,
+                        indexed_arc_cost=lambda arc: indexed_arc_cost(arc, data=request, cache=cache, leg=leg, deadline=None))
+                    expected_cost = expected.cost
+                else:
+                    expected_cost = 0
+                actual = numeric_shortest_path(self.graph, self._segment_endpoint("sb", low),
+                    self._segment_endpoint("sb", high), profile=profile, hill_weight=6)
+                self.assertAlmostEqual(actual.cost, expected_cost, places=8)
+
+    def test_partial_hills_reject_missing_invalid_and_incomplete_detail(self) -> None:
+        start, end = self._segment_endpoint("sb", 25), self._segment_endpoint("sb", 75)
+        for payload in (None, b"bad", bytes(128), np.full((1, 16), math.nan, dtype="<f8").tobytes()):
+            with self.subTest(payload=payload), self.assertRaises(ValueError):
+                numeric_shortest_path(self.graph, replace(start, hill_intervals=payload),
+                    replace(end, hill_intervals=payload), hill_weight=6)
+        intervals = np.frombuffer(start.hill_intervals, dtype="<f8").copy().reshape(-1, 16)
+        intervals[-1, 1] = 99
+        with self.assertRaisesRegex(ValueError, "do not cover"):
+            numeric_shortest_path(self.graph, replace(start, hill_intervals=intervals.tobytes()),
+                replace(end, hill_intervals=intervals.tobytes()), hill_weight=6)
+        # Full-segment traversal uses totals without requiring interval detail.
+        self.assertIsNotNone(numeric_shortest_path(self.graph, self._endpoint("s"), self._endpoint("b"),
+                                                  hill_weight=6).cost)
+
+    def test_legacy_embedded_intervals_remain_usable(self) -> None:
+        with closing(open_network_database(self.reference)) as connection:
+            payloads = [encode_numeric_chunk(prepare_numeric_chunk(connection, cast(TopologyChunk, json.loads(row[0])),
+                        self.graph.metadata.models.profiles)) for row in connection.execute("SELECT payload FROM graph_chunks ORDER BY number")]
+        legacy = replace(self.graph, native=_routing_native.NumericGraph(payloads, bounds=BOUNDS,
+                         distance_scale=self.graph.metadata.distance_scale))
+        home, end = self._segment_endpoint("sb", 25), self._segment_endpoint("bc", 75)
+        actual = numeric_shortest_path(self.graph, home, end, hill_weight=6)
+        original = numeric_shortest_path(legacy, replace(home, hill_intervals=None),
+                                         replace(end, hill_intervals=None), hill_weight=6)
+        self.assertEqual(actual.arc_ids.tolist(), original.arc_ids.tolist())
+        np.testing.assert_allclose(actual.components, original.components, atol=1e-10, rtol=1e-12)
+        np.testing.assert_allclose(actual.hill_features, original.hill_features, atol=1e-10, rtol=1e-12)
 
     def test_unreachable_deadlines_and_invalid_inputs(self) -> None:
         path = numeric_shortest_path(self.graph, self._endpoint("s"), self._endpoint("d"))

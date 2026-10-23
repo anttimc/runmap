@@ -20,6 +20,7 @@ pub struct CostSettings {
     pub shape: Option<ShapeSettings>,
     pub used_segments: HashSet<i64>,
     pub used_spans: HashMap<i64, Vec<(f64, f64)>>,
+    pub hill_intervals: HashMap<i64, Vec<[f64; 16]>>,
 }
 
 pub struct CostCache {
@@ -63,39 +64,114 @@ pub fn validate_settings(settings: &CostSettings) -> Result<(), RoutingError> {
     Ok(())
 }
 
-pub fn hill_features(chunk: &Chunk<'_>, edge: Edge) -> Result<[f64; 7], RoutingError> {
-    let lo = chunk.columns[HILL_OFFSETS].integer(edge.segment) as usize;
-    let hi = chunk.columns[HILL_OFFSETS].integer(edge.segment + 1) as usize;
-    if lo == hi {
+fn matching_chainage(a: f64, b: f64) -> bool {
+    (a - b).abs() <= 1e-6_f64.max(1e-9 * a.abs().max(b.abs()))
+}
+
+pub fn parse_hill_intervals(payload: &[u8]) -> Result<Vec<[f64; 16]>, RoutingError> {
+    if payload.is_empty() || payload.len() % 128 != 0 {
+        return Err(RoutingError::Invalid("Invalid hill interval byte count"));
+    }
+    let mut intervals = Vec::with_capacity(payload.len() / 128);
+    let mut previous = 0.0;
+    for bytes in payload.chunks_exact(128) {
+        let row: [f64; 16] = std::array::from_fn(|i| {
+            f64::from_le_bytes(bytes[i * 8..(i + 1) * 8].try_into().unwrap())
+        });
+        if row.iter().any(|v| !v.is_finite() || *v < 0.0)
+            || !matching_chainage(row[0], previous)
+            || row[1] <= row[0]
+        {
+            return Err(RoutingError::Invalid("Invalid prepared hill intervals"));
+        }
+        previous = row[1];
+        intervals.push(row);
+    }
+    Ok(intervals)
+}
+
+fn add_interval(
+    values: &mut [f64; 7],
+    edge: Edge,
+    start: f64,
+    end: f64,
+    features: [f64; 7],
+) -> Result<(), RoutingError> {
+    if end <= start {
+        return Err(RoutingError::Invalid("Invalid prepared hill chainage"));
+    }
+    let overlap = edge.high.min(end) - edge.low.max(start);
+    if overlap > 0.0 {
+        for (total, feature) in values.iter_mut().zip(features) {
+            *total += feature * overlap / (end - start);
+        }
+    }
+    Ok(())
+}
+
+pub fn hill_features(
+    chunk: &Chunk<'_>,
+    edge: Edge,
+    settings: &CostSettings,
+) -> Result<[f64; 7], RoutingError> {
+    let direction = usize::from(edge.backward);
+    let totals: [f64; 7] = std::array::from_fn(|i| {
+        chunk.columns[HILL_TOTALS].float((edge.segment * 2 + direction) * 7 + i)
+    });
+    if totals[6] <= 0.0 {
         return Err(RoutingError::Invalid("Hill features are unavailable"));
     }
-    let length = chunk.columns[HILL_CHAINAGE].float((hi - 1) * 2 + 1);
+    let length = chunk.columns[ARC_LENGTHS].float(edge.arc);
     if edge.low < 0.0 || edge.high > length + 1e-6 {
         return Err(RoutingError::Invalid(
             "Partial hill traversal is outside physical chainage",
         ));
     }
-    let direction = usize::from(edge.backward);
     if edge.low == 0.0 && edge.high == length {
-        return Ok(std::array::from_fn(|i| {
-            chunk.columns[HILL_TOTALS].float((edge.segment * 2 + direction) * 7 + i)
-        }));
+        return Ok(totals);
     }
     let mut values = [0.0; 7];
+    let lo = chunk.columns[HILL_OFFSETS].integer(edge.segment) as usize;
+    let hi = chunk.columns[HILL_OFFSETS].integer(edge.segment + 1) as usize;
+    if lo == hi {
+        let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
+        let intervals = settings
+            .hill_intervals
+            .get(&segment_id)
+            .ok_or(RoutingError::Invalid(
+                "Partial hill traversal requires endpoint intervals",
+            ))?;
+        if intervals
+            .last()
+            .is_none_or(|last| !matching_chainage(last[1], length))
+        {
+            return Err(RoutingError::Invalid(
+                "Endpoint hill intervals do not cover the segment",
+            ));
+        }
+        for row in intervals {
+            add_interval(
+                &mut values,
+                edge,
+                row[0],
+                row[1],
+                std::array::from_fn(|i| row[2 + direction * 7 + i]),
+            )?;
+        }
+        return Ok(values);
+    }
     for interval in lo..hi {
         let start = chunk.columns[HILL_CHAINAGE].float(interval * 2);
         let end = chunk.columns[HILL_CHAINAGE].float(interval * 2 + 1);
-        if end <= start {
-            return Err(RoutingError::Invalid("Invalid prepared hill chainage"));
-        }
-        let overlap = edge.high.min(end) - edge.low.max(start);
-        if overlap > 0.0 {
-            for (i, total) in values.iter_mut().enumerate() {
-                *total += chunk.columns[HILL_FEATURES].float((interval * 2 + direction) * 7 + i)
-                    * overlap
-                    / (end - start);
-            }
-        }
+        add_interval(
+            &mut values,
+            edge,
+            start,
+            end,
+            std::array::from_fn(|i| {
+                chunk.columns[HILL_FEATURES].float((interval * 2 + direction) * 7 + i)
+            }),
+        )?;
     }
     Ok(values)
 }
@@ -197,7 +273,7 @@ pub fn evaluate_cost(
         }
     }
     let hills = if settings.hill_weight > 0.0 {
-        hill_features(chunk, edge)?
+        hill_features(chunk, edge, settings)?
     } else {
         [0.0; 7]
     };

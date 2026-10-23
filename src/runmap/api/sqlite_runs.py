@@ -217,7 +217,8 @@ def _plan_numeric_windows(data: SQLitePathData, options: RunRequest, response: R
         attempt.segments = count
         if count > limits.max_segments:
             return _area_limited(response, "maximum_segments", attempt, started)
-        graph, home, turnaround = data.numeric.prepare(bounds, snaps, deadline)
+        graph, home, turnaround = data.numeric.prepare(bounds, snaps, deadline,
+                                                       include_hill_intervals=preferences.hills != "off")
         attempt.nodes = graph.native.node_count
         result = numeric_plan_run(graph, home, turnaround, points[0], points[1], settings,
             profile=exploration_profile(options.surface, options.avoid_stairs), preferences=preferences, deadline=deadline)

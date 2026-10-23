@@ -34,6 +34,13 @@ membership: native endpoints must belong to the loaded retained graph.
 The [capital-area pruning report](archive/history/49-policy-union-pruning.md)
 records size changes, routing/exploration equivalence, and latency limits.
 
+New exports use SQLite schema version 2, separating detailed hill intervals from
+the main graph payload. Readers accept schema 1 artifacts with embedded intervals
+and schema 2 artifacts with separate detail. The binary chunk layout remains
+version 2. Rebuild the native extension before using the new exporter/runtime;
+older runtimes reject the new SQLite schema. Re-export to a new destination and
+restart the API to obtain the smaller working sets.
+
 Version 2 adds explicit node eligibility masks. Arc eligibility alone cannot
 represent the reference behavior for a search starting at a blocked node.
 Version-1 experimental artifacts must be re-exported into a new filename. This
@@ -100,7 +107,7 @@ The ordered layout is defined by `array_layouts` in
 | `arc_allowed` | Arc eligibility by metadata profile order, including prepared access/boundary rules |
 | `outgoing_offsets`, `outgoing_arcs` | Local-node CSR adjacency referencing local arc indices |
 | `incoming_offsets`, `incoming_arcs` | Corresponding reverse-search adjacency |
-| `hill_offsets`, `hill_chainage`, `hill_features`, `hill_totals` | Packed hill intervals and complete-segment directional totals |
+| `hill_offsets`, `hill_chainage`, `hill_features`, `hill_totals` | Legacy embedded intervals and complete-segment directional totals; schema 2 uses zero offsets and empty interval columns |
 
 Projected coordinates use EPSG:3067. Forward/backward hill features have shape
 `(intervals, 2, 7)` and totals have shape `(segments, 2, 7)`. Feature order is
@@ -113,6 +120,32 @@ Without prepared hills, interval columns are empty and totals are zero; the
 metadata hill model is absent. Consumers must use that availability metadata so
 an unavailable observation is not interpreted as measured zero.
 
+With prepared hills in SQLite schema 2, interval columns are also empty, but
+directional totals remain populated. Complete-segment traversal reads those
+totals. Hills-enabled planning loads detail only for snapped endpoint segments;
+distance exploration and hills Off load no interval detail. Endpoint detail is
+request-local, so graph-cache keys and owners stay independent of endpoints and
+hill preferences. Legacy embedded intervals remain usable without conversion.
+
+### Separate endpoint intervals
+
+Schema 2 stores `hill_intervals(segment_id, payload, sha256, byte_size, raw_size)`.
+The key is the original numeric physical-segment ID. Payloads use lossless zlib
+compression (export level 1); the checksum and byte size describe the compressed
+BLOB. `raw_size` bounds decompression, which must consume one complete stream
+and produce exactly that many bytes. Missing records and corrupt data fail the
+request rather than silently making partial traversal free.
+
+Decompressed bytes contain little-endian float64 rows of 16 values (128 bytes):
+graph chainage start/end, seven forward features, and seven backward features in
+the order above. Raw interval values are preserved exactly. Rust checks finite,
+nonnegative values, contiguous increasing spans, and coverage of the original
+segment before integrating a partial span. Physical sampled length in the seven
+features can differ from graph chainage length; complete traversal is identified
+using the original arc length, not sampled length. The Python endpoint container
+owns immutable detail bytes; native search copies only these small endpoint
+arrays into request-local state before releasing the GIL.
+
 Export validates finite values, dimensions, references, incidence, CSR consistency,
 bounds, flags, and IDs, then stores a checksum. Decoding always validates header,
 version, and exact payload length before constructing views. Optional checksum
@@ -121,6 +154,9 @@ through `validate_numeric_chunk`; normal loading avoids repeating all offline
 validation scans. Bounds are conservative source R-tree envelopes.
 
 ## Benchmarks
+
+The [separate-interval report](archive/history/51-split-hill-intervals.md) records
+current paired storage, complete-request, and exploration-preparation comparisons.
 
 Record the reference request including snapping, JSON serialization, and coarse
 phase timings in a fresh worker:
@@ -198,7 +234,8 @@ available. It preserves validation, working-area limits, expansion, and response
 rendering, and caches immutable graphs in a byte-accounted LRU per artifact
 lifetime. API endpoint overlays pass snapped projected coordinates as well as
 chainage so shape integration uses the reference endpoint geometry. The graph
-still loads all selected BLOBs, including hill arrays, before traversal. Different
+loads selected topology, geometry, and hill totals; schema 2 keeps interval detail
+outside these BLOBs. Different
 bounds do not share retained chunks yet. Exploration snapshots retain only sparse
 reached-node IDs/distances; numeric endpoint metadata for visible intervals is
 queried on demand from the source database. Their byte/TTL budget excludes graph

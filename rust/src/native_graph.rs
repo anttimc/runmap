@@ -5,7 +5,7 @@ use crate::chunk_search::{self, SearchSettings, check_deadline};
 use crate::endpoint_overlay::{self, Endpoint, node_id};
 use crate::fields::FieldSettings;
 use crate::numeric::{self, ARC_IDS, ARC_LENGTHS, ARC_NODES, Chunk, RoutingError, SEGMENT_IDS};
-use crate::routing_cost::{CostSettings, ShapeSettings};
+use crate::routing_cost::{CostSettings, ShapeSettings, parse_hill_intervals};
 use pyo3::exceptions::{PyTimeoutError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -55,6 +55,24 @@ fn views<'a>(py: Python<'a>, owners: &'a [Py<PyBytes>]) -> PyResult<Vec<Chunk<'a
         .iter()
         .map(|owner| numeric::parse_chunk(owner.bind(py).as_bytes()).map_err(routing_error))
         .collect()
+}
+
+fn request_hill_intervals(
+    py: Python<'_>,
+    values: Vec<(i64, Py<PyBytes>)>,
+    end: Option<Instant>,
+) -> PyResult<HashMap<i64, Vec<[f64; 16]>>> {
+    let mut intervals = HashMap::new();
+    for (id, payload) in values {
+        check_deadline(end).map_err(routing_error)?;
+        let parsed = parse_hill_intervals(payload.bind(py).as_bytes()).map_err(routing_error)?;
+        if id < 0 || intervals.insert(id, parsed).is_some() {
+            return Err(PyValueError::new_err(
+                "Invalid or duplicate endpoint hill segment",
+            ));
+        }
+    }
+    Ok(intervals)
 }
 
 fn endpoint(
@@ -215,6 +233,7 @@ impl NumericGraph {
                         shape: None,
                         used_segments: HashSet::new(),
                         used_spans: HashMap::new(),
+                        hill_intervals: HashMap::new(),
                     },
                 };
                 let result = chunk_search::search(&self.graph, &chunks, &overlay, settings)?;
@@ -231,7 +250,7 @@ impl NumericGraph {
     }
 
     #[pyo3(signature = (start_node=None, destination_node=None, *, start_segment=None, destination_segment=None,
-                       start_point=None, destination_point=None, profile=0, hill_weight=0.0, shape=None, used_segments=Vec::new(), used_spans=Vec::new(), timeout_seconds=None))]
+                       start_point=None, destination_point=None, profile=0, hill_weight=0.0, shape=None, used_segments=Vec::new(), used_spans=Vec::new(), hill_intervals=Vec::new(), timeout_seconds=None))]
     #[allow(clippy::too_many_arguments)] // Core search receives structured settings.
     fn shortest_path(
         &self,
@@ -247,12 +266,14 @@ impl NumericGraph {
         shape: Option<ShapeArguments>,
         used_segments: Vec<i64>,
         used_spans: Vec<(i64, f64, f64)>,
+        hill_intervals: Vec<(i64, Py<PyBytes>)>,
         timeout_seconds: Option<f64>,
     ) -> PyResult<PathOutput> {
         let end = deadline(timeout_seconds)?;
         let start = endpoint(start_node, start_segment, start_point)?;
         let destination = endpoint(destination_node, destination_segment, destination_point)?;
         let chunks = views(py, &self.owners)?;
+        let hill_intervals = request_hill_intervals(py, hill_intervals, end)?;
         let (result, start_id, destination_id) = py
             .detach(|| {
                 check_deadline(end)?;
@@ -282,6 +303,7 @@ impl NumericGraph {
                                 spans
                             },
                         ),
+                        hill_intervals,
                     },
                 };
                 let result = chunk_search::search(&self.graph, &chunks, &overlay, settings)?;

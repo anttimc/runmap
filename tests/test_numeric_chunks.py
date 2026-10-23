@@ -19,6 +19,7 @@ from runmap.paths.numeric_database import (StoredNumericChunk, export_numeric_da
                                            node_chunk_ids, open_numeric_database)
 from runmap.paths.numeric_format import (HEADER, NumericChunk, decode_numeric_chunk,
                                          encode_numeric_chunk, validate_numeric_chunk)
+from runmap.paths.numeric_hills import read_hill_intervals
 from runmap.routing.search import shortest_distances
 from runmap.routing.numeric_search import NumericEndpoint, load_numeric_graph, numeric_distances
 from test_database_features import BOUNDS
@@ -82,8 +83,13 @@ class NumericChunkTests(unittest.TestCase):
                     self.assertEqual(data["node_degree"][i], local.routing.degree[node])
                 segment_number = local.routing.integer.segment_indices[key]
                 start, end = local.hills.interval_offsets[segment_number:segment_number + 2]
-                np.testing.assert_allclose(data["hill_chainage"], local.hills.chainage[start:end])
-                np.testing.assert_allclose(data["hill_features"], local.hills.features[start:end])
+                self.assertEqual(chunk.counts.intervals, 0)
+                self.assertEqual(data["hill_chainage"].shape, (0, 2))
+                payload = read_hill_intervals(numeric, int(data["segment_ids"][0]))
+                self.assertIsNotNone(payload)
+                intervals = np.frombuffer(payload, dtype="<f8").reshape(-1, 16)
+                np.testing.assert_array_equal(intervals[:, :2], local.hills.chainage[start:end])
+                np.testing.assert_array_equal(intervals[:, 2:].reshape(-1, 2, 7), local.hills.features[start:end])
                 np.testing.assert_allclose(data["hill_totals"][0], local.hills.totals[segment_number])
                 points = local.routing.projected.segments
                 lo, hi = points.offsets[segment_number:segment_number + 2]
@@ -206,6 +212,26 @@ class NumericChunkTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         values.flat[0] = 0
             validate_numeric_chunk(stored.chunk)
+
+    def test_endpoint_interval_integrity_and_missing_records(self) -> None:
+        with closing(open_numeric_database(self.numeric)) as connection:
+            segment = connection.execute("SELECT segment_id FROM hill_intervals LIMIT 1").fetchone()[0]
+            payload = read_hill_intervals(connection, segment)
+        for alteration in ("UPDATE hill_intervals SET byte_size=byte_size+1",
+                           "UPDATE hill_intervals SET sha256='incorrect'",
+                           "UPDATE hill_intervals SET raw_size=raw_size+128",
+                           "UPDATE hill_intervals SET raw_size=raw_size-128",
+                           "DELETE FROM hill_intervals"):
+            with closing(sqlite3.connect(self.numeric)) as writer:
+                writer.execute("BEGIN")
+                writer.execute(alteration)
+                with self.assertRaises(ValueError):
+                    read_hill_intervals(writer, segment)
+                writer.rollback()
+        self.assertTrue(payload)
+        intervals = np.frombuffer(payload, dtype="<f8").reshape(-1, 16)
+        self.assertEqual(intervals[0, 0], 0)
+        self.assertAlmostEqual(intervals[-1, 1], 100)
 
     def test_invalid_headers_checksums_columns_and_indices_are_rejected(self) -> None:
         with closing(open_numeric_database(self.numeric)) as connection:
