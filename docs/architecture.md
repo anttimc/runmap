@@ -309,6 +309,9 @@ The renderer reads only selected physical segment records and produces the same
 API response schema. Equal-cost ties use numeric identities and can select a
 different equivalent route. Without a numeric artifact the reference SQLite
 planner remains available. Distance exploration uses the same numeric graph service.
+Numeric exports omit segments forbidden by every supported profile, rebuilding
+node incidence and chunk envelopes over the retained policy union; see
+[numeric preprocessing](numeric-routing-format.md#export-and-read).
 
 Run planning retries when a candidate search reaches an unloaded connection,
 when any candidate geometry enters the query-boundary band, or when an incomplete
@@ -319,7 +322,12 @@ against the same expanded local graph. This is a heuristic: a better route
 outside the window can remain undetected; global optimality is not promised.
 
 Defaults allow five retries, 2,500 km² query area, and 650,000 selected segments.
-Area and bounded segment-count checks precede decoding. Run search metadata
+Area and bounded segment-count checks precede decoding. Counts read only the
+source segment R-tree, stopping at the cap plus one; source export maintains one
+index entry per segment. Policy filtering happens after admission, so these
+counts include ineligible source candidates. The
+[admission-count report](archive/history/50-segment-count.md) records equivalence
+and complete-request timings. Run search metadata
 records each attempted box, node/segment counts, retry reason, reached-frontier
 and query-boundary involvement, and source-coverage proximity separately.
 Exhaustion returns `status=area_limited`, an explicit reason, and no candidate

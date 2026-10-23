@@ -285,6 +285,21 @@ def query_network(connection: sqlite3.Connection, bounds: Bounds,
     return NetworkWindow(bounds, topology.graph, measurements, topology.frontier_nodes)
 
 
+def count_network_segments(connection: sqlite3.Connection, bounds: Bounds, *, limit: int) -> int:
+    """Bound area admission checks without reading full segment records."""
+    _validate_bounds(bounds)
+    if limit < 1:
+        raise ValueError("Segment count limit must be positive")
+    west, south, east, north = bounds
+    return connection.execute("""
+        SELECT count(*) FROM (
+            SELECT number FROM segment_bounds
+            WHERE west <= :east AND east >= :west
+              AND south <= :north AND north >= :south LIMIT :limit
+        )
+    """, dict(west=west, south=south, east=east, north=north, limit=limit)).fetchone()[0]
+
+
 def _query_measurements(connection: sqlite3.Connection, prefix: str,
                         parameters: dict[str, float]) -> dict[str, list[Measurement]]:
     result: dict[str, list[Measurement]] = {}

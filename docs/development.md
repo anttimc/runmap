@@ -155,7 +155,10 @@ uv run python -m runmap.cli paths export-numeric \
 Startup validates metadata without loading graph chunks. A mismatched or explicitly
 configured missing artifact fails startup; re-export after replacing the source
 network. Without a numeric artifact, both use the existing local SQLite backend.
-Existing version-2 numeric artifacts work without re-export.
+Existing version-2 numeric artifacts work without re-export. New exports omit
+segments forbidden by every supported policy; re-export to a new destination and
+select it with `RUNMAP_NUMERIC_DATABASE` to obtain that size reduction. See
+[preprocessing and identity details](numeric-routing-format.md#export-and-read).
 
 `RUNMAP_NUMERIC_CACHE_BYTES` defaults to 134217728 (128 MiB) per API process.
 The LRU retains immutable graphs for exact working-area bounds, including their

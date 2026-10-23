@@ -1,0 +1,278 @@
+{
+  "machine": "arm64",
+  "python": "3.14.6",
+  "before": {
+    "path": "data/paths/prepared/helsinki-capital-area/numeric-routing-v2-before-policy-union.sqlite",
+    "file_bytes": 776671232,
+    "payload_bytes": 617942800,
+    "chunks": 3461,
+    "segments": 631979,
+    "arcs": 1263958,
+    "intervals": 2749906
+  },
+  "after": {
+    "path": "data/paths/prepared/helsinki-capital-area/numeric-routing-policy-union.sqlite",
+    "file_bytes": 740032512,
+    "payload_bytes": 582072800,
+    "chunks": 3459,
+    "segments": 586218,
+    "arcs": 1172436,
+    "intervals": 2616596
+  },
+  "note": "Sequential direct handler requests plus response JSON; no HTTP/browser transport. Each case has a fresh graph cache. OS cache is uncontrolled. Three repeated samples are diagnostic, not production percentiles.",
+  "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+  "feature_identity": "f3f52c96764f4107f33dccf94361d9bb13578f1057b7e02e91a518f775c01098",
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "exploration_equivalence": {
+    "request": {
+      "dataset_id": "fda8c40d3e79bbd078a7edcdc485fd7d45a5bd685fe05c0db32e9fd15567039f",
+      "home": {
+        "longitude": 24.795,
+        "latitude": 60.216,
+        "segment_id": null
+      },
+      "turnaround": {
+        "longitude": 24.815,
+        "latitude": 60.225,
+        "segment_id": null
+      },
+      "settings": {
+        "avoidance_ratio": 0.18,
+        "centre_enabled": true,
+        "radius_ratio": 0.15,
+        "transition_ratio": 0.05,
+        "side_strength": 2.0,
+        "reuse_strength": 4.0
+      },
+      "preferences": {
+        "hills": "off",
+        "signals": "off",
+        "busy_roads": "off",
+        "greenery": "off"
+      },
+      "radius_m": 50.0,
+      "surface": "all",
+      "avoid_stairs": true
+    },
+    "bounds": [
+      376156.4135660749,
+      6675746.019860009,
+      380642.6539071208,
+      6680232.260201054
+    ],
+    "profiles": [
+      {
+        "id": "public:all:stairs-0",
+        "forbidden_access_values": [
+          "no",
+          "private",
+          "destination",
+          "customers",
+          "permit",
+          "delivery"
+        ],
+        "forbidden_highways": [],
+        "surface_preference": "all"
+      },
+      {
+        "id": "public:all:stairs-1",
+        "forbidden_access_values": [
+          "no",
+          "private",
+          "destination",
+          "customers",
+          "permit",
+          "delivery"
+        ],
+        "forbidden_highways": [
+          "steps"
+        ],
+        "surface_preference": "all"
+      },
+      {
+        "id": "public:surfaced:stairs-0",
+        "forbidden_access_values": [
+          "no",
+          "private",
+          "destination",
+          "customers",
+          "permit",
+          "delivery"
+        ],
+        "forbidden_highways": [],
+        "surface_preference": "surfaced"
+      },
+      {
+        "id": "public:surfaced:stairs-1",
+        "forbidden_access_values": [
+          "no",
+          "private",
+          "destination",
+          "customers",
+          "permit",
+          "delivery"
+        ],
+        "forbidden_highways": [
+          "steps"
+        ],
+        "surface_preference": "surfaced"
+      }
+    ],
+    "budgets_m": [
+      1000,
+      3000,
+      5000
+    ],
+    "directions": [
+      "forward",
+      "reverse"
+    ],
+    "comparisons": 24,
+    "exact_node_and_distance_match": true
+  },
+  "endpoint_requests": [
+    {
+      "route": "short",
+      "hills": "off",
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.815,
+        60.225
+      ]
+    },
+    {
+      "route": "short",
+      "hills": "high",
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.815,
+        60.225
+      ]
+    },
+    {
+      "route": "long",
+      "hills": "off",
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.96,
+        60.25
+      ]
+    },
+    {
+      "route": "long",
+      "hills": "high",
+      "home": [
+        24.795,
+        60.216
+      ],
+      "turnaround": [
+        24.96,
+        60.25
+      ]
+    }
+  ],
+  "active_artifact": "data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite",
+  "cases": [
+    {
+      "route": "short",
+      "hills": "off",
+      "equivalent": true,
+      "timings_ms": {
+        "before": {
+          "first": 364.9472499964759,
+          "repeated_median": 33.31316699041054
+        },
+        "after": {
+          "first": 82.83570897765458,
+          "repeated_median": 30.965958023443818
+        }
+      },
+      "candidate_distances_m": [
+        5273.9980000000005,
+        5273.998
+      ],
+      "attempts": {
+        "before": 2,
+        "after": 2
+      }
+    },
+    {
+      "route": "short",
+      "hills": "high",
+      "equivalent": true,
+      "timings_ms": {
+        "before": {
+          "first": 93.50137499859557,
+          "repeated_median": 41.521625011228025
+        },
+        "after": {
+          "first": 89.33212497504428,
+          "repeated_median": 41.57987498911098
+        }
+      },
+      "candidate_distances_m": [
+        6018.905618386403,
+        5911.5356183864005
+      ],
+      "attempts": {
+        "before": 2,
+        "after": 2
+      }
+    },
+    {
+      "route": "long",
+      "hills": "off",
+      "equivalent": true,
+      "timings_ms": {
+        "before": {
+          "first": 4120.476833020803,
+          "repeated_median": 2643.3191670221277
+        },
+        "after": {
+          "first": 2674.6595420408994,
+          "repeated_median": 2571.4054169948213
+        }
+      },
+      "candidate_distances_m": [
+        29868.393999999986,
+        29868.394000000008
+      ],
+      "attempts": {
+        "before": 2,
+        "after": 2
+      }
+    },
+    {
+      "route": "long",
+      "hills": "high",
+      "equivalent": true,
+      "timings_ms": {
+        "before": {
+          "first": 2985.349749971647,
+          "repeated_median": 2763.7864170246758
+        },
+        "after": {
+          "first": 2930.5047909729183,
+          "repeated_median": 2755.063292046543
+        }
+      },
+      "candidate_distances_m": [
+        30548.8226183864,
+        31017.375618386402
+      ],
+      "attempts": {
+        "before": 2,
+        "after": 2
+      }
+    }
+  ]
+}

@@ -14,7 +14,8 @@ from unittest.mock import patch
 from rasterio.warp import transform
 
 from runmap.cli import main
-from runmap.paths.database import export_network_database, network_metadata, open_network_database, query_network
+from runmap.paths.database import (count_network_segments, export_network_database, network_metadata,
+                                   open_network_database, query_network)
 from runmap.paths.measurements import graph_digest
 from runmap.routing.types import GraphDocument, Measurement, MeasurementDocument
 from test_measurements import enrich
@@ -52,6 +53,24 @@ def publish_fixture(root: Path, *, terrain: bool = True) -> tuple[Path, GraphDoc
 
 
 class PathDatabaseTests(unittest.TestCase):
+    def test_bounded_segment_counts_preserve_envelope_selection(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, _, _ = publish_fixture(root, terrain=False)
+            destination = root / "network.sqlite"
+            export_network_database(source, destination)
+            with closing(open_network_database(destination)) as connection:
+                for bounds in ((0, 0, 1, 1), (375040, 6674990, 375060, 6675010),
+                               (374990, 6674990, 375210, 6675010), (374000, 6674000, 381000, 6676000)):
+                    expected = len(query_network(connection, bounds, include_measurements=False).graph["segments"])
+                    for limit in (1, 2, 3, 4):
+                        with self.subTest(bounds=bounds, limit=limit):
+                            self.assertEqual(count_network_segments(connection, bounds, limit=limit), min(expected, limit))
+                with self.assertRaisesRegex(ValueError, "positive"):
+                    count_network_segments(connection, (0, 0, 1, 1), limit=0)
+                with self.assertRaisesRegex(ValueError, "bounds"):
+                    count_network_segments(connection, (1, 0, 0, 1), limit=1)
+
     def test_complete_crossing_segment_and_frontier_then_expansion(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

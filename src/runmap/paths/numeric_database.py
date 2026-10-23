@@ -19,6 +19,7 @@ from runmap.routing.types import Bounds
 
 
 NUMERIC_SCHEMA_VERSION = 1
+PREPROCESSING_VERSION = "policy-union-v1"
 
 
 @dataclass(frozen=True)
@@ -61,6 +62,8 @@ def _write_metadata(source: sqlite3.Connection, target: sqlite3.Connection) -> N
     target.executemany("INSERT INTO metadata VALUES (?, ?)", source.execute(
         "SELECT key, value FROM metadata WHERE key != 'graph_metadata'"))
     target.execute("INSERT INTO metadata VALUES ('numeric_format_version', ?)", (str(FORMAT_VERSION),))
+    target.execute("INSERT INTO metadata VALUES ('numeric_preprocessing_version', ?)",
+                   (json.dumps(PREPROCESSING_VERSION),))
     for kind, query in (
             ("node", "SELECT rowid, id FROM nodes"),
             ("segment", "SELECT number, id FROM segments"),
@@ -70,20 +73,71 @@ def _write_metadata(source: sqlite3.Connection, target: sqlite3.Connection) -> N
     return metadata
 
 
+def _prepare_routing_selection(source: sqlite3.Connection, metadata: NetworkMetadata) -> None:
+    """Count incidence over the policy union so excluded links are not frontiers."""
+    profiles = tuple(profile["id"] for profile in metadata.models.profiles)
+    placeholders = ",".join("?" for _ in profiles)
+    missing = source.execute(f"""
+        SELECT s.id FROM segments s WHERE (
+            SELECT count(*) FROM segment_policies p WHERE p.segment_id = s.id
+              AND p.policy_id IN ({placeholders})
+        ) != ? LIMIT 1
+    """, (*profiles, len(profiles))).fetchone()
+    if missing is not None:
+        raise ValueError(f"Missing prepared routing policies for segment {missing[0]}")
+    source.execute("CREATE TEMP TABLE numeric_segments (number INTEGER PRIMARY KEY)")
+    source.execute(f"""
+        INSERT INTO numeric_segments
+        SELECT s.number FROM segments s WHERE EXISTS (
+            SELECT 1 FROM segment_policies p WHERE p.segment_id = s.id
+              AND p.policy_id IN ({placeholders}) AND (p.forward OR p.backward)
+        )
+    """, profiles)
+    source.execute("""
+        CREATE TEMP TABLE numeric_node_degree AS
+        SELECT id, count(*) AS degree FROM (
+            SELECT s.source AS id FROM segments s JOIN numeric_segments n ON n.number = s.number
+            UNION ALL
+            SELECT s.target FROM segments s JOIN numeric_segments n ON n.number = s.number
+        ) GROUP BY id
+    """)
+    source.execute("CREATE UNIQUE INDEX numeric_degree_id ON numeric_node_degree(id)")
+
+
+def _routing_chunk(source: sqlite3.Connection, chunk: TopologyChunk) -> TopologyChunk:
+    numbers = [item["number"] for item in chunk["segments"]]
+    placeholders = ",".join("?" for _ in numbers)
+    retained = {row[0] for row in source.execute(
+        f"SELECT number FROM numeric_segments WHERE number IN ({placeholders})", numbers)}
+    segments = [item for item in chunk["segments"] if item["number"] in retained]
+    keys = {item["record"]["id"] for item in segments}
+    endpoints = {item["record"][end] for item in segments for end in ("from", "to")}
+    placeholders = ",".join("?" for _ in endpoints)
+    degrees = dict(source.execute(
+        f"SELECT id, degree FROM numeric_node_degree WHERE id IN ({placeholders})", tuple(endpoints)))
+    return TopologyChunk(segments=segments,
+        arcs=[item for item in chunk["arcs"] if item["record"]["segment_id"] in keys],
+        nodes=[dict(record=item["record"], degree=degrees[item["record"]["id"]])
+               for item in chunk["nodes"] if item["record"]["id"] in endpoints])
+
+
 def _write_chunks(source: sqlite3.Connection, target: sqlite3.Connection,
                   metadata: NetworkMetadata) -> None:
-    rows = source.execute("""
-        SELECT c.number, c.payload, b.west, b.east, b.south, b.north
-        FROM graph_chunks c JOIN graph_chunk_bounds b ON b.number = c.number ORDER BY c.number
-    """)
-    for number, document, west, east, south, north in rows:
-        records = cast(TopologyChunk, json.loads(document))
+    _prepare_routing_selection(source, metadata)
+    rows = source.execute("SELECT number, payload FROM graph_chunks ORDER BY number")
+    for number, document in rows:
+        records = _routing_chunk(source, cast(TopologyChunk, json.loads(document)))
+        if not records["segments"]:
+            continue
         chunk = prepare_numeric_chunk(source, records, metadata.models.profiles)
         payload = encode_numeric_chunk(chunk)
         target.execute("INSERT INTO numeric_chunks VALUES (?, ?, ?, ?)",
                        (number, payload, hashlib.sha256(payload).hexdigest(), len(payload)))
-        target.execute("INSERT INTO chunk_bounds VALUES (?, ?, ?, ?, ?)",
-                       (number, west, east, south, north))
+        bounds = (min(s["bounds"][0] for s in records["segments"]),
+                  max(s["bounds"][2] for s in records["segments"]),
+                  min(s["bounds"][1] for s in records["segments"]),
+                  max(s["bounds"][3] for s in records["segments"]))
+        target.execute("INSERT INTO chunk_bounds VALUES (?, ?, ?, ?, ?)", (number, *bounds))
         target.executemany("INSERT INTO node_chunks VALUES (?, ?)",
                            ((int(node), number) for node in chunk.arrays["node_ids"]))
 

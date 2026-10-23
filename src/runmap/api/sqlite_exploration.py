@@ -9,7 +9,7 @@ from time import monotonic
 import numpy as np
 
 from runmap.api.sqlite_data import SQLitePathData
-from runmap.paths.database import SELECTION, query_segment_record
+from runmap.paths.database import count_network_segments, query_segment_record
 from runmap.paths.exploration import DistanceData, Snap, distance_data
 from runmap.paths.local_network import load_local_network
 from runmap.routing.deadlines import check_deadline
@@ -131,9 +131,7 @@ def _check_window(connection: sqlite3.Connection, bounds: Bounds, retry: int,
     west, south, east, north = bounds
     if (east - west) * (north - south) > limits.max_area_km2 * 1e6:
         raise ExplorationAreaError("maximum_area", bounds, retry)
-    count = connection.execute(f"SELECT count(*) FROM ({SELECTION} LIMIT :limit)",
-                               dict(west=west, south=south, east=east, north=north,
-                                    limit=limits.max_segments + 1)).fetchone()[0]
+    count = count_network_segments(connection, bounds, limit=limits.max_segments + 1)
     if count > limits.max_segments:
         raise ExplorationAreaError("maximum_segments", bounds, retry)
 

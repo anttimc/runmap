@@ -14,7 +14,7 @@ from runmap.api.numeric_runs import load_route_segments, render_numeric_result, 
 from runmap.routing.numeric_planner import numeric_plan_run
 from runmap.api.sqlite_paths import database_snap
 from runmap.paths.coverage import near_coverage_boundary
-from runmap.paths.database import SELECTION
+from runmap.paths.database import count_network_segments
 from runmap.paths.exploration import Snap
 from runmap.paths.local_network import LocalNetwork, load_local_network
 from runmap.routing.cost_preparation import resolve_shape_strengths
@@ -113,9 +113,7 @@ def _plan_windows(data: SQLitePathData, options: RunRequest, response: RunRespon
         with data.pool.connection(deadline=deadline) as connection:
             if _area_exceeded(bounds, limits.max_area_km2):
                 return _area_limited(response, "maximum_area", attempt, started)
-            west, south, east, north = bounds
-            count = connection.execute(f"SELECT count(*) FROM ({SELECTION} LIMIT :limit)",
-                dict(west=west, south=south, east=east, north=north, limit=limits.max_segments + 1)).fetchone()[0]
+            count = count_network_segments(connection, bounds, limit=limits.max_segments + 1)
             attempt.segments = count
             if count > limits.max_segments:
                 return _area_limited(response, "maximum_segments", attempt, started)
@@ -215,8 +213,7 @@ def _plan_numeric_windows(data: SQLitePathData, options: RunRequest, response: R
             return _area_limited(response, "maximum_area", attempt, started)
         west, south, east, north = bounds
         with data.pool.connection(deadline=deadline) as connection:
-            count = connection.execute(f"SELECT count(*) FROM ({SELECTION} LIMIT :limit)",
-                dict(west=west, south=south, east=east, north=north, limit=limits.max_segments+1)).fetchone()[0]
+            count = count_network_segments(connection, bounds, limit=limits.max_segments+1)
         attempt.segments = count
         if count > limits.max_segments:
             return _area_limited(response, "maximum_segments", attempt, started)

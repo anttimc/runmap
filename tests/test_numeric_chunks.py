@@ -20,6 +20,7 @@ from runmap.paths.numeric_database import (StoredNumericChunk, export_numeric_da
 from runmap.paths.numeric_format import (HEADER, NumericChunk, decode_numeric_chunk,
                                          encode_numeric_chunk, validate_numeric_chunk)
 from runmap.routing.search import shortest_distances
+from runmap.routing.numeric_search import NumericEndpoint, load_numeric_graph, numeric_distances
 from test_database_features import BOUNDS
 from test_path_database import publish_fixture
 
@@ -135,7 +136,64 @@ class NumericChunkTests(unittest.TestCase):
                     indices = np.flatnonzero(data["arc_segments"] == i)
                     observed[identities[int(number)]] = [int(value) for value in data["arc_allowed"][indices, 0]]
             self.assertEqual(observed["bc"], [0, 1])
-            self.assertEqual(observed["de"], [0, 0])
+            self.assertNotIn("de", observed)
+
+    def test_pruning_updates_incidence_bounds_and_cross_chunk_frontiers(self) -> None:
+        root = self.root / "pruned"
+        root.mkdir()
+        source, graph, _ = publish_fixture(root, terrain=False)
+        graph["nodes"][2]["foot"] = "no"  # Remove bc; retain its shared endpoint b.
+        source.write_text(json.dumps(graph))
+        reference, numeric = root / "network.sqlite", root / "numeric.sqlite"
+        export_network_database(source, reference)
+        # An unrelated policy must not keep a segment absent from the supported union.
+        with closing(sqlite3.connect(reference)) as connection, connection:
+            connection.execute("INSERT INTO segment_policies VALUES ('bc', 'unsupported', 1, 1, NULL)")
+        export_numeric_database(reference, numeric)
+        with closing(open_numeric_database(numeric)) as connection:
+            identities = dict(connection.execute("SELECT external_id, number FROM identities WHERE kind='node'"))
+            self.assertEqual(node_chunk_ids(connection, identities["c"]), ())
+            chunks = list(iter_numeric_chunks(connection, (375140, 6674990, 375160, 6675010)))
+            self.assertEqual(chunks, [])  # The old sb/bc chunk envelope reached this box.
+            graph = load_numeric_graph(connection, (375040, 6674990, 375060, 6675010))
+            result = numeric_distances(graph, NumericEndpoint(node_id=identities["s"]))
+            self.assertEqual(set(result.node_ids), {identities["s"], identities["b"]})
+            self.assertFalse(result.frontier_node_ids.size)
+            chunk = next(iter_numeric_chunks(connection, (375040, 6674990, 375060, 6675010))).chunk
+            self.assertEqual(chunk.arrays["node_degree"].tolist(), [1, 1])
+
+    def test_excluded_chunks_disappear_and_retained_connections_remain_frontiers(self) -> None:
+        with closing(sqlite3.connect(self.reference)) as connection, connection:
+            connection.execute("UPDATE segment_policies SET forward=0, backward=0, reason='test' WHERE segment_id='de'")
+        destination = self.root / "pruned.sqlite"
+        export_numeric_database(self.reference, destination)
+        with closing(open_numeric_database(destination)) as connection:
+            self.assertEqual(len(list(iter_numeric_chunks(connection, BOUNDS))), 2)
+            identities = dict(connection.execute("SELECT external_id, number FROM identities WHERE kind='node'"))
+            self.assertEqual(node_chunk_ids(connection, identities["d"]), ())
+            graph = load_numeric_graph(connection, (375040, 6674990, 375060, 6675010))
+            result = numeric_distances(graph, NumericEndpoint(node_id=identities["s"]))
+            self.assertEqual(result.frontier_node_ids.tolist(), [identities["b"]])
+
+    def test_empty_policy_union_exports_no_chunks(self) -> None:
+        with closing(sqlite3.connect(self.reference)) as connection, connection:
+            connection.execute("UPDATE segment_policies SET forward=0, backward=0, reason='test'")
+        destination = self.root / "empty.sqlite"
+        export_numeric_database(self.reference, destination)
+        with closing(open_numeric_database(destination)) as connection, closing(open_network_database(self.reference)) as reference:
+            self.assertEqual(list(iter_numeric_chunks(connection, BOUNDS)), [])
+            self.assertEqual(connection.execute("SELECT count(*) FROM chunk_bounds").fetchone()[0], 0)
+            self.assertEqual(connection.execute("SELECT count(*) FROM node_chunks").fetchone()[0], 0)
+            self.assertEqual(network_metadata(connection).dataset_id, network_metadata(reference).dataset_id)
+
+    def test_missing_policies_are_not_treated_as_forbidden(self) -> None:
+        with closing(sqlite3.connect(self.reference)) as connection, connection:
+            connection.execute("DELETE FROM segment_policies WHERE segment_id='de'")
+        destination = self.root / "missing.sqlite"
+        with self.assertRaisesRegex(ValueError, "Missing prepared routing policies.*de"):
+            export_numeric_database(self.reference, destination)
+        self.assertFalse(destination.exists())
+        self.assertFalse(list(self.root.glob("numeric-*.sqlite")))
 
     def test_loading_buffers_does_not_decode_records_and_buffers_outlive_connection(self) -> None:
         with closing(open_numeric_database(self.numeric)) as connection:

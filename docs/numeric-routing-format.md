@@ -1,11 +1,9 @@
 # Numeric routing artifact, version 2
 
-This is the first storage implementation for the
+This implements numeric storage for the
 [100 ms routing architecture](100ms-routing-architecture.md). It is an offline
-artifact alongside the reference database. The HTTP planner and exploration
-endpoints still use the reference backend. Native traversal, endpoint overlays,
-and experimental run candidates are implemented; bounded chunk residency and API
-integration remain outstanding.
+artifact alongside the reference database, used by the HTTP planner and distance
+exploration with bounded working-set caching.
 
 ## Export and read
 
@@ -20,10 +18,26 @@ chunks individually, including prepared features; it never loads the complete
 JSON graph. The destination must be new. Staging and atomic no-overwrite publication
 preserve both existing artifacts and failed-export cleanup.
 
+New exports retain a segment only when at least one supported metadata profile
+allows at least one traversal direction. Its arcs, geometry, and hill features
+are omitted otherwise; nodes with no retained incident segments and empty chunks
+are omitted too. Chunk envelopes and global node incidence are recomputed over
+this policy union. Excluded links therefore do not create unloaded frontiers,
+while retained links outside a working window still do. Source network data,
+coverage, snapping, and inspection remain available independently.
+
+The JSON metadata value `numeric_preprocessing_version` is `"policy-union-v1"`
+for these exports. Existing version-2 artifacts remain readable; re-export to a
+new destination to obtain the reduction. Source numeric identities are preserved,
+including identity rows for omitted records. Those rows do not imply graph
+membership: native endpoints must belong to the loaded retained graph.
+The [capital-area pruning report](archive/history/49-policy-union-pruning.md)
+records size changes, routing/exploration equivalence, and latency limits.
+
 Version 2 adds explicit node eligibility masks. Arc eligibility alone cannot
 represent the reference behavior for a search starting at a blocked node.
 Version-1 experimental artifacts must be re-exported into a new filename. This
-does not change the reference network database schema or active HTTP backend.
+does not change the reference network database schema.
 
 The artifact is read-only SQLite with a bounded page-cache target. Opening reads
 metadata only. `iter_numeric_chunks` selects full chunk envelopes through an

@@ -218,7 +218,7 @@ class NumericSearchTests(unittest.TestCase):
                 results = list(executor.map(request, range(16)))
         self.assertEqual(results, [200] * 16)
 
-    def test_one_way_and_blocked_start_nodes_match_reference(self) -> None:
+    def test_one_way_routes_and_excluded_endpoints(self) -> None:
         root = self.root / "restricted"
         root.mkdir()
         source, graph, _ = publish_fixture(root, terrain=False)
@@ -232,8 +232,10 @@ class NumericSearchTests(unittest.TestCase):
             loaded = load_numeric_graph(connection, BOUNDS)
         self.assertIsNone(numeric_shortest_path(loaded, self._endpoint("s"), self._endpoint("c")).cost)
         self.assertEqual(numeric_shortest_path(loaded, self._endpoint("c"), self._endpoint("s")).cost, 200)
-        self.assertFalse(numeric_distances(loaded, self._endpoint("e")).node_ids.size)
-        self.assertIsNone(numeric_shortest_path(loaded, self._endpoint("e"), self._endpoint("e")).cost)
+        with self.assertRaisesRegex(ValueError, "not in the selected graph"):
+            numeric_distances(loaded, self._endpoint("e"))
+        with self.assertRaisesRegex(ValueError, "not in the selected graph"):
+            numeric_shortest_path(loaded, self._endpoint("e"), self._endpoint("e"))
 
     def test_native_constructor_rejects_corrupt_references_and_duplicate_chunks(self) -> None:
         with closing(open_numeric_database(self.numeric)) as connection:

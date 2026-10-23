@@ -53,6 +53,7 @@ def measure_phases() -> Iterator[PhaseTimes]:
     """Instrument coarse boundaries only, keeping per-arc routing work untouched."""
     phases = PhaseTimes()
     with ExitStack() as stack:
+        stack.enter_context(patch.object(sqlite_runs, "count_network_segments", _timed("segment_count", sqlite_runs.count_network_segments, phases)))
         stack.enter_context(patch.object(sqlite_runs, "_snap", _timed("snap", sqlite_runs._snap, phases)))
         stack.enter_context(patch.object(sqlite_runs, "load_local_network", _timed("prepare", sqlite_runs.load_local_network, phases)))
         stack.enter_context(patch.object(local_network, "query_network", _timed("topology", local_network.query_network, phases)))
