@@ -65,6 +65,23 @@ class CliTests(unittest.TestCase):
                 sidecar.write_text('{"sha256": "incorrect"}')
             self.assertFalse((root / "prepared").exists())
 
+    def test_cached_source_with_old_highway_query_requires_refresh(self) -> None:
+        with TemporaryDirectory() as directory, patch("runmap.cli.download_highways") as download:
+            root = Path(directory)
+            source = root / "raw" / EXPERIMENT_ID / "osm-network-boundaries-none.json"
+            source.parent.mkdir(parents=True)
+            source.write_text('{"elements": []}')
+            source.with_suffix(".json.json").write_text(json.dumps({
+                "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                "query": '[out:json];way["highway"="path"];out;',
+            }))
+            with redirect_stderr(StringIO()) as errors, self.assertRaises(SystemExit) as exit_info:
+                main(["paths", "--data-root", str(root), "prepare", EXPERIMENT_ID, "--without-terrain"])
+            self.assertEqual(exit_info.exception.code, 2)
+            self.assertIn("query does not match current acquisition", errors.getvalue())
+            download.assert_not_called()
+            self.assertFalse((root / "prepared").exists())
+
     def test_stale_graph_is_rejected_before_route_outputs(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

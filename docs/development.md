@@ -109,6 +109,10 @@ The dry run lists required tiles without downloading them. See
 
 ## Prepare paths
 
+Tertiary roads are included alongside residential streets and paths, subject to
+the existing pedestrian-access restrictions. OSM's tertiary classification
+describes a connecting road's transport role and does not imply a pedestrian ban.
+
 Prepare elevation and its default derivative first, then acquire and prepare the
 configured OSM network:
 
@@ -116,6 +120,12 @@ configured OSM network:
 uv run --extra web python -m runmap.cli paths prepare helsinki-capital-area --dry-run
 uv run --extra web python -m runmap.cli paths prepare helsinki-capital-area
 ```
+
+Cached acquisition queries must match the current highway selection. If a cached
+extract predates a selection change (such as adding tertiary roads), move its
+JSON file and `.json.json` provenance sidecar aside and rerun preparation to
+download a fresh extract. Explicit `--input` bypasses this query check for offline
+rebuilds; an older extract cannot supply road classes it never downloaded.
 
 Rebuild from an existing local extract without downloading again:
 

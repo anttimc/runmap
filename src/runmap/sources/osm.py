@@ -11,7 +11,7 @@ from urllib.request import Request, build_opener
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 OSM_COPYRIGHT_URL = "https://www.openstreetmap.org/copyright"
 RUNNABLE_HIGHWAY_PATTERN = (
-    "cycleway|footway|living_street|path|pedestrian|residential|service|steps|track|unclassified"
+    "cycleway|footway|living_street|path|pedestrian|residential|service|steps|tertiary|track|unclassified"
 )
 
 

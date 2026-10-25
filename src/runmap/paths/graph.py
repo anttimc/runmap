@@ -29,6 +29,7 @@ RUNNABLE_HIGHWAYS = frozenset({
     "residential",
     "service",
     "steps",
+    "tertiary",
     "track",
     "unclassified",
 })

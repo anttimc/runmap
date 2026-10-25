@@ -203,7 +203,9 @@ def _input_provenance(raw_path: Path, bounds_wgs84: CoordinateBounds) -> OsmSour
     }
 
 
-def _cached_osm_provenance(raw_path: Path, parser: argparse.ArgumentParser) -> OsmSource:
+def _cached_osm_provenance(
+    raw_path: Path, parser: argparse.ArgumentParser, expected_query: str,
+) -> OsmSource:
     """Require the cached payload to match its acquisition provenance before reuse."""
     sidecar = raw_path.with_suffix(raw_path.suffix + ".json")
     if not sidecar.exists():
@@ -211,6 +213,12 @@ def _cached_osm_provenance(raw_path: Path, parser: argparse.ArgumentParser) -> O
     provenance = json.loads(sidecar.read_text())
     if hashlib.sha256(raw_path.read_bytes()).hexdigest() != provenance.get("sha256"):
         parser.error(f"Existing OSM source checksum does not match: {raw_path}")
+    if provenance.get("query") != expected_query:
+        parser.error(
+            f"Existing OSM source query does not match current acquisition: {raw_path}. "
+            "Move the cached source and its provenance sidecar aside and rerun to download "
+            "the current highway classes, or use --input to explicitly reuse an older extract."
+        )
     return provenance
 
 
@@ -229,7 +237,8 @@ def _load_osm_source(
     else:
         try:
             osm_provenance = (
-                _cached_osm_provenance(raw_path, parser) if raw_path.exists()
+                _cached_osm_provenance(raw_path, parser, highway_query(bounds_wgs84, boundary_refs))
+                if raw_path.exists()
                 else download_highways(bounds_wgs84, raw_path, boundary_refs)
             )
         except HTTPError as exc:

@@ -22,6 +22,30 @@ def node(identifier, longitude, latitude, tags=None):
 
 
 class PathGraphTests(unittest.TestCase):
+    def test_ainontie_tertiary_connects_paths_and_respects_pedestrian_restrictions(self) -> None:
+        document = {"elements": [
+            node(1, 24.788, 60.266), node(2, 24.789, 60.266),
+            node(3, 24.790, 60.266), node(4, 24.791, 60.266),
+            {"type": "way", "id": 10, "nodes": [1, 2], "tags": {"highway": "path"}},
+            {"type": "way", "id": 11, "nodes": [2, 3],
+             "tags": {"highway": "tertiary", "name": "Ainontie", "surface": "asphalt"}},
+            {"type": "way", "id": 12, "nodes": [3, 4], "tags": {"highway": "path"}},
+            {"type": "way", "id": 13, "nodes": [1, 4],
+             "tags": {"highway": "tertiary", "foot": "no"}},
+            {"type": "way", "id": 14, "nodes": [1, 4],
+             "tags": {"highway": "tertiary", "access": "private"}},
+        ]}
+
+        graph = build_routing_graph(document)
+
+        self.assertEqual(graph["summary"]["component_count"], 1)
+        self.assertEqual(graph["summary"]["segment_count"], 3)
+        self.assertEqual(graph["summary"]["arc_count"], 6)
+        self.assertEqual(graph["summary"]["rejected_way_counts"],
+                         {"foot_denied": 1, "access_denied": 1})
+        ainontie = next(segment for segment in graph["segments"] if segment["osm_way_id"] == "11")
+        self.assertEqual(ainontie["tags"]["name"], "Ainontie")
+
     def test_splits_at_shared_nodes_and_builds_pedestrian_arcs(self):
         document = {"elements": [
             node(1, 24.80, 60.20),
@@ -247,7 +271,7 @@ class RoutingExperimentTests(unittest.TestCase):
         query = highway_query((60.1, 24.7, 60.3, 24.9), ("1",))
 
         self.assertIn(
-            'way["highway"~"^(cycleway|footway|living_street|path|pedestrian|residential|service|steps|track|unclassified)$"]'
+            'way["highway"~"^(cycleway|footway|living_street|path|pedestrian|residential|service|steps|tertiary|track|unclassified)$"]'
             '(60.1000000,24.7000000,60.3000000,24.9000000)',
             query,
         )
