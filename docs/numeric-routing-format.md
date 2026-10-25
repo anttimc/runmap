@@ -237,7 +237,7 @@ chainage so shape integration uses the reference endpoint geometry. The graph
 loads selected topology, geometry, and hill totals; schema 2 keeps interval detail
 outside these BLOBs. Different
 bounds do not share retained chunks yet. Exploration snapshots retain only sparse
-reached-node IDs/distances; numeric endpoint metadata for visible intervals is
+reached-node IDs/distances; numeric endpoint metadata for inspected segments is
 queried on demand from the source database. Their byte/TTL budget excludes graph
 owners because snapshot result bytes remain valid independently of graph-cache
 eviction or shutdown. Profiles, partial starts, whole-interval inclusion, and

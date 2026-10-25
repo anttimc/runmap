@@ -307,8 +307,9 @@ delivery, and reader peak RSS. HTTP transport and cold OS caches are excluded.
 See the [migration roadmap](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
 for planner area expansion.
 
-Add `--explore-budget-km 3` to compare exploration preparation, viewport inclusion,
-and snapshot distance tiles in the SQLite/JSON reader subprocesses. The probe
+Add `--explore-budget-km 3` to compare exploration preparation and start-distance
+inspection in the SQLite/JSON reader subprocesses. Numeric SQLite readers also
+measure both shell methods. The probe
 checks output hashes, includes reader RSS, and reports selected local graph size
 and snapshot cache ownership. SQLite preparation includes loading its bounded working set; numeric snapshots
 retain only sparse distances. Warm samples in this delivery probe reuse the
@@ -392,7 +393,7 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_PATH_SEARCH_MAX_SEGMENTS` | 650,000 complete candidate segments per exploration query |
 | `RUNMAP_PATH_SEARCH_MAX_RETRIES` | 2 retries; double both box dimensions after a reached frontier |
 | `RUNMAP_PATH_TILE_CACHE_BYTES` | 67,108,864 bytes |
-| `RUNMAP_PATH_TILE_INPUT_CACHE_BYTES` | 67,108,864 bytes of compact immutable display samples, shared across snapshots; zero disables retention |
+| `RUNMAP_PATH_TILE_INPUT_CACHE_BYTES` | 67,108,864 bytes of compact immutable gradient display samples; zero disables retention |
 | `RUNMAP_PATH_SNAPSHOT_CACHE_BYTES` | 134,217,728 bytes |
 | `RUNMAP_PATH_TILE_TTL` | 900 seconds |
 | `RUNMAP_PATH_SNAPSHOT_TTL` | 900 seconds |

@@ -13,19 +13,6 @@
     map.once("style.load", resolve);
     map.setStyle({ version: 8, sources: {}, layers: [] });
   });
-  let snapshot = await (
-    await fetch("/api/paths/snapshots", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        dataset_id: config.dataset_id,
-        longitude: 24.80259,
-        latitude: 60.21682,
-        budget_km: 6,
-      }),
-    })
-  ).json();
-  if (snapshot.status !== "ready") throw Error(JSON.stringify(snapshot));
   let sequence = 0;
   const rows = [];
   window.__tileBenchResult = {
@@ -71,20 +58,8 @@
       map.jumpTo({ center: [lon, lat], zoom });
       await wait(250);
       const b = map.getBounds();
-      for (const mode of ["gradient", "gradient_explore", "distance_explore"]) {
-        if (mode !== "gradient")
-          snapshot = await (
-            await fetch("/api/paths/snapshots", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                dataset_id: config.dataset_id,
-                longitude: 24.80259,
-                latitude: 60.21682,
-                budget_km: 6,
-              }),
-            })
-          ).json();
+      {
+        const mode = "gradient";
         const params = new URLSearchParams({
           west: b.getWest(),
           south: b.getSouth(),
@@ -94,21 +69,11 @@
           surface: "all",
           avoid_stairs: true,
           dataset_id: config.dataset_id,
-          metric: mode === "distance_explore" ? "distance" : "gradient",
         });
-        if (mode !== "gradient") {
-          params.set("longitude", 24.80259);
-          params.set("latitude", 60.21682);
-          params.set("budget_km", 6);
-        }
-        const baseline = await (
-          await fetch("/api/paths/" + (mode === "gradient" ? "viewport" : "explore") + "?" + params)
-        ).json();
-        const template = (
-          mode === "gradient"
-            ? config.tile_template.replace("{policy}", "all-no-stairs")
-            : snapshot.tile_template
-        ).replace("{variant}", (mode === "distance_explore" ? "distance" : "gradient") + "-hidden");
+        const baseline = await (await fetch("/api/paths/viewport?" + params)).json();
+        const template = config.tile_template
+          .replace("{policy}", "all-no-stairs")
+          .replace("{variant}", "gradient-hidden");
         const project = (lon, lat) => [
           ((lon + 180) / 360) * 2 ** zoom,
           ((1 - Math.asinh(Math.tan((lat * Math.PI) / 180)) / Math.PI) / 2) * 2 ** zoom,

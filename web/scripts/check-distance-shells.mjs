@@ -12,6 +12,7 @@ let sequence = 0;
 const pending = new Map();
 const requests = [];
 const exceptions = [];
+let hideShellCapability = false;
 function call(method, params = {}) {
   const id = ++sequence;
   const result = new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
@@ -32,13 +33,24 @@ socket.addEventListener("message", async (event) => {
   } else if (message.method === "Fetch.requestPaused") {
     const { requestId } = message.params;
     const response = await call("Fetch.getResponseBody", { requestId });
-    const body =
-      (response.base64Encoded ? Buffer.from(response.body, "base64").toString() : response.body) +
-      '\nObject.defineProperty(window, "__map", {get: () => map});';
+    let body = response.base64Encoded
+      ? Buffer.from(response.body, "base64").toString()
+      : response.body;
+    const configuration = message.params.request.url.includes("/api/paths/config");
+    if (configuration) {
+      const config = JSON.parse(body);
+      if (hideShellCapability) config.shell_methods = [];
+      body = JSON.stringify(config);
+    } else body += '\nObject.defineProperty(window, "__map", {get: () => map});';
     await call("Fetch.fulfillRequest", {
       requestId,
       responseCode: 200,
-      responseHeaders: [{ name: "Content-Type", value: "application/javascript" }],
+      responseHeaders: [
+        {
+          name: "Content-Type",
+          value: configuration ? "application/json" : "application/javascript",
+        },
+      ],
       body: Buffer.from(body).toString("base64"),
     });
   }
@@ -78,7 +90,10 @@ try {
     mobile: false,
   });
   await call("Fetch.enable", {
-    patterns: [{ urlPattern: "*/src/main.ts*", requestStage: "Response" }],
+    patterns: [
+      { urlPattern: "*/src/main.ts*", requestStage: "Response" },
+      { urlPattern: "*/api/paths/config", requestStage: "Response" },
+    ],
   });
   await call("Page.navigate", { url: "http://127.0.0.1:5173/" });
   await until(`window.__map && !document.getElementById('mode-distance').disabled`);
@@ -136,7 +151,8 @@ try {
     `${dataExpression}.features.length === 0 && document.getElementById('path-status').dataset.state === 'choose_start'`,
   );
   observations.clearStart = true;
-  await evaluate(`document.getElementById('mode-gradient').click()`);
+  await evaluate(`window.__map.jumpTo({center:[24.795,60.216],zoom:15});
+    document.getElementById('mode-gradient').click();`);
   assert.equal(
     await evaluate(`window.__map.getLayoutProperty('distance-shell-fill','visibility')`),
     "none",
@@ -146,6 +162,17 @@ try {
     "visible",
   );
   observations.gradientRestored = true;
+  await until(`document.getElementById('path-status').dataset.state === 'ready'
+    && window.__map.isSourceLoaded(window.__map.getLayer('path-grades').source)`);
+  assert.ok(
+    await evaluate(`window.__map.queryRenderedFeatures({layers:['path-grades']}).length > 0`),
+  );
+  hideShellCapability = true;
+  await call("Page.navigate", { url: "http://127.0.0.1:5173/" });
+  await until(`window.__map && !document.getElementById('mode-gradient').disabled`);
+  assert.equal(await evaluate(`document.getElementById('mode-distance').disabled`), true);
+  assert.equal(await evaluate(`document.getElementById('distance-shell-method').disabled`), true);
+  observations.distanceDisabledWithoutNumericData = true;
   assert.deepEqual(exceptions, []);
   fs.writeFileSync(
     path.join(directory, "results.json"),

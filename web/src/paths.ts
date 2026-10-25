@@ -32,25 +32,6 @@ import { element } from "./dom";
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
 const neutralPathColor = "#727980";
 
-function distanceExpression(maximumM: number): ExpressionSpecification {
-  const bands = distanceBands(maximumM);
-  return [
-    "case",
-    [
-      "any",
-      ["!=", ["get", "inclusion_state"], "included"],
-      ["==", ["get", "distance_from_start_m"], null],
-    ],
-    neutralPathColor,
-    [
-      "step",
-      ["coalesce", ["get", "distance_from_start_m"], 0],
-      bands[0].color,
-      ...bands.slice(1).flatMap((band) => [band.startM, band.color]),
-    ],
-  ] as ExpressionSpecification;
-}
-
 function renderDistanceLegend(maximumKm: number): void {
   const maximumM = maximumKm * 1000;
   const bands = distanceBands(maximumM);
@@ -413,20 +394,7 @@ function pathCasingOpacity(opacity: ExpressionSpecification | number = 1): Expre
 }
 
 function applyPathEmphasis(map: Map, highlightFlat: boolean, threshold: number): void {
-  const alpha: ExpressionSpecification = [
-    "case",
-    ["==", ["get", "eligible"], false],
-    0.08,
-    [
-      "match",
-      ["coalesce", ["get", "inclusion_state"], ""],
-      "beyond_budget",
-      0.3,
-      "excluded",
-      0.08,
-      1,
-    ],
-  ];
+  const alpha: ExpressionSpecification = ["case", ["==", ["get", "eligible"], false], 0.08, 1];
   const measured: ExpressionSpecification = [
     "all",
     ["==", ["get", "quality"], "terrain_estimate"],
@@ -643,7 +611,11 @@ export function startPaths(
     control.disabled = false;
   addPathLayers(map, config, stops);
   addShellLayers(map);
-  shellMethod.disabled = !config.shell_methods?.length;
+  distanceMode.disabled = !config.shell_methods?.length;
+  distanceMode.title = distanceMode.disabled
+    ? "Distance shells require prepared numeric routing data."
+    : "";
+  shellMethod.disabled = distanceMode.disabled;
   if (!config.shell_methods?.length)
     shellStatus.textContent = "Shell display is unavailable for this dataset.";
   renderGradientLegend(stops);
@@ -700,7 +672,6 @@ export function startPaths(
   const currentMetric = (): "gradient" | "distance" =>
     options.state.mode === "plan" ? "gradient" : exploreMetric;
   const distanceEnabled = (): boolean => currentMetric() === "distance";
-  const usesShells = (): boolean => distanceEnabled() && !!config.shell_methods?.length;
   let choosingStart = false;
   function chooseStartMode(active: boolean): void {
     choosingStart = active;
@@ -785,7 +756,7 @@ export function startPaths(
     tileFailed = false;
   }
   function variant(): string {
-    return `${currentMetric()}-${hideBuildingAccess.checked ? "hidden" : "all"}`;
+    return `gradient-${hideBuildingAccess.checked ? "hidden" : "all"}`;
   }
   function policy(): string {
     return `${options.state.policy.surface}-${options.state.policy.avoid_stairs ? "no-stairs" : "stairs"}`;
@@ -793,17 +764,14 @@ export function startPaths(
   function updateLodLegend(): void {
     const zoom = Math.floor(map.getZoom());
     const note = element("path-lod-note");
-    note.hidden = usesShells() || zoom < config.tile_min_zoom || zoom > 14;
-    note.textContent =
-      currentMetric() === "distance"
-        ? `Zoomed-out distance colors use ${zoom <= 12 ? 250 : 125} m bins. Inspection shows original samples.`
-        : `Zoomed-out grade colors use ${zoom <= 12 ? 2 : 1}% bins, rounded up. Inspection shows original samples.`;
+    note.hidden = distanceEnabled() || zoom < config.tile_min_zoom || zoom > 14;
+    note.textContent = `Zoomed-out grade colors use ${zoom <= 12 ? 2 : 1}% bins, rounded up. Inspection shows original samples.`;
   }
   function coverageStatus(): void {
     updateLodLegend();
     updateLegendVisibility();
     if (preparing || tileFailed) return;
-    if (usesShells()) {
+    if (distanceEnabled()) {
       context(false);
       if (options.state.home && !currentSnapshot) return;
       const loaded = !!installedShell && map.isSourceLoaded("distance-shells");
@@ -848,10 +816,10 @@ export function startPaths(
   async function updateViewport(): Promise<void> {
     const params = parameters();
     const outing = addOutingParameters(params);
-    // Visibility and metric select tile variants; they never invalidate routing.
+    // Shell methods and visibility never invalidate the distance search.
     params.delete("hide_building_access");
     const key = outing ? params.toString() : "";
-    const viewKey = `${key}|${usesShells() ? shellMethod.value : variant()}`;
+    const viewKey = `${key}|${distanceEnabled() ? shellMethod.value : variant()}`;
     if (outing && key === snapshotKey && preparing && pendingView === viewKey) return;
     pendingView = viewKey;
     viewportAbort?.abort();
@@ -867,7 +835,7 @@ export function startPaths(
       currentSnapshot = undefined;
       snapshotKey = "";
       clearShells();
-      if (!usesShells())
+      if (!distanceEnabled())
         installTiles(
           config.tile_template.replace("{policy}", policy()).replace("{variant}", variant()),
         );
@@ -885,7 +853,6 @@ export function startPaths(
     preparing = true;
     tileFailed = false;
     if (installedShell !== viewKey) clearShells();
-    if (!usesShells()) installTiles();
     context(false);
     showStart();
     setStatus("Calculating distances from this start…", "loading");
@@ -912,29 +879,27 @@ export function startPaths(
         return;
       }
       currentSnapshot = result;
-      if (usesShells()) {
-        if (installedShell !== viewKey) {
-          shellStatus.textContent = "Generating distance shells…";
-          const method = shellMethod.value as ShellMethod;
-          const shells = await loadDistanceShells(
-            config.dataset_id,
-            result.snapshot_id,
-            method,
-            viewportAbort.signal,
-          );
-          if (sequence !== viewportSequence) return;
-          if (
-            shells.dataset_id !== config.dataset_id ||
-            shells.snapshot_id !== result.snapshot_id ||
-            shells.method !== method
-          )
-            throw new Error("Distance shell response changed — try again.");
-          setShellData(map, shells);
-          installedShell = viewKey;
-          const label = shells.method_used === "grid" ? "Grid" : "Filtered triangulation";
-          shellStatus.textContent = `${label} · ${shells.features.length} bands · ${(shells.generation_ms / 1000).toFixed(2)} s${shells.method_used !== method ? " · sparse network fallback" : ""}`;
-        }
-      } else installTiles(result.tile_template.replace("{variant}", variant()));
+      if (installedShell !== viewKey) {
+        shellStatus.textContent = "Generating distance shells…";
+        const method = shellMethod.value as ShellMethod;
+        const shells = await loadDistanceShells(
+          config.dataset_id,
+          result.snapshot_id,
+          method,
+          viewportAbort.signal,
+        );
+        if (sequence !== viewportSequence) return;
+        if (
+          shells.dataset_id !== config.dataset_id ||
+          shells.snapshot_id !== result.snapshot_id ||
+          shells.method !== method
+        )
+          throw new Error("Distance shell response changed — try again.");
+        setShellData(map, shells);
+        installedShell = viewKey;
+        const label = shells.method_used === "grid" ? "Grid" : "Filtered triangulation";
+        shellStatus.textContent = `${label} · ${shells.features.length} bands · ${(shells.generation_ms / 1000).toFixed(2)} s${shells.method_used !== method ? " · sparse network fallback" : ""}`;
+      }
       preparing = false;
       showStart(result.start);
       outingStatus.textContent += ` Prepared in ${(result.preparation_ms / 1000).toFixed(2)} s.`;
@@ -960,17 +925,8 @@ export function startPaths(
   map.on("error", (event) => {
     const error = event.error as Error & { status?: number; url?: string };
     const sourceId = (event as unknown as { sourceId?: string }).sourceId;
-    const isCurrent = usesShells()
-      ? sourceId === "distance-shells"
-      : sourceId === activeSource ||
-        (currentSnapshot && error.url?.includes(`/snapshots/${currentSnapshot.snapshot_id}/`));
+    const isCurrent = sourceId === (distanceEnabled() ? "distance-shells" : activeSource);
     if (!isCurrent || preparing) return;
-    if (error.status === 410 && currentSnapshot && !expiryRetried) {
-      expiryRetried = true;
-      currentSnapshot = undefined;
-      void updateViewport();
-      return;
-    }
     tileFailed = true;
     setStatus(`Path tile failed to load. ${error.message}`, "failed");
   });
@@ -1017,7 +973,7 @@ export function startPaths(
   function updateMetric(): void {
     updateLodLegend();
     const distance = currentMetric() === "distance";
-    const shells = usesShells();
+    const shells = distanceEnabled();
     hideBuildingAccess.disabled = shells;
     for (const id of ["path-hit", "path-casing", "path-grades", "path-uncertain", "path-stairs"])
       map.setLayoutProperty(id, "visibility", shells ? "none" : "visible");
@@ -1039,33 +995,17 @@ export function startPaths(
         : "Path gradient";
     renderGradientLegend(stops);
     element("mode-description").textContent = distance
-      ? shells
-        ? "Choose a start to see network distance in filled 500 m shells."
-        : "Choose a start to see network distance in 500 m path colors."
+      ? "Choose a start to see network distance in filled 500 m shells."
       : highlightFlat
         ? `Flat stretches of at least 50 m, with grades up to ${threshold}%, are highlighted.`
         : "Compare path steepness. Click a path to inspect its profile.";
     renderDistanceLegend(maximumKm);
     const gradeColor: ExpressionSpecification = gradientExpression(stops);
-    map.setPaintProperty("path-casing", "line-color", distance ? "#fffdf5" : "#a6a6a6");
-    map.setPaintProperty(
-      "path-grades",
-      "line-color",
-      distance ? distanceExpression(maximumKm * 1000) : gradeColor,
-    );
-    map.setFilter("path-grades", distance ? null : ["==", ["get", "quality"], "terrain_estimate"]);
-    map.setFilter(
-      "path-uncertain",
-      distance
-        ? ["==", ["get", "quality"], "hidden"]
-        : ["!=", ["get", "quality"], "terrain_estimate"],
-    );
+    map.setPaintProperty("path-grades", "line-color", gradeColor);
     updateLegendVisibility();
     element("metric-note").textContent = distance
-      ? shells
-        ? "Filled colors show 0.5 km bands of shortest legal network distance. Areas between paths are approximate and do not imply off-path access or access across water. Shells stop at prepared coverage; the final band may be shorter. Click a mapped path for its exact network distance."
-        : "Path colors show shortest legal distance from the snapped start in 0.5 km bands. Gray paths are beyond budget, excluded, or unreachable."
-      : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
+      ? "Filled colors show 0.5 km bands of shortest legal network distance. Areas between paths are approximate and do not imply off-path access or access across water. Shells stop at prepared coverage; the final band may be shorter. Click a mapped path for its exact network distance."
+      : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
     flatter.disabled = distance;
     flatThreshold.disabled = distance;
     applyPathEmphasis(map, highlightFlat, threshold);
@@ -1075,7 +1015,7 @@ export function startPaths(
     const bounds = map.getBounds();
     const [west, south, east, north] = config.bounds_wgs84;
     const visible =
-      (usesShells() || map.getZoom() >= config.tile_min_zoom) &&
+      (distanceEnabled() || map.getZoom() >= config.tile_min_zoom) &&
       bounds.getEast() >= west &&
       bounds.getWest() <= east &&
       bounds.getNorth() >= south &&
@@ -1110,7 +1050,7 @@ export function startPaths(
       options.setHome([event.lngLat.lng, event.lngLat.lat]);
       return;
     }
-    if (usesShells()) {
+    if (distanceEnabled()) {
       void inspectShellPath([event.lngLat.lng, event.lngLat.lat]);
       return;
     }

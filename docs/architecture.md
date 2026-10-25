@@ -281,13 +281,14 @@ The reference backend retains its local graph and sealed distance buffers togeth
 
 Identical pending preparations coalesce before graph loading, and waiting callers
 retain their own deadlines. Snapshot keys include prepared feature identity,
-algorithm version, policy, snapped segment/offset, and budget. Static and snapshot
-tiles query display intervals from SQLite. Numeric snapshot queries also select
-persisted numeric endpoint identities and physical segment length, resolving
+algorithm version, policy, snapped segment/offset, and budget. Static gradient
+tiles query display intervals from SQLite without distance endpoint metadata.
+Start-distance inspection selects persisted numeric endpoint identities and
+physical segment length, resolving
 point distances and whole-interval inclusion using sparse distance lookups plus
 the virtual start anchor. No graph or measurement sidecar is reconstructed.
 Source-coverage flags, policy exclusions, styling, inspection direction, and tile
-LOD retain reference semantics. Direct exploration and start-distance inspection
+LOD retain reference semantics. Shell exploration and start-distance inspection
 share the same snapshot cache. These operations need no source JSON.
 
 SQLite run planning snaps both endpoints using indexed interval queries and
@@ -370,8 +371,8 @@ COGs. Contours use source elevation, ContourPy, and a separate MVT encoder.
 Terrain/contour cache lookups share duplicate in-flight work while permitting
 distinct tile renders; derived-core generation has a separate process-local lock.
 
-Path MVTs use buffered clipping, zoom-dependent simplification and grade/distance
-bins, while keeping segment IDs, eligibility, quality, and inclusion boundaries.
+Path MVTs use buffered clipping, zoom-dependent simplification and grade bins,
+while keeping segment IDs, eligibility, and quality.
 Inspection retains full measurements. Static tiles use immutable versioned URLs.
 Display intervals share the measurement store's segment offsets, retain surface
 classes once per segment, and store flat-run thresholds and presence flags in
@@ -387,19 +388,19 @@ for candidate segments without constructing a whole-network routing index.
 Routing and exploration prepare and cache policy eligibility when a search needs it.
 Start/policy/budget queries prepare process-local snapshots containing immutable
 bounded search results. Interval states, midpoint distances, and boundary flags
-are calculated only for the spatial candidates of requested buffered tiles.
-Navigation and tile variants reuse the same search; encoded tiles are cached.
+are calculated for inspected segments. Shell methods reuse the same search;
+gradient tiles remain independent of snapshots.
 SQLite delivery also caches compact immutable tile inputs independently of the
-start and distance budget. Numeric segment/interval indices, chainage, display
-flags, and geometry use sealed buffers; eligibility and endpoint metadata are
-retained once per segment. Cache byte accounting includes buffer owners and
+start and distance budget. Segment/interval indices, grade/flat values, quality
+and stair flags, and geometry use sealed buffers; eligibility is retained once
+per segment. Tile inputs contain no distance chainage, endpoints, or coverage
+flags. Cache byte accounting includes buffer owners and
 metadata. Identical pending input reads coalesce, database leases are released
 before rendering, and inputs larger than the byte budget render without being
 retained. This cache owns no snapshot distances or graph owners.
 
-Numeric tile rendering resolves endpoint distances once per segment, skips
-unreachable segment calculations, and avoids constructing inspection-only
-direction records. Python retains projection, clipping, simplification, and
+Gradient tile rendering performs no exploration distance calculations.
+Python retains projection, clipping, simplification, and
 rounding; the existing Python `mapbox-vector-tile` library encodes remaining
 path tiles. Distance shells use GeoJSON and do not require path MVT encoding.
 Inspection and contour encoding retain their existing paths. The browser retains
@@ -429,8 +430,8 @@ methods. See [distance shells](distance-shells.md) for algorithms, limits,
 approximation semantics, caching, and frontend behavior.
 
 Exploration runs only a distance-bounded Dijkstra search; no whole-network
-connectivity search runs. Inspection and legacy path tiles retain interval
-states: eligible intervals not reached within budget share `beyond_budget`,
+connectivity search runs. Inspection retains interval states: eligible intervals
+not reached within budget share `beyond_budget`,
 including disconnected intervals, while policy-excluded intervals retain their
 separate state.
 
@@ -590,10 +591,10 @@ protect inspection, snapshots, and runs from obsolete responses.
 | `GET /api/paths/snap` | Eligible endpoint snap and alternatives |
 | `POST /api/paths/snapshots` | Forward-distance snapshot preparation |
 | `GET /api/paths/snapshots/{snapshot_id}/shells` | Grid or filtered-triangulation distance shells as GeoJSON |
-| `GET /api/paths/tiles/v{version}/{dataset_id}/…` | Static or snapshot path MVTs |
+| `GET /api/paths/tiles/v{version}/{dataset_id}/static/…` | Static gradient path MVTs |
 | `POST /api/paths/run` | Bounded run generation with resolved cost model and diagnostics |
 
-Legacy viewport/explore GeoJSON endpoints remain for diagnostics, and
+The gradient viewport GeoJSON endpoint remains for diagnostics, and
 `/api/terrain.png` is available with the single-raster override. Live request
 schemas are available at FastAPI's `/docs`; configuration responses advertise
 capabilities and tile versions. Environment variables are documented in

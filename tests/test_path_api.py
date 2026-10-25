@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from runmap.api.app import app, lifespan
 from runmap.api.paths import (load_path_data, path_config, viewport_paths, inspect_path,
-                              uphill_sections, render_paths, explore_paths, snap_path_start, _build_display_index)
+                              uphill_sections, render_paths, snap_path_start, _build_display_index)
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import graph_digest, segment_measurements
 from runmap.routing.profiles import surface_category, exploration_profile
@@ -76,15 +76,7 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual(len(restored["features"]), 4)
         self.assertEqual(viewport_paths(data, bounds, 15, max_features=0,
                                        hide_building_access=False)["reason"], "feature_limit")
-        for metric in ("gradient", "distance"):
-            self.assertFalse(render_paths(viewport_paths(data, bounds, 15), metric)["features"])
-            with patch("runmap.api.paths._interval_state", side_effect=AssertionError("hidden interval evaluated")):
-                result = explore_paths(data, bounds, 15, 24.801, 60.2)
-                self.assertEqual(result["status"], "ready")
-                self.assertFalse(render_paths(result, metric)["features"])
-            result = explore_paths(data, bounds, 15, 24.801, 60.2, hide_building_access=False)
-            self.assertEqual(len(result["features"]), 4)
-            self.assertTrue(result["distance_cache_hit"])
+        self.assertFalse(render_paths(viewport_paths(data, bounds, 15))["features"])
         self.assertEqual(snap_path_start(data, 24.801, 60.2)["snap"]["segment_id"], "s")
         inspection = inspect_path(data, "s")
         self.assertTrue(inspection["eligible"])
@@ -125,13 +117,12 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual(first["properties"]["grade_percent"], 2)
         self.assertEqual(response, before)
 
-    def test_render_preserves_budget_transitions_and_segment_boundaries(self):
+    def test_render_preserves_segment_boundaries(self) -> None:
         response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
         first, second = response["features"][:2]
-        first["properties"]["inclusion_state"] = "included"
-        second["properties"]["inclusion_state"] = "beyond_budget"
-        self.assertEqual(len(render_paths(response)["features"]), 4)
-        second["properties"]["inclusion_state"] = "included"
+        second["properties"].update(grade_percent=first["properties"]["grade_percent"],
+                                     flat_min_grade_50m=first["properties"]["flat_min_grade_50m"])
+        self.assertEqual(len(render_paths(response)["features"]), 3)
         second["properties"]["segment_id"] = "other"
         self.assertEqual(len(render_paths(response)["features"]), 4)
 
@@ -143,16 +134,6 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual([feature["properties"]["grade_percent"]
                           for feature in rendered["features"][:2]], [2.1, 2.9])
 
-    def test_distance_render_preserves_exact_distances(self):
-        response = viewport_paths(self.data, (24.79, 60.19, 24.81, 60.21), 11)
-        for feature, distance in zip(response["features"], [999, 1000, 2000, None]):
-            feature["properties"]["distance_from_start_m"] = distance
-        rendered = render_paths(response, "distance")
-        self.assertEqual([f["properties"]["distance_from_start_m"] for f in rendered["features"]],
-                         [999, 1000, 2000, None])
-        self.assertNotIn("grade_percent", rendered["features"][0]["properties"])
-        with self.assertRaises(ValueError):
-            render_paths(response, "unknown")
 
     def test_zoom_area_feature_limit_and_outside_are_explicit(self):
         bounds = (24.79, 60.19, 24.81, 60.21)
@@ -227,7 +208,7 @@ async def get(url):
 
 
 class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
-    async def test_building_filter_option_on_all_endpoints(self) -> None:
+    async def test_building_filter_applies_to_viewport_and_inspection(self) -> None:
         from runmap.paths.dead_ends import Classification
         with TemporaryDirectory() as directory:
             paths = write_graph_outputs(fixture(), directory)
@@ -235,13 +216,10 @@ class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
             app.state.paths = replace(data, display_cells={}, building_access={
                 "s": Classification("building_access_entrance", "s", "1", 100, ("entrance=yes",))})
             query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15"
-            for endpoint in (f"viewport?{query}",
-                             f"explore?{query}&longitude=24.801&latitude=60.2&metric=gradient",
-                             f"explore?{query}&longitude=24.801&latitude=60.2&metric=distance"):
-                code, hidden = await get(f"/api/paths/{endpoint}")
-                self.assertEqual((code, hidden["status"], hidden["features"]), (200, "ready", []))
-                _, visible = await get(f"/api/paths/{endpoint}&hide_building_access=false")
-                self.assertEqual({item["properties"]["segment_id"] for item in visible["features"]}, {"s"})
+            code, hidden = await get(f"/api/paths/viewport?{query}")
+            self.assertEqual((code, hidden["status"], hidden["features"]), (200, "ready", []))
+            _, visible = await get(f"/api/paths/viewport?{query}&hide_building_access=false")
+            self.assertEqual({item["properties"]["segment_id"] for item in visible["features"]}, {"s"})
             self.assertTrue((await get("/api/paths/segments/s"))[1]["hidden_by_building_access"])
             self.assertFalse((await get("/api/paths/segments/s?hide_building_access=false"))[1]["hidden_by_building_access"])
 
@@ -261,7 +239,7 @@ class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await get("/api/paths/config"))[1]["status"], "unavailable")
             self.assertEqual((await get("/api/paths/segments/s"))[0], 503)
 
-    async def test_snap_explore_and_inspection_share_profile_and_dataset(self):
+    async def test_snap_and_inspection_share_profile_and_dataset(self):
         with TemporaryDirectory() as directory:
             paths = write_graph_outputs(fixture(), directory)
             app.state.paths = load_path_data(paths["graph"])
@@ -270,11 +248,9 @@ class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(code, 200)
             self.assertEqual(snapped["status"], "ready")
             query = f"west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&{base}"
-            code, result = await get(f"/api/paths/explore?{query}")
-            self.assertEqual(code, 200)
-            self.assertEqual({feature["properties"]["inclusion_state"] for feature in result["features"]}, {"included", "beyond_budget"})
-            self.assertEqual((await get(f"/api/paths/explore?{query}&dataset_id=stale"))[0], 409)
-            self.assertEqual((await get(f"/api/paths/explore?{query}&budget_km=0"))[0], 422)
+            self.assertEqual((await get(f"/api/paths/explore?{query}"))[0], 404)
+            self.assertEqual((await get(f"/api/paths/segments/s?{query}&dataset_id=stale"))[0], 409)
+            self.assertEqual((await get(f"/api/paths/segments/s?{query}&budget_km=0"))[0], 422)
             self.assertEqual((await get(f"/api/paths/snap?{base}&surface=unknown"))[0], 400)
             self.assertEqual((await get(f"/api/paths/snap?{base}&segment_id=missing"))[1]["status"], "no_eligible_snap")
             code, inspected = await get(f"/api/paths/segments/s?reverse=true&{base}")

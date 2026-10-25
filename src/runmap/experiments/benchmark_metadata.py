@@ -16,7 +16,7 @@ from time import perf_counter
 import numpy as np
 
 from runmap.api.paths import PathData, inspect_path, load_path_data, path_policy_index, viewport_paths
-from runmap.api.path_tiles import PathTileService, encode_tile, projected_point
+from runmap.api.path_tiles import encode_tile, projected_point
 from runmap.paths.exploration import snap_candidates
 from runmap.paths.measurements import graph_digest, inspect_measurements, segment_measurements
 from runmap.routing.cost_types import PreferenceSettings
@@ -76,16 +76,11 @@ def measurement_outputs(data: PathData) -> dict[str, object]:
 
 
 def tile_outputs(data: PathData, repeats: int) -> dict[str, object]:
-    service = PathTileService(data, preparation_deadline=120)
     tiles: dict[str, str] = {}
     timings: dict[str, float] = {}
     viewports: dict[str, str] = {}
     for surface in ('all', 'surfaced'):
         policy = f'{surface}-no-stairs'
-        snapshots = []
-        for budget in (3, 10):
-            result = service.prepare(24.795, 60.216, budget, surface, True, 50, None)
-            snapshots.append(service.snapshot(result['snapshot_id']))
         for lon, lat in ((24.807, 60.219), (24.771, 60.242)):
             viewports[f'{surface}:{lon}'] = digest(viewport_paths(
                 data, (lon-.008, lat-.004, lon+.008, lat+.004), 15, surface))
@@ -101,10 +96,6 @@ def tile_outputs(data: PathData, repeats: int) -> dict[str, object]:
                         encode_tile(data, policy, variant, z, x, y)
                         samples.append((perf_counter()-started)*1000)
                     timings[key] = median(samples)
-                for snapshot in snapshots:
-                    for variant in ('gradient-hidden', 'distance-hidden'):
-                        key = f'{policy}:{lon}:{z}:{variant}:{snapshot.budget_km}'
-                        tiles[key] = hashlib.sha256(encode_tile(data, policy, variant, z, x, y, snapshot)).hexdigest()
     return dict(tiles=tiles, tile_median_ms=timings, viewports=viewports)
 
 

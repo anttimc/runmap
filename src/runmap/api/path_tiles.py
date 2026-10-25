@@ -16,19 +16,18 @@ import mapbox_vector_tile
 from shapely.geometry import LineString, box
 from shapely import transform
 
-from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, display_segment_reason, exploration_context, path_policy_index
+from runmap.api.paths import PathData, candidate_path_indexes, display_segment_reason, exploration_context
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.sqlite_exploration import (ExplorationLimits, LocalExploration, NumericExploration,
                                           prepare_local_exploration, retained_exploration_bytes)
 from runmap.paths.display import measurement_quality
-from runmap.routing.types import MeasurementLocation
 from runmap.routing.profiles import exploration_profile
 from runmap.paths.dead_ends import ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M
-from runmap.paths.exploration import DistanceData, Snap, segment_reason
+from runmap.paths.exploration import DistanceData, Snap
 from runmap.routing.numeric_exploration import NumericDistanceData
 from runmap.paths.tile_inputs import TileInputs
 
-RENDER_VERSION = 3
+RENDER_VERSION = 4
 ALGORITHM_VERSION = 5
 MIN_ZOOM = 10
 MAX_ZOOM = 16
@@ -153,11 +152,10 @@ def policy_options(policy: str) -> tuple[str, bool]:
     return policy.split("-")[0], policy.endswith("no-stairs")
 
 
-def variant_options(variant: str) -> tuple[str, bool]:
-    if variant not in {"gradient-hidden", "gradient-all", "distance-hidden", "distance-all"}:
-        raise ValueError("Unknown path tile variant")
-    metric, visibility = variant.split("-")
-    return metric, visibility == "hidden"
+def tile_hides_building_access(variant: str) -> bool:
+    if variant not in {"gradient-hidden", "gradient-all"}:
+        raise ValueError("Unknown gradient tile variant")
+    return variant == "gradient-hidden"
 
 
 def tile_bounds(z: int, x: int, y: int) -> tuple[float, float, float, float]:
@@ -177,14 +175,11 @@ def projected_point(longitude: float, latitude: float, z: int, x: int, y: int) -
             (1 - math.asinh(math.tan(math.radians(latitude))) / math.pi) / 2 * scale - y * EXTENT)
 
 
-def display_runs(data: PathData, indexes: list[int], policy: str, variant: str,
-                 z: int, snapshot: Snapshot | None) -> list[DisplayRun]:
-    metric, _ = variant_options(variant)
+def display_runs(data: PathData, indexes: list[int], policy: str, z: int) -> list[DisplayRun]:
     options = policy_options(policy)
     profile = exploration_profile(*options)
-    index = path_policy_index(data, *options) if snapshot is not None else data.routing
+    index = data.routing
     grade_bin = 2 if z <= 12 else 1 if z <= 14 else 0
-    distance_bin = 250 if z <= 12 else 125 if z <= 14 else 0
     runs: list[DisplayRun] = []
     eligible: dict[str, bool] = {}
     measurements = data.measurements
@@ -200,29 +195,16 @@ def display_runs(data: PathData, indexes: list[int], policy: str, variant: str,
         quality = measurement_quality(valid[number], flags)
         coordinates = _interval_coordinates(geometry, geometry_offsets, number)
         if segment not in eligible:
-            eligible[segment] = (segment_reason(index, segment) if snapshot is not None
-                                 else display_segment_reason(index, segment, profile)) is None
+            eligible[segment] = display_segment_reason(index, segment, profile) is None
         properties: dict[str, Property] = {
             "segment_id": segment, "quality": quality, "stairs": "stairs" in flags,
             "eligible": eligible[segment],
         }
-        distance: float | None = None
-        if snapshot is not None:
-            source = MeasurementLocation(segment_id=segment, interval_index=feature.interval_index,
-                                         graph_start_m=values[number, 2], graph_end_m=values[number, 3],
-                                         geometry=list(coordinates))
-            state = _interval_state(data, index, snapshot.distances, source, snapshot.budget_km)
-            properties["inclusion_state"] = state["inclusion_state"]
-            properties["coverage_limited"] = state["coverage_limited"]
-            distance = state["distance_from_start_m"]
-        if metric == "gradient":
-            if feature.flat_min_grade_50m is not None:
-                properties["flat_min_grade_50m"] = feature.flat_min_grade_50m
-            grade = values[number, 4] if present[number, 0] else None
-            if grade is not None and quality == "terrain_estimate":
-                properties["grade_percent"] = math.ceil(abs(grade) / grade_bin) * grade_bin if grade_bin else abs(grade)
-        elif distance is not None:
-            properties["distance_from_start_m"] = round(distance / distance_bin) * distance_bin if distance_bin else distance
+        if feature.flat_min_grade_50m is not None:
+            properties["flat_min_grade_50m"] = feature.flat_min_grade_50m
+        grade = values[number, 4] if present[number, 0] else None
+        if grade is not None and quality == "terrain_estimate":
+            properties["grade_percent"] = math.ceil(abs(grade) / grade_bin) * grade_bin if grade_bin else abs(grade)
         interval = feature.interval_index
         if (runs and runs[-1].properties == properties and runs[-1].last_interval + 1 == interval
                 and runs[-1].coordinates[-1] == coordinates[0]):
@@ -238,9 +220,9 @@ def _interval_coordinates(geometry: memoryview, offsets: memoryview, number: int
 
 
 def encode_tile(data: PathData | SQLitePathData, policy: str, variant: str, z: int, x: int, y: int,
-                snapshot: Snapshot | None = None, *, input_cache: ByteCache[TileInputs] | None = None) -> bytes:
+                *, input_cache: ByteCache[TileInputs] | None = None) -> bytes:
     west, south, east, north = tile_bounds(z, x, y)
-    _, hidden = variant_options(variant)
+    hidden = tile_hides_building_access(variant)
     policy_options(policy)
     runs: list[DisplayRun] = []
     if z >= MIN_ZOOM:
@@ -249,10 +231,10 @@ def encode_tile(data: PathData | SQLitePathData, policy: str, variant: str, z: i
         bounds = (west - pad, south - pad, east + pad, north + pad)
         if isinstance(data, SQLitePathData):
             from runmap.api.sqlite_paths import database_tile_runs
-            runs = database_tile_runs(data, bounds, policy, variant, z, snapshot, input_cache=input_cache)
+            runs = database_tile_runs(data, bounds, policy, variant, z, input_cache=input_cache)
         else:
             indexes = candidate_path_indexes(data, bounds, hidden)
-            runs = display_runs(data, indexes, policy, variant, z, snapshot)
+            runs = display_runs(data, indexes, policy, z)
     return encode_runs(runs, z, x, y)
 
 
@@ -324,10 +306,9 @@ class PathTileService:
                                                 deadline=started + self.preparation_deadline)
         return {"status": "ready", "dataset_id": self.data.dataset_id, "snapshot_id": snapshot.id,
                 "start": start, "coverage": self.data.coverage, "bounds_wgs84": self.data.bounds,
-                "tile_template": tile_template(self.data, f"snapshots/{snapshot.id}"),
                 "expires_at": snapshot.expires_at, "preparation_ms": snapshot.preparation_ms,
                 "request_ms": (monotonic() - started) * 1000, "retained_bytes": snapshot.retained_bytes,
-                "routing_ms": snapshot.routing_ms, "interval_preparation_ms": 0.0,
+                "routing_ms": snapshot.routing_ms,
                 "snapshot_cache_hit": hit, "distance_cache_hit": distance_hit}
 
     def _prepare_database(self, longitude: float, latitude: float, budget_km: float, surface: str,
@@ -361,10 +342,9 @@ class PathTileService:
         assert snapshot.local is not None
         return {"status": "ready", "dataset_id": data.dataset_id, "snapshot_id": snapshot.id,
                 "start": start, "coverage": data.coverage, "bounds_wgs84": data.bounds,
-                "tile_template": tile_template(data, f"snapshots/{snapshot.id}"),
                 "expires_at": snapshot.expires_at, "preparation_ms": snapshot.preparation_ms,
                 "request_ms": (monotonic() - started) * 1000, "retained_bytes": snapshot.retained_bytes,
-                "routing_ms": snapshot.routing_ms, "interval_preparation_ms": 0.0,
+                "routing_ms": snapshot.routing_ms,
                 "snapshot_cache_hit": hit, "distance_cache_hit": hit,
                 "search_bounds_epsg3067": snapshot.local.bounds, "search_retries": snapshot.local.retries}
 
@@ -377,18 +357,17 @@ class PathTileService:
                     return entry.value
         raise KeyError("Exploration snapshot expired; prepare it again")
 
-    def tile(self, policy: str, variant: str, z: int, x: int, y: int,
-             snapshot: Snapshot | None = None) -> tuple[bytes, bool, float]:
+    def tile(self, policy: str, variant: str, z: int, x: int, y: int) -> tuple[bytes, bool, float]:
         started = monotonic()
         tile_bounds(z, x, y)
-        variant_options(variant)
+        tile_hides_building_access(variant)
         policy_options(policy)
         identity = (render_version(self.data), self.data.dataset_id, CLASSIFIER_VERSION, ENTRANCE_LIMIT_M,
-                    snapshot.id if snapshot else policy, variant, z, x, y)
+                    policy, variant, z, x, y)
         encoded, hit = self.tiles.compute(repr(identity),
-            lambda: encode_tile(self.data, policy, variant, z, x, y, snapshot, input_cache=self.tile_inputs), len)
+            lambda: encode_tile(self.data, policy, variant, z, x, y, input_cache=self.tile_inputs), len)
         return encoded, hit, (monotonic() - started) * 1000
 
 
-def tile_template(data: PathData | SQLitePathData, context: str) -> str:
-    return f"/api/paths/tiles/v{render_version(data)}/{data.dataset_id}/{context}/{{variant}}/{{z}}/{{x}}/{{y}}.mvt"
+def tile_template(data: PathData | SQLitePathData) -> str:
+    return f"/api/paths/tiles/v{render_version(data)}/{data.dataset_id}/static/{{policy}}/{{variant}}/{{z}}/{{x}}/{{y}}.mvt"

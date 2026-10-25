@@ -66,8 +66,8 @@ class PathTileTests(unittest.TestCase):
 
     def test_static_policy_switch_does_not_build_a_routing_index(self) -> None:
         self.assertEqual(self.data.profile_indexes, {})
-        with patch("runmap.api.path_tiles.path_policy_index", side_effect=AssertionError("routing index")):
-            runs = display_runs(self.data, [0, 1, 2, 3], "surfaced-no-stairs", "gradient-all", 12, None)
+        with patch("runmap.api.paths.path_policy_index", side_effect=AssertionError("routing index")):
+            runs = display_runs(self.data, [0, 1, 2, 3], "surfaced-no-stairs", 12)
         self.assertTrue(runs)
         self.assertEqual(self.data.profile_indexes, {})
 
@@ -94,16 +94,16 @@ class PathTileTests(unittest.TestCase):
                 for surface in ("all", "surfaced"):
                     for stairs in (False, True):
                         policy = f"{surface}-{'no-stairs' if stairs else 'stairs'}"
-                        runs = display_runs(data, [0, 1, 2, 3], policy, "gradient-all", 12, None)
+                        runs = display_runs(data, [0, 1, 2, 3], policy, 12)
                         index = path_policy_index(data, surface, stairs)
                         self.assertEqual({run.properties["eligible"] for run in runs},
                                          {segment_reason(index, "s") is None})
 
     def test_snapshot_preparation_defers_all_interval_work(self) -> None:
         service = PathTileService(self.data)
-        with patch("runmap.api.path_tiles._interval_state", side_effect=AssertionError("eager interval work")):
+        with patch("runmap.api.paths._interval_state", side_effect=AssertionError("eager interval work")):
             result = service.prepare(24.8, 60.2, .1, "all", True, 50, None)
-        self.assertEqual(result["interval_preparation_ms"], 0)
+        self.assertNotIn("tile_template", result)
         self.assertEqual(self.data.boundary_intervals, {})
         self.assertEqual(service.snapshot(result["snapshot_id"]).budget_km, .1)
 
@@ -133,17 +133,16 @@ class PathTileTests(unittest.TestCase):
         pad = (east - west) / 64
         expected = candidate_path_indexes(data, (west - pad, south - pad, east + pad, north + pad), False)
         self.assertLess(len(expected), len(data.features))
-        with patch("runmap.api.path_tiles._interval_state", wraps=_interval_state) as evaluate:
-            encoded, hit, _ = service.tile(snapshot.policy, "distance-all", 15, x, y, snapshot)
+        with patch("runmap.api.path_tiles.display_runs", wraps=display_runs) as evaluate:
+            encoded, hit, _ = service.tile(snapshot.policy, "gradient-all", 15, x, y)
             self.assertFalse(hit)
-            self.assertEqual(evaluate.call_count, len(expected))
-            self.assertEqual({call.args[3]["segment_id"] for call in evaluate.call_args_list}, {"s"})
-            self.assertEqual(service.tile(snapshot.policy, "distance-all", 15, x, y, snapshot)[0], encoded)
-            self.assertEqual(evaluate.call_count, len(expected))
-            # Panning uses the same immutable search; only the new tile is evaluated.
+            self.assertEqual(evaluate.call_count, 1)
+            self.assertEqual(evaluate.call_args.args[1], expected)
+            self.assertEqual(service.tile(snapshot.policy, "gradient-all", 15, x, y)[0], encoded)
+            self.assertEqual(evaluate.call_count, 1)
             far_x, far_y = xyz(25.8, 60.2, 15)
-            service.tile(snapshot.policy, "distance-all", 15, far_x, far_y, snapshot)
-            self.assertIn("far", {call.args[3]["segment_id"] for call in evaluate.call_args_list})
+            tile = service.tile(snapshot.policy, "gradient-all", 15, far_x, far_y)[0]
+            self.assertIn("far", {f["properties"]["segment_id"] for f in mapbox_vector_tile.decode(tile)["paths"]["features"]})
 
     def test_snapshot_distances_are_isolated_and_memory_scales_with_nodes(self) -> None:
         snap = Snap("s", 0, 0, 24.8, 60.2, 0)
@@ -172,8 +171,8 @@ class PathTileTests(unittest.TestCase):
         self.assertIs(small.distances.outward, large.distances.outward)
         for snapshot, expected in ((large, ["included"] * 4),
                                    (small, ["included"] + ["beyond_budget"] * 3)):
-            states = [display_runs(self.data, [i], snapshot.policy, "distance-all", 15, snapshot)[0]
-                      .properties["inclusion_state"] for i in range(4)]
+            states = [_interval_state(self.data, path_policy_index(self.data), snapshot.distances,
+                indexed_measurement(self.data.measurements, 0, i), snapshot.budget_km)["inclusion_state"] for i in range(4)]
             self.assertEqual(states, expected)
 
     def test_decode_identity_orientation_and_missing_grade(self) -> None:
@@ -232,8 +231,8 @@ class PathTileTests(unittest.TestCase):
         self.assertEqual(result["snapshot_id"], same["snapshot_id"])
         self.assertTrue(same["snapshot_cache_hit"])
         snapshot = service.snapshot(result["snapshot_id"])
-        states = [display_runs(self.data, [i], snapshot.policy, "gradient-all", 15, snapshot)[0]
-                  .properties["inclusion_state"] for i in range(4)]
+        states = [_interval_state(self.data, path_policy_index(self.data), snapshot.distances,
+                indexed_measurement(self.data.measurements, 0, i), snapshot.budget_km)["inclusion_state"] for i in range(4)]
         self.assertEqual(states, ["included", "beyond_budget", "beyond_budget", "beyond_budget"])
         self.assertTrue(snapshot.distances.outward.values.readonly)
         self.assertEqual(external_node_distances(snapshot.distances.outward), {"1": 0})
@@ -247,11 +246,11 @@ class PathTileTests(unittest.TestCase):
         self.assertNotEqual(result["snapshot_id"], moved["snapshot_id"])
         x, y = xyz(24.8, 60.2, 15)
         with patch("runmap.api.path_tiles.exploration_context", side_effect=AssertionError("routing during tile generation")):
-            for variant in ("gradient-all", "gradient-hidden", "distance-all", "distance-hidden"):
-                encoded, hit, _ = service.tile(snapshot.policy, variant, 15, x, y, snapshot)
+            for variant in ("gradient-all", "gradient-hidden"):
+                encoded, hit, _ = service.tile(snapshot.policy, variant, 15, x, y)
                 self.assertFalse(hit)
                 self.assertTrue(encoded)
-                self.assertTrue(service.tile(snapshot.policy, variant, 15, x, y, snapshot)[1])
+                self.assertTrue(service.tile(snapshot.policy, variant, 15, x, y)[1])
         with patch("runmap.api.path_tiles.monotonic", return_value=math.inf):
             with self.assertRaises(KeyError):
                 service.snapshot(snapshot.id)
@@ -260,40 +259,25 @@ class PathTileTests(unittest.TestCase):
     def test_lod_semantic_boundaries_and_conservative_bins(self) -> None:
         self.replace_interval(0, grade=2.1)
         self.replace_interval(1, grade=3.9)
-        runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", "gradient-all", 11, None)
+        runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", 11)
         # Different minimum thresholds must survive coalescing even if grade bins match.
         self.assertEqual(len(runs), 4)
         self.assertNotEqual(runs[0].properties["flat_min_grade_50m"], runs[1].properties["flat_min_grade_50m"])
         self.data = replace(self.data, features=(
             replace(self.data.features[0], flat_min_grade_50m=4), *self.data.features[1:]))
-        runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", "gradient-all", 11, None)
+        runs = display_runs(self.data, [0, 1, 2, 3], "all-stairs", 11)
         self.assertEqual(len(runs), 3)
         self.assertEqual(runs[0].properties["grade_percent"], 4)
         self.assertEqual(len(runs[0].coordinates), 3)
-        snapshot_service = PathTileService(self.data)
-        result = snapshot_service.prepare(24.8, 60.2, .1, "all", True, 50, None)
-        snapshot = snapshot_service.snapshot(result["snapshot_id"])
-        runs = display_runs(self.data, [0, 1], "all-no-stairs", "gradient-all", 11, snapshot)
-        self.assertEqual(len(runs), 2)
-        self.assertNotEqual(runs[0].properties["inclusion_state"], runs[1].properties["inclusion_state"])
 
-    def test_snapshot_tiles_unify_unreachable_and_beyond_budget_intervals(self) -> None:
+    def test_inspection_unifies_unreachable_and_beyond_budget_intervals(self) -> None:
         service = PathTileService(self.data)
         result = service.prepare(24.802, 60.2, .06, "all", True, 50, None)
         snapshot = service.snapshot(result["snapshot_id"])
         # The one-way path before the start and the distant end share a state.
-        states = [display_runs(self.data, [i], snapshot.policy, "gradient-all", 15, snapshot)[0]
-                  .properties["inclusion_state"] for i in range(4)]
+        states = [_interval_state(self.data, path_policy_index(self.data), snapshot.distances,
+                indexed_measurement(self.data.measurements, 0, i), snapshot.budget_km)["inclusion_state"] for i in range(4)]
         self.assertEqual(states, ["beyond_budget", "beyond_budget", "included", "beyond_budget"])
-        for variant in ("gradient-all", "distance-all"):
-            runs = display_runs(self.data, [0, 1, 2, 3], "all-no-stairs", variant, 15, snapshot)
-            self.assertEqual(runs[0].properties["inclusion_state"], "beyond_budget")
-            self.assertEqual(runs[-1].properties["inclusion_state"], "beyond_budget")
-            x, y = xyz(24.8, 60.2, 15)
-            decoded = mapbox_vector_tile.decode(encode_tile(
-                self.data, "all-no-stairs", variant, 15, x, y, snapshot))["paths"]
-            self.assertEqual({feature["properties"]["inclusion_state"] for feature in decoded["features"]},
-                             {"included", "beyond_budget"})
 
     def test_flat_length_features_use_full_samples_before_tile_selection_and_bins(self) -> None:
         graph = fixture()
@@ -306,9 +290,9 @@ class PathTileTests(unittest.TestCase):
             data = load_path_data(write_graph_outputs(graph, directory)["graph"])
         for zoom in (11, 15):
             # Selecting only the first 25 m interval must retain its full-run qualification.
-            run = display_runs(data, [0], "all-stairs", "gradient-all", zoom, None)[0]
+            run = display_runs(data, [0], "all-stairs", zoom)[0]
             self.assertEqual(run.properties["flat_min_grade_50m"], 2.5)
-        self.assertNotIn("flat_min_grade_50m", display_runs(data, [3], "all-stairs", "gradient-all", 15, None)[0].properties)
+        self.assertNotIn("flat_min_grade_50m", display_runs(data, [3], "all-stairs", 15)[0].properties)
         x, y = xyz(24.8, 60.2, 15)
         decoded = mapbox_vector_tile.decode(encode_tile(data, "all-stairs", "gradient-all", 15, x, y))["paths"]
         self.assertIn(2.5, [f["properties"].get("flat_min_grade_50m") for f in decoded["features"]])
@@ -473,13 +457,10 @@ class TileEndpointTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(headers[b"cache-control"], b"no-store")
             snapshot = json.loads(body)
             dynamic = f"{root}/snapshots/{snapshot['snapshot_id']}/distance-all/15/{x}/{y}.mvt"
-            code, headers, body = await send_request(dynamic)
-            self.assertEqual(code, 200)
-            self.assertIn(b"private", headers[b"cache-control"])
-            self.assertEqual((await send_request(dynamic.replace(snapshot["snapshot_id"], "expired")))[0], 410)
-            # Replacing the loaded object invalidates process-local snapshots even with the same digest.
-            app.state.paths = replace(data)
-            self.assertEqual((await send_request(dynamic))[0], 410)
+            self.assertEqual((await send_request(dynamic))[0], 404)
+            self.assertNotIn("tile_template", snapshot)
+            self.assertEqual((await send_request(path.replace("gradient-all", "distance-all")))[0], 400)
+            self.assertEqual((await send_request(path.replace("gradient-all", "distance-hidden")))[0], 400)
 
 
 class RoutingConcurrencyTests(unittest.TestCase):

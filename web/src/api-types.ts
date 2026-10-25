@@ -128,7 +128,6 @@ export interface SnapshotResponse {
   status: string;
   dataset_id: string;
   snapshot_id: string;
-  tile_template: string;
   expires_at: number;
   preparation_ms: number;
   start?: StartResponse;

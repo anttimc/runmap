@@ -13,29 +13,22 @@ from unittest.mock import patch
 
 from starlette.responses import JSONResponse
 
-from runmap.api.paths import (PathData, _build_display_index, _cells, explore_paths,
+from runmap.api.paths import (PathData, _build_display_index, _cells,
                               load_path_data, path_config, render_paths, viewport_paths)
 
 
 def _query(data: PathData, bounds: tuple[float, float, float, float], zoom: int,
-           mode: str, hide: bool) -> dict:
-    if mode == "gradient":
-        response = viewport_paths(data, bounds, zoom, hide_building_access=hide)
-    else:
-        response = explore_paths(data, bounds, zoom, 24.80259, 60.21682,
-                                 hide_building_access=hide)
-    return render_paths(response, "distance" if mode == "distance_explore" else "gradient")
+           hide: bool) -> dict:
+    return render_paths(viewport_paths(data, bounds, zoom, hide_building_access=hide))
 
 
 def _measure(data: PathData, bounds: tuple[float, float, float, float], zoom: int,
-             mode: str, hide: bool, repeats: int) -> dict:
-    data.exploration_cache.entries.clear()
-    data.boundary_intervals.clear()
+             hide: bool, repeats: int) -> dict:
     data.profile_indexes.clear()
     elapsed = []
     for _ in range(repeats + 1):
         started = perf_counter()
-        response = _query(data, bounds, zoom, mode, hide)
+        response = _query(data, bounds, zoom, hide)
         payload = JSONResponse(response).body
         elapsed.append((perf_counter() - started) * 1000)
     cells = data.display_cells if hide else data.cells
@@ -68,10 +61,9 @@ def benchmark(graph_path: Path, repeats: int) -> dict:
     for name, longitude, latitude in (("urban", 24.807, 60.219), ("forest", 24.771, 60.242)):
         for zoom, dx, dy in ((11, 0.07, 0.04), (13, 0.025, 0.013), (15, 0.008, 0.004)):
             bounds = (longitude - dx, latitude - dy, longitude + dx, latitude + dy)
-            for mode in ("gradient", "gradient_explore", "distance_explore"):
-                rows.append({"viewport": name, "bounds": bounds, "zoom": zoom, "mode": mode,
-                             "runs": [_measure(filtered, bounds, zoom, mode, hide, repeats)
-                                      for hide in (False, True)]})
+            rows.append({"viewport": name, "bounds": bounds, "zoom": zoom, "mode": "gradient",
+                         "runs": [_measure(filtered, bounds, zoom, hide, repeats)
+                                  for hide in (False, True)]})
     samples = [{"segment_id": segment_id, "reason": item.reason,
                 "branch_length_m": item.branch_length_m,
                 "tags": data.segments[segment_id]["tags"],
@@ -79,7 +71,7 @@ def benchmark(graph_path: Path, repeats: int) -> dict:
                for segment_id, item in sorted(filtered.building_access.items())[:10]]
     return {"dataset_id": data.dataset_id, "graph_path": str(graph_path),
             "machine": platform.platform(), "python": platform.python_version(),
-            "processor": platform.machine(), "start": [24.80259, 60.21682], "budget_km": 6,
+            "processor": platform.machine(),
             "surface": "all", "avoid_stairs": True, "warm_repeats": repeats,
             "timing_scope": "In-process API query, rendering coalescence, and JSONResponse serialization; no HTTP/browser timing.",
             "unfiltered_load_seconds": load_seconds,

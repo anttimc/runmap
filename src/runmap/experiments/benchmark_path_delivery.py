@@ -12,12 +12,13 @@ from typing import cast
 
 from rasterio.warp import transform, transform_bounds
 
-from runmap.api.paths import (PathData, explore_paths, inspect_path, load_path_data, path_config,
+from runmap.api.paths import (PathData, inspect_outing, inspect_path, load_path_data, path_config,
                               snap_path_start, viewport_paths)
 from runmap.api.path_tiles import PathTileService, projected_point
 from runmap.api.sqlite_data import SQLitePathData
+from runmap.api.path_shells import PathShellService
 from runmap.api.sqlite_exploration import NumericExploration
-from runmap.api.sqlite_paths import (database_explore, database_inspection, database_path_config,
+from runmap.api.sqlite_paths import (database_inspect_outing, database_inspection, database_path_config,
                                     database_snap, database_viewport)
 from runmap.routing.types import Bounds
 
@@ -79,10 +80,9 @@ def _probe_requests(data: PathData | SQLitePathData, bounds: Bounds) -> dict[str
 
 
 def _probe_exploration(data: PathData | SQLitePathData, bounds: Bounds, budget_km: float) -> dict[str, object]:
-    view = transform_bounds("EPSG:3067", "EPSG:4326", *bounds, densify_pts=21)
     lon, lat = transform("EPSG:3067", "EPSG:4326", [(bounds[0] + bounds[2]) / 2], [(bounds[1] + bounds[3]) / 2])
     service = PathTileService(data)
-    px, py = projected_point(lon[0], lat[0], 15, 0, 0)
+    shells = PathShellService(service) if isinstance(data, SQLitePathData) and data.numeric is not None else None
     report: dict[str, object] = {"budget_km": budget_km}
     for label in ("first", "warm"):
         started = perf_counter()
@@ -92,19 +92,19 @@ def _probe_exploration(data: PathData | SQLitePathData, bounds: Bounds, budget_k
             raise ValueError("No eligible benchmark start")
         snapshot = service.snapshot(prepared["snapshot_id"])
         started = perf_counter()
+        segment = snapshot.distances.snap.segment_id
         if isinstance(data, SQLitePathData):
-            visible = database_explore(database_viewport(data, view, 15, snapshot=snapshot),
-                                       prepared, snapshot, budget_km)
+            inspected = database_inspect_outing(data, database_inspection(data, segment), prepared, snapshot, budget_km, "all", True)
         else:
-            visible = explore_paths(data, view, 15, lon[0], lat[0], budget_km)
-        report[label + "_viewport_ms"] = (perf_counter() - started) * 1000
-        visible.pop("distance_cache_hit", None)
-        report["viewport_sha256"] = sha256(json.dumps(visible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-        started = perf_counter()
-        tile, hit, _ = service.tile(snapshot.policy, "distance-all", 15, math.floor(px / 4096), math.floor(py / 4096), snapshot)
-        report[label + "_tile_ms"] = (perf_counter() - started) * 1000
-        report[label + "_tile_cache_hit"] = hit
-        report["tile_sha256"] = sha256(tile).hexdigest()
+            inspected = inspect_outing(data, inspect_path(data, segment), lon[0], lat[0], budget_km)
+        report[label + "_inspection_ms"] = (perf_counter() - started) * 1000
+        report["inspection_sha256"] = sha256(json.dumps(inspected, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if shells is not None:
+            for method in ("grid", "triangulation"):
+                encoded, hit, elapsed = shells.render(snapshot, method)
+                report[f"{label}_{method}_shell_ms"] = elapsed
+                report[f"{label}_{method}_shell_cache_hit"] = hit
+                report[f"{method}_shell_bytes"] = len(encoded)
         report["snapshot_bytes"] = snapshot.retained_bytes
         if snapshot.local is not None:
             if isinstance(snapshot.local, NumericExploration):

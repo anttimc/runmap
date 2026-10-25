@@ -67,8 +67,10 @@ benchmark. The server uses its defaults or the `RUNMAP_RUN_MAX_SEGMENTS` and
 
 ## Native distance-exploration integration
 
-Snapshot preparation, viewport highlighting, start-distance inspection, and
-snapshot tiles now use numeric exploration when a matching artifact is present.
+Snapshot preparation and start-distance inspection use numeric exploration when
+a matching artifact is present. The measurements below predate distance shells:
+viewport highlighting and snapshot path tiles have since been retired in favor
+of [grid and filtered-triangulation shells](distance-shells.md).
 The source database and version-2 numeric artifact need no format migration.
 Snapshot outputs retain only immutable reached-node IDs/distances and metadata,
 so a graph-cache eviction or shutdown does not invalidate them. The measurements
@@ -95,7 +97,7 @@ were 149 ms and 458 ms, respectively (single observations).
 A larger 27,487-interval GeoJSON viewport produced roughly 21–22 MB of JSON and
 took 0.6–1.4 seconds to generate in the same probe. Fast search does not establish
 a corresponding latency bound for arbitrarily large display output. The normal
-snapshot-tile path and display limits remain available.
+shell visualization now avoids shipping every reached path interval.
 
 ## Observed limits
 

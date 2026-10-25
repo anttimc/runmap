@@ -8,16 +8,15 @@ from time import monotonic
 import unittest
 from unittest.mock import patch
 
-import mapbox_vector_tile
-from rasterio.warp import transform, transform_bounds
+from rasterio.warp import transform
 
-from runmap.api.paths import explore_paths, inspect_outing, inspect_path, load_path_data
-from runmap.api.path_tiles import PathTileService, encode_tile
+from runmap.api.paths import inspect_outing, inspect_path, load_path_data
+from runmap.api.path_tiles import PathTileService
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.sqlite_exploration import (ExplorationAreaError, ExplorationLimits, NumericExploration,
                                           prepare_local_exploration, retained_exploration_bytes)
-from runmap.api.sqlite_paths import (database_explore, database_inspect_outing, database_inspection,
-                                    database_snap, database_viewport)
+from runmap.api.sqlite_paths import (database_inspect_outing, database_inspection,
+                                    database_snap)
 from runmap.paths.database import export_network_database
 from runmap.paths.exploration import Snap
 from runmap.paths.graph import write_graph_outputs
@@ -27,8 +26,6 @@ from runmap.routing.numeric_search import LoadedNumericGraph, NumericEndpoint, N
 from runmap.routing.types import EdgeProfile
 from test_path_api import fixture
 from test_path_database import publish_fixture
-from test_path_tiles import xyz
-from test_sqlite_exploration import VIEW
 from test_sqlite_runs import detour_graph
 from test_measurements import enrich
 from runmap.api.app import app, SnapshotRequest, prepare_path_snapshot
@@ -49,11 +46,11 @@ class NumericExplorationTests(unittest.TestCase):
         self.data = SQLitePathData(self.database)
         self.addCleanup(self.data.close)
 
-    def test_map_inspection_and_tiles_match_reference_for_profiles_and_budgets(self) -> None:
+    def test_inspection_matches_reference_for_profiles_and_budgets(self) -> None:
         with patch.object(Path, "read_text", side_effect=AssertionError("JSON read")), \
                 patch("runmap.api.sqlite_exploration.load_local_network", side_effect=AssertionError("Python graph")), \
                 patch("runmap.api.sqlite_exploration.distance_data", side_effect=AssertionError("Python search")):
-            service, reference_service = PathTileService(self.data), PathTileService(self.reference)
+            service = PathTileService(self.data)
             for surface in ("all", "surfaced"):
                 for stairs in (False, True):
                     for budget in (.03, .1, .3):
@@ -64,12 +61,6 @@ class NumericExplorationTests(unittest.TestCase):
                         self.assertIsInstance(snapshot.distances, NumericDistanceData)
                         self.assertFalse(hasattr(snapshot.local, "routing"))
                         self.assertFalse(snapshot.distances.outward.values.flags.writeable)
-                        actual = database_explore(database_viewport(self.data, VIEW, 15, surface, stairs,
-                            snapshot=snapshot), prepared, snapshot, budget)
-                        expected = explore_paths(self.reference, VIEW, 15, *options[:3], surface, stairs)
-                        actual.pop("distance_cache_hit")
-                        expected.pop("distance_cache_hit")
-                        self.assertEqual(actual, expected)
                         for reverse in (False, True):
                             actual_inspection = database_inspect_outing(self.data,
                                 database_inspection(self.data, "s", reverse, surface, stairs), prepared,
@@ -77,14 +68,6 @@ class NumericExplorationTests(unittest.TestCase):
                             expected_inspection = inspect_outing(self.reference,
                                 inspect_path(self.reference, "s", reverse, surface, stairs), *options[:3], surface, stairs)
                             self.assertEqual(actual_inspection, expected_inspection)
-                        ref_prepared = reference_service.prepare(*options)
-                        ref_snapshot = reference_service.snapshot(ref_prepared["snapshot_id"])
-                        for z in (10, 12, 14, 16):
-                            x, y = xyz(24.801, 60.2, z)
-                            for variant in ("gradient-hidden", "gradient-all", "distance-hidden", "distance-all"):
-                                self.assertEqual(mapbox_vector_tile.decode(encode_tile(self.data, snapshot.policy,
-                                    variant, z, x, y, snapshot)), mapbox_vector_tile.decode(encode_tile(
-                                    self.reference, ref_snapshot.policy, variant, z, x, y, ref_snapshot)))
 
     def test_distant_segments_do_not_require_graph_membership(self) -> None:
         root = self.root / "chain"
@@ -95,15 +78,11 @@ class NumericExplorationTests(unittest.TestCase):
         export_network_database(source, database)
         export_numeric_database(database, root / "numeric-routing-v2.sqlite")
         lon, lat = transform("EPSG:3067", "EPSG:4326", [375050], [6675000])
-        view = transform_bounds("EPSG:3067", "EPSG:4326", 374900, 6674900, 380200, 6675100)
         with closing(SQLitePathData(database)) as data:
             service = PathTileService(data)
             options = (lon[0], lat[0], .03, "all", True, 50, None)
             prepared = service.prepare(*options)
             snapshot = service.snapshot(prepared["snapshot_id"])
-            actual = database_explore(database_viewport(data, view, 15, snapshot=snapshot), prepared, snapshot, .03)
-            expected = explore_paths(reference, view, 15, *options)
-            self.assertEqual(actual["features"], expected["features"])
             for key in ("bc", "de"):
                 actual = database_inspect_outing(data, database_inspection(data, key), prepared, snapshot, .03, "all", True)
                 expected = inspect_outing(reference, inspect_path(reference, key), *options)
@@ -147,7 +126,7 @@ class NumericExplorationTests(unittest.TestCase):
         self.assertEqual(len({p["snapshot_id"] for p in prepared}), 1)
         snapshot = service.snapshot(prepared[0]["snapshot_id"])
         self.assertGreaterEqual(snapshot.retained_bytes, retained_exploration_bytes(snapshot.local))
-        expected = database_viewport(self.data, VIEW, 15, snapshot=snapshot)
+        expected = database_inspect_outing(self.data, database_inspection(self.data, "s"), prepared[0], snapshot, .1, "all", True)
         with self.assertRaisesRegex(ValueError, "memory budget"):
             PathTileService(self.data, snapshot_bytes=1).prepare(24.801, 60.2, .1, "all", True, 50, None)
         second = service.prepare(24.802, 60.2, .1, "all", True, 50, None)
@@ -162,7 +141,7 @@ class NumericExplorationTests(unittest.TestCase):
         # Drop graph owners while retaining independent sparse distance bytes.
         self.data.numeric.close()
         self.data.numeric = None
-        self.assertEqual(database_viewport(self.data, VIEW, 15, snapshot=snapshot), expected)
+        self.assertEqual(database_inspect_outing(self.data, database_inspection(self.data, "s"), prepared[0], snapshot, .1, "all", True), expected)
         with patch("runmap.api.path_tiles.monotonic", return_value=monotonic()+1000):
             with self.assertRaises(KeyError):
                 service.snapshot(snapshot.id)
@@ -187,7 +166,6 @@ class NumericExplorationTests(unittest.TestCase):
                 export_network_database(source, database)
             export_numeric_database(database, root / "numeric-routing-v2.sqlite")
             lon, lat = transform("EPSG:3067", "EPSG:4326", [375000], [6675300])
-            view = transform_bounds("EPSG:3067", "EPSG:4326", 374900, 6674900, 376100, 6676300)
             with closing(SQLitePathData(database)) as data:
                 service = PathTileService(data)
                 for stairs in (True, False):
@@ -195,9 +173,11 @@ class NumericExplorationTests(unittest.TestCase):
                         options = (lon[0], lat[0], budget, "all", stairs, 50, None)
                         prepared = service.prepare(*options)
                         snapshot = service.snapshot(prepared["snapshot_id"])
-                        actual = database_viewport(data, view, 15, "all", stairs, snapshot=snapshot)
-                        expected = explore_paths(reference, view, 15, *options)
-                        self.assertEqual(actual["features"], expected["features"])
+                        for key in reference.segments:
+                            actual = database_inspect_outing(data, database_inspection(data, key, avoid_stairs=stairs),
+                                prepared, snapshot, budget, "all", stairs)
+                            expected = inspect_outing(reference, inspect_path(reference, key, avoid_stairs=stairs), *options)
+                            self.assertEqual(actual, expected)
 
     def test_shared_cache_and_deadlines(self) -> None:
         service = PathTileService(self.data)
@@ -236,15 +216,14 @@ class NumericExplorationEndpointTests(unittest.IsolatedAsyncioTestCase):
                 patch.object(app.state, "path_tiles", service, create=True), \
                 patch("runmap.api.sqlite_exploration.load_local_network", side_effect=AssertionError("Python graph")):
             query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&longitude=24.801&latitude=60.2&budget_km=.1"
-            self.assertEqual((await get("/api/paths/explore?"+query))[0], 200)
             self.assertEqual((await get("/api/paths/segments/s?"+query))[0], 200)
-            self.assertEqual((await get("/api/paths/explore?"+query+"&dataset_id=stale"))[0], 409)
+            self.assertEqual((await get("/api/paths/segments/s?"+query+"&dataset_id=stale"))[0], 409)
             request = Request({"type": "http", "app": app, "headers": []})
             options = SnapshotRequest(longitude=24.801, latitude=60.2, budget_km=.1, dataset_id=self.data.dataset_id)
             self.assertEqual(prepare_path_snapshot(request, options).status_code, 200)
             app.state.path_tiles = PathTileService(self.data, exploration_limits=ExplorationLimits(max_area_km2=.001))
-            status, result = await get("/api/paths/explore?"+query)
+            status, result = await get("/api/paths/segments/s?"+query)
             self.assertEqual(status, 422)
             self.assertEqual(result["status"], "area_limited")
             app.state.path_tiles = PathTileService(self.data, preparation_deadline=-1)
-            self.assertEqual((await get("/api/paths/explore?"+query))[0], 504)
+            self.assertEqual((await get("/api/paths/segments/s?"+query))[0], 504)

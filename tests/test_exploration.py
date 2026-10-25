@@ -5,12 +5,11 @@ import unittest
 
 from test_routing import graph_document
 from test_path_api import fixture
-from runmap.api.paths import load_path_data, snap_path_start, explore_paths, path_policy_index
+from runmap.api.paths import load_path_data, snap_path_start, exploration_context, inspect_path, inspect_outing, path_policy_index
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.exploration import (Snap, ExplorationCache, distance_data, interval_inclusion,
                                      split_start_graph, cached_distances, distance_from_start)
 from runmap.routing.search import build_graph_index, shortest_path, shortest_distances, external_node_distances
-from runmap.routing.profiles import exploration_profile
 
 
 def graph(edges):
@@ -196,21 +195,22 @@ class SnapTests(unittest.TestCase):
         distances = distance_data(index, snap("s", 110), 1000)
         self.assertEqual(interval_inclusion(index, distances, "parallel", 110, 120, 1000)["inclusion_state"], "beyond_budget")
 
-    def test_explore_cache_viewport_reuse_and_inspection_numerical_states(self):
+    def test_search_cache_reuse_preserves_inspection_numerical_states(self) -> None:
         document = fixture()
         document["segments"][0]["backward"] = True
         document["arcs"].append({"id": "s:b", "segment_id": "s", "from": "2", "to": "1", "length_m": 220})
         data = self.load(document)
-        bounds = (24.799, 60.199, 24.805, 60.201)
-        result = explore_paths(data, bounds, 15, 24.802, 60.2, .1)
-        self.assertFalse(result["distance_cache_hit"])
-        self.assertIn("km of the start", result["label"])
-        result = explore_paths(data, (24.801, 60.199, 24.803, 60.201), 15, 24.802, 60.2, .05)
-        self.assertTrue(result["distance_cache_hit"])
-        self.assertEqual({f["properties"]["inclusion_state"] for f in result["features"]}, {"beyond_budget"})
-        result = explore_paths(data, bounds, 15, 24.802, 60.2, .3)
-        self.assertFalse(result["distance_cache_hit"])
-        self.assertEqual({f["properties"]["inclusion_state"] for f in result["features"]}, {"included"})
+        _, first, _, hit = exploration_context(data, 24.802, 60.2, .1, "all", True, 50, None)
+        self.assertFalse(hit)
+        _, smaller, _, hit = exploration_context(data, 24.802, 60.2, .05, "all", True, 50, None)
+        self.assertTrue(hit)
+        self.assertIs(first, smaller)
+        result = inspect_outing(data, inspect_path(data, "s"), 24.802, 60.2, .05)
+        self.assertEqual({item["inclusion_state"] for item in result["intervals"]}, {"beyond_budget"})
+        _, _, _, hit = exploration_context(data, 24.802, 60.2, .3, "all", True, 50, None)
+        self.assertFalse(hit)
+        result = inspect_outing(data, inspect_path(data, "s"), 24.802, 60.2, .3)
+        self.assertEqual({item["inclusion_state"] for item in result["intervals"]}, {"included"})
 
     def test_bridge_crossing_has_candidates_without_an_artificial_junction(self):
         document = fixture()

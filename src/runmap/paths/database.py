@@ -356,10 +356,8 @@ def dataset_presentation(connection: sqlite3.Connection) -> DatasetPresentation:
 
 
 def iter_query_display_intervals(connection: sqlite3.Connection, bounds: Bounds, policy_id: str,
-                                 *, hide_building_access: bool = True,
-                                 include_endpoints: bool = False) -> Iterator[PreparedDisplayInterval]:
-    return iter_display_intervals(connection, _query_parameters(bounds), hide_building_access, policy_id,
-                                  include_endpoints=include_endpoints)
+                                 *, hide_building_access: bool = True) -> Iterator[PreparedDisplayInterval]:
+    return iter_display_intervals(connection, _query_parameters(bounds), hide_building_access, policy_id)
 
 
 def query_display_interval_ids(connection: sqlite3.Connection, bounds: Bounds, *,
@@ -367,9 +365,9 @@ def query_display_interval_ids(connection: sqlite3.Connection, bounds: Bounds, *
     return display_interval_ids(connection, _query_parameters(bounds), hide_building_access)
 
 
-def query_display_interval_batch(connection: sqlite3.Connection, numbers: Sequence[int], policy_id: str, *,
-                                 include_endpoints: bool = False) -> tuple[PreparedDisplayInterval, ...]:
-    return tuple(iter_display_intervals_by_ids(connection, numbers, policy_id, include_endpoints=include_endpoints))
+def query_display_interval_batch(connection: sqlite3.Connection, numbers: Sequence[int],
+                                 policy_id: str) -> tuple[PreparedDisplayInterval, ...]:
+    return tuple(iter_display_intervals_by_ids(connection, numbers, policy_id))
 
 
 def query_segment_endpoints(connection: sqlite3.Connection, segment_id: str) -> PreparedEndpoints:

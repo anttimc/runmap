@@ -68,7 +68,7 @@ class SQLiteDeliveryTests(unittest.TestCase):
             for z in (10, 12, 14, 16):
                 x, y = xyz(24.801, 60.2, z)
                 for policy in ("all-stairs", "all-no-stairs", "surfaced-stairs", "surfaced-no-stairs"):
-                    for variant in ("gradient-hidden", "gradient-all", "distance-hidden", "distance-all"):
+                    for variant in ("gradient-hidden", "gradient-all"):
                         self.assertEqual(mapbox_vector_tile.decode(encode_tile(self.data, policy, variant, z, x, y)),
                                          mapbox_vector_tile.decode(encode_tile(self.reference, policy, variant, z, x, y)))
         service = PathTileService(self.data, tile_bytes=100000)
@@ -114,11 +114,8 @@ class SQLiteDeliveryTests(unittest.TestCase):
             result = service.prepare(24.801, 60.2, .1, "all", True, 50, None)
             snapshot = service.snapshot(result["snapshot_id"])
             x, y = xyz(24.801, 60.2, 15)
-            actual = service.tile(snapshot.policy, "gradient-all", 15, x, y, snapshot)[0]
-            reference_service = PathTileService(self.reference)
-            prepared = reference_service.prepare(24.801, 60.2, .1, "all", True, 50, None)
-            reference_snapshot = reference_service.snapshot(prepared["snapshot_id"])
-            expected = encode_tile(self.reference, snapshot.policy, "gradient-all", 15, x, y, reference_snapshot)
+            actual = service.tile(snapshot.policy, "gradient-all", 15, x, y)[0]
+            expected = encode_tile(self.reference, snapshot.policy, "gradient-all", 15, x, y)
             self.assertEqual(mapbox_vector_tile.decode(actual), mapbox_vector_tile.decode(expected))
         self.assertFalse(hasattr(self.data, "routing_data"))
 
@@ -241,7 +238,7 @@ class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(config["run_planner"]["available"])
                 self.assertEqual((await get("/api/paths/segments/s"))[0], 200)
                 query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&longitude=24.801&latitude=60.2"
-                self.assertEqual((await get("/api/paths/explore?" + query))[0], 200)
+                self.assertEqual((await get("/api/paths/segments/s?" + query))[0], 200)
                 self.assertFalse(hasattr(data, "legacy"))
 
 

@@ -1,4 +1,4 @@
-"""Compact immutable display samples shared across exploration snapshots."""
+"""Compact immutable gradient samples shared across static path tiles."""
 
 from array import array
 from collections.abc import Iterable
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import math
 
 from runmap.paths.display import measurement_quality
-from runmap.paths.preparation import PreparedDisplayInterval, PreparedEndpoints, PreparedPolicy
+from runmap.paths.preparation import PreparedDisplayInterval
 
 
 QUALITIES = ("missing", "uncertain", "terrain_estimate")
@@ -15,8 +15,7 @@ QUALITIES = ("missing", "uncertain", "terrain_estimate")
 @dataclass(frozen=True)
 class TileSegment:
     id: str
-    policy: PreparedPolicy
-    endpoints: PreparedEndpoints | None
+    eligible: bool
 
 
 @dataclass(frozen=True)
@@ -42,13 +41,12 @@ def pack_tile_inputs(intervals: Iterable[PreparedDisplayInterval]) -> TileInputs
             if stored.policy is None:
                 raise ValueError("Prepared policy data is missing")
             lookup[key] = len(segments)
-            segments.append(TileSegment(key, stored.policy, stored.endpoints))
+            segments.append(TileSegment(key, stored.policy.reason is None))
         indices.extend((lookup[key], item["interval_index"]))
-        values.extend((item["graph_start_m"], item["graph_end_m"],
-                       item["grade_percent"] if item["grade_percent"] is not None else math.nan,
+        values.extend((item["grade_percent"] if item["grade_percent"] is not None else math.nan,
                        stored.flat_min_grade_50m if stored.flat_min_grade_50m is not None else math.nan))
         quality = measurement_quality(item["valid"], item["quality_flags"])
-        flags.extend((QUALITIES.index(quality), int("stairs" in item["quality_flags"]), int(stored.coverage_limited)))
+        flags.extend((QUALITIES.index(quality), int("stairs" in item["quality_flags"])))
         for point in item["geometry"]:
             geometry.extend((point[0], point[1]))
         offsets.append(len(geometry) // 2)

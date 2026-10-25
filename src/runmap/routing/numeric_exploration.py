@@ -1,4 +1,4 @@
-"""Resolve display intervals from sparse native distances without retaining a graph."""
+"""Resolve inspected intervals from sparse distances without retaining a graph."""
 
 from dataclasses import dataclass
 import math
@@ -22,36 +22,17 @@ class NumericSegmentDistances:
     anchors: tuple[tuple[float, float], ...]
     policy: PreparedPolicy
     maximum_m: float
-    reachable: bool
 
 
 def numeric_segment_distances(distances: NumericDistanceData, segment_id: str, endpoints: PreparedEndpoints,
                               policy: PreparedPolicy) -> NumericSegmentDistances:
     if policy.reason is not None:
-        return NumericSegmentDistances((), policy, distances.maximum_m, False)
+        return NumericSegmentDistances((), policy, distances.maximum_m)
     anchors = [(0.0, _node_distance(distances.outward, endpoints.source)),
                (endpoints.length_m, _node_distance(distances.outward, endpoints.target))]
     if segment_id == distances.snap.segment_id:
         anchors.append((distances.snap.graph_offset_m, 0.0))
-    return NumericSegmentDistances(tuple(anchors), policy, distances.maximum_m,
-                                   any(base <= distances.maximum_m for _, base in anchors))
-
-
-def numeric_tile_interval(distances: NumericSegmentDistances, start_m: float, end_m: float,
-                           budget_m: float) -> tuple[str, float | None]:
-    """Compute display state without constructing inspection-only direction records."""
-    if distances.policy.reason is not None:
-        return "excluded", None
-    if not distances.reachable:
-        return "beyond_budget", None
-    included = False
-    for allowed, position in ((distances.policy.forward, start_m), (distances.policy.backward, end_m)):
-        if allowed:
-            start = _point_distance(distances, position)
-            included |= start <= distances.maximum_m and start + abs(end_m-start_m) <= budget_m + 1e-8
-    midpoint = _point_distance(distances, (start_m+end_m)/2)
-    distance = midpoint if math.isfinite(midpoint) and midpoint <= distances.maximum_m else None
-    return "included" if included else "beyond_budget", distance
+    return NumericSegmentDistances(tuple(anchors), policy, distances.maximum_m)
 
 
 def _node_distance(distances: NumericDistances, node: int) -> float:

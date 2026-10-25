@@ -11,7 +11,9 @@ The filled space between paths is an approximate distance surface, not evidence
 that the intervening ground can be traversed. Neither algorithm has water or
 barrier polygons. Both are clipped to prepared coverage. Shell display requires
 the SQLite backend and its matching numeric routing artifact; configuration
-advertises available methods. Legacy datasets retain the path-color display.
+advertises available methods. Datasets without numeric routing retain gradient
+display and inspection; the distance button is disabled. Distance path colors,
+snapshot MVTs, and `/api/paths/explore` have been removed.
 
 ## Shared distance samples
 

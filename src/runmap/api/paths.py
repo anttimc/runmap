@@ -11,7 +11,7 @@ from runmap.paths.coverage import (Coverage, geometry_bounds as _bounds, point_i
                                    graph_coverage, near_coverage_boundary)
 
 from runmap.paths.measurements import (MeasurementData, graph_digest, inspect_measurements,
-                                       load_measurements, indexed_measurement, segment_measurements)
+                                       load_measurements, segment_measurements)
 from runmap.paths.flat import measurement_flat_thresholds
 from runmap.paths.display import DisplayInterval, display_feature, pack_display_intervals
 from runmap.paths.spatial import Cell, filter_cells, pack_cells
@@ -347,27 +347,6 @@ def _interval_state(data: PathData, index: GraphData, distances: DistanceData,
                 (interval["graph_start_m"] + interval["graph_end_m"]) / 2)}
 
 
-def explore_paths(data, bounds, zoom, longitude, latitude, budget_km=3, surface="all",
-                  avoid_stairs=True, radius_m=50, segment_id=None, hide_building_access: bool = True):
-    response = viewport_paths(data, bounds, zoom, surface, avoid_stairs=avoid_stairs,
-                              hide_building_access=hide_building_access)
-    index, distances, snap_response, hit = exploration_context(
-        data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id)
-    response.update(start=snap_response, budget_km=budget_km,
-                    label=f"Within {budget_km:g} km of the start",
-                    semantics="Each entire highlighted interval is reachable within the forward distance budget; no return distance is included.")
-    if distances is None:
-        return {**response, "status": "no_eligible_snap", "features": []}
-    features = []
-    for feature in response["features"]:
-        properties = feature["properties"]
-        interval = indexed_measurement(data.measurements, data.measurements.segment_indices[properties["segment_id"]], properties["interval_index"])
-        features.append({**feature, "properties": {**properties, **_interval_state(data, index, distances, interval, budget_km)}})
-    return {**response, "features": features, "distance_cache_hit": hit,
-            "search_limit_m": distances.maximum_m, "interval_resolution_note":
-            "Whole display intervals are tested conservatively. Paths not reached within the budget share one state, including disconnected paths. Exact minima beyond the bounded search may be unavailable."}
-
-
 def inspect_outing(data, result, longitude, latitude, budget_km=3, surface="all", avoid_stairs=True,
                    radius_m=50, start_segment_id=None):
     index, distances, snap_response, _ = exploration_context(
@@ -382,14 +361,12 @@ def inspect_outing(data, result, longitude, latitude, budget_km=3, surface="all"
     return result
 
 
-def render_paths(response, metric="gradient"):
+def render_paths(response):
     """Coalesce contiguous equal-value intervals; inspection retains exact samples.
 
-    Keep segment boundaries and outing-state transitions. Only properties
+    Keep segment boundaries. Only properties
     consumed by map styling are shipped.
     """
-    if metric not in {"gradient", "distance"}:
-        raise ValueError("Unknown path display metric")
     features = []
     previous_key = None
     previous_interval = None
@@ -397,15 +374,11 @@ def render_paths(response, metric="gradient"):
         source = feature["properties"]
         grade = abs(source["grade_percent"] or 0)
         properties = {key: source[key] for key in (
-            "segment_id", "quality", "stairs", "eligible", "inclusion_state"
+            "segment_id", "quality", "stairs", "eligible"
         ) if key in source}
-        if metric == "distance":
-            distance = source.get("distance_from_start_m")
-            properties["distance_from_start_m"] = distance
-        else:
-            properties["grade_percent"] = grade
-            if source.get("flat_min_grade_50m") is not None:
-                properties["flat_min_grade_50m"] = source["flat_min_grade_50m"]
+        properties["grade_percent"] = grade
+        if source.get("flat_min_grade_50m") is not None:
+            properties["flat_min_grade_50m"] = source["flat_min_grade_50m"]
         key = tuple(properties.items())
         coordinates = feature["geometry"]["coordinates"]
         interval = source["interval_index"]

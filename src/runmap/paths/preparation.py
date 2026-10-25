@@ -80,7 +80,6 @@ class PreparedDisplayInterval:
     coverage_limited: bool
     building_access: Classification | None
     policy: PreparedPolicy | None = None
-    endpoints: PreparedEndpoints | None = None
 
 
 def prepared_models(hill_model: HillModel | None) -> PreparedModels:

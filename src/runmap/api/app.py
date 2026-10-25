@@ -16,11 +16,11 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from runmap.api.paths import render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, explore_paths, inspect_outing
+from runmap.api.paths import render_paths, inspect_path, load_path_data, path_config, viewport_paths, snap_path_start, inspect_outing
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.sqlite_runs import RunAreaLimits, generate_database_run, validate_run_limits
 from runmap.api.sqlite_paths import (database_path_config, database_viewport, database_inspection, database_snap,
-                                    database_explore, database_inspect_outing)
+                                    database_inspect_outing)
 from runmap.api.sqlite_exploration import ExplorationAreaError, ExplorationLimits
 from runmap.paths.database_pool import DatabaseBusyError
 from runmap.api.path_tiles import PathTileService, Snapshot, render_version as path_render_version, tile_template
@@ -139,7 +139,7 @@ def paths_config(request: Request):
     model = data.metadata.models.hill_model if sqlite else data.hills.model if data.hills else None
     capabilities = (prepared_preference_capabilities(model, data.metadata.hill_valid_fraction)
                     if sqlite else preference_capabilities(data.hills))
-    return {**(database_path_config(data) if sqlite else path_config(data)), "tile_template": tile_template(data, "static/{policy}"),
+    return {**(database_path_config(data) if sqlite else path_config(data)), "tile_template": tile_template(data),
             "tile_min_zoom": 10, "tile_max_zoom": 16,
             "shell_methods": ["grid", "triangulation"] if sqlite and data.numeric is not None else [],
             "run_planner": PlannerConfiguration(
@@ -216,20 +216,15 @@ def prepare_path_snapshot(request: Request, options: SnapshotRequest) -> JSONRes
 
 
 def _path_tile_response(request: Request, service: PathTileService, version: str,
-                        policy: str, variant: str, z: int, x: int, y: int,
-                        snapshot_id: str | None = None) -> Response:
+                        policy: str, variant: str, z: int, x: int, y: int) -> Response:
     if version != path_render_version(service.data):
         raise HTTPException(404, "Unknown path rendering version")
     try:
-        snapshot = service.snapshot(snapshot_id) if snapshot_id else None
-        encoded, hit, elapsed = service.tile(snapshot.policy if snapshot else policy, variant, z, x, y, snapshot)
-    except KeyError as exc:
-        raise HTTPException(410, "Exploration snapshot expired; prepare it again") from exc
+        encoded, hit, elapsed = service.tile(policy, variant, z, x, y)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    lifetime = max(0, int(snapshot.expires_at - time())) if snapshot else 31536000
     headers = {
-        "Cache-Control": f"private, max-age={lifetime}" if snapshot else "public, max-age=31536000, immutable",
+        "Cache-Control": "public, max-age=31536000, immutable",
         "ETag": 'W/"' + sha256(encoded).hexdigest() + '"',
         "X-Runmap-Compute-Ms": f"{elapsed:.2f}", "X-Runmap-Cache-Hit": str(hit).lower(),
         "X-Runmap-Tile-Cache-Bytes": str(service.tiles.bytes),
@@ -247,12 +242,6 @@ def _path_tile_response(request: Request, service: PathTileService, version: str
 def static_path_tile(request: Request, version: str, dataset_id: str, policy: str,
                      variant: str, z: int, x: int, y: int) -> Response:
     return _path_tile_response(request, _tile_service(request, dataset_id), version, policy, variant, z, x, y)
-
-
-@app.get("/api/paths/tiles/v{version}/{dataset_id}/snapshots/{snapshot_id}/{variant}/{z}/{x}/{y}.mvt")
-def explored_path_tile(request: Request, version: str, dataset_id: str, snapshot_id: str,
-                       variant: str, z: int, x: int, y: int) -> Response:
-    return _path_tile_response(request, _tile_service(request, dataset_id), version, "", variant, z, x, y, snapshot_id)
 
 
 @app.get("/api/paths/snapshots/{snapshot_id}/shells")
@@ -344,31 +333,6 @@ def path_start_snap(request: Request, longitude: float, latitude: float,
         return reader(data, longitude, latitude, surface, avoid_stairs, radius_m, segment_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.get("/api/paths/explore")
-def path_exploration(request: Request, west: float, south: float, east: float, north: float,
-                     zoom: float, longitude: float, latitude: float,
-                     budget_km: float = Query(3, gt=0, le=50),
-                     surface: str = "all", avoid_stairs: bool = True,
-                     radius_m: float = Query(50, gt=0, le=200), segment_id: str = None,
-                     dataset_id: str = None, metric: str = "gradient", hide_building_access: bool = True):
-    data = _path_data(request, dataset_id)
-    try:
-        if isinstance(data, SQLitePathData):
-            prepared, snapshot = _local_snapshot(request, data, longitude, latitude, budget_km, surface,
-                                                  avoid_stairs, radius_m, segment_id)
-            response = database_viewport(data, (west, south, east, north), zoom, surface, avoid_stairs,
-                                         hide_building_access, snapshot=snapshot)
-            result = database_explore(response, prepared, snapshot, budget_km)
-        else:
-            result = explore_paths(data, (west, south, east, north), zoom, longitude, latitude,
-                                   budget_km, surface, avoid_stairs, radius_m, segment_id, hide_building_access)
-        return JSONResponse(render_paths(result, metric))
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except TimeoutError as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
 
 
 @app.get("/api/terrain.png")

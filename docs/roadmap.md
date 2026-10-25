@@ -91,7 +91,7 @@ Remaining validation and improvements:
    index semantics. Local window caching requires byte/concurrency/generation
    bounds and evidence that repeated requests benefit.
 3. Reduce first-load display preparation for zoomed-out tiles. Compact tile-input
-   caching improves subsequent snapshots, but cold SQL/JSON reads remain costly;
+   caching improves repeated gradient views, but cold SQL/JSON reads remain costly;
    see the [distance-tile measurements](archive/history/52-distance-tiles.md).
    Evaluate prepared compact display chunks and complete browser tile-set timing,
    preserving inspection, coverage, policy flags, and distance boundaries.
