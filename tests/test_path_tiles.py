@@ -15,7 +15,7 @@ from runmap.api.paths import load_path_data
 from runmap.api.paths import _interval_state, candidate_path_indexes, path_policy_index
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import build_measurement_data, indexed_measurement, segment_measurements
-from runmap.api.path_tiles import (ByteCache, PathTileService, display_runs, encode_tile,
+from runmap.api.path_tiles import (ByteCache, DisplayRun, PathTileService, Property, display_runs, encode_runs, encode_tile,
                                   projected_point, render_version, snapshot_distances, tile_bounds)
 from runmap.paths.exploration import DistanceData, Snap
 from runmap.paths.exploration import segment_reason
@@ -25,6 +25,13 @@ from runmap.routing.search import freeze_node_distances, external_node_distances
 def xyz(longitude: float, latitude: float, z: int) -> tuple[int, int]:
     px, py = projected_point(longitude, latitude, z, 0, 0)
     return math.floor(px / 4096), math.floor(py / 4096)
+
+
+def tile_coordinate(x: float, y: float) -> tuple[float, float]:
+    scale = 2**14 * 4096
+    longitude = (8000 * 4096 + x) / scale * 360 - 180
+    latitude = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (8000 * 4096 + y) / scale))))
+    return longitude, latitude
 
 
 class PathTileTests(unittest.TestCase):
@@ -183,6 +190,30 @@ class PathTileTests(unittest.TestCase):
         self.assertLess(abs(first[0] - expected[0]), 1)
         self.assertLess(abs(first[1] - expected[1]), 1)
         self.assertLess(projected_point(24.8, 60.21, 15, x, y)[1], expected[1])
+
+    def test_encoded_multipart_lines_preserve_geometry_and_property_types(self) -> None:
+        properties: dict[str, Property] = {"segment_id": "Mäkipolku", "eligible": False, "stairs": True,
+                                          "distance_from_start_m": 125, "grade_percent": 1.5, "negative": -12}
+        # The middle of the line exits the buffered tile; clipping leaves two parts.
+        points = ((100, 100), (5000, 100), (5000, 200), (100, 200))
+        run = DisplayRun(tuple(tile_coordinate(x, y) for x, y in points), properties, 0)
+        tile = mapbox_vector_tile.decode(encode_runs([run], 14, 8000, 8000),
+                                         default_options={"y_coord_down": True})["paths"]
+        self.assertEqual(tile["extent"], 4096)
+        feature = tile["features"][0]
+        self.assertEqual(feature["geometry"], {"type": "MultiLineString",
+            "coordinates": [[[100, 100], [4160, 100]], [[4160, 200], [100, 200]]]})
+        self.assertEqual(feature["properties"], properties)
+        self.assertIs(feature["properties"]["eligible"], False)
+        self.assertIs(feature["properties"]["stairs"], True)
+        self.assertIsInstance(feature["properties"]["negative"], int)
+        self.assertIsInstance(feature["properties"]["grade_percent"], float)
+
+    def test_encoding_omits_duplicate_only_and_rounded_zero_length_lines(self) -> None:
+        coordinates = ((100., 100.), (100.01, 100.01))
+        runs = [DisplayRun(tuple(tile_coordinate(x, y) for x, y in coordinates), {"segment_id": "tiny"}, 0),
+                DisplayRun((tile_coordinate(200, 200),) * 2, {"segment_id": "duplicate"}, 0)]
+        self.assertEqual(mapbox_vector_tile.decode(encode_runs(runs, 14, 8000, 8000))["paths"]["features"], [])
 
     def test_empty_and_validation(self) -> None:
         self.assertFalse(mapbox_vector_tile.decode(encode_tile(self.data, "all-stairs", "gradient-hidden", 10, 0, 0))["paths"]["features"])

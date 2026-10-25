@@ -12,9 +12,9 @@ from typing import Callable, Generic, TypeVar
 from uuid import uuid4
 
 import numpy as np
+import mapbox_vector_tile
 from shapely.geometry import LineString, box
 from shapely import transform
-from runmap import _routing_native
 
 from runmap.api.paths import PathData, _interval_state, candidate_path_indexes, display_segment_reason, exploration_context, path_policy_index
 from runmap.api.sqlite_data import SQLitePathData
@@ -257,7 +257,7 @@ def encode_tile(data: PathData | SQLitePathData, policy: str, variant: str, z: i
 
 
 def encode_runs(runs: list[DisplayRun], z: int, x: int, y: int) -> bytes:
-    features: list[tuple[list[list[tuple[float, float]]], dict[str, Property]]] = []
+    features: list[dict[str, object]] = []
     clip = box(-BUFFER, -BUFFER, EXTENT + BUFFER, EXTENT + BUFFER)
     tolerance = EXTENT / 512 * (1 if z <= 12 else .5 if z <= 14 else .125)
     for run in runs:
@@ -268,9 +268,9 @@ def encode_runs(runs: list[DisplayRun], z: int, x: int, y: int) -> bytes:
         geometry = transform(geometry, np.rint)
         if geometry.length == 0:
             continue
-        lines = [geometry] if geometry.geom_type == "LineString" else list(geometry.geoms)
-        features.append(([list(line.coords) for line in lines], run.properties))
-    return _routing_native.encode_line_tile(features, EXTENT)
+        features.append({"geometry": geometry, "properties": run.properties})
+    return mapbox_vector_tile.encode({"name": "paths", "features": features},
+                                    default_options={"y_coord_down": True, "extents": EXTENT})
 
 
 class PathTileService:

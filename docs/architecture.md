@@ -400,12 +400,15 @@ retained. This cache owns no snapshot distances or graph owners.
 Numeric tile rendering resolves endpoint distances once per segment, skips
 unreachable segment calculations, and avoids constructing inspection-only
 direction records. Python retains projection, clipping, simplification, and
-rounding; a native line-only MVT encoder writes geometry commands and typed
-properties while releasing the GIL. Inspection and contour encoding retain their
-existing paths. The browser retains an installed vector source when its tile
-template has not changed, preserving worker results across unrelated refreshes.
-The [distance-tile report](archive/history/52-distance-tiles.md) records paired
-tile equivalence/timings, cache ownership, and larger exploration examples.
+rounding; the existing Python `mapbox-vector-tile` library encodes remaining
+path tiles. Distance shells use GeoJSON and do not require path MVT encoding.
+Inspection and contour encoding retain their existing paths. The browser retains
+an installed vector source when its tile template has not changed, preserving
+worker results across unrelated refreshes.
+The historical [distance-tile report](archive/history/52-distance-tiles.md)
+records paired timings for the former native encoder, cache ownership, and
+larger exploration examples; its native encoding timings do not describe the
+current Python tile encoder.
 Snapshot memory accounting charges the shared immutable distance buffers to each
 entry conservatively; reference SQLite entries also charge their owned local graph,
 while numeric SQLite snapshots charge only their independent sparse distances.
