@@ -1,4 +1,4 @@
-import type { Polygon } from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 export type Location = [number, number];
 export type PreferenceLevel = "off" | "low" | "high";
@@ -52,6 +52,7 @@ export interface PathConfig {
   tile_template: string;
   tile_min_zoom: number;
   tile_max_zoom: number;
+  shell_methods?: ShellMethod[];
   snap_radius_m: number;
   default_budget_km: number;
   importer_notes: string[];
@@ -133,6 +134,21 @@ export interface SnapshotResponse {
   start?: StartResponse;
   snap?: Snap | null;
   requested?: [number, number];
+}
+
+export type ShellMethod = "grid" | "triangulation";
+export interface ShellResponse extends FeatureCollection<
+  MultiPolygon,
+  { lower_m: number; upper_m: number }
+> {
+  dataset_id: string;
+  snapshot_id: string;
+  method: ShellMethod;
+  method_used: ShellMethod;
+  cell_m: number;
+  interval_m: number;
+  generation_ms: number;
+  vertices: number;
 }
 
 export interface RunPlannerConfiguration {

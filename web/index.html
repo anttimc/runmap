@@ -101,6 +101,12 @@
             </div>
             <div id="distance-controls" class="outing-controls" hidden>
               <h2 class="section-title">Distance from start</h2>
+              <label class="control-label" for="distance-shell-method">Shell method</label>
+              <select id="distance-shell-method" disabled>
+                <option value="grid">Grid</option>
+                <option value="triangulation">Filtered triangulation</option>
+              </select>
+              <p id="distance-shell-status" class="explanation" role="status"></p>
               <div class="heading-row outing-actions">
                 <button id="outing-set-start" type="button" disabled>Set start on map</button>
                 <button id="outing-clear-start" type="button" disabled>Clear start</button>
@@ -122,9 +128,10 @@
               <details class="inline-help">
                 <summary>About distance highlighting</summary>
                 <p class="explanation">
-                  Full emphasis: within the forward budget. Faint: not reached within budget. Very
-                  faint: excluded. Return distance is not included. Whole intervals at the budget
-                  boundary are treated conservatively.
+                  Colors show 500 m bands of shortest legal distance along the path network. Filled
+                  areas between paths are approximate; they do not imply access across water or
+                  other barriers. Return distance is not included. Click a mapped path to inspect
+                  its exact network distance.
                 </p>
               </details>
             </div>

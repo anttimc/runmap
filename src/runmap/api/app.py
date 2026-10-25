@@ -5,6 +5,7 @@ import os
 import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 from hashlib import sha256
 from time import time
 
@@ -23,6 +24,7 @@ from runmap.api.sqlite_paths import (database_path_config, database_viewport, da
 from runmap.api.sqlite_exploration import ExplorationAreaError, ExplorationLimits
 from runmap.paths.database_pool import DatabaseBusyError
 from runmap.api.path_tiles import PathTileService, Snapshot, render_version as path_render_version, tile_template
+from runmap.api.path_shells import PathShellService
 from runmap.api.terrain import TerrainRenderer
 from runmap.api.runs import PlannerConfiguration, RunRequest, RunResponse, generate_run
 from runmap.routing.cost_settings import preference_capabilities, prepared_preference_capabilities
@@ -139,6 +141,7 @@ def paths_config(request: Request):
                     if sqlite else preference_capabilities(data.hills))
     return {**(database_path_config(data) if sqlite else path_config(data)), "tile_template": tile_template(data, "static/{policy}"),
             "tile_min_zoom": 10, "tile_max_zoom": 16,
+            "shell_methods": ["grid", "triangulation"] if sqlite and data.numeric is not None else [],
             "run_planner": PlannerConfiguration(
                 available=True,
                 preference_capabilities=capabilities,
@@ -250,6 +253,35 @@ def static_path_tile(request: Request, version: str, dataset_id: str, policy: st
 def explored_path_tile(request: Request, version: str, dataset_id: str, snapshot_id: str,
                        variant: str, z: int, x: int, y: int) -> Response:
     return _path_tile_response(request, _tile_service(request, dataset_id), version, "", variant, z, x, y, snapshot_id)
+
+
+@app.get("/api/paths/snapshots/{snapshot_id}/shells")
+def distance_shells(request: Request, snapshot_id: str, dataset_id: str,
+                    method: Literal["grid", "triangulation"] = "grid", cell_m: int = 50) -> Response:
+    paths = _tile_service(request, dataset_id)
+    service = getattr(request.app.state, "path_shells", None)
+    if service is None or service.paths is not paths:
+        service = PathShellService(paths)
+        request.app.state.path_shells = service
+    try:
+        snapshot = paths.snapshot(snapshot_id)
+        encoded, hit, elapsed = service.render(snapshot, method, cell_m)
+    except KeyError as exc:
+        raise HTTPException(410, "Exploration snapshot expired; prepare it again") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(504, str(exc)) from exc
+    if snapshot.expires_at <= time():
+        raise HTTPException(410, "Exploration snapshot expired; prepare it again")
+    headers = {"Cache-Control": f"private, max-age={max(0, int(snapshot.expires_at - time()))}",
+               "X-Runmap-Compute-Ms": f"{elapsed:.2f}", "X-Runmap-Cache-Hit": str(hit).lower(),
+               "X-Runmap-Shell-Cache-Bytes": str(service.responses.bytes),
+               "ETag": 'W/"' + sha256(encoded).hexdigest() + '"', "Vary": "Accept-Encoding"}
+    validators = {value.strip().removeprefix("W/") for value in request.headers.get("if-none-match", "").split(",")}
+    if headers["ETag"].removeprefix("W/") in validators or "*" in validators:
+        return Response(status_code=304, headers=headers)
+    return Response(encoded, media_type="application/geo+json", headers=headers)
 
 
 @app.get("/api/paths/viewport")

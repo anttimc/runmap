@@ -8,6 +8,8 @@ import type {
   RunResponse,
   SnapshotResponse,
   Snap,
+  ShellMethod,
+  ShellResponse,
 } from "./api-types";
 
 interface UnavailablePathConfig {
@@ -49,9 +51,17 @@ async function errorMessage(response: Response): Promise<string> {
   return fallback;
 }
 
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
-  if (!response.ok) throw new Error(await errorMessage(response));
+  if (!response.ok) throw new ApiError(await errorMessage(response), response.status);
   return (await response.json()) as T;
 }
 
@@ -91,6 +101,19 @@ export function prepareSnapshot(
   signal: AbortSignal,
 ): Promise<SnapshotResponse> {
   return postJson("/api/paths/snapshots", body, signal);
+}
+
+export function loadDistanceShells(
+  datasetId: string,
+  snapshotId: string,
+  method: ShellMethod,
+  signal: AbortSignal,
+): Promise<ShellResponse> {
+  const parameters = new URLSearchParams({ dataset_id: datasetId, method });
+  return requestJson(
+    `/api/paths/snapshots/${encodeURIComponent(snapshotId)}/shells?${parameters}`,
+    { signal },
+  );
 }
 
 export async function snapEndpoint(

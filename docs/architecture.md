@@ -413,10 +413,23 @@ Creating a snapshot does not copy search results. Snapshots and tiles have
 byte-bounded TTL/LRU caches. Expired snapshots return 410; the client recreates
 once. Use one API worker until snapshots can be shared or reconstructed.
 
-Exploration runs only a distance-bounded Dijkstra search. Eligible intervals not
-reached within the budget share the `beyond_budget` state and faint styling,
-including disconnected intervals. No whole-network connectivity search runs;
-policy-excluded intervals retain their separate state.
+Distance exploration uses filled 500 m shells when a numeric artifact is
+available. Grid and filtered Delaunay methods share immutable samples from one
+forward-Dijkstra snapshot. Sampling reads numeric geometry directly, including
+directed partial-start distances and extra support at the outer budget boundary.
+The grid uses bounded nearest-sample interpolation and ContourPy; the mesh clips
+linear triangle fields into bands and merges their fragments with Shapely.
+Both return coverage-clipped GeoJSON, without rendering path vector tiles.
+Separate bounded caches coalesce sample preparation and encoded shell responses.
+The browser cancels superseded requests and reuses the search when switching
+methods. See [distance shells](distance-shells.md) for algorithms, limits,
+approximation semantics, caching, and frontend behavior.
+
+Exploration runs only a distance-bounded Dijkstra search; no whole-network
+connectivity search runs. Inspection and legacy path tiles retain interval
+states: eligible intervals not reached within budget share `beyond_budget`,
+including disconnected intervals, while policy-excluded intervals retain their
+separate state.
 
 Run requests split both snapped endpoints in one temporary overlay. The planner
 uses A* with a calibrated graph-distance lower bound, lazy shared shape integrals,
@@ -573,6 +586,7 @@ protect inspection, snapshots, and runs from obsolete responses.
 | `GET /api/paths/segments/{segment_id}` | Full measurement/profile inspection |
 | `GET /api/paths/snap` | Eligible endpoint snap and alternatives |
 | `POST /api/paths/snapshots` | Forward-distance snapshot preparation |
+| `GET /api/paths/snapshots/{snapshot_id}/shells` | Grid or filtered-triangulation distance shells as GeoJSON |
 | `GET /api/paths/tiles/v{version}/{dataset_id}/…` | Static or snapshot path MVTs |
 | `POST /api/paths/run` | Bounded run generation with resolved cost model and diagnostics |
 

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { loadMapConfig, loadInspection, prepareSnapshot } from "../src/api.ts";
+import {
+  ApiError,
+  loadDistanceShells,
+  loadMapConfig,
+  loadInspection,
+  prepareSnapshot,
+} from "../src/api.ts";
 
 test("HTTP failures preserve actionable server details and handle non-JSON bodies", async (context) => {
   const responses = [
@@ -59,4 +65,28 @@ test("snapshot transport preserves server responses and request cancellation", a
     controller.signal,
   );
   assert.deepEqual(result, snapshot);
+});
+
+test("shell transport selects a method on the same snapshot and preserves expiry status", async (context) => {
+  const controller = new AbortController();
+  const shells = { type: "FeatureCollection", features: [], snapshot_id: "snapshot" };
+  context.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(options.signal, controller.signal);
+    const parsed = new URL(url, "http://localhost");
+    assert.equal(parsed.pathname, "/api/paths/snapshots/snapshot/shells");
+    assert.equal(parsed.searchParams.get("dataset_id"), "dataset");
+    assert.equal(parsed.searchParams.get("method"), "triangulation");
+    return Response.json(shells);
+  });
+  assert.deepEqual(
+    await loadDistanceShells("dataset", "snapshot", "triangulation", controller.signal),
+    shells,
+  );
+  context.mock.method(globalThis, "fetch", async () =>
+    Response.json({ detail: "Snapshot expired" }, { status: 410 }),
+  );
+  await assert.rejects(
+    loadDistanceShells("dataset", "snapshot", "grid", controller.signal),
+    (error) => error instanceof ApiError && error.status === 410 && /expired/.test(error.message),
+  );
 });

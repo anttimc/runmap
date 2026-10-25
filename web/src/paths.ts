@@ -7,8 +7,14 @@ import {
   type MapMouseEvent,
 } from "maplibre-gl";
 import type { Feature, FeatureCollection, LineString, Point } from "geojson";
-import { turboColors } from "./turbo";
-import { loadInspection, prepareSnapshot } from "./api";
+import { ApiError, loadDistanceShells, loadInspection, prepareSnapshot, snapEndpoint } from "./api";
+import {
+  addShellLayers,
+  distanceBandM,
+  distanceBands,
+  setShellData,
+  showShellLayers,
+} from "./distance-shells";
 import type {
   ColorStop,
   Inclusion,
@@ -18,22 +24,13 @@ import type {
   PathConfig,
   SnapshotResponse,
   StartResponse,
+  ShellMethod,
 } from "./api-types";
 import type { SharedState } from "./state";
 import { element } from "./dom";
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
-const distanceBandM = 500;
 const neutralPathColor = "#727980";
-
-function distanceBands(maximumM: number): { startM: number; color: string }[] {
-  const count = Math.max(1, Math.ceil(maximumM / distanceBandM));
-  return Array.from({ length: count }, (_, index) => {
-    const colorIndex =
-      count === 1 ? 0 : Math.floor((index * (turboColors.length - 1)) / (count - 1));
-    return { startM: index * distanceBandM, color: turboColors[colorIndex] };
-  });
-}
 
 function distanceExpression(maximumM: number): ExpressionSpecification {
   const bands = distanceBands(maximumM);
@@ -622,6 +619,8 @@ export function startPaths(
   const setStart = element<HTMLButtonElement>("outing-set-start");
   const clearStart = element<HTMLButtonElement>("outing-clear-start");
   const outingStatus = element("outing-status");
+  const shellMethod = element<HTMLSelectElement>("distance-shell-method");
+  const shellStatus = element("distance-shell-status");
   const setStatus = (message: string, state: string) => {
     status.textContent = message;
     status.dataset.state = state;
@@ -643,6 +642,10 @@ export function startPaths(
   ])
     control.disabled = false;
   addPathLayers(map, config, stops);
+  addShellLayers(map);
+  shellMethod.disabled = !config.shell_methods?.length;
+  if (!config.shell_methods?.length)
+    shellStatus.textContent = "Shell display is unavailable for this dataset.";
   renderGradientLegend(stops);
   applyPathEmphasis(map, flatter.checked, Number(flatThreshold.value));
   map.addSource("start-offset", { type: "geojson", data: empty });
@@ -688,6 +691,8 @@ export function startPaths(
   let currentSnapshot: SnapshotResponse | undefined;
   let expiryRetried = false;
   let preparing = false;
+  let pendingView = "";
+  let installedShell = "";
   let tileFailed = false;
   let inspectionSequence = 0;
   let selected: string | undefined;
@@ -695,6 +700,7 @@ export function startPaths(
   const currentMetric = (): "gradient" | "distance" =>
     options.state.mode === "plan" ? "gradient" : exploreMetric;
   const distanceEnabled = (): boolean => currentMetric() === "distance";
+  const usesShells = (): boolean => distanceEnabled() && !!config.shell_methods?.length;
   let choosingStart = false;
   function chooseStartMode(active: boolean): void {
     choosingStart = active;
@@ -712,7 +718,7 @@ export function startPaths(
     clearStart.disabled = !options.state.home;
     element("outing-label").textContent =
       distanceEnabled() && options.state.home
-        ? `Within a ${Number(budget.value)} km outing — retracing allowed`
+        ? `${Number(budget.value)} km forward distance · return not included`
         : "";
     if (!distanceEnabled() || !options.state.home) return;
     requestedMarker.setLngLat(options.state.home).addTo(map);
@@ -787,7 +793,7 @@ export function startPaths(
   function updateLodLegend(): void {
     const zoom = Math.floor(map.getZoom());
     const note = element("path-lod-note");
-    note.hidden = zoom < config.tile_min_zoom || zoom > 14;
+    note.hidden = usesShells() || zoom < config.tile_min_zoom || zoom > 14;
     note.textContent =
       currentMetric() === "distance"
         ? `Zoomed-out distance colors use ${zoom <= 12 ? 250 : 125} m bins. Inspection shows original samples.`
@@ -797,6 +803,20 @@ export function startPaths(
     updateLodLegend();
     updateLegendVisibility();
     if (preparing || tileFailed) return;
+    if (usesShells()) {
+      context(false);
+      if (options.state.home && !currentSnapshot) return;
+      const loaded = !!installedShell && map.isSourceLoaded("distance-shells");
+      setStatus(
+        !options.state.home
+          ? "Choose a start to display distance shells."
+          : loaded
+            ? "Distance shells ready · click a mapped path to inspect."
+            : "Drawing distance shells…",
+        !options.state.home ? "choose_start" : loaded ? "ready" : "loading",
+      );
+      return;
+    }
     const bounds = map.getBounds();
     const [w, s, e, n] = config.bounds_wgs84;
     if (map.getZoom() < config.tile_min_zoom) {
@@ -831,77 +851,119 @@ export function startPaths(
     // Visibility and metric select tile variants; they never invalidate routing.
     params.delete("hide_building_access");
     const key = outing ? params.toString() : "";
-    if (outing && key === snapshotKey && preparing) return;
+    const viewKey = `${key}|${usesShells() ? shellMethod.value : variant()}`;
+    if (outing && key === snapshotKey && preparing && pendingView === viewKey) return;
+    pendingView = viewKey;
     viewportAbort?.abort();
     viewportAbort = new AbortController();
     const sequence = ++viewportSequence;
+    const clearShells = () => {
+      installedShell = "";
+      setShellData(map);
+      shellStatus.textContent = "";
+    };
     if (!outing) {
       preparing = false;
       currentSnapshot = undefined;
       snapshotKey = "";
-      installTiles(
-        config.tile_template.replace("{policy}", policy()).replace("{variant}", variant()),
-      );
+      clearShells();
+      if (!usesShells())
+        installTiles(
+          config.tile_template.replace("{policy}", policy()).replace("{variant}", variant()),
+        );
       showStart();
       coverageStatus();
       return;
     }
-    if (key === snapshotKey && currentSnapshot && currentSnapshot.expires_at * 1000 > Date.now()) {
-      installTiles(currentSnapshot.tile_template.replace("{variant}", variant()));
-      showStart(currentSnapshot.start);
-      coverageStatus();
-      return;
-    }
     if (key !== snapshotKey) expiryRetried = false;
-    snapshotKey = key;
-    currentSnapshot = undefined;
+    const reusable =
+      key === snapshotKey && currentSnapshot && currentSnapshot.expires_at * 1000 > Date.now();
+    if (!reusable) {
+      snapshotKey = key;
+      currentSnapshot = undefined;
+    }
     preparing = true;
-    installTiles();
+    tileFailed = false;
+    if (installedShell !== viewKey) clearShells();
+    if (!usesShells()) installTiles();
     context(false);
     showStart();
-    setStatus("Calculating paths from this start…", "loading");
+    setStatus("Calculating distances from this start…", "loading");
     try {
-      const result = await prepareSnapshot(
-        {
-          dataset_id: config.dataset_id,
-          longitude: options.state.home![0],
-          latitude: options.state.home![1],
-          ...options.state.policy,
-          budget_km: Number(budget.value),
-        },
-        viewportAbort.signal,
-      );
+      const result =
+        currentSnapshot ??
+        (await prepareSnapshot(
+          {
+            dataset_id: config.dataset_id,
+            longitude: options.state.home![0],
+            latitude: options.state.home![1],
+            ...options.state.policy,
+            budget_km: Number(budget.value),
+          },
+          viewportAbort.signal,
+        ));
       if (sequence !== viewportSequence) return;
-      preparing = false;
       if (result.dataset_id !== config.dataset_id)
         throw new Error("Dataset changed — reload the map.");
       if (result.status === "no_eligible_snap") {
+        preparing = false;
         showStart({ status: result.status, snap: null, requested: options.state.home! });
         setStatus("Start could not be snapped to an eligible path.", "no_eligible_snap");
         return;
       }
       currentSnapshot = result;
-      installTiles(result.tile_template.replace("{variant}", variant()));
+      if (usesShells()) {
+        if (installedShell !== viewKey) {
+          shellStatus.textContent = "Generating distance shells…";
+          const method = shellMethod.value as ShellMethod;
+          const shells = await loadDistanceShells(
+            config.dataset_id,
+            result.snapshot_id,
+            method,
+            viewportAbort.signal,
+          );
+          if (sequence !== viewportSequence) return;
+          if (
+            shells.dataset_id !== config.dataset_id ||
+            shells.snapshot_id !== result.snapshot_id ||
+            shells.method !== method
+          )
+            throw new Error("Distance shell response changed — try again.");
+          setShellData(map, shells);
+          installedShell = viewKey;
+          const label = shells.method_used === "grid" ? "Grid" : "Filtered triangulation";
+          shellStatus.textContent = `${label} · ${shells.features.length} bands · ${(shells.generation_ms / 1000).toFixed(2)} s${shells.method_used !== method ? " · sparse network fallback" : ""}`;
+        }
+      } else installTiles(result.tile_template.replace("{variant}", variant()));
+      preparing = false;
       showStart(result.start);
       outingStatus.textContent += ` Prepared in ${(result.preparation_ms / 1000).toFixed(2)} s.`;
       coverageStatus();
     } catch (error) {
       if (sequence !== viewportSequence || (error as Error).name === "AbortError") return;
       preparing = false;
+      clearShells();
+      if (error instanceof ApiError && error.status === 410 && !expiryRetried) {
+        expiryRetried = true;
+        currentSnapshot = undefined;
+        void updateViewport();
+        return;
+      }
       tileFailed = true;
       context(false);
       setStatus(`Path request failed. ${(error as Error).message}`, "failed");
     }
   }
   map.on("sourcedata", (event) => {
-    if (event.sourceId === activeSource) coverageStatus();
+    if (event.sourceId === activeSource || event.sourceId === "distance-shells") coverageStatus();
   });
   map.on("error", (event) => {
     const error = event.error as Error & { status?: number; url?: string };
     const sourceId = (event as unknown as { sourceId?: string }).sourceId;
-    const isCurrent =
-      sourceId === activeSource ||
-      (currentSnapshot && error.url?.includes(`/snapshots/${currentSnapshot.snapshot_id}/`));
+    const isCurrent = usesShells()
+      ? sourceId === "distance-shells"
+      : sourceId === activeSource ||
+        (currentSnapshot && error.url?.includes(`/snapshots/${currentSnapshot.snapshot_id}/`));
     if (!isCurrent || preparing) return;
     if (error.status === 410 && currentSnapshot && !expiryRetried) {
       expiryRetried = true;
@@ -951,9 +1013,16 @@ export function startPaths(
   budget.addEventListener("change", () => {
     if (budget.reportValidity()) refresh();
   });
+  shellMethod.addEventListener("change", refresh);
   function updateMetric(): void {
     updateLodLegend();
     const distance = currentMetric() === "distance";
+    const shells = usesShells();
+    hideBuildingAccess.disabled = shells;
+    for (const id of ["path-hit", "path-casing", "path-grades", "path-uncertain", "path-stairs"])
+      map.setLayoutProperty(id, "visibility", shells ? "none" : "visible");
+    showShellLayers(map, shells, Number(budget.value) * 1000);
+    if (!shells) setShellData(map);
     const highlightFlat = !distance && options.state.mode === "explore" && flatter.checked;
     const threshold = Number(flatThreshold.value);
     const maximumKm = Number(budget.value);
@@ -970,7 +1039,9 @@ export function startPaths(
         : "Path gradient";
     renderGradientLegend(stops);
     element("mode-description").textContent = distance
-      ? "Choose a start to see network distance in 500 m color bands."
+      ? shells
+        ? "Choose a start to see network distance in filled 500 m shells."
+        : "Choose a start to see network distance in 500 m path colors."
       : highlightFlat
         ? `Flat stretches of at least 50 m, with grades up to ${threshold}%, are highlighted.`
         : "Compare path steepness. Click a path to inspect its profile.";
@@ -991,7 +1062,9 @@ export function startPaths(
     );
     updateLegendVisibility();
     element("metric-note").textContent = distance
-      ? "Shortest legal network distance from the snapped start to each interval midpoint. Turbo colors mark 0.5 km bands (0–0.5, 0.5–1 km, and so on), from purple through blue, green, and yellow to red across the forward distance budget. The final band may be shorter. Gray: beyond budget, excluded, unreachable, or distance unavailable. Terrain uncertainty remains in inspection."
+      ? shells
+        ? "Filled colors show 0.5 km bands of shortest legal network distance. Areas between paths are approximate and do not imply off-path access or access across water. Shells stop at prepared coverage; the final band may be shorter. Click a mapped path for its exact network distance."
+        : "Path colors show shortest legal distance from the snapped start in 0.5 km bands. Gray paths are beyond budget, excluded, or unreachable."
       : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins and distance uses 250/125 m midpoint bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
     flatter.disabled = distance;
     flatThreshold.disabled = distance;
@@ -1002,7 +1075,7 @@ export function startPaths(
     const bounds = map.getBounds();
     const [west, south, east, north] = config.bounds_wgs84;
     const visible =
-      map.getZoom() >= config.tile_min_zoom &&
+      (usesShells() || map.getZoom() >= config.tile_min_zoom) &&
       bounds.getEast() >= west &&
       bounds.getWest() <= east &&
       bounds.getNorth() >= south &&
@@ -1037,6 +1110,10 @@ export function startPaths(
       options.setHome([event.lngLat.lng, event.lngLat.lat]);
       return;
     }
+    if (usesShells()) {
+      void inspectShellPath([event.lngLat.lng, event.lngLat.lat]);
+      return;
+    }
     const hits = map.queryRenderedFeatures(event.point, { layers: ["path-hit"] });
     const feature = [
       ...new globalThis.Map(hits.map((hit) => [hit.properties.segment_id, hit])).values(),
@@ -1046,6 +1123,26 @@ export function startPaths(
     selected = id;
     reverse.checked = false;
     void inspectSelected();
+  }
+  async function inspectShellPath(location: Location): Promise<void> {
+    inspectionAbort?.abort();
+    inspectionAbort = new AbortController();
+    const sequence = ++inspectionSequence;
+    try {
+      const snap = await snapEndpoint(
+        config.dataset_id,
+        location,
+        options.state.policy,
+        inspectionAbort.signal,
+      );
+      if (sequence !== inspectionSequence || !snap) return;
+      selected = snap.segment_id;
+      reverse.checked = false;
+      void inspectSelected();
+    } catch (error) {
+      if (sequence !== inspectionSequence || (error as Error).name === "AbortError") return;
+      setStatus(`Path inspection failed. ${(error as Error).message}`, "failed");
+    }
   }
   map.on("mouseenter", "path-hit", () => {
     map.getCanvas().style.cursor =
