@@ -224,9 +224,9 @@ impl NumericGraph {
                 let start_id = node_id(&self.graph, overlay.start);
                 let settings = SearchSettings {
                     profile,
-                    maximum,
+                    cost_budget: maximum,
                     reverse,
-                    distance_scale: 0.0,
+                    heuristic_distance_scale: 0.0,
                     deadline: end,
                     costs: CostSettings {
                         hill_weight: 0.0,
@@ -236,7 +236,7 @@ impl NumericGraph {
                         hill_intervals: HashMap::new(),
                     },
                 };
-                let result = chunk_search::search(&self.graph, &chunks, &overlay, settings)?;
+                let result = chunk_search::search_routes(&self.graph, &chunks, &overlay, settings)?;
                 Ok::<_, RoutingError>((result, start_id))
             })
             .map_err(routing_error)?;
@@ -288,9 +288,9 @@ impl NumericGraph {
                 let destination_id = node_id(&self.graph, overlay.destination.unwrap());
                 let settings = SearchSettings {
                     profile,
-                    maximum: f64::INFINITY,
+                    cost_budget: f64::INFINITY,
                     reverse: false,
-                    distance_scale: self.distance_scale,
+                    heuristic_distance_scale: self.distance_scale,
                     deadline: end,
                     costs: CostSettings {
                         hill_weight,
@@ -306,7 +306,7 @@ impl NumericGraph {
                         hill_intervals,
                     },
                 };
-                let result = chunk_search::search(&self.graph, &chunks, &overlay, settings)?;
+                let result = chunk_search::search_routes(&self.graph, &chunks, &overlay, settings)?;
                 Ok::<_, RoutingError>((result, start_id, destination_id))
             })
             .map_err(routing_error)?;

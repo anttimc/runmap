@@ -1,4 +1,4 @@
-//! Request-owned shortest paths and distance budgets across chunk boundaries.
+//! Request-owned shortest paths and cost budgets across chunk boundaries.
 
 use crate::chunk_graph::{GraphIndex, SegmentRef};
 use crate::endpoint_overlay::{Edge, Overlay, node_id};
@@ -10,9 +10,9 @@ use std::time::Instant;
 
 #[derive(Clone, Copy)]
 struct QueueEntry {
-    priority: f64,
-    distance: f64,
-    key: i64,
+    estimated_total_cost: f64,
+    cost_so_far: f64,
+    node_id: i64,
     node: usize,
 }
 impl PartialEq for QueueEntry {
@@ -29,19 +29,19 @@ impl PartialOrd for QueueEntry {
 impl Ord for QueueEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         other
-            .priority
-            .total_cmp(&self.priority)
-            .then_with(|| other.distance.total_cmp(&self.distance))
-            .then_with(|| other.key.cmp(&self.key))
+            .estimated_total_cost
+            .total_cmp(&self.estimated_total_cost)
+            .then_with(|| other.cost_so_far.total_cmp(&self.cost_so_far))
+            .then_with(|| other.node_id.cmp(&self.node_id))
             .then_with(|| other.node.cmp(&self.node))
     }
 }
 
 pub struct SearchSettings {
     pub profile: usize,
-    pub maximum: f64,
+    pub cost_budget: f64,
     pub reverse: bool,
-    pub distance_scale: f64,
+    pub heuristic_distance_scale: f64,
     pub deadline: Option<Instant>,
     pub costs: CostSettings,
 }
@@ -64,7 +64,7 @@ pub fn check_deadline(deadline: Option<Instant>) -> Result<(), RoutingError> {
     }
 }
 
-fn node_point(graph: &GraphIndex, overlay: &Overlay, node: usize) -> (f64, f64) {
+fn node_coordinates(graph: &GraphIndex, overlay: &Overlay, node: usize) -> (f64, f64) {
     if node < graph.points.len() {
         graph.points[node]
     } else {
@@ -72,27 +72,27 @@ fn node_point(graph: &GraphIndex, overlay: &Overlay, node: usize) -> (f64, f64) 
     }
 }
 
-fn heuristic_scale(graph: &GraphIndex, overlay: &Overlay, mut scale: f64) -> f64 {
+fn compute_safe_heuristic_scale(graph: &GraphIndex, overlay: &Overlay, mut scale: f64) -> f64 {
     for edge in &overlay.edges {
-        let a = node_point(graph, overlay, edge.source);
-        let b = node_point(graph, overlay, edge.target);
-        let distance = (a.0 - b.0).hypot(a.1 - b.1);
-        if distance > 0.0 {
-            scale = scale.min(edge.length / distance);
+        let a = node_coordinates(graph, overlay, edge.source);
+        let b = node_coordinates(graph, overlay, edge.target);
+        let straight_line_distance = (a.0 - b.0).hypot(a.1 - b.1);
+        if straight_line_distance > 0.0 {
+            scale = scale.min(edge.length / straight_line_distance);
         }
     }
     scale * (1.0 - 1e-12)
 }
 
-fn estimate(graph: &GraphIndex, overlay: &Overlay, node: usize, scale: f64) -> f64 {
+fn estimate_remaining_cost(graph: &GraphIndex, overlay: &Overlay, node: usize, scale: f64) -> f64 {
     overlay.destination.map_or(0.0, |target| {
-        let a = node_point(graph, overlay, node);
-        let b = node_point(graph, overlay, target);
+        let a = node_coordinates(graph, overlay, node);
+        let b = node_coordinates(graph, overlay, target);
         scale * (a.0 - b.0).hypot(a.1 - b.1)
     })
 }
 
-fn base_edges(
+fn visit_base_graph_edges(
     graph: &GraphIndex,
     chunks: &[Chunk<'_>],
     overlay: &Overlay,
@@ -151,7 +151,7 @@ fn base_edges(
     Ok(())
 }
 
-fn visit_edges(
+fn visit_traversable_edges(
     graph: &GraphIndex,
     chunks: &[Chunk<'_>],
     overlay: &Overlay,
@@ -159,7 +159,7 @@ fn visit_edges(
     settings: &SearchSettings,
     mut visit: impl FnMut(Edge) -> Result<(), RoutingError>,
 ) -> Result<(), RoutingError> {
-    base_edges(graph, chunks, overlay, node, settings, &mut visit)?;
+    visit_base_graph_edges(graph, chunks, overlay, node, settings, &mut visit)?;
     let extra = if settings.reverse {
         overlay.incoming.get(&node)
     } else {
@@ -177,11 +177,15 @@ fn visit_edges(
     Ok(())
 }
 
-fn reconstruct(overlay: &Overlay, previous: &[Option<Edge>], reverse: bool) -> Option<Vec<Edge>> {
+fn reconstruct_path(
+    overlay: &Overlay,
+    predecessor_edges: &[Option<Edge>],
+    reverse: bool,
+) -> Option<Vec<Edge>> {
     let mut node = overlay.destination?;
     let mut edges = Vec::new();
     while node != overlay.start {
-        let edge = previous[node]?;
+        let edge = predecessor_edges[node]?;
         edges.push(edge);
         node = if reverse { edge.target } else { edge.source };
     }
@@ -190,23 +194,27 @@ fn reconstruct(overlay: &Overlay, previous: &[Option<Edge>], reverse: bool) -> O
 }
 
 struct SearchState {
-    values: Vec<f64>,
-    previous: Vec<Option<Edge>>,
+    best_costs: Vec<f64>,
+    predecessor_edges: Vec<Option<Edge>>,
     cache: CostCache,
-    queue: BinaryHeap<QueueEntry>,
+    open_queue: BinaryHeap<QueueEntry>,
     expanded: usize,
     frontier: Vec<i64>,
     scale: f64,
 }
 
-fn initialize(graph: &GraphIndex, overlay: &Overlay, settings: &SearchSettings) -> SearchState {
+fn initialize_search_state(
+    graph: &GraphIndex,
+    overlay: &Overlay,
+    settings: &SearchSettings,
+) -> SearchState {
     let count = graph.node_ids.len() + overlay.points.len();
-    let scale = heuristic_scale(graph, overlay, settings.distance_scale);
-    let mut values = vec![f64::INFINITY; count];
-    values[overlay.start] = 0.0;
+    let scale = compute_safe_heuristic_scale(graph, overlay, settings.heuristic_distance_scale);
+    let mut best_costs = vec![f64::INFINITY; count];
+    best_costs[overlay.start] = 0.0;
     SearchState {
-        values,
-        previous: if overlay.destination.is_some() {
+        best_costs,
+        predecessor_edges: if overlay.destination.is_some() {
             vec![None; count]
         } else {
             Vec::new()
@@ -214,10 +222,10 @@ fn initialize(graph: &GraphIndex, overlay: &Overlay, settings: &SearchSettings) 
         cache: CostCache {
             integrals: HashMap::new(),
         },
-        queue: BinaryHeap::from([QueueEntry {
-            priority: estimate(graph, overlay, overlay.start, scale),
-            distance: 0.0,
-            key: node_id(graph, overlay.start),
+        open_queue: BinaryHeap::from([QueueEntry {
+            estimated_total_cost: estimate_remaining_cost(graph, overlay, overlay.start, scale),
+            cost_so_far: 0.0,
+            node_id: node_id(graph, overlay.start),
             node: overlay.start,
         }]),
         expanded: 0,
@@ -226,13 +234,13 @@ fn initialize(graph: &GraphIndex, overlay: &Overlay, settings: &SearchSettings) 
     }
 }
 
-fn relax(
+fn relax_edge(
     graph: &GraphIndex,
     chunks: &[Chunk<'_>],
     overlay: &Overlay,
     settings: &SearchSettings,
     state: &mut SearchState,
-    distance: f64,
+    cost_so_far: f64,
     edge: Edge,
 ) -> Result<(), RoutingError> {
     let next = if settings.reverse {
@@ -247,33 +255,34 @@ fn relax(
         &mut state.cache,
         settings.deadline,
     )?;
-    let candidate = distance + components.iter().sum::<f64>();
-    if candidate <= settings.maximum && candidate < state.values[next] {
-        state.values[next] = candidate;
-        if !state.previous.is_empty() {
-            state.previous[next] = Some(edge);
+    let candidate = cost_so_far + components.iter().sum::<f64>();
+    if candidate <= settings.cost_budget && candidate < state.best_costs[next] {
+        state.best_costs[next] = candidate;
+        if !state.predecessor_edges.is_empty() {
+            state.predecessor_edges[next] = Some(edge);
         }
-        state.queue.push(QueueEntry {
-            priority: candidate + estimate(graph, overlay, next, state.scale),
-            distance: candidate,
-            key: node_id(graph, next),
+        state.open_queue.push(QueueEntry {
+            estimated_total_cost: candidate
+                + estimate_remaining_cost(graph, overlay, next, state.scale),
+            cost_so_far: candidate,
+            node_id: node_id(graph, next),
             node: next,
         });
     }
     Ok(())
 }
 
-fn settle_nodes(
+fn expand_search_frontier(
     graph: &GraphIndex,
     chunks: &[Chunk<'_>],
     overlay: &Overlay,
     settings: &SearchSettings,
     state: &mut SearchState,
 ) -> Result<(), RoutingError> {
-    while let Some(entry) = state.queue.pop() {
+    while let Some(entry) = state.open_queue.pop() {
         check_deadline(settings.deadline)?;
         let node = entry.node;
-        if entry.distance != state.values[node] {
+        if entry.cost_so_far != state.best_costs[node] {
             continue;
         }
         if node < graph.frontier.len() && graph.frontier[node] {
@@ -283,14 +292,14 @@ fn settle_nodes(
             break;
         }
         state.expanded += 1;
-        visit_edges(graph, chunks, overlay, node, settings, |edge| {
-            relax(
+        visit_traversable_edges(graph, chunks, overlay, node, settings, |edge| {
+            relax_edge(
                 graph,
                 chunks,
                 overlay,
                 settings,
                 state,
-                entry.distance,
+                entry.cost_so_far,
                 edge,
             )
         })?;
@@ -298,17 +307,19 @@ fn settle_nodes(
     Ok(())
 }
 
-fn finish(
+fn build_search_result(
     graph: &GraphIndex,
     chunks: &[Chunk<'_>],
     overlay: &Overlay,
     settings: &SearchSettings,
     mut state: SearchState,
 ) -> Result<SearchResult, RoutingError> {
-    let path = reconstruct(overlay, &state.previous, settings.reverse);
-    let cost = overlay
-        .destination
-        .and_then(|n| state.values[n].is_finite().then_some(state.values[n]));
+    let path = reconstruct_path(overlay, &state.predecessor_edges, settings.reverse);
+    let cost = overlay.destination.and_then(|n| {
+        state.best_costs[n]
+            .is_finite()
+            .then_some(state.best_costs[n])
+    });
     let mut components = Vec::new();
     let mut hills = Vec::new();
     for edge in path.iter().flatten() {
@@ -325,7 +336,7 @@ fn finish(
     }
     let distances = if overlay.destination.is_none() {
         state
-            .values
+            .best_costs
             .into_iter()
             .enumerate()
             .filter(|(_, v)| v.is_finite())
@@ -345,7 +356,7 @@ fn finish(
     })
 }
 
-pub fn search(
+pub fn search_routes(
     graph: &GraphIndex,
     chunks: &[Chunk<'_>],
     overlay: &Overlay,
@@ -354,13 +365,13 @@ pub fn search(
     check_deadline(settings.deadline)?;
     validate_settings(&settings.costs)?;
     if settings.profile >= graph.profiles
-        || settings.maximum.is_nan()
-        || settings.maximum < 0.0
-        || !settings.distance_scale.is_finite()
-        || !(0.0..=1.0).contains(&settings.distance_scale)
+        || settings.cost_budget.is_nan()
+        || settings.cost_budget < 0.0
+        || !settings.heuristic_distance_scale.is_finite()
+        || !(0.0..=1.0).contains(&settings.heuristic_distance_scale)
     {
         return Err(RoutingError::Invalid(
-            "Invalid profile, distance budget, or heuristic scale",
+            "Invalid profile, cost budget, or heuristic scale",
         ));
     }
     let blocked = |node: usize| {
@@ -378,7 +389,7 @@ pub fn search(
             hills: Vec::new(),
         });
     }
-    let mut state = initialize(graph, overlay, &settings);
-    settle_nodes(graph, chunks, overlay, &settings, &mut state)?;
-    finish(graph, chunks, overlay, &settings, state)
+    let mut state = initialize_search_state(graph, overlay, &settings);
+    expand_search_frontier(graph, chunks, overlay, &settings, &mut state)?;
+    build_search_result(graph, chunks, overlay, &settings, state)
 }
