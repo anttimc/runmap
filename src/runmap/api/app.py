@@ -140,7 +140,7 @@ def paths_config(request: Request):
     capabilities = (prepared_preference_capabilities(model, data.metadata.hill_valid_fraction)
                     if sqlite else preference_capabilities(data.hills))
     return {**(database_path_config(data) if sqlite else path_config(data)), "tile_template": tile_template(data),
-            "tile_min_zoom": 10, "tile_max_zoom": 16,
+            "tile_min_zoom": 13, "tile_max_zoom": 16,
             "shell_methods": ["grid", "triangulation"] if sqlite and data.numeric is not None else [],
             "run_planner": PlannerConfiguration(
                 available=True,

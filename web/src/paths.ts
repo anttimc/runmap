@@ -770,6 +770,12 @@ export function startPaths(
   function coverageStatus(): void {
     updateLodLegend();
     updateLegendVisibility();
+    updateMetricDescription();
+    if (!distanceEnabled() && map.getZoom() < config.tile_min_zoom) {
+      setStatus("Zoom in for path gradients. Background colors show terrain slope.", "zoom_in");
+      context(false);
+      return;
+    }
     if (preparing || tileFailed) return;
     if (distanceEnabled()) {
       context(false);
@@ -787,10 +793,7 @@ export function startPaths(
     }
     const bounds = map.getBounds();
     const [w, s, e, n] = config.bounds_wgs84;
-    if (map.getZoom() < config.tile_min_zoom) {
-      setStatus("Zoom in for path colors.", "zoom_in");
-      context(false);
-    } else if (
+    if (
       bounds.getEast() < w ||
       bounds.getWest() > e ||
       bounds.getNorth() < s ||
@@ -926,7 +929,8 @@ export function startPaths(
     const error = event.error as Error & { status?: number; url?: string };
     const sourceId = (event as unknown as { sourceId?: string }).sourceId;
     const isCurrent = sourceId === (distanceEnabled() ? "distance-shells" : activeSource);
-    if (!isCurrent || preparing) return;
+    if (!isCurrent || preparing || (!distanceEnabled() && map.getZoom() < config.tile_min_zoom))
+      return;
     tileFailed = true;
     setStatus(`Path tile failed to load. ${error.message}`, "failed");
   });
@@ -994,22 +998,33 @@ export function startPaths(
         ? `Path gradient · flat ≤${threshold}%`
         : "Path gradient";
     renderGradientLegend(stops);
-    element("mode-description").textContent = distance
-      ? "Choose a start to see network distance in filled 500 m shells."
-      : highlightFlat
-        ? `Flat stretches of at least 50 m, with grades up to ${threshold}%, are highlighted.`
-        : "Compare path steepness. Click a path to inspect its profile.";
     renderDistanceLegend(maximumKm);
     const gradeColor: ExpressionSpecification = gradientExpression(stops);
     map.setPaintProperty("path-grades", "line-color", gradeColor);
     updateLegendVisibility();
-    element("metric-note").textContent = distance
-      ? "Filled colors show 0.5 km bands of shortest legal network distance. Areas between paths are approximate and do not imply off-path access or access across water. Shells stop at prepared coverage; the final band may be shorter. Click a mapped path for its exact network distance."
-      : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 10–14, grade uses rounded-up 2%/1% bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
-    flatter.disabled = distance;
-    flatThreshold.disabled = distance;
+    updateMetricDescription();
     applyPathEmphasis(map, highlightFlat, threshold);
     if (options.state.mode === "plan") map.setPaintProperty("path-grades", "line-opacity", 0.4);
+  }
+  function updateMetricDescription(): void {
+    const distance = distanceEnabled();
+    const overview = !distance && map.getZoom() < config.tile_min_zoom;
+    const highlightFlat = !distance && options.state.mode === "explore" && flatter.checked;
+    const threshold = Number(flatThreshold.value);
+    element("mode-description").textContent = distance
+      ? "Choose a start to see network distance in filled 500 m shells."
+      : overview
+        ? "Background colors show terrain slope. Zoom in for path gradients and inspection."
+        : highlightFlat
+          ? `Flat stretches of at least 50 m, with grades up to ${threshold}%, are highlighted.`
+          : "Compare path steepness. Click a path to inspect its profile.";
+    element("metric-note").textContent = distance
+      ? "Filled colors show 0.5 km bands of shortest legal network distance. Areas between paths are approximate and do not imply off-path access or access across water. Shells stop at prepared coverage; the final band may be shorter. Click a mapped path for its exact network distance."
+      : overview
+        ? "Terrain slope describes the ground, not steepness along a path. A path following a hillside contour can be flat. Zoom in to see computed path gradients."
+        : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 13–14, grade uses rounded-up 1% bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
+    flatter.disabled = distance || overview;
+    flatThreshold.disabled = distance || overview;
   }
   function updateLegendVisibility(): void {
     const bounds = map.getBounds();

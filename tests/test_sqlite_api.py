@@ -235,6 +235,7 @@ class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
                 app.state.paths = data
                 status, config = await get("/api/paths/config")
                 self.assertEqual(status, 200)
+                self.assertEqual(config["tile_min_zoom"], 13)
                 self.assertTrue(config["run_planner"]["available"])
                 self.assertEqual((await get("/api/paths/segments/s"))[0], 200)
                 query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&longitude=24.801&latitude=60.2"
