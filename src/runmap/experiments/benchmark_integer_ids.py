@@ -18,11 +18,14 @@ from runmap.api.paths import PathData, load_path_data, path_policy_index
 from runmap.experiments.benchmark_integration import Timing, verify_routes
 from runmap.experiments.search_reference import shortest_path_string
 from runmap.paths.exploration import snap_candidates
-from runmap.routing.fields import Point, integrate_fields, integrate_fields_python
+from runmap.routing.types import Point
+from runmap.routing.fields import integrate_fields
+from runmap.routing_reference.fields import integrate_fields_python
 from runmap.routing.integer_graph import prepare_integer_graph
-from runmap.routing.run_planner import distance_heuristic, endpoint_overlay, plan_run
+from runmap.routing_reference.run_planner import distance_heuristic, endpoint_overlay, plan_run
 from runmap.routing.run_types import RunSettings
-from runmap.routing.search import GraphData, shortest_path
+from runmap.routing.graph import GraphData
+from runmap.routing_reference.search import shortest_path
 from runmap.routing.types import Arc
 
 
@@ -37,7 +40,7 @@ class Scenario:
 @contextmanager
 def string_planner() -> Iterator[None]:
     # Both planners now need shared integer feature IDs; compare search bookkeeping.
-    with patch('runmap.routing.run_planner.shortest_path', shortest_path_string):
+    with patch('runmap.routing_reference.run_planner.shortest_path', shortest_path_string):
         yield
 
 
@@ -142,11 +145,11 @@ def main() -> None:
                  replace(profile, name='shape-off', settings=RunSettings(avoidance_ratio=0)))
     results: list[dict[str, object]] = []
     for scenario in scenarios:
-        with patch('runmap.routing.cost_preparation.integrate_fields', integrate_fields):
+        with patch('runmap.routing_reference.cost_preparation.integrate_fields', integrate_fields):
             result = benchmark_scenario(data, index, scenario, args.repeats)
         results.append(result)
         print(json.dumps(result), flush=True)
-    with patch('runmap.routing.cost_preparation.integrate_fields', integrate_fields_python):
+    with patch('runmap.routing_reference.cost_preparation.integrate_fields', integrate_fields_python):
         python_result = benchmark_scenario(data, index, profile, args.repeats)
     with args.graph.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()

@@ -12,7 +12,7 @@ from typing import cast
 from runmap.paths.database import open_network_database
 from runmap.paths.local_network import load_local_network
 from runmap.routing.geometry import indexed_node_point
-from runmap.routing.search import indexed_shortest_distances
+from runmap.routing_reference.search import indexed_shortest_distances
 from runmap.routing.types import Bounds
 
 

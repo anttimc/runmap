@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.search import GraphData, apply_profile
+from runmap.routing.graph import GraphData, apply_profile
 from runmap.routing.types import Coordinate
 
 

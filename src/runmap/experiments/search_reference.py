@@ -5,7 +5,8 @@ import heapq
 import math
 from time import monotonic
 
-from runmap.routing.search import CostModel, GraphData, PathResult, _arc_cost, _remaining_cost
+from runmap.routing_reference.search import CostModel, PathResult, _arc_cost, _remaining_cost
+from runmap.routing.graph import GraphData
 from runmap.routing.types import Arc
 from runmap.routing.integer_graph import IntegerArc, integer_arc
 

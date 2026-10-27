@@ -3,8 +3,8 @@
 import copy
 import unittest
 
-from runmap.routing.baseline import _select_alternatives, assess_candidate, rank_candidate
-from runmap.routing.loop_types import Assessment, LoopCandidate, LoopRequest
+from runmap.routing_reference.baseline import _select_alternatives, assess_candidate, rank_candidate
+from runmap.routing_reference.loop_types import Assessment, LoopCandidate, LoopRequest
 from runmap.routing.types import RouteMetrics
 
 

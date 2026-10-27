@@ -11,7 +11,7 @@ from numpy.typing import NDArray
 from runmap import _routing_native
 from runmap.paths.database import NetworkMetadata, network_metadata
 from runmap.paths.numeric_database import iter_numeric_payloads
-from runmap.routing.cost_preparation import resolve_shape_strengths
+from runmap.routing.settings import resolve_shape_strengths
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.run_types import RunSettings
 from runmap.routing.profiles import exploration_profile

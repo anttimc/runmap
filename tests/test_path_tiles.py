@@ -19,7 +19,7 @@ from runmap.api.path_tiles import (ByteCache, DisplayRun, PathTileService, Prope
                                   projected_point, render_version, snapshot_distances, tile_bounds)
 from runmap.paths.exploration import DistanceData, Snap
 from runmap.paths.exploration import segment_reason
-from runmap.routing.search import freeze_node_distances, external_node_distances
+from runmap.routing_reference.search import freeze_node_distances, external_node_distances
 
 
 def xyz(longitude: float, latitude: float, z: int) -> tuple[int, int]:
@@ -465,7 +465,8 @@ class TileEndpointTests(unittest.IsolatedAsyncioTestCase):
 
 class RoutingConcurrencyTests(unittest.TestCase):
     def test_different_starts_do_not_share_a_search_lock(self) -> None:
-        from runmap.paths.exploration import ExplorationCache, Snap, DistanceData, cached_distances
+        from runmap.paths.exploration import ExplorationCache, Snap, DistanceData
+        from runmap.routing_reference.exploration import cached_distances
         from runmap.api.paths import path_policy_index
         with TemporaryDirectory() as directory:
             data = load_path_data(write_graph_outputs(fixture(), directory)["graph"])
@@ -483,7 +484,7 @@ class RoutingConcurrencyTests(unittest.TestCase):
                 outward = freeze_node_distances(index.integer, array("d", [math.inf, math.inf]), array("q"))
                 return DistanceData(snap, maximum, outward)
 
-            with patch("runmap.paths.exploration.distance_data", side_effect=search):
+            with patch("runmap.routing_reference.exploration.distance_data", side_effect=search):
                 with ThreadPoolExecutor(2) as pool:
                     first = pool.submit(cached_distances, cache, data.dataset_id, index, first_snap, 100)
                     self.assertTrue(entered.wait(2))

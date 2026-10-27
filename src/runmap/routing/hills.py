@@ -11,7 +11,7 @@ from runmap.routing.cost_types import PreferenceObservations, TraversalRef
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points
 from runmap.routing.hill_types import HillData, HillFeatures, HillInterval, HillModel
-from runmap.routing.search import GraphData
+from runmap.routing.graph import GraphData
 from runmap.routing.types import Measurement, MeasurementDocument, Segment
 
 

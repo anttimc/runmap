@@ -13,8 +13,8 @@ from runmap.paths.measurements import graph_digest
 from runmap.routing.metadata_strings import pack_string_rows, string_row
 from runmap.routing.node_storage import MetadataLookup, NodeRecords
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.run_planner import endpoint_overlay
-from runmap.routing.search import apply_profile, build_graph_index
+from runmap.routing_reference.run_planner import endpoint_overlay
+from runmap.routing.graph import apply_profile, build_graph_index
 from runmap.routing.segment_storage import SegmentRecords
 from runmap.routing.serialization import prepared_json
 

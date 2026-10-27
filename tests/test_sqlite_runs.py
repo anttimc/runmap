@@ -14,14 +14,16 @@ from starlette.requests import Request
 
 from runmap.api.app import app, run_route
 from runmap.api.paths import load_path_data
-from runmap.api.runs import PreferencesRequest, RunRequest, SettingsRequest, generate_run
+from runmap.api.runs import PreferencesRequest, RunRequest, SettingsRequest
+from runmap.routing_reference.api import generate_run
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.sqlite_runs import RunAreaLimits, generate_database_run, initial_run_bounds
 from runmap.paths.database import export_network_database
 from runmap.paths.graph import write_graph_outputs
-from runmap.routing.run_planner import plan_run
-from runmap.routing.run_types import RunMode, RunResult, RunSettings
-from runmap.routing.search import GraphData
+from runmap.routing_reference.run_planner import plan_run
+from runmap.routing.run_types import RunMode, RunSettings
+from runmap.routing_reference.run_types import RunResult
+from runmap.routing.graph import GraphData
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.hill_types import HillData
 from runmap.paths.exploration import Snap
@@ -174,7 +176,7 @@ class SQLiteRunTests(unittest.TestCase):
         data, source = self.publish(detour_graph())
         options = self.options(data, detour=True)
         reference = generate_run(load_path_data(source), options)
-        with patch("runmap.api.sqlite_runs.plan_run", wraps=plan_run) as planner:
+        with patch("runmap.routing_reference.sqlite_runs.plan_run", wraps=plan_run) as planner:
             result = generate_database_run(data, options)
         self.assertEqual(result.status, "complete")
         self.assertEqual(result.candidates, reference.candidates)
@@ -242,8 +244,10 @@ class SQLiteRunTests(unittest.TestCase):
     def test_deadline_covers_snapping_loading_and_retries_and_slots_are_released(self) -> None:
         data, _ = self.publish(detour_graph())
         options = self.options(data, detour=True)
-        for operation in ("database_snap", "load_local_network", "plan_run"):
-            with patch("runmap.api.sqlite_runs." + operation, side_effect=TimeoutError):
+        for operation in ("runmap.api.sqlite_runs.database_snap",
+                          "runmap.routing_reference.sqlite_runs.load_local_network",
+                          "runmap.routing_reference.sqlite_runs.plan_run"):
+            with patch(operation, side_effect=TimeoutError):
                 self.assertEqual(generate_database_run(data, options).status, "deadline")
         with patch("runmap.api.runs.RUN_SLOTS") as slots:
             slots.acquire.return_value = False
@@ -277,7 +281,7 @@ class SQLiteRunTests(unittest.TestCase):
                                hills=hills, frontier_nodes=frontier_nodes)
             return replace(result, candidates=result.candidates[:1], outcomes=("complete", "deadline"))
 
-        with patch("runmap.api.sqlite_runs.plan_run", side_effect=partial):
+        with patch("runmap.routing_reference.sqlite_runs.plan_run", side_effect=partial):
             result = generate_database_run(data, self.options(data))
         self.assertEqual(result.status, "deadline")
         self.assertEqual(len(result.candidates), 1)

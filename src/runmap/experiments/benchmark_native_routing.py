@@ -24,7 +24,7 @@ from runmap.routing.geometry import projected_points
 from runmap.routing.numeric_planner import NumericRunResult, numeric_plan_run
 from runmap.routing.numeric_search import LoadedNumericGraph, NumericEndpoint, load_numeric_graph, numeric_distances
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.run_planner import plan_run
+from runmap.routing_reference.run_planner import plan_run
 from runmap.routing.run_types import RunSettings
 from runmap.routing.types import Bounds
 

@@ -9,16 +9,21 @@ from collections.abc import Callable
 
 from test_routing import graph_document
 from runmap.paths.exploration import Snap
-from runmap.routing.cost_preparation import build_request_cost_data, resolve_traversal, validate_settings
-from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
-from runmap.routing.costs import arc_cost
+from runmap.routing_reference.cost_preparation import build_request_cost_data, resolve_traversal
+from runmap.routing.settings import validate_settings
+from runmap.routing_reference.cost_types import LegCostContext, RequestCostCache
+from runmap.routing.cost_types import PreferenceSettings
+from runmap.routing_reference.costs import arc_cost
 from runmap.routing.fields import integrate_fields
 from runmap.routing.geometry import indexed_node_point, indexed_segment_points
 from runmap.routing.integer_graph import IntegerArc
-from runmap.routing.run_planner import (RunSettings, endpoint_overlay, plan_run,
-                                        distance_heuristic, projected_points, penalty_strengths)
-from runmap.paths.exploration import split_start_graph
-from runmap.routing.search import GraphData, PathResult, apply_profile, arc_usable, build_graph_index, route_coordinates, shortest_path
+from runmap.routing.run_types import RunSettings
+from runmap.routing_reference.run_planner import endpoint_overlay, plan_run, distance_heuristic
+from runmap.routing.geometry import projected_points
+from runmap.routing_reference.cost_preparation import penalty_strengths
+from runmap.routing_reference.exploration import split_start_graph
+from runmap.routing.graph import GraphData, apply_profile, arc_usable, build_graph_index
+from runmap.routing_reference.search import PathResult, route_coordinates, shortest_path
 
 
 class RunPlannerTests(unittest.TestCase):
@@ -108,8 +113,8 @@ class RunPlannerTests(unittest.TestCase):
         overlay = endpoint_overlay(self.index, home, turnaround)
         data = build_request_cost_data(overlay.graph, home, turnaround, RunSettings())
         cache = RequestCostCache()
-        with patch("runmap.routing.cost_preparation.projected_points", side_effect=AssertionError), \
-                patch("runmap.routing.run_planner.projected_points", side_effect=AssertionError):
+        with patch("runmap.routing_reference.cost_preparation.projected_points", side_effect=AssertionError), \
+                patch("runmap.routing.geometry.projected_points", side_effect=AssertionError):
             heuristic = distance_heuristic(overlay.graph, None)
             result = shortest_path(overlay.graph, overlay.start, overlay.destination,
                                    heuristic=heuristic,
@@ -185,7 +190,7 @@ class RunPlannerTests(unittest.TestCase):
             return shortest_path(index, start, destination, indexed_arc_cost=indexed_arc_cost,
                                  deadline=deadline, indexed_heuristic=indexed_heuristic, visit_node=visit_node)
 
-        with patch("runmap.routing.run_planner.shortest_path", side_effect=bounded_search):
+        with patch("runmap.routing_reference.run_planner.shortest_path", side_effect=bounded_search):
             result = plan_run(self.index, self.snap("ab", .2), self.snap("ab", .8), RunSettings())
         self.assertEqual(result.outcomes, ("complete", "deadline"))
         self.assertEqual(len(result.candidates), 1)
@@ -199,7 +204,7 @@ class RunPlannerTests(unittest.TestCase):
 
     def test_shape_integrations_shared_across_candidates_but_not_requests(self) -> None:
         home, turnaround = self.snap("ab", .2), self.snap("bc", .5)
-        with patch("runmap.routing.cost_preparation.integrate_fields", wraps=integrate_fields) as integrate:
+        with patch("runmap.routing_reference.cost_preparation.integrate_fields", wraps=integrate_fields) as integrate:
             result = plan_run(self.index, home, turnaround, RunSettings())
             self.assertEqual(result.outcomes, ("complete", "complete"))
             geometries = [tuple(call.args[0]) for call in integrate.call_args_list]
@@ -230,7 +235,7 @@ class RunPlannerTests(unittest.TestCase):
             arc_cost(arc, data=data, cache=cache, leg=unused, deadline=monotonic() - 1)
 
     def test_zero_width_skips_shape_preparation(self) -> None:
-        with patch("runmap.routing.cost_preparation.integrate_fields",
+        with patch("runmap.routing_reference.cost_preparation.integrate_fields",
                    side_effect=AssertionError("Zero-width run must not integrate shape fields")):
             result = plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5),
                               RunSettings(avoidance_ratio=0))
@@ -269,7 +274,7 @@ class RunPlannerTests(unittest.TestCase):
                          ("bc", 0, 1100, True))
 
     def test_unsupported_preferences_rejected_before_overlay_or_search(self) -> None:
-        with patch("runmap.routing.run_planner.endpoint_overlay", side_effect=AssertionError):
+        with patch("runmap.routing_reference.run_planner.endpoint_overlay", side_effect=AssertionError):
             with self.assertRaisesRegex(ValueError, "Unsupported hills"):
                 plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5), RunSettings(),
                           preferences=PreferenceSettings(hills="low"))

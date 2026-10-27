@@ -17,7 +17,8 @@ from rasterio.warp import transform
 
 from runmap import _routing_native
 from runmap.paths.database import export_network_database, open_network_database
-from runmap.paths.exploration import Snap, split_start_graph
+from runmap.paths.exploration import Snap
+from runmap.routing_reference.exploration import split_start_graph
 from runmap.paths.local_network import load_local_network
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.numeric_database import export_numeric_database, iter_numeric_chunks, open_numeric_database
@@ -25,17 +26,18 @@ from runmap.paths.numeric_format import decode_numeric_chunk, encode_numeric_chu
 from runmap.paths.numeric_hills import read_hill_intervals
 from runmap.paths.numeric_preparation import prepare_numeric_chunk
 from runmap.paths.graph_chunks import TopologyChunk
-from runmap.routing.cost_preparation import build_request_cost_data
-from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
-from runmap.routing.costs import indexed_arc_cost, path_cost_breakdown
+from runmap.routing_reference.cost_preparation import build_request_cost_data
+from runmap.routing_reference.cost_types import LegCostContext, RequestCostCache
+from runmap.routing.cost_types import PreferenceSettings
+from runmap.routing_reference.costs import indexed_arc_cost, path_cost_breakdown
 from runmap.routing.geometry import projected_points
 from runmap.routing.numeric_search import (LoadedNumericGraph, NumericEndpoint, NumericShapeCosts,
                                           load_numeric_graph, numeric_distances, numeric_shortest_path)
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.run_planner import endpoint_overlay, plan_run
+from runmap.routing_reference.run_planner import endpoint_overlay, plan_run
 from runmap.routing.numeric_planner import numeric_plan_run
 from runmap.routing.run_types import RunSettings
-from runmap.routing.search import shortest_distances, shortest_path
+from runmap.routing_reference.search import shortest_distances, shortest_path
 from test_database_features import BOUNDS
 from test_path_database import publish_fixture
 from test_routing import graph_document
@@ -266,8 +268,8 @@ class NumericSearchTests(unittest.TestCase):
             numeric_shortest_path(self.graph, self._endpoint("s"), self._endpoint("c"), hill_weight=math.nan)
 
     def test_graph_is_shared_between_concurrent_searches_without_python_callbacks(self) -> None:
-        with patch("runmap.routing.search.shortest_path", side_effect=AssertionError("Python search")), \
-                patch("runmap.routing.costs.indexed_arc_cost", side_effect=AssertionError("Python costs")), \
+        with patch("runmap.routing_reference.search.shortest_path", side_effect=AssertionError("Python search")), \
+                patch("runmap.routing_reference.costs.indexed_arc_cost", side_effect=AssertionError("Python costs")), \
                 patch.object(json, "loads", side_effect=AssertionError("record decode")):
             def request(index: int) -> float | None:
                 path = numeric_shortest_path(self.graph, self._endpoint("s"), self._endpoint("c"))

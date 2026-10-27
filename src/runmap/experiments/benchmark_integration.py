@@ -14,9 +14,12 @@ from unittest.mock import patch
 
 from runmap.api.paths import load_path_data, path_policy_index
 from runmap.paths.exploration import snap_candidates
-from runmap.routing.fields import Point, integrate_fields, integrate_fields_python
-from runmap.routing.run_planner import plan_run
-from runmap.routing.run_types import RunResult, RunSettings
+from runmap.routing.types import Point
+from runmap.routing.fields import integrate_fields
+from runmap.routing_reference.fields import integrate_fields_python
+from runmap.routing_reference.run_planner import plan_run
+from runmap.routing_reference.run_types import RunResult
+from runmap.routing.run_types import RunSettings
 
 Integrals = tuple[float, float, float]
 Integrator = Callable[[Sequence[Point], Point, Point, float, float, float, float | None], Integrals]
@@ -81,14 +84,14 @@ def benchmark(graph: Path, repeats: int) -> dict[str, object]:
     def route() -> RunResult:
         return plan_run(index, home, turnaround, RunSettings())
 
-    with patch('runmap.routing.cost_preparation.integrate_fields', record):
+    with patch('runmap.routing_reference.cost_preparation.integrate_fields', record):
         native_result = route()
     expected = evaluate(cases, integrate_fields_python)
     actual = evaluate(cases, integrate_fields)
     for a, b in zip(expected, actual):
         if not all(math.isclose(x, y, rel_tol=1e-12, abs_tol=1e-9) for x, y in zip(a, b)):
             raise ValueError("Integration results differ")
-    with patch('runmap.routing.cost_preparation.integrate_fields', integrate_fields_python):
+    with patch('runmap.routing_reference.cost_preparation.integrate_fields', integrate_fields_python):
         verify_routes(route(), native_result)
         python_route = measure(route, repeats)
     native_route = measure(route, repeats)

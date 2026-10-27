@@ -6,13 +6,14 @@ import unittest
 from unittest.mock import patch
 
 from test_routing import graph_document
-from runmap.paths.exploration import Snap, distance_data, legal_directions, split_start_graph
+from runmap.paths.exploration import Snap, legal_directions
+from runmap.routing_reference.exploration import distance_data, split_start_graph
 from runmap.routing.geometry import projected_points
 from runmap.routing.profiles import arc_direction_allowed, exploration_profile
-from runmap.routing.run_planner import RunSettings, endpoint_overlay, plan_run
-from runmap.routing.search import (
-    apply_profile, arc_usable, build_graph_index, shortest_distances, shortest_path,
-)
+from runmap.routing.run_types import RunSettings
+from runmap.routing_reference.run_planner import endpoint_overlay, plan_run
+from runmap.routing.graph import apply_profile, arc_usable, build_graph_index
+from runmap.routing_reference.search import shortest_distances, shortest_path
 from runmap.routing.types import GraphDocument
 
 
@@ -85,7 +86,7 @@ class PreparedTraversalTests(unittest.TestCase):
                 graph = direction_graph({"oneway:foot": oneway})
                 index = build_graph_index(graph)
                 home, turnaround = interior_snap(graph, .2), interior_snap(graph, .8)
-                with patch("runmap.routing.search.pedestrian_directions", side_effect=AssertionError), \
+                with patch("runmap.routing.graph.pedestrian_directions", side_effect=AssertionError), \
                         patch("runmap.routing.profiles.pedestrian_directions", side_effect=AssertionError):
                     overlay = endpoint_overlay(index, home, turnaround)
                     start, end = overlay.start, overlay.destination

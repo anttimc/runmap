@@ -16,7 +16,8 @@ from starlette.requests import Request
 from runmap.api.app import app, lifespan, static_path_tile
 from runmap.api.paths import inspect_path, load_path_data, path_config, snap_path_start, viewport_paths
 from runmap.api.path_tiles import PathTileService, encode_tile, render_version
-from runmap.api.runs import RunRequest, generate_run
+from runmap.api.runs import RunRequest
+from runmap.routing_reference.api import generate_run
 from runmap.api.sqlite_runs import generate_database_run
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.sqlite_paths import database_inspection, database_path_config, database_snap, database_viewport

@@ -3,8 +3,13 @@
 The current cost-model identifier is `distance-preferences-v1`. The hill model
 is `minetti-excess-uphill-preference-v4`, with weight table
 `minetti-excess-equivalent-metres-v4`. These identify separate contracts: a
-stable composition can contain a revised feature model. Implementations live
-in `routing/costs.py`, `cost_preparation.py`, `fields.py`, and `hills.py`.
+stable composition can contain a revised feature model. Native search evaluates
+costs in `rust/src/routing_cost.rs`, using prepared hill features from
+`routing/hills.py` and shared settings from `routing/settings.py`. Python
+reference costs and request preparation live in `routing_reference/costs.py`
+and `routing_reference/cost_preparation.py`. That planner uses the scalar Rust
+adapter in `routing/fields.py`; the comparison Python integrator is in
+`routing_reference/fields.py`.
 See [architecture](../architecture.md) for request/cache lifetimes and the
 [guide](../guide.md) for controls and result interpretation. This model is
 separate from the CLI anchor-baseline experiment.

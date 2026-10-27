@@ -1,23 +1,10 @@
-"""Explicit request and leg data for shape-cost evaluation."""
+"""Preference settings, capabilities, and cost observations shared by both backends."""
 
-from dataclasses import dataclass, field
-from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Literal
-
-from runmap.routing.fields import Point
-from runmap.routing.search import GraphData
-from runmap.routing.hill_types import HillData, HillFeatures
-from runmap.routing.integer_graph import IntegerGraph
 
 
 PreferenceLevel = Literal["off", "low", "high"]
-
-
-@dataclass(frozen=True)
-class PhysicalPart:
-    segment: int
-    start_m: float
-    end_m: float
 
 
 @dataclass(frozen=True)
@@ -83,14 +70,6 @@ class TraversalRef:
     reverse: bool
 
 
-@dataclass(frozen=True, slots=True)
-class IndexedTraversal:
-    segment: int
-    graph_start_m: float
-    graph_end_m: float
-    reverse: bool
-
-
 @dataclass(frozen=True)
 class PreferenceCosts:
     hills: float = 0.0
@@ -134,39 +113,3 @@ class ShapeStrengths:
     centre: float
     side: float
     reuse: float
-
-
-@dataclass(frozen=True)
-class ShapeFeatures:
-    radial_integral_m: float
-    right_integral_m: float
-    projected_length_m: float
-
-
-@dataclass(frozen=True)
-class RequestCostData:
-    graph: GraphData
-    index: IntegerGraph
-    home: Point
-    turnaround: Point
-    radius_m: float
-    transition_width_m: float
-    spacing_m: float
-    strengths: ShapeStrengths
-    shape_disabled: bool
-    parts: Mapping[int, PhysicalPart] = field(default_factory=dict)
-    preferences: ResolvedPreferences = ResolvedPreferences(
-        PreferenceSettings(), PreferenceWeights(), PreferenceWeightTables())
-    hills: HillData | None = None
-
-
-@dataclass
-class RequestCostCache:
-    shape_fields: dict[int, ShapeFeatures] = field(default_factory=dict)
-    hill_features: dict[int, HillFeatures] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class LegCostContext:
-    penalize_right: bool
-    used_segments: frozenset[int] = frozenset()

@@ -7,9 +7,10 @@ from test_routing import graph_document
 from test_path_api import fixture
 from runmap.api.paths import load_path_data, snap_path_start, exploration_context, inspect_path, inspect_outing, path_policy_index
 from runmap.paths.graph import write_graph_outputs
-from runmap.paths.exploration import (Snap, ExplorationCache, distance_data, interval_inclusion,
-                                     split_start_graph, cached_distances, distance_from_start)
-from runmap.routing.search import build_graph_index, shortest_path, shortest_distances, external_node_distances
+from runmap.paths.exploration import Snap, ExplorationCache, interval_inclusion, distance_from_start
+from runmap.routing_reference.exploration import distance_data, split_start_graph, cached_distances
+from runmap.routing.graph import build_graph_index
+from runmap.routing_reference.search import shortest_path, shortest_distances, external_node_distances
 
 
 def graph(edges):

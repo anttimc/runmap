@@ -10,8 +10,8 @@ from time import perf_counter
 
 from runmap.paths.measurements import segment_measurements
 from runmap.api.paths import PathData, load_path_data
-from runmap.api.runs import (EndpointRequest, LegResponse, PreferencesRequest, RunRequest,
-                             SettingsRequest, generate_run)
+from runmap.api.runs import EndpointRequest, LegResponse, PreferencesRequest, RunRequest, SettingsRequest
+from runmap.routing_reference.api import generate_run
 from runmap.routing.cost_types import PreferenceLevel, PreferenceWeightTables, TraversalRef
 from runmap.routing.hills import hill_observations, sum_hill_features, traversal_hills
 

@@ -1,17 +1,25 @@
-"""Shape-cost formulas and the adapter used by generic graph search."""
+"""Python reference cost composition and observations for graph search."""
 
 import math
 from collections.abc import Iterable
 
-from runmap.routing.cost_preparation import ensure_arc_features, ensure_hill_features
 from runmap.routing.cost_types import (
-    CostBreakdown, LegCostContext, PreferenceCosts, RequestCostCache, RequestCostData,
-    ShapeFeatures, ShapeStrengths, PreferenceObservations,
+    CostBreakdown,
+    PreferenceCosts,
+    PreferenceObservations,
+    ShapeStrengths,
 )
-from runmap.routing.hills import hill_observations, sum_hill_features
 from runmap.routing.deadlines import check_deadline
-from runmap.routing.types import Arc
+from runmap.routing.hills import hill_observations, sum_hill_features
 from runmap.routing.integer_graph import IntegerArc, integer_arc
+from runmap.routing.types import Arc
+from runmap.routing_reference.cost_preparation import ensure_arc_features, ensure_hill_features
+from runmap.routing_reference.cost_types import (
+    LegCostContext,
+    RequestCostCache,
+    RequestCostData,
+    ShapeFeatures,
+)
 
 
 NO_SHAPE_FEATURES = ShapeFeatures(0, 0, 0)

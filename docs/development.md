@@ -59,8 +59,8 @@ slice of coordinate pairs and returns three `f64` values. Settings are plain
 data; numerical operations are functions. Empty/single-point geometries return
 zero integrals; invalid coordinates/scales raise `ValueError`, and deadline
 expiry raises `TimeoutError`. The Python reference is available explicitly as
-`integrate_fields_python`. A missing compiled extension is an installation error,
-not a reason to silently benchmark Python instead.
+`runmap.routing_reference.fields.integrate_fields_python`. A missing compiled
+extension is an installation error, not a reason to silently benchmark Python instead.
 
 ```sh
 uv run --no-sync python -c 'from runmap.routing.fields import integrate_fields; print(integrate_fields([(0., 0.), (100., 0.)], (0., 0.), (100., 0.), 15., 5.))'
@@ -68,6 +68,19 @@ uv run --no-sync python -c 'from runmap.routing.fields import integrate_fields; 
 
 Compiled extensions and `rust/target/` are ignored by Git. Restart the backend
 after rebuilding; an already running process retains its loaded native library.
+
+For the application routing path, start with
+[`routing/numeric_planner.py`](../src/runmap/routing/numeric_planner.py) and
+[`routing/numeric_search.py`](../src/runmap/routing/numeric_search.py), then read
+[`rust/src/native_graph.rs`](../rust/src/native_graph.rs) and the native search/cost
+modules. Shared settings live in `routing/settings.py`, API contracts in
+`api/runs.py`, and graph preparation in `routing/graph.py`. The Python planner,
+cost evaluator, exploration search, and fallback API adapters live in the
+[`routing_reference` package](../src/runmap/routing_reference/__init__.py).
+See [backend boundaries](architecture.md#routing-backend-boundaries) before adding
+imports across these packages. Both ship together; no new extra or backend setting
+is required. Existing internal imports of moved reference functions must use
+`runmap.routing_reference` rather than their former `runmap.routing` modules.
 
 With terrain prepared as below, start the backend:
 
@@ -429,7 +442,10 @@ deadline expiry during a long native call. Rebuild Rust before running Python
 checks after native edits; uv does not detect every Rust source change itself.
 
 The Python suite covers terrain, graph/policy behavior, measurements, exploration,
-tiles/caches, routing costs, and API contracts. The frontend build includes
+tiles/caches, routing costs, and API contracts. Routing boundary tests also block
+reference imports in a fresh process while exporting artifacts and exercising
+native one-way/round-trip plans, hill preferences, distance inspection, and shells.
+The frontend build includes
 TypeScript checking, including unused declarations and parameters. The frontend
 tests use Node's built-in test runner with TypeScript stripping; use the
 recorded Node 24 toolchain. Use `pnpm --dir web format` to apply

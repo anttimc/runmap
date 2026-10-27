@@ -21,6 +21,7 @@ from runmap.api.runs import EndpointRequest, PreferencesRequest, RunRequest, Set
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.numeric_data import NumericRoutingData
 from runmap.api import sqlite_runs
+from runmap.routing_reference import sqlite_runs as reference_runs
 from runmap.experiments.latency import latency_summary
 from runmap.paths import local_network
 from runmap.routing.cost_types import PreferenceLevel
@@ -54,15 +55,16 @@ def measure_phases() -> Iterator[PhaseTimes]:
     phases = PhaseTimes()
     with ExitStack() as stack:
         stack.enter_context(patch.object(sqlite_runs, "count_network_segments", _timed("segment_count", sqlite_runs.count_network_segments, phases)))
+        stack.enter_context(patch.object(reference_runs, "count_network_segments", _timed("segment_count", reference_runs.count_network_segments, phases)))
         stack.enter_context(patch.object(sqlite_runs, "_snap", _timed("snap", sqlite_runs._snap, phases)))
-        stack.enter_context(patch.object(sqlite_runs, "load_local_network", _timed("prepare", sqlite_runs.load_local_network, phases)))
+        stack.enter_context(patch.object(reference_runs, "load_local_network", _timed("prepare", reference_runs.load_local_network, phases)))
         stack.enter_context(patch.object(local_network, "query_network", _timed("topology", local_network.query_network, phases)))
         stack.enter_context(patch.object(local_network, "query_segment_features", _timed("features", local_network.query_segment_features, phases)))
         stack.enter_context(patch.object(local_network, "build_graph_index", _timed("index", local_network.build_graph_index, phases)))
         stack.enter_context(patch.object(local_network, "_pack_hills", _timed("pack_hills", local_network._pack_hills, phases)))
-        stack.enter_context(patch.object(sqlite_runs, "plan_run", _timed("search", sqlite_runs.plan_run, phases)))
-        stack.enter_context(patch.object(sqlite_runs, "_retry_reason", _timed("boundary_check", sqlite_runs._retry_reason, phases)))
-        stack.enter_context(patch.object(sqlite_runs, "render_run_result", _timed("render", sqlite_runs.render_run_result, phases)))
+        stack.enter_context(patch.object(reference_runs, "plan_run", _timed("search", reference_runs.plan_run, phases)))
+        stack.enter_context(patch.object(reference_runs, "_retry_reason", _timed("boundary_check", reference_runs._retry_reason, phases)))
+        stack.enter_context(patch.object(reference_runs, "render_run_result", _timed("render", reference_runs.render_run_result, phases)))
         stack.enter_context(patch.object(NumericRoutingData, "prepare", _timed("numeric_prepare", NumericRoutingData.prepare, phases)))
         stack.enter_context(patch.object(sqlite_runs, "numeric_plan_run", _timed("numeric_search", sqlite_runs.numeric_plan_run, phases)))
         stack.enter_context(patch.object(sqlite_runs, "load_route_segments", _timed("route_metadata", sqlite_runs.load_route_segments, phases)))

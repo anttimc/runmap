@@ -1,4 +1,4 @@
-"""Loop-planning records keep internal ranking separate from published routes."""
+"""Reference anchor-loop records keep ranking separate from published routes."""
 
 from dataclasses import dataclass
 from typing import NotRequired, TypedDict

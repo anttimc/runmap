@@ -8,7 +8,8 @@ from unittest.mock import patch
 
 from runmap.api.numeric_data import NumericRoutingData, read_hill_intervals
 from runmap.api.paths import load_path_data
-from runmap.api.runs import PreferencesRequest, SettingsRequest, RunResponse, generate_run
+from runmap.api.runs import PreferencesRequest, SettingsRequest, RunResponse
+from runmap.routing_reference.api import generate_run
 from runmap.api.app import app, run_route
 from starlette.requests import Request
 from fastapi import HTTPException
@@ -50,7 +51,7 @@ class NumericRunTests(unittest.TestCase):
         graph["arcs"].append({"id": "s:b", "segment_id": "s", "from": "2", "to": "1", "length_m": 220})
         data, source = self.publish(graph)
         reference = load_path_data(source)
-        with patch("runmap.api.sqlite_runs.load_local_network", side_effect=AssertionError("legacy graph loaded")):
+        with patch("runmap.routing_reference.sqlite_runs.load_local_network", side_effect=AssertionError("legacy graph loaded")):
             for hills in ("off", "low", "high"):
                 for avoidance in (0, .18):
                     for surface in ("all", "surfaced"):

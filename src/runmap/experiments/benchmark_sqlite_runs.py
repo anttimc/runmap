@@ -14,7 +14,8 @@ from time import perf_counter
 from typing import Literal, cast
 
 from runmap.api.paths import load_path_data
-from runmap.api.runs import EndpointRequest, PreferencesRequest, RunRequest, generate_run
+from runmap.api.runs import EndpointRequest, PreferencesRequest, RunRequest
+from runmap.routing_reference.api import generate_run
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.sqlite_runs import generate_database_run
 from runmap.experiments.benchmark_hill_preferences import CASES

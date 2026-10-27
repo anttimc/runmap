@@ -5,7 +5,9 @@ import unittest
 from unittest.mock import patch
 
 from runmap import _routing_native
-from runmap.routing.fields import Point, integrate_fields, integrate_fields_python, smooth_fields
+from runmap.routing.types import Point
+from runmap.routing.fields import integrate_fields
+from runmap.routing_reference.fields import integrate_fields_python, smooth_fields
 
 
 def reference_fields(points: list[Point], spacing: float) -> tuple[float, float, float]:
@@ -43,7 +45,7 @@ class FieldTests(unittest.TestCase):
                                  15, 5, deadline=monotonic() - 1)
 
     def test_python_reference_checks_deadline_between_batches(self) -> None:
-        with patch('runmap.routing.fields.monotonic', side_effect=(0, 2)):
+        with patch('runmap.routing_reference.fields.monotonic', side_effect=(0, 2)):
             with self.assertRaises(TimeoutError):
                 integrate_fields_python([(0, 0), (10000, 0)], (0, 0), (100, 0),
                                         15, 5, deadline=1)

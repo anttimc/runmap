@@ -3,7 +3,7 @@ import unittest
 
 from test_routing import graph_document
 from runmap.routing.profiles import classify_segments, forbidden_reason
-from runmap.routing.search import build_graph_index
+from runmap.routing.graph import build_graph_index
 
 
 STRICT_ACCESS = {"forbidden_access_values": [

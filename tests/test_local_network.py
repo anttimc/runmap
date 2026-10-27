@@ -13,13 +13,14 @@ from rasterio.warp import transform
 
 from runmap.api.paths import load_path_data, path_policy_index
 from runmap.paths.database import export_network_database, open_network_database
-from runmap.paths.exploration import Snap, segment_reason, split_start_graph
+from runmap.paths.exploration import Snap, segment_reason
+from runmap.routing_reference.exploration import split_start_graph
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.local_network import load_local_network
 from runmap.paths.measurements import segment_measurements
 from runmap.routing.hills import indexed_traversal_hills
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.search import shortest_distances, shortest_path
+from runmap.routing_reference.search import shortest_distances, shortest_path
 from test_database_features import BOUNDS, driveway_graph
 from test_measurements import enrich
 from test_path_database import publish_fixture
@@ -98,8 +99,8 @@ class LocalNetworkTests(unittest.TestCase):
             destination = root / "network.sqlite"
             export_network_database(source, destination)
             with patch.object(Path, "read_text", side_effect=AssertionError("JSON read")), \
-                    patch("runmap.routing.search.classify_segments", side_effect=AssertionError("reclassified")), \
-                    patch("runmap.routing.search._boundary_blocked_segments", side_effect=AssertionError("recomputed")), \
+                    patch("runmap.routing.graph.classify_segments", side_effect=AssertionError("reclassified")), \
+                    patch("runmap.routing.graph._boundary_blocked_segments", side_effect=AssertionError("recomputed")), \
                     closing(open_network_database(destination)) as connection:
                 local = load_local_network(connection, (375071, 6674999, 375079, 6675001))
                 self.assertEqual(set(local.routing.segments), {"xy"})

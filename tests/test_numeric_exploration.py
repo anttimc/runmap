@@ -49,7 +49,7 @@ class NumericExplorationTests(unittest.TestCase):
     def test_inspection_matches_reference_for_profiles_and_budgets(self) -> None:
         with patch.object(Path, "read_text", side_effect=AssertionError("JSON read")), \
                 patch("runmap.api.sqlite_exploration.load_local_network", side_effect=AssertionError("Python graph")), \
-                patch("runmap.api.sqlite_exploration.distance_data", side_effect=AssertionError("Python search")):
+                patch("runmap.api.sqlite_exploration._search_windows", side_effect=AssertionError("Python search")):
             service = PathTileService(self.data)
             for surface in ("all", "surfaced"):
                 for stairs in (False, True):

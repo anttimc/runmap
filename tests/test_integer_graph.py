@@ -9,13 +9,14 @@ import unittest
 
 from test_routing import graph_document
 from runmap.experiments.search_reference import shortest_path_string, shortest_distances_string
-from runmap.paths.exploration import Snap, split_start_graph
+from runmap.paths.exploration import Snap
+from runmap.routing_reference.exploration import split_start_graph
 from runmap.routing.geometry import projected_points
 from runmap.routing.integer_graph import integer_arc, external_arc
 from runmap.routing.profiles import exploration_profile, arc_forward
-from runmap.routing.run_planner import endpoint_overlay
-from runmap.routing.search import (CostModel, apply_profile, build_graph_index, shortest_path,
-                                   shortest_distances, indexed_shortest_distances, external_node_distances)
+from runmap.routing_reference.run_planner import endpoint_overlay
+from runmap.routing_reference.search import CostModel, shortest_path, shortest_distances, indexed_shortest_distances, external_node_distances
+from runmap.routing.graph import apply_profile, build_graph_index
 from runmap.routing.types import GraphDocument
 
 

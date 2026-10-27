@@ -1,14 +1,8 @@
 import unittest
 
-from runmap.routing.baseline import generate_anchor_loops
-from runmap.routing.search import (
-    CostModel,
-    build_graph_index,
-    diverse_path_pair,
-    route_metrics,
-    shortest_distances,
-    shortest_path,
-)
+from runmap.routing_reference.baseline import generate_anchor_loops
+from runmap.routing_reference.search import CostModel, diverse_path_pair, route_metrics, shortest_distances, shortest_path
+from runmap.routing.graph import build_graph_index
 
 
 def graph_document(nodes, edges, start="s"):

@@ -19,10 +19,10 @@ from runmap.paths.dead_ends import (ACCESS_POLICY, CLASSIFIER_VERSION, ENTRANCE_
                                    Classification, classify_building_access)
 from runmap.routing.profiles import surface_category, exploration_profile, forbidden_reason, pedestrian_access_reason
 from runmap.routing.types import Bounds, Coordinate, EdgeProfile, MeasurementLocation, Segment, TerrainMetadata
-from runmap.routing.search import GraphData, build_graph_index, apply_profile
+from runmap.routing.graph import GraphData, build_graph_index, apply_profile
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import build_hill_data
-from runmap.paths.exploration import (DistanceData, ExplorationCache, Snap, cached_distances, distance_from_start, interval_inclusion, legal_directions, segment_reason, snap_candidates)
+from runmap.paths.exploration import DistanceData, ExplorationCache, Snap, distance_from_start, interval_inclusion, legal_directions, segment_reason, snap_candidates
 
 
 MIN_ZOOM = 11
@@ -324,6 +324,8 @@ def _near_boundary(data: PathData, geometry: Sequence[Coordinate]) -> bool:
 
 def exploration_context(data, longitude, latitude, budget_km, surface, avoid_stairs, radius_m, segment_id,
                         deadline: float | None = None):
+    from runmap.routing_reference.exploration import cached_distances
+
     if not math.isfinite(budget_km) or not 0 < budget_km <= 50:
         raise ValueError("Budget must be greater than zero and at most 50 km")
     snap_response = snap_path_start(data, longitude, latitude, surface, avoid_stairs, radius_m, segment_id)

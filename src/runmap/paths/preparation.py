@@ -12,7 +12,7 @@ from runmap.paths.measurements import MeasurementData, load_measurements
 from runmap.routing.hill_types import HillData, HillFeatures, HillInterval, HillModel
 from runmap.routing.hills import build_hill_data
 from runmap.routing.profiles import POLICY_VERSION, exploration_profile
-from runmap.routing.search import BOUNDARY_VERSION, GraphData, build_graph_index
+from runmap.routing.graph import BOUNDARY_VERSION, GraphData, build_graph_index
 from runmap.routing.types import Coordinate, EdgeProfile, GraphDocument, Measurement
 
 

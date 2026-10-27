@@ -14,8 +14,8 @@ from runmap.routing.arc_storage import ArcLookup, ArcRecords
 from runmap.routing.integer_graph import (AdjacencyLookup, apply_integer_policy, extend_integer_graph,
                                          external_arc, filtered_adjacency, integer_arc)
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.search import (apply_profile, build_graph_index, external_node_distances,
-                                   indexed_shortest_distances, shortest_path)
+from runmap.routing.graph import apply_profile, build_graph_index
+from runmap.routing_reference.search import external_node_distances, indexed_shortest_distances, shortest_path
 from runmap.routing.serialization import prepared_json
 
 

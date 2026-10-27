@@ -20,9 +20,10 @@ from runmap.api.path_tiles import encode_tile, projected_point
 from runmap.paths.exploration import snap_candidates
 from runmap.paths.measurements import graph_digest, inspect_measurements, segment_measurements
 from runmap.routing.cost_types import PreferenceSettings
-from runmap.routing.run_planner import plan_run
+from runmap.routing_reference.run_planner import plan_run
 from runmap.routing.run_types import RunSettings
-from runmap.routing.search import GraphData, build_graph_index, indexed_shortest_distances, route_coordinates
+from runmap.routing.graph import GraphData, build_graph_index
+from runmap.routing_reference.search import indexed_shortest_distances, route_coordinates
 from runmap.routing.serialization import prepared_json
 
 

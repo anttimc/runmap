@@ -9,6 +9,7 @@ import os
 import sqlite3
 from pathlib import Path
 import sys
+from typing import TYPE_CHECKING
 from urllib.error import HTTPError, URLError
 
 from rasterio.warp import transform
@@ -18,12 +19,13 @@ from runmap.paths.experiments import RoutingExperiment, find_experiment
 from runmap.paths.graph import build_routing_graph, snap_to_vertex, write_graph_outputs
 from runmap.paths.terrain import enrich_graph_terrain
 from runmap.regions import PROCESSING_HALO_M, Region, find_region, list_regions
-from runmap.routing.baseline import generate_anchor_loops, write_route_outputs
-from runmap.routing.search import build_graph_index
-from runmap.routing.loop_types import LoopResult
+from runmap.routing.graph import build_graph_index
 from runmap.routing.types import Bounds as CoordinateBounds, GraphDocument, OsmSource
 from runmap.sources.mml import Bounds, coverage_url, download_elevation
 from runmap.sources.osm import download_highways, highway_query
+
+if TYPE_CHECKING:
+    from runmap.routing_reference.loop_types import LoopResult
 
 
 def local_key(path: Path) -> str:
@@ -399,7 +401,7 @@ def _load_route_graph(
     return graph
 
 
-def _report_routes(result: LoopResult, outputs: Mapping[str, Path]) -> None:
+def _report_routes(result: "LoopResult", outputs: Mapping[str, Path]) -> None:
     print(
         f"Evaluated {result['evaluated_candidate_count']} routes through "
         f"{result['anchor_count']} anchors; "
@@ -417,6 +419,8 @@ def _report_routes(result: LoopResult, outputs: Mapping[str, Path]) -> None:
 
 
 def routes_command(argv: Sequence[str]) -> None:
+    from runmap.routing_reference.baseline import generate_anchor_loops, write_route_outputs
+
     parser = _routes_command_parser()
     args = parser.parse_args(argv)
     experiment = find_experiment(args.experiments, args.experiment_id)

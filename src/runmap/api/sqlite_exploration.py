@@ -10,14 +10,14 @@ import numpy as np
 
 from runmap.api.sqlite_data import SQLitePathData
 from runmap.paths.database import count_network_segments, query_segment_record
-from runmap.paths.exploration import DistanceData, Snap, distance_data
+from runmap.paths.exploration import DistanceData, Snap
 from runmap.paths.local_network import load_local_network
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.numeric_exploration import NumericDistanceData
 from runmap.routing.numeric_search import numeric_distances
 from runmap.routing.geometry import projected_points
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.search import GraphData
+from runmap.routing.graph import GraphData
 from runmap.routing.types import Bounds, EdgeProfile
 
 
@@ -86,6 +86,8 @@ def exploration_bounds(points: list[tuple[float, float]], budget_m: float, dista
 def _search_windows(connection: sqlite3.Connection, snap: Snap, maximum_m: float,
                      profile: EdgeProfile, bounds: Bounds, deadline: float,
                      limits: ExplorationLimits) -> LocalExploration:
+    from runmap.routing_reference.exploration import distance_data
+
     for retry in range(limits.max_retries + 1):
         check_deadline(deadline)
         _check_window(connection, bounds, retry, limits)

@@ -26,7 +26,7 @@ from runmap.paths.database_pool import DatabaseBusyError
 from runmap.api.path_tiles import PathTileService, Snapshot, render_version as path_render_version, tile_template
 from runmap.api.path_shells import PathShellService
 from runmap.api.terrain import TerrainRenderer
-from runmap.api.runs import PlannerConfiguration, RunRequest, RunResponse, generate_run
+from runmap.api.runs import PlannerConfiguration, RunRequest, RunResponse
 from runmap.routing.cost_settings import preference_capabilities, prepared_preference_capabilities
 from runmap.api.terrain_tiles import (
     CONTOUR_INTERVAL_M,
@@ -176,6 +176,8 @@ def run_route(request: Request, options: RunRequest) -> RunResponse:
         timeout = float(os.environ.get("RUNMAP_RUN_DEADLINE", "15"))
         if isinstance(data, SQLitePathData):
             return generate_database_run(data, options, timeout, getattr(request.app.state, "run_limits", RunAreaLimits()))
+        from runmap.routing_reference.api import generate_run
+
         return generate_run(data, options, timeout)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc

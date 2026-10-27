@@ -12,7 +12,7 @@ from time import perf_counter
 import numpy as np
 from scipy.spatial import Delaunay
 
-from runmap.routing.fields import smooth_fields, smooth_fields_array
+from runmap.routing_reference.fields import smooth_fields, smooth_fields_array
 
 Point = tuple[float, float]
 Edge = tuple[int, int]

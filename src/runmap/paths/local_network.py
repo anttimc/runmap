@@ -13,7 +13,7 @@ from runmap.paths.measurements import MeasurementData, pack_measurement_data
 from runmap.paths.preparation import PreparedSegment
 from runmap.routing.hill_types import HillData, HillFeatures
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.search import GraphData, PreparedGraphPolicy, build_graph_index
+from runmap.routing.graph import GraphData, PreparedGraphPolicy, build_graph_index
 from runmap.routing.types import Bounds, EdgeProfile, MeasurementDocument
 
 

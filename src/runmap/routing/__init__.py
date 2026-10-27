@@ -1,1 +1,1 @@
-"""Route search and candidate generation over prepared path graphs."""
+"""Native routing adapters and shared contracts, geometry, and preparation."""

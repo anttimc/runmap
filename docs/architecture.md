@@ -44,18 +44,22 @@ and hosted storage are [future work](roadmap.md).
 | `paths/preparation.py`, `paths/coverage.py` | Dataset-wide feature preparation and shared source-coverage semantics |
 | `paths/database_pool.py`, `api/sqlite_data.py`, `api/sqlite_paths.py` | Bounded connection leases, SQLite dataset lifetime, and selective API delivery |
 | `api/sqlite_exploration.py` | Local exploration envelopes, frontier retries, request limits, and retained graph accounting |
-| `api/sqlite_runs.py` | Local run-planning windows, candidate boundary checks, expansion attempts, and area-limited outcomes |
-| `paths/exploration.py`, `routing/profiles.py` | Shared eligibility, snapping, temporary start overlay, and forward-distance inclusion |
+| `api/runs.py`, `api/sqlite_runs.py` | Shared API contracts and candidate diagnostics, native planning windows, limits, and explicit reference dispatch |
+| `paths/exploration.py`, `routing/profiles.py` | Shared snapping, eligibility, distance-buffer containers, and inspection inclusion formulas |
 | `paths/dead_ends.py`, `paths/flat.py` | Building-access visibility and flat-stretch display metadata |
-| `routing/search.py`, `routing/run_planner.py` | Generic directed search and two-leg candidate orchestration |
+| `routing/graph.py` | Shared packed graph containers, index preparation, route boundaries, and pedestrian policy application |
+| `routing_reference/search.py`, `routing_reference/run_planner.py` | Python A*/Dijkstra, endpoint overlays, and one-way/round-trip reference planning |
 | `routing/integer_graph.py` | Prepared dense node/segment/arc indices and shared sparse endpoint overlays |
 | `routing/arc_storage.py`, `routing/serialization.py` | Packed arc columns, lazy external record views, and explicit JSON boundaries |
 | `routing/node_storage.py`, `routing/segment_storage.py`, `routing/metadata_strings.py` | Packed node/segment metadata and pooled strings sharing IDs and geometry |
 | `routing/coordinates.py`, `routing/geometry.py` | Packed WGS84/projected coordinates, read-only segment views, and sparse overlay geometry |
-| `routing/cost_*`, `routing/costs.py`, `routing/hills.py`, `routing/fields.py` | Explicit request/leg data, settings, features, integration, and cost composition |
+| `routing/run_types.py`, `routing/settings.py`, `routing/cost_types.py`, `routing/cost_settings.py` | Shared route modes, settings, validation, preferences, and cost/observation contracts |
+| `routing/hills.py`, `routing/hill_types.py`, `routing/fields.py` | Shared prepared hill features/observations and the scalar Rust integration adapter |
+| `routing_reference/cost_preparation.py`, `routing_reference/costs.py`, `routing_reference/cost_types.py` | Python reference cost evaluation and request-local feature caches |
+| `routing_reference/api.py`, `routing_reference/sqlite_runs.py`, `routing_reference/exploration.py` | Reference run execution/rendering, SQLite planning windows, and Python exploration searches |
 | `rust/src/fields.rs`, `rust/src/bindings.rs` | Scalar integration kernel and its PyO3 adapter, built as `runmap._routing_native` |
 | `rust/src/native_graph.rs`, `chunk_graph.rs`, `chunk_search.rs`, `endpoint_overlay.rs`, `routing_cost.rs` | Immutable numeric graph indexing, native traversal, endpoint overlays, and request-local costs |
-| `routing/baseline.py`, `experiments/` | CLI anchor baseline and standalone measurements/experiments |
+| `routing_reference/baseline.py`, `routing_reference/fields.py`, `experiments/` | CLI anchor baseline, Python integration reference, and standalone measurements/experiments |
 | `api/` | Terrain/path delivery, inspection, snapshots, and bounded planner requests |
 | `web/src/main.ts`, `map-style.ts` | Map startup, terrain controls, and declarative basemap style |
 | `web/src/app.ts`, `state.ts` | Shared home/path policy, planner activation, and map-click dispatch |
@@ -68,6 +72,30 @@ spectral state, stores, and cache/service lifetimes. The reference planner binds
 a scalar arc-cost callback with explicit request data and fixed leg context; it does not
 require a plugin registry. Its integer search view references the same physical
 segments and directed arc records as the serialized graph.
+
+### Routing backend boundaries
+
+`src/runmap/routing/` contains native adapters and shared routing contracts and
+preparation. `src/runmap/routing_reference/` contains the Python search, overlay,
+and cost implementations used for correctness comparisons and compatibility.
+Both are subpackages of the same installed `runmap` distribution.
+
+Shared settings, geometry, policy, packed storage, and hill-feature preparation
+remain outside the reference package because native routing and offline exports
+also need them. `api/runs.py` owns the shared request/response models, admission
+slots, and candidate geometry diagnostics; reference execution and result
+serialization live in `routing_reference/api.py`.
+
+The API imports reference run and exploration algorithms only when it selects a
+reference path: SQLite without a numeric artifact, or explicit
+`RUNMAP_PATH_BACKEND=json`. Native app imports, artifact exports, numeric planning,
+shells, and inspection do not import `routing_reference`. CLI anchor baselines
+and comparison benchmarks opt into it explicitly. Backend selection, artifact
+formats, mathematical models, and HTTP contracts are unchanged by this package
+boundary. `tests/test_routing_boundaries.py` enforces shared-module import rules
+and exercises native delivery with reference imports blocked.
+
+### Frontend coordination
 
 The frontend coordinator owns the shared home/start and routing policy and
 notifies path and planner controllers when those inputs change. The Plan run
@@ -488,8 +516,9 @@ their fields depend on the selected endpoints and settings.
 passing coordinates and field settings and returning radial/right integrals and
 projected length. The PyO3 adapter copies the small coordinate sequence into a
 Rust vector. The pure kernel borrows its slice and has no Python dependencies or
-callbacks. The previous Python implementation remains as `integrate_fields_python`
-for comparison; there is no automatic fallback when the extension is missing.
+callbacks. The Python integrator lives in
+`routing_reference.fields.integrate_fields_python` for comparison; there is no
+automatic fallback when the extension is missing.
 The kernel preserves midpoint sampling and the fixed left/right frame. Python
 checks the request deadline before and after the call; Rust receives a remaining
 duration and checks its own elapsed time at bounded sample intervals. The first
@@ -501,8 +530,8 @@ during graph construction and native searches. Cross-window chunk reuse and
 broader interaction validation remain in the
 [roadmap](roadmap.md#next-native-routing-validation-and-interactive-latency).
 
-The packed indexes and Python search buffers described below belong to the
-reference backend; numeric traversal uses the separate
+The packed graph and Python search details below describe shared offline
+preparation and reference execution; native traversal uses the separate
 [numeric format](numeric-routing-format.md).
 
 Each policy index prepares an arc eligibility mask and segment directions.

@@ -8,12 +8,14 @@ import unittest
 from test_routing import graph_document
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import graph_digest
-from runmap.paths.exploration import Snap, split_start_graph
+from runmap.paths.exploration import Snap
+from runmap.routing_reference.exploration import split_start_graph
 from runmap.routing.coordinates import PackedLine
 from runmap.routing.serialization import prepared_json
 from runmap.routing.geometry import (indexed_node_point, indexed_segment_points,
                                      prepare_projected_geometry, projected_points)
-from runmap.routing.search import apply_profile, build_graph_index, route_coordinates
+from runmap.routing.graph import apply_profile, build_graph_index
+from runmap.routing_reference.search import route_coordinates
 
 
 class PackedGeometryTests(unittest.TestCase):

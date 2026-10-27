@@ -1,30 +1,39 @@
-"""Directed one-way and round-trip runs over the prepared pedestrian network."""
+"""Python reference planning for directed one-way and round-trip runs."""
 
+import math
 from collections import ChainMap, Counter
+from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
-import math
 from time import monotonic
 from typing import Literal
-from collections.abc import Callable
 
 from runmap.paths.exploration import Snap, legal_directions, segment_reason
-from runmap.routing.cost_preparation import (
-    build_request_cost_data, effective_run_settings, penalty_strengths, resolve_traversal,
-)
-from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache, RequestCostData
 from runmap.routing.cost_settings import resolve_preferences
-from runmap.routing.costs import indexed_arc_cost, path_cost_breakdown, path_observations
-from runmap.routing.hill_types import HillData
+from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.deadlines import check_deadline
-from runmap.routing.geometry import (prepare_projected_geometry, projected_points, slice_geometry,
-                                     indexed_node_point, indexed_segment_points)
-from runmap.routing.integer_graph import extend_integer_graph, integer_arc, integer_segment_id
-from runmap.routing.run_types import (
-    PhysicalPart, RunCandidate, RunLeg, RunMode, RunOverlay, RunResult, RunSettings,
+from runmap.routing.geometry import (
+    indexed_node_point,
+    indexed_segment_points,
+    prepare_projected_geometry,
+    slice_geometry,
 )
-from runmap.routing.search import GraphData, PathResult, arc_usable, shortest_path
+from runmap.routing.graph import GraphData, arc_usable
+from runmap.routing.hill_types import HillData
+from runmap.routing.integer_graph import extend_integer_graph, integer_arc, integer_segment_id
+from runmap.routing.run_types import RunMode, RunSettings
+from runmap.routing.settings import effective_run_settings
 from runmap.routing.types import Arc, Node, Segment
+from runmap.routing_reference.cost_preparation import build_request_cost_data, resolve_traversal
+from runmap.routing_reference.cost_types import (
+    LegCostContext,
+    PhysicalPart,
+    RequestCostCache,
+    RequestCostData,
+)
+from runmap.routing_reference.costs import indexed_arc_cost, path_cost_breakdown, path_observations
+from runmap.routing_reference.run_types import RunCandidate, RunLeg, RunOverlay, RunResult
+from runmap.routing_reference.search import PathResult, shortest_path
 
 
 def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,

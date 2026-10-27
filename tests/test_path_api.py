@@ -12,7 +12,7 @@ from runmap.api.paths import (load_path_data, path_config, viewport_paths, inspe
 from runmap.paths.graph import write_graph_outputs
 from runmap.paths.measurements import graph_digest, segment_measurements
 from runmap.routing.profiles import surface_category, exploration_profile
-from runmap.routing.search import apply_profile
+from runmap.routing.graph import apply_profile
 from runmap.paths.exploration import legal_directions
 
 
@@ -55,7 +55,7 @@ class PathQueryTests(unittest.TestCase):
         self.assertEqual(config["coverage"]["kind"], "geometry_envelope")
 
     def test_building_filter_precedes_interval_work_and_preserves_start(self) -> None:
-        from runmap.routing.search import build_graph_index
+        from runmap.routing.graph import build_graph_index
         graph = copy.deepcopy(self.data.graph)
         graph["segments"][0]["tags"] = {"highway": "service", "service": "driveway"}
         # A physical self-loop anchors the dangling segment to a surviving core.

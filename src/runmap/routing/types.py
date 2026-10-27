@@ -5,6 +5,7 @@ from collections.abc import Sequence
 
 
 Coordinate = list[float] | tuple[float, float]
+Point = tuple[float, float]
 Bounds = tuple[float, float, float, float]
 Tags = dict[str, str]
 

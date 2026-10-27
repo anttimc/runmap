@@ -4,7 +4,7 @@ from copy import deepcopy
 import unittest
 
 from runmap.paths.dead_ends import classify_building_access
-from runmap.routing.search import build_graph_index
+from runmap.routing.graph import build_graph_index
 from runmap.routing.types import GraphDocument
 
 
@@ -71,7 +71,7 @@ class DeadEndTests(unittest.TestCase):
 
     def test_branched_entrances_and_display_profile_invariance(self) -> None:
         from runmap.routing.profiles import exploration_profile
-        from runmap.routing.search import apply_profile
+        from runmap.routing.graph import apply_profile
         graph = graph_fixture(CORE + [("ax", "a", "x", "footway"),
                                       ("xy", "x", "y", "steps"), ("xz", "x", "z", "footway")], "y")
         graph["nodes"][-1]["entrance"] = "main"

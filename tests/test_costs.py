@@ -7,13 +7,12 @@ import unittest
 
 from test_routing import graph_document
 from runmap.routing.cost_settings import resolve_preferences, validate_weight_table
-from runmap.routing.cost_types import (
-    LegCostContext, PreferenceCosts, PreferenceLevel, PreferenceSettings, PreferenceWeights,
-    PreferenceWeightTable, ShapeFeatures, ShapeStrengths,
-)
-from runmap.routing.costs import evaluate_arc_breakdown, evaluate_arc_cost
-from runmap.routing.run_planner import distance_heuristic
-from runmap.routing.search import build_graph_index, shortest_path
+from runmap.routing_reference.cost_types import LegCostContext, ShapeFeatures
+from runmap.routing.cost_types import PreferenceCosts, PreferenceLevel, PreferenceSettings, PreferenceWeights, PreferenceWeightTable, ShapeStrengths
+from runmap.routing_reference.costs import evaluate_arc_breakdown, evaluate_arc_cost
+from runmap.routing_reference.run_planner import distance_heuristic
+from runmap.routing.graph import build_graph_index
+from runmap.routing_reference.search import shortest_path
 from runmap.routing.types import Arc
 
 

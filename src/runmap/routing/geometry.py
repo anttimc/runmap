@@ -8,7 +8,7 @@ import numpy as np
 from rasterio.warp import transform
 
 from runmap.routing.coordinates import PackedLines, pack_segment_coordinates
-from runmap.routing.fields import Point
+from runmap.routing.types import Point
 from runmap.routing.integer_graph import IntegerGraph
 from runmap.routing.types import Arc, Coordinate, Node, Segment
 

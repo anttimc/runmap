@@ -11,7 +11,8 @@ from starlette.requests import Request
 from test_path_api import fixture
 from runmap.api.paths import load_path_data
 from runmap.api.app import run_route
-from runmap.api.runs import CandidateResponse, PlannerConfiguration, PreferencesRequest, RunRequest, RunResponse, generate_run
+from runmap.api.runs import CandidateResponse, PlannerConfiguration, PreferencesRequest, RunRequest, RunResponse
+from runmap.routing_reference.api import generate_run
 from runmap.paths.graph import write_graph_outputs
 
 
@@ -103,7 +104,7 @@ class RunApiTests(unittest.TestCase):
                                         "mode": "one_way"})
 
     def test_deadline_does_not_claim_unreachable(self) -> None:
-        with patch("runmap.api.runs.plan_run", side_effect=TimeoutError):
+        with patch("runmap.routing_reference.api.plan_run", side_effect=TimeoutError):
             result = generate_run(self.data, self.options)
         self.assertEqual(result.status, "deadline")
 
@@ -133,7 +134,7 @@ class RunApiTests(unittest.TestCase):
     def test_unsupported_preferences_fail_even_when_no_endpoint_would_snap(self) -> None:
         options = self.options.model_copy(update={"preferences": PreferencesRequest(signals="high"),
                                                   "home": self.options.home.model_copy(update={"longitude": 20})})
-        with patch("runmap.api.runs.snap_candidates", side_effect=AssertionError):
+        with patch("runmap.routing_reference.api.snap_candidates", side_effect=AssertionError):
             with self.assertRaisesRegex(ValueError, "Unsupported signals"):
                 generate_run(self.data, options)
         for preferences in ({"hills": "maximum"}, {"hills": "medium"}, {"unknown": "low"}):

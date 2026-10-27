@@ -20,7 +20,7 @@ from runmap.paths.numeric_database import (StoredNumericChunk, export_numeric_da
 from runmap.paths.numeric_format import (HEADER, NumericChunk, decode_numeric_chunk,
                                          encode_numeric_chunk, validate_numeric_chunk)
 from runmap.paths.numeric_hills import read_hill_intervals
-from runmap.routing.search import shortest_distances
+from runmap.routing_reference.search import shortest_distances
 from runmap.routing.numeric_search import NumericEndpoint, load_numeric_graph, numeric_distances
 from test_database_features import BOUNDS
 from test_path_database import publish_fixture

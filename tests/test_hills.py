@@ -15,20 +15,23 @@ import numpy as np
 from test_routing import graph_document
 from runmap.paths.exploration import Snap
 from runmap.paths.measurements import build_measurement_data, graph_digest
-from runmap.routing.cost_preparation import build_request_cost_data
+from runmap.routing_reference.cost_preparation import build_request_cost_data
 from runmap.routing.cost_settings import resolve_preferences
-from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache, TraversalRef
-from runmap.routing.costs import arc_cost, indexed_arc_cost
+from runmap.routing_reference.cost_types import LegCostContext, RequestCostCache
+from runmap.routing.cost_types import PreferenceSettings, TraversalRef
+from runmap.routing_reference.costs import arc_cost, indexed_arc_cost
 from runmap.routing.geometry import projected_points
 from runmap.routing.hill_types import HillData
 from runmap.routing.hills import (build_hill_data, grade_response, hill_observations,
                                   hill_penalty_response, running_energy_cost, running_energy_response,
                                   sum_hill_features, traversal_hills, indexed_traversal_hills,
                                   _prepare_segment, _scaled)
-from runmap.routing.run_planner import RunSettings, distance_heuristic, endpoint_overlay, plan_run
-from runmap.routing.run_planner import indexed_distance_heuristic
+from runmap.routing.run_types import RunSettings
+from runmap.routing_reference.run_planner import distance_heuristic, endpoint_overlay, plan_run
+from runmap.routing_reference.run_planner import indexed_distance_heuristic
 from runmap.routing.integer_graph import IntegerGraph
-from runmap.routing.search import apply_profile, build_graph_index, shortest_path
+from runmap.routing.graph import apply_profile, build_graph_index
+from runmap.routing_reference.search import shortest_path
 from runmap.routing.types import GraphDocument, Measurement, MeasurementDocument
 
 
@@ -264,7 +267,7 @@ class HillTests(unittest.TestCase):
 
     def test_one_way_hills_choose_a_gentler_outward_route_without_searching_return(self) -> None:
         hills = self.hills([10])
-        with patch("runmap.routing.run_planner.shortest_path", wraps=shortest_path) as search:
+        with patch("runmap.routing_reference.run_planner.shortest_path", wraps=shortest_path) as search:
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(), mode="one_way",
                               preferences=PreferenceSettings(hills="high"), hills=hills)
         self.assertEqual(search.call_count, 1)
@@ -277,7 +280,7 @@ class HillTests(unittest.TestCase):
 
     def test_zero_width_hills_search_return_independently_and_use_both_directions(self) -> None:
         hills = self.hills([10])
-        with patch("runmap.routing.run_planner.reverse_path", side_effect=AssertionError("Cannot retrace asymmetric costs")):
+        with patch("runmap.routing_reference.run_planner.reverse_path", side_effect=AssertionError("Cannot retrace asymmetric costs")):
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0),
                               preferences=PreferenceSettings(hills="high"), hills=hills)
         self.assertEqual(len(result.candidates), 1)
@@ -330,7 +333,7 @@ class HillTests(unittest.TestCase):
     def test_both_loop_assignments_optimize_each_leg_with_signed_costs(self) -> None:
         hills = self.hills([10])
         settings = RunSettings()
-        with patch("runmap.routing.run_planner.shortest_path", wraps=shortest_path) as search:
+        with patch("runmap.routing_reference.run_planner.shortest_path", wraps=shortest_path) as search:
             result = plan_run(self.index, self.home, self.turnaround, settings,
                               preferences=PreferenceSettings(hills="high"), hills=hills)
         self.assertEqual(result.outcomes, ("complete", "complete"))
@@ -373,7 +376,7 @@ class HillTests(unittest.TestCase):
 
     def test_off_skips_hill_features_and_unavoidable_hill_still_returns_a_route(self) -> None:
         hills = self.hills([10])
-        with patch("runmap.routing.cost_preparation.indexed_traversal_hills", side_effect=AssertionError):
+        with patch("runmap.routing_reference.cost_preparation.indexed_traversal_hills", side_effect=AssertionError):
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0), hills=hills)
         self.assertEqual(result.candidates[0].distance_m, 200)
         self.index = replace(self.index, segments=dict(self.index.segments))
@@ -396,7 +399,7 @@ class HillTests(unittest.TestCase):
 
     def test_directed_hill_cache_is_shared_within_a_request_and_isolated_between_requests(self) -> None:
         hills = self.hills([5])
-        with patch("runmap.routing.cost_preparation.indexed_traversal_hills", wraps=indexed_traversal_hills) as integrate:
+        with patch("runmap.routing_reference.cost_preparation.indexed_traversal_hills", wraps=indexed_traversal_hills) as integrate:
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(),
                               preferences=PreferenceSettings(hills="low"), hills=hills)
             self.assertEqual(result.outcomes, ("complete", "complete"))

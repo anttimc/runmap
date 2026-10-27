@@ -18,7 +18,7 @@ from runmap.paths.preparation import (PreparedDisplayInterval, PreparedNetwork, 
 from runmap.routing.geometry import indexed_node_point, indexed_segment_points, projected_points
 from runmap.routing.hill_types import HillData, HillFeatures, HillInterval
 from runmap.routing.profiles import surface_category
-from runmap.routing.search import apply_profile
+from runmap.routing.graph import apply_profile
 from runmap.routing.types import Measurement
 
 

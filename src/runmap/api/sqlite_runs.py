@@ -1,31 +1,33 @@
-"""Plan complete runs on expanding SQLite windows under one request deadline."""
+"""Bounded native run planning with explicit reference dispatch when numeric routing is absent."""
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from time import monotonic
 
 from fastapi import HTTPException
 
 from runmap.api import runs
-from runmap.api.runs import (CostConfigurationResponse, RunRequest, RunResponse, RunSearchAttempt,
-                             RunSearchMetadata, render_run_result)
-from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.numeric_runs import load_route_segments, render_numeric_result, route_near_boundary
-from runmap.routing.numeric_planner import numeric_plan_run
+from runmap.api.runs import (
+    CostConfigurationResponse,
+    RunRequest,
+    RunResponse,
+    RunSearchAttempt,
+    RunSearchMetadata,
+)
+from runmap.api.sqlite_data import SQLitePathData
 from runmap.api.sqlite_paths import database_snap
 from runmap.paths.coverage import near_coverage_boundary
 from runmap.paths.database import count_network_segments
 from runmap.paths.exploration import Snap
-from runmap.paths.local_network import LocalNetwork, load_local_network
-from runmap.routing.cost_preparation import effective_run_settings, resolve_shape_strengths
 from runmap.routing.cost_settings import prepared_preference_capabilities, resolve_prepared_preferences
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.deadlines import check_deadline
-from runmap.routing.geometry import indexed_segment_points, projected_points
-from runmap.routing.integer_graph import integer_arc
+from runmap.routing.geometry import projected_points
+from runmap.routing.numeric_planner import numeric_plan_run
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.run_planner import plan_run
-from runmap.routing.run_types import RunResult, RunSettings
+from runmap.routing.run_types import RunSettings
+from runmap.routing.settings import effective_run_settings, resolve_shape_strengths
 from runmap.routing.types import Bounds
 
 
@@ -77,7 +79,12 @@ def _generate_run(data: SQLitePathData, options: RunRequest, started: float,
             return response
         points = projected_points([[snap.longitude, snap.latitude] for snap in (response.home, response.turnaround)])
         bounds = initial_run_bounds(points, limits.minimum_dimension_m)
-        planner = _plan_numeric_windows if data.numeric is not None else _plan_windows
+        if data.numeric is not None:
+            planner = _plan_numeric_windows
+        else:
+            from runmap.routing_reference.sqlite_runs import _plan_windows
+
+            planner = _plan_windows
         return planner(data, options, response, settings, preferences, bounds, started, deadline, limits)
     except TimeoutError:
         if response.search and response.search.attempts:
@@ -101,52 +108,6 @@ def initial_run_bounds(points: list[tuple[float, float]], minimum_dimension_m: f
     return x - half_side, y - half_side, x + half_side, y + half_side
 
 
-def _plan_windows(data: SQLitePathData, options: RunRequest, response: RunResponse, settings: RunSettings,
-                    preferences: PreferenceSettings, bounds: Bounds, started: float, deadline: float,
-                    limits: RunAreaLimits) -> RunResponse:
-    assert response.home is not None and response.turnaround is not None and response.search is not None
-    for retry in range(limits.max_retries + 1):
-        check_deadline(deadline)
-        attempt = RunSearchAttempt(bounds_epsg3067=bounds)
-        response.search.attempts.append(attempt)
-        response.search.retries = retry
-        with data.pool.connection(deadline=deadline) as connection:
-            if _area_exceeded(bounds, limits.max_area_km2):
-                return _area_limited(response, "maximum_area", attempt, started)
-            count = count_network_segments(connection, bounds, limit=limits.max_segments + 1)
-            attempt.segments = count
-            if count > limits.max_segments:
-                return _area_limited(response, "maximum_segments", attempt, started)
-            local = load_local_network(connection, bounds,
-                exploration_profile(options.surface, options.avoid_stairs),
-                include_terrain=preferences.hills != "off", include_measurements=False, include_coverage=False)
-            attempt.nodes = len(local.routing.nodes)
-            check_deadline(deadline)
-            result = plan_run(local.routing, response.home, response.turnaround, settings, deadline,
-                               preferences=preferences, hills=local.hills, frontier_nodes=local.frontier_indices, mode=options.mode)
-            attempt.reached_frontier = bool(result.reached_frontier)
-            attempt.source_coverage_limited = _source_limited(data, result, response)
-            if "deadline" in result.outcomes:
-                attempt.reason = "deadline"
-                # Preserve completed legs from this one working set, as the
-                # reference planner does. Serialization can finish after search.
-                return render_run_result(response, result, started)
-            reason = _retry_reason(local, result, bounds, limits, attempt, deadline)
-        if reason is None:
-            if attempt.source_coverage_limited:
-                response.coverage_note = "Routes approach prepared source coverage edges; missing source connections may affect the result."
-            return render_run_result(response, result, started, deadline)
-        attempt.reason = reason
-        if retry == limits.max_retries:
-            return _area_limited(response, reason, attempt, started)
-        west, south, east, north = bounds
-        dx, dy = (east - west) / 2, (north - south) / 2
-        bounds = west - dx, south - dy, east + dx, north + dy
-        # Never retain old candidate legs or dense indices into the next attempt.
-        del local, result
-    raise AssertionError("Run planning retry loop did not run")
-
-
 def _area_exceeded(bounds: Bounds, maximum_km2: float) -> bool:
     return (bounds[2] - bounds[0]) * (bounds[3] - bounds[1]) > maximum_km2 * 1e6
 
@@ -160,41 +121,6 @@ def _area_limited(response: RunResponse, reason: str, attempt: RunSearchAttempt,
     response.elapsed_s = monotonic() - started
     response.coverage_note = "Planning reached its loaded-area limits. Try closer endpoints or increase the configured planning limits."
     return response
-
-
-def _retry_reason(local: LocalNetwork, result: RunResult, bounds: Bounds, limits: RunAreaLimits,
-                    attempt: RunSearchAttempt, deadline: float) -> str | None:
-    check_deadline(deadline)
-    west, south, east, north = bounds
-    margin = max(limits.boundary_margin_m, min(east - west, north - south) * .05)
-    graph = result.overlay.graph
-    assert graph.integer is not None
-    for candidate in result.candidates:
-        for leg in candidate.legs:
-            for key in leg.path.arc_ids:
-                check_deadline(deadline)
-                arc = integer_arc(graph.integer, graph.integer.arc_indices[key])
-                if any(x <= west + margin or x >= east - margin or y <= south + margin or y >= north - margin
-                       for x, y in indexed_segment_points(graph.projected, arc.segment)):
-                    attempt.near_boundary = True
-    if attempt.reached_frontier:
-        return "unloaded_connections"
-    if attempt.near_boundary:
-        return "near_boundary"
-    if len(result.candidates) < len(result.outcomes) and local.frontier_nodes:
-        return "no_route"
-    return None
-
-
-def _source_limited(data: SQLitePathData, result: RunResult, response: RunResponse) -> bool:
-    segments = {traversal.segment_id for candidate in result.candidates
-                for leg in candidate.legs for traversal in leg.traversals}
-    if any(near_coverage_boundary(data.coverage, result.overlay.graph.segments[key]["geometry"])
-           for key in segments):
-        return True
-    assert response.home is not None and response.turnaround is not None
-    return near_coverage_boundary(data.coverage, [[snap.longitude, snap.latitude]
-                                                for snap in (response.home, response.turnaround)])
 
 
 def _plan_numeric_windows(data: SQLitePathData, options: RunRequest, response: RunResponse, settings: RunSettings,

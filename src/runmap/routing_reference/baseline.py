@@ -1,26 +1,30 @@
-"""Anchor-based loop candidates using diverse outbound and return paths."""
+"""Experimental anchor-loop generation using the Python reference search."""
 
+import json, math
 from collections.abc import Iterator, Sequence
-import json
-import math
 from pathlib import Path
 
-from runmap.routing.profiles import exploration_profile, effective_edge_profile
-from runmap.routing.search import (
+from runmap.routing.graph import GraphData, apply_profile
+from runmap.routing_reference.loop_types import (
+    Anchor,
+    Assessment,
+    LoopCandidate,
+    LoopRequest,
+    LoopResult,
+    LoopSettings,
+    Rank,
+    RankedCandidate,
+)
+from runmap.routing.profiles import effective_edge_profile, exploration_profile
+from runmap.routing.types import RouteMetrics
+from runmap.routing_reference.search import (
     CostModel,
-    GraphData,
     PathResult,
-    apply_profile,
     route_coordinates,
     route_metrics,
-    shortest_path,
     shortest_distances,
+    shortest_path,
 )
-
-from runmap.routing.loop_types import (
-    Anchor, Assessment, LoopCandidate, LoopRequest, LoopResult, LoopSettings, Rank, RankedCandidate,
-)
-from runmap.routing.types import RouteMetrics
 
 
 def select_loop_anchors(
