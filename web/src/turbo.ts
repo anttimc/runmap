@@ -1,3 +1,4 @@
+/** Provide the shared color palette for distance-band rendering. */
 // Matplotlib turbo lookup table, sampled by the distance bands.
 export const turboColors: readonly string[] = [
   "#30123b",

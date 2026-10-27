@@ -1,4 +1,4 @@
-"""Render native candidates by hydrating only selected physical segments."""
+"""Assemble API route geometry and diagnostics from native traversal results."""
 
 from collections import defaultdict
 from dataclasses import dataclass

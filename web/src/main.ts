@@ -1,3 +1,4 @@
+/** Initialize the map, terrain layers, and application feature controllers. */
 import {
   AttributionControl,
   Map,

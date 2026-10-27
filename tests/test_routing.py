@@ -1,3 +1,5 @@
+"""Verify reference shortest paths, route boundaries, and experimental anchor loops."""
+
 import unittest
 
 from runmap.routing_reference.baseline import generate_anchor_loops

@@ -1,3 +1,4 @@
+/** Exercise the legacy distance-shell browser flow and record rendering observations. */
 // Requires Vite on 5173, the API on 8000, and headless Chrome's debugger on 9231.
 import assert from "node:assert/strict";
 import fs from "node:fs";

@@ -1,3 +1,4 @@
+/** HTTP transport, cancellation, and server error handling for map features. */
 import type {
   Inspection,
   Location,

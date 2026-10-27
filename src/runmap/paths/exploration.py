@@ -1,4 +1,4 @@
-"""Eligible edge snapping and budgeted outing inclusion over prepared topology."""
+"""Share eligible endpoint snapping and forward-distance inspection semantics."""
 
 from collections import OrderedDict
 from collections.abc import Sequence

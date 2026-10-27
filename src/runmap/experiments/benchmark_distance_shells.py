@@ -1,4 +1,4 @@
-"""Measure snapshot-to-shell delivery without changing the distance-tile API."""
+"""Measure numeric sampling and grid-shell generation independently of HTTP delivery."""
 
 import argparse
 from contextlib import closing

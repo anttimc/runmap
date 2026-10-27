@@ -1,3 +1,4 @@
+/** Exercise planner modes and result lifetimes in a browser with controlled route responses. */
 // Requires Vite on 5173, the API on 8000, and headless Chrome on debugger port 9232.
 // Route responses are controlled fixtures; map setup, snapping and layers use the local API.
 import assert from "node:assert/strict";

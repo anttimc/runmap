@@ -1,3 +1,5 @@
+"""Verify bounded elevation acquisition requests and input validation."""
+
 import unittest
 from urllib.parse import parse_qs, urlsplit
 

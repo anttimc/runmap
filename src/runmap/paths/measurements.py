@@ -1,4 +1,4 @@
-"""File-backed terrain measurements and direction-independent inspection."""
+"""Validate, pack, and inspect terrain measurements tied to a published graph."""
 
 from dataclasses import dataclass, replace
 from collections.abc import Iterator, Mapping, Sequence

@@ -1,3 +1,4 @@
+/** HTTP payload types shared by map rendering and feature controllers. */
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 export type Location = [number, number];

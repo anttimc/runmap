@@ -14,6 +14,9 @@ return values. Do not use `Any`; prefer precise types.
 
 Keep docstrings short. Explain higher-level purpose, context, and why an
 operation is needed instead of restating what is obvious from the code.
+Give each module a purpose docstring or module documentation comment. Keep
+code-level documentation with the code; architecture documents describe component
+responsibilities, dependencies, and data flow.
 
 Use `uv` to manage Python environments and dependencies and to run Python
 commands, including tests.

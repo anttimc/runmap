@@ -1,3 +1,5 @@
+"""Verify pedestrian graph preparation, terrain enrichment, and experiment configuration."""
+
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory

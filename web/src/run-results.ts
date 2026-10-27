@@ -1,3 +1,4 @@
+/** Present route geometry, names, and details for one-way and round-trip results. */
 import type { Candidate, Location } from "./api-types";
 
 export function runCoordinates(candidate: Candidate): Location[] {

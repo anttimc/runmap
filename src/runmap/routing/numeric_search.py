@@ -1,4 +1,4 @@
-"""Native routing primitives over immutable numeric chunks."""
+"""Connect prepared numeric graphs and directed search requests to the Rust library."""
 
 from dataclasses import dataclass
 import math

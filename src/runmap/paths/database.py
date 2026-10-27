@@ -1,4 +1,4 @@
-"""Prepared SQLite network windows; geometry processing stays in Python."""
+"""Export prepared network datasets and read selected records and spatial windows."""
 
 from __future__ import annotations
 

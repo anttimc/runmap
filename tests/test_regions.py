@@ -1,3 +1,5 @@
+"""Verify region definitions, source-grid alignment, and prepared raster preservation."""
+
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory

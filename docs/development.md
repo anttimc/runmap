@@ -118,7 +118,7 @@ coverage, converts them to COGs, and activates an immutable coverage manifest
 under `data/elevation/`. Ready source tiles are reused. Precompute builds the
 default derived terrain; other advertised presets are generated on demand.
 The dry run lists required tiles without downloading them. See
-[architecture](architecture.md) for grids and artifact identities.
+[prepared data](reference/prepared-data.md#elevation-products) for grids and artifact identities.
 
 ## Prepare paths
 

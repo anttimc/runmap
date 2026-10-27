@@ -1,4 +1,4 @@
-"""Conservative display preferences over complete public pedestrian topology."""
+"""Classify building-access branches for optional display hiding."""
 
 from collections import defaultdict, deque
 from collections.abc import Callable, Sequence

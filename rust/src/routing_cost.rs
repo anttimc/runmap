@@ -1,4 +1,4 @@
-//! Request-specific scalar costs without Python callbacks in traversal loops.
+//! Evaluate route preference costs during native graph traversal.
 
 use crate::endpoint_overlay::{Edge, projected_length, segment_points};
 use crate::fields::{self, FieldSettings, IntegrationError};

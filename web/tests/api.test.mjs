@@ -1,3 +1,4 @@
+/** Verify HTTP transport, cancellation, and actionable API errors. */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {

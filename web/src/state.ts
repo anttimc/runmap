@@ -1,3 +1,4 @@
+/** Describe shared planner activation, start location, and routing policy state. */
 import type { Location, PathPolicy, RunMode } from "./api-types";
 
 export type PlannerMode = "off" | RunMode;

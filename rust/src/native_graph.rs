@@ -1,4 +1,4 @@
-//! Python owns immutable bytes; traversal borrows them while releasing the GIL.
+//! Expose immutable numeric graphs and native routing searches through PyO3.
 
 use crate::chunk_graph::{self, Bounds, GraphIndex};
 use crate::chunk_search::{self, SearchSettings, check_deadline};

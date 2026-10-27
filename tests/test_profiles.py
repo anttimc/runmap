@@ -1,3 +1,5 @@
+"""Verify pedestrian access policies and their effect on graph eligibility."""
+
 from dataclasses import replace
 import unittest
 

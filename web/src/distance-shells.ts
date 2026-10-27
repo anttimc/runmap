@@ -1,3 +1,4 @@
+/** Render distance-band polygons and their shared map legend colors. */
 import type { ExpressionSpecification, GeoJSONSource, Map } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import { turboColors } from "./turbo.ts";

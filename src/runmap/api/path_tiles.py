@@ -1,4 +1,4 @@
-"""Display-only generalization and process-local exploration snapshots."""
+"""Serve static path tiles and reusable process-local exploration snapshots."""
 
 from collections import OrderedDict
 from concurrent.futures import Future

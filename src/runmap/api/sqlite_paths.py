@@ -1,4 +1,4 @@
-"""Selective SQLite delivery; spatial refinement stays in the application."""
+"""Serve path configuration, snapping, inspection, and display data from SQLite."""
 
 from dataclasses import asdict
 from collections.abc import Iterator

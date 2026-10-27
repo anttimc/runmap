@@ -1,4 +1,4 @@
-"""Packed graph preparation and pedestrian policy shared with offline exports."""
+"""Prepare shared pedestrian graphs and policy views for export and reference execution."""
 
 import math, numpy as np
 from collections import Counter, defaultdict

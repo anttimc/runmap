@@ -1,3 +1,4 @@
+/** Drive a browser path-tile benchmark and collect its measurements. */
 // Run with Chrome's remote debugger on 9225 and Vite on 5173.
 import fs from "node:fs";
 import path from "node:path";

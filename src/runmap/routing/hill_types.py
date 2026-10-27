@@ -1,4 +1,4 @@
-"""Prepared directional hill features retain physical coverage and provenance."""
+"""Describe directional hill features, coverage, and model provenance."""
 
 from dataclasses import dataclass
 

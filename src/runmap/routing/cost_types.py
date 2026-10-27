@@ -1,4 +1,4 @@
-"""Preference settings, capabilities, and cost observations shared by both backends."""
+"""Preferences, capabilities, cost breakdowns, and observations shared by routing backends."""
 
 from dataclasses import dataclass
 from typing import Literal

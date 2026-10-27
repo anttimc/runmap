@@ -1,1 +1,1 @@
-"""Interactive terrain-map API."""
+"""HTTP delivery and dataset services for terrain, paths, exploration, and planning."""

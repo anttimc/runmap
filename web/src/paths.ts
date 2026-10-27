@@ -1,3 +1,4 @@
+/** Coordinate path layers, distance exploration, and segment inspection. */
 import {
   Marker,
   type GeoJSONSource,

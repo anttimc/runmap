@@ -41,7 +41,7 @@ with a bounded working-set cache; see the SQLite setup instructions above.
 - [Guide](docs/guide.md): existing features and limitations.
 - [Goals](docs/goals.md): purpose, scope, and non-goals.
 - [Roadmap](docs/roadmap.md): outstanding work and acceptance criteria.
-- [Architecture](docs/architecture.md): current data flow and implementation.
+- [Architecture](docs/architecture.md): components, dependencies, and data flow.
 - [Development](docs/development.md): setup, commands, and configuration.
 - [Terrain mathematics](docs/reference/terrain-mathematics.md) and
   [routing mathematics](docs/reference/routing-mathematics.md): implemented calculations.

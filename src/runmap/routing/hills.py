@@ -1,4 +1,4 @@
-"""Minetti running energy integrated over the original sampled physical spans."""
+"""Prepare and inspect directional hill-effort features from measured path intervals."""
 
 import math
 from collections.abc import Iterable, Sequence

@@ -1,3 +1,5 @@
+"""Verify single-raster terrain rendering, palettes, and map configuration."""
+
 import unittest
 from io import BytesIO
 

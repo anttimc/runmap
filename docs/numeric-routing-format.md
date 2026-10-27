@@ -215,7 +215,8 @@ Native lookup and search state are numeric Rust allocations, not Python records.
 segment starts, profile masks, and unloaded-frontier output. `numeric_shortest_path`
 adds A*, partial start/destination overlays, complete/partial hill integration,
 shape-field integration, and physical-span reuse costs. `numeric_plan_run`
-constructs both side assignments and both legs under one deadline. Result arrays
+constructs a single outward route for one-way mode or both two-leg side assignments
+for round-trip mode under one deadline. Result arrays
 are immutable byte-backed NumPy views. Overlay nodes use negative request-local
 IDs; reuse a segment endpoint rather than passing an overlay node ID to another
 request.

@@ -1,3 +1,5 @@
+"""Verify terrain/contour tile rendering, cache reuse, and concurrent requests."""
+
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path

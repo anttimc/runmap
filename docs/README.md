@@ -9,8 +9,10 @@ exists, and [roadmap](roadmap.md) for outstanding work.
 | [Goals](goals.md) | Intended outcomes, scope, and non-goals |
 | [Guide](guide.md) | Existing features, usage, and limitations |
 | [Roadmap](roadmap.md) | Outstanding work, priorities, and acceptance criteria |
-| [Architecture](architecture.md) | Current data flow, artifacts, and component boundaries |
+| [Architecture](architecture.md) | High-level components, dependencies, data flow, and ownership boundaries |
 | [Development](development.md) | Setup, preparation, commands, and configuration |
+| [Prepared data](reference/prepared-data.md) | Artifact identity, publication, network schema, and spatial-selection contracts |
+| [API reference](reference/api.md) | Endpoint roles, result contracts, search limits, and request/cache lifetimes |
 | [Numeric routing format](numeric-routing-format.md) | Numeric artifact versions, identity, binary layout, and native working-set boundaries |
 | [100 ms routing architecture](100ms-routing-architecture.md) | Routing latency target, dated observations, and outstanding performance acceptance |
 | [Distance shells](distance-shells.md) | Delivered distance visualization, approximation semantics, methods, and limits |
@@ -27,6 +29,9 @@ for current behavior.
 
 - Give each behavior, default, and unresolved task one authoritative home;
   link to it instead of repeating its description across documents.
+- Describe module purpose in module docstrings or documentation comments. Keep
+  internal code explanations close to the implementation. Architecture covers
+  component relationships; contracts and formats belong in technical references.
 - Document existing behavior in the guide and technical references. Keep
   planned behavior in the roadmap, distinguishing next steps from optional ideas.
 - Track outstanding validation explicitly. Implemented behavior may still need

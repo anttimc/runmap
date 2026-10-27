@@ -1,1 +1,1 @@
-"""Reusable terrain exploration components."""
+"""Terrain preparation, path exploration, and run planning."""

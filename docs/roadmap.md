@@ -72,7 +72,7 @@ and a database server are not required. Memory should follow the requested area,
 network density, concurrency, and bounded caches rather than total coverage.
 
 The exporter, prepared-feature persistence, and local-network readers are implemented in
-`paths/database.py`; see [architecture](architecture.md#sqlite-storage-foundation)
+`paths/database.py`; see [prepared data](reference/prepared-data.md#prepared-network-sqlite-database)
 and [export instructions](development.md#export-a-sqlite-network-dataset).
 The API supports selective SQLite config, static tiles, inspection, and snapping.
 Exploration and run planning use native traversal over bounded numeric working
@@ -155,8 +155,8 @@ physical segments and direction; segment offsets identify ranges in packed
 geometry/interval arrays. Endpoint overlays append temporary IDs and retain the
 original segment index and chainage range. They never renumber the base dataset.
 
-The current integer search/cost pipeline and packed hill storage are described in
-[architecture](architecture.md). Measurement samples now also use packed arrays
+The shared indexing/storage contracts are described in
+[prepared data](reference/prepared-data.md#selected-windows-and-identities). Measurement samples now also use packed arrays
 in the shared segment order, and display references use integer IDs; the
 [storage report](archive/history/38-packed-measurements.md) records equivalence
 and the retained-memory change.

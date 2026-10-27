@@ -1,4 +1,4 @@
-"""Bounded forward searches retain the graph ordering owned by each snapshot."""
+"""Prepare bounded forward-distance searches over native or reference SQLite data."""
 
 from dataclasses import dataclass, fields, is_dataclass
 import math

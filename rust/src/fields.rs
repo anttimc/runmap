@@ -1,3 +1,5 @@
+//! Integrate loop-shape preference fields along projected route geometry.
+
 use std::time::{Duration, Instant};
 
 pub type Point = (f64, f64);

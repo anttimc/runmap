@@ -1,3 +1,5 @@
+"""Compare shape-field integrators and verify validation and deadline behavior."""
+
 import math
 import random
 from time import monotonic

@@ -1,3 +1,5 @@
+"""Verify terrain derivatives, smoothing behavior, and missing-data handling."""
+
 import unittest
 
 import numpy as np

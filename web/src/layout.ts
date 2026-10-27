@@ -1,3 +1,4 @@
+/** Manage responsive panel layout, settings dialogs, and contextual help. */
 import type { PaddingOptions } from "maplibre-gl";
 
 import { element } from "./dom";

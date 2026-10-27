@@ -1,3 +1,4 @@
+/** Coordinate planner inputs, endpoint editing, requests, and displayed routes. */
 import {
   LngLatBounds,
   Marker,

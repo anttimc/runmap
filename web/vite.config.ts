@@ -1,3 +1,4 @@
+/** Configure frontend development and proxy API requests to the local backend. */
 import { defineConfig } from "vite";
 
 export default defineConfig({

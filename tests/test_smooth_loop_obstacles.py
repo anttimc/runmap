@@ -1,3 +1,5 @@
+"""Verify obstacle handling in the experimental smooth-loop graph."""
+
 import unittest
 
 from runmap.experiments.smooth_loop_obstacles import intersects_rectangle, remove_obstructed_edges

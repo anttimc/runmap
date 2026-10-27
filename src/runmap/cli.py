@@ -1,4 +1,4 @@
-"""Command boundaries translate preparation failures into actionable diagnostics."""
+"""Expose explicit acquisition, preparation, export, and experiment commands."""
 
 import argparse
 from collections.abc import Mapping, Sequence

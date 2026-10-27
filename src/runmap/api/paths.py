@@ -1,4 +1,4 @@
-"""File-backed path exploration; requests never import OSM or sample terrain."""
+"""Shared path presentation and inspection helpers, with the full-JSON dataset loader."""
 
 from collections import defaultdict
 from collections.abc import Mapping, Sequence

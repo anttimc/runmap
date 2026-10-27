@@ -1,3 +1,4 @@
+/** Coordinate shared start/policy inputs and dispatch map interaction to feature controllers. */
 import type { Map } from "maplibre-gl";
 import { loadPathConfig } from "./api";
 import type { ColorStop, Location, PathConfig, PathPolicy } from "./api-types";

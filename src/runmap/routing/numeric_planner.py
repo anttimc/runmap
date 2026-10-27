@@ -1,4 +1,4 @@
-"""Run candidates built from native chunk searches."""
+"""Build one-way and round-trip candidates using the native shortest-path search."""
 
 from dataclasses import dataclass, replace
 import math

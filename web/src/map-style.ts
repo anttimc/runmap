@@ -1,3 +1,4 @@
+/** Define the neutral basemap used beneath terrain and routing overlays. */
 import type { StyleSpecification } from "maplibre-gl";
 
 export const FIRST_LABEL_LAYER_ID = "water-place-labels";

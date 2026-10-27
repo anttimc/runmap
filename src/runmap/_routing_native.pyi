@@ -1,3 +1,5 @@
+"""Typed signature for the scalar Rust field-integration binding."""
+
 from collections.abc import Sequence
 
 def integrate_fields(

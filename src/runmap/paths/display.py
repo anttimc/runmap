@@ -1,4 +1,4 @@
-"""Retain display metadata without duplicating every measurement as GeoJSON."""
+"""Prepare path styling and flat-stretch metadata from shared terrain measurements."""
 
 from array import array
 from bisect import bisect_right

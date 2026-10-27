@@ -1,3 +1,5 @@
+"""Verify experimental smooth-loop penalties and search against a reference."""
+
 import math
 import unittest
 

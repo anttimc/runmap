@@ -1,8 +1,8 @@
 # Terrain mathematics
 
 This reference describes the calculations used by terrain rendering and prepared
-path measurements. See [architecture](../architecture.md) for storage and
-sampling settings, and the [guide](../guide.md) for their interpretation in the UI.
+path measurements. See [prepared data](prepared-data.md) for storage and sampling
+contracts, and the [guide](../guide.md) for their interpretation in the UI.
 
 ## Gradient and path conventions
 

@@ -1,4 +1,4 @@
-"""Own a pinned numeric artifact and bounded immutable working-set cache."""
+"""Manage numeric artifact access and reuse bounded native routing working sets."""
 
 from collections import OrderedDict
 from pathlib import Path

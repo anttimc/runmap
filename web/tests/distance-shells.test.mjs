@@ -1,3 +1,4 @@
+/** Verify distance-band colors and shell layer/source lifetimes. */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {

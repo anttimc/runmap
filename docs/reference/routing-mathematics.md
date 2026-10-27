@@ -10,8 +10,8 @@ reference costs and request preparation live in `routing_reference/costs.py`
 and `routing_reference/cost_preparation.py`. That planner uses the scalar Rust
 adapter in `routing/fields.py`; the comparison Python integrator is in
 `routing_reference/fields.py`.
-See [architecture](../architecture.md) for request/cache lifetimes and the
-[guide](../guide.md) for controls and result interpretation. This model is
+See the [API reference](api.md#work-and-result-lifetimes) for request/cache
+lifetimes and the [guide](../guide.md) for controls and result interpretation. This model is
 separate from the CLI anchor-baseline experiment.
 
 The planner supports a directed one-way route from start to destination and a

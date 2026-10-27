@@ -1,4 +1,4 @@
-"""Immutable reference distance buffers retained by exploration snapshots."""
+"""Represent immutable reference-search distances bound to a prepared graph ordering."""
 
 from dataclasses import dataclass
 

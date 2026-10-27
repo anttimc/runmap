@@ -1,3 +1,5 @@
+//! Register Python access to native graph search and scalar field integration.
+
 use std::time::Duration;
 
 use pyo3::exceptions::{PyTimeoutError, PyValueError};

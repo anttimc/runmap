@@ -1,4 +1,4 @@
-"""Attach direction-dependent ascent estimates from prepared terrain gradients."""
+"""Prepare signed along-path terrain samples and direction-dependent height estimates."""
 
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass

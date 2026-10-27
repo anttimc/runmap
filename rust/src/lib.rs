@@ -1,3 +1,5 @@
+//! Numerical routing and field-integration kernels with optional Python bindings.
+
 pub mod chunk_graph;
 pub mod chunk_search;
 pub mod endpoint_overlay;

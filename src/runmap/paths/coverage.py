@@ -1,4 +1,4 @@
-"""Source coverage stays fixed when selecting a smaller network window."""
+"""Describe source-network coverage independently of request-sized graph windows."""
 
 from collections.abc import Iterable, Sequence
 import math

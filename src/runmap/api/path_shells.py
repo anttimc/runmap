@@ -1,4 +1,4 @@
-"""Snapshot-scoped geographic distance bands shared by both display algorithms."""
+"""Turn exploration snapshots into cached geographic distance-band responses."""
 
 from dataclasses import dataclass
 import json

@@ -1,4 +1,4 @@
-"""Compare string and integer bookkeeping while keeping A* in Python."""
+"""Compare reference-search integer bookkeeping with the string-indexed baseline."""
 
 import argparse
 from collections.abc import Callable, Iterator

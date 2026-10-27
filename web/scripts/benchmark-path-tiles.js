@@ -1,3 +1,4 @@
+/** Measure path-tile decoding and rendering inside the instrumented map page. */
 (async () => {
   const map = window.__map,
     wait = (ms) => new Promise((r) => setTimeout(r, ms));
