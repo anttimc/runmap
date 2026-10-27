@@ -146,8 +146,11 @@ municipal boundaries. It reuses the prepared 40 m terrain product without new
 elevation downloads. OSM acquisition includes complete ways intersecting its
 WGS84 bounding box; portions outside terrain coverage retain missing-terrain
 flags. The original `leppavaara-flat-10k` experiment remains available for small
-benchmarks and the anchor baseline. To run the app with that smaller graph, set
-`RUNMAP_PATH_GRAPH=data/paths/prepared/leppavaara-flat-10k/graph.json`.
+benchmarks and the anchor baseline. To run the app with that smaller dataset, set
+`RUNMAP_PATH_GRAPH=data/paths/prepared/leppavaara-flat-10k/graph.json` and export
+its sibling `network.sqlite` as described below. For a JSON reference deployment,
+also set `RUNMAP_PATH_BACKEND=json`; setting the graph path alone does not enable
+the JSON loader. Distance shells require the matching numeric artifact.
 
 ### Export a SQLite network dataset
 

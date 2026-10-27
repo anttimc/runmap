@@ -78,7 +78,7 @@ external_id)`. Reuse is keyed by dataset and feature identity, not a filename.
 Each arc and physical segment belongs to one chunk. Endpoint nodes can occur in
 multiple chunks with the same numeric node ID and saved global incidence count.
 `node_chunks(node_id, chunk_id)` indexes all chunks incident to a node. This is the
-boundary-link contract for future native traversal: a loaded chunk's local node
+boundary-link contract for native traversal: a loaded chunk's local node
 index is not a global node index. Searching across that node must include its
 other incident chunks, subject to request bounds and limits. Missing loaded links
 must remain distinguishable from source coverage boundaries and true dead ends.

@@ -1,7 +1,7 @@
 # Architecture
 
-Runmap is a local Python processing/API package with a Rust integration kernel
-and a TypeScript/MapLibre web application. Numerical work also uses NumPy, SciPy,
+Runmap is a local Python processing/API package with Rust integration and routing
+kernels and a TypeScript/MapLibre web application. Numerical work also uses NumPy, SciPy,
 and Rasterio/GDAL; the optional
 web dependencies add FastAPI, Shapely, ContourPy, Pillow, and an MVT encoder.
 Vite builds the frontend. SQLite catalogs elevation products and supports
@@ -20,7 +20,8 @@ MML elevation -> validated source COGs + immutable coverage manifest
 OSM extract -> directed pedestrian graph -> sampled gradient intervals
             -> graph.json + content-addressed measurements
             -> prepared network.sqlite -> static path MVTs, inspection, snapping
-                                       -> local graphs -> forward-distance queries, run planning
+                                       -> numeric-routing-v2.sqlite -> native exploration, run planning
+                                       -> local Python graphs -> reference exploration, run planning
 ```
 
 Preparation is explicit. Browser panning reads local prepared data; it does not
@@ -38,6 +39,8 @@ and hosted storage are [future work](roadmap.md).
 | `paths/graph.py`, `paths/terrain.py`, `paths/measurements.py` | Graph preparation, terrain sampling, artifact identity, and profile inspection |
 | `paths/database.py`, `paths/database_features.py` | Offline SQLite export, prepared-feature persistence, and selective read-only queries |
 | `paths/local_network.py` | Request-sized packed routing, measurements, hills, and unloaded/source-boundary markers |
+| `paths/numeric_database.py`, `paths/numeric_format.py`, `api/numeric_data.py` | Numeric artifact export/read, binary layout, and bounded native working-set ownership |
+| `routing/numeric_search.py`, `routing/numeric_planner.py`, `api/numeric_runs.py` | Native search adapters, candidate orchestration, and selected-route rendering |
 | `paths/preparation.py`, `paths/coverage.py` | Dataset-wide feature preparation and shared source-coverage semantics |
 | `paths/database_pool.py`, `api/sqlite_data.py`, `api/sqlite_paths.py` | Bounded connection leases, SQLite dataset lifetime, and selective API delivery |
 | `api/sqlite_exploration.py` | Local exploration envelopes, frontier retries, request limits, and retained graph accounting |
@@ -51,6 +54,7 @@ and hosted storage are [future work](roadmap.md).
 | `routing/coordinates.py`, `routing/geometry.py` | Packed WGS84/projected coordinates, read-only segment views, and sparse overlay geometry |
 | `routing/cost_*`, `routing/costs.py`, `routing/hills.py`, `routing/fields.py` | Explicit request/leg data, settings, features, integration, and cost composition |
 | `rust/src/fields.rs`, `rust/src/bindings.rs` | Scalar integration kernel and its PyO3 adapter, built as `runmap._routing_native` |
+| `rust/src/native_graph.rs`, `chunk_graph.rs`, `chunk_search.rs`, `endpoint_overlay.rs`, `routing_cost.rs` | Immutable numeric graph indexing, native traversal, endpoint overlays, and request-local costs |
 | `routing/baseline.py`, `experiments/` | CLI anchor baseline and standalone measurements/experiments |
 | `api/` | Terrain/path delivery, inspection, snapshots, and bounded planner requests |
 | `web/src/main.ts`, `map-style.ts` | Map startup, terrain controls, and declarative basemap style |
@@ -60,8 +64,8 @@ and hosted storage are [future work](roadmap.md).
 
 Keep calculations independent of HTTP and rendering. Use data-only records and
 focused module functions; behavioral classes are appropriate for reusable
-spectral state, stores, and cache/service lifetimes. The planner binds a scalar
-arc-cost callback with explicit request data and fixed leg context; it does not
+spectral state, stores, and cache/service lifetimes. The reference planner binds
+a scalar arc-cost callback with explicit request data and fixed leg context; it does not
 require a plugin registry. Its integer search view references the same physical
 segments and directed arc records as the serialized graph.
 
@@ -140,7 +144,7 @@ temporarily holds its dictionaries; this is not a persistent prepared-array form
 ## SQLite storage foundation
 
 `paths export-sqlite` converts a published graph and its optional measurement
-sidecar into a schema version 2 SQLite database. Export verifies measurement checksum
+sidecar into a schema version 3 SQLite database. Export verifies measurement checksum
 and graph identity through the existing loader. The database retains original
 node/segment/arc records, non-topology graph metadata, ordered per-segment
 measurements, graph identity, measurement checksum, and terrain method. Source
@@ -170,7 +174,8 @@ identity, measurement checksum, and model settings. Flatness thresholds/length,
 classification policy/limit, pedestrian policy definitions, coverage/boundary
 versions, and complete hill-model settings are versioned. Opening rejects schema
 or model mismatches and inconsistent feature identity without scanning the network;
-schema version 1 databases must be re-exported into a new destination.
+older network databases must be re-exported into a new destination. The network
+schema is independent of numeric artifact schema and binary format versions.
 
 An R-tree indexes physical-segment envelopes in EPSG:3067. Ordinary indexes
 support segment endpoints and arc segment/source lookups. `query_network` returns
@@ -217,16 +222,16 @@ process or OS cache memory. Standalone connections stay with their owning thread
 unless explicitly opened for exclusive cross-thread leases. Offline import still parses the source JSON and prepares
 its complete routing, measurement, classification, and hill data in memory.
 
-The API selects `RUNMAP_PATH_DATABASE` when set, otherwise a `network.sqlite`
-beside `RUNMAP_PATH_GRAPH` when present. Without either it uses the JSON loader.
-A selected missing, corrupt, stale, or incompatible database reports unavailable
-or failed; it does not silently fall back to the global JSON loader.
+The API defaults to `RUNMAP_PATH_BACKEND=sqlite` and selects
+`RUNMAP_PATH_DATABASE` when set, otherwise `network.sqlite` beside
+`RUNMAP_PATH_GRAPH`. A missing, corrupt, stale, or incompatible database reports
+unavailable or failed. Set `RUNMAP_PATH_BACKEND=json` explicitly to use the
+full-graph JSON reference loader.
 
 SQLite startup reads only versioned metadata, source coverage, provenance, initial
-view, and precomputed hidden-segment/interval counts. These presentation values
-are additive schema-2 metadata: earlier exports without them must be regenerated
-for API use. Startup performs no network-table count, source JSON read, spatial
-index rebuild, classification, or hill preparation.
+view, and precomputed hidden-segment/interval counts. Current exports persist
+these presentation values for API use. Startup performs no network-table count,
+source JSON read, spatial index rebuild, classification, or hill preparation.
 
 `DatabasePool` opens two read-only connections by default, each with a 16 MiB
 page-cache target. A bounded queue leases each connection exclusively to one
@@ -345,9 +350,10 @@ The existing two run slots bound concurrent preparation/search. One deadline
 covers endpoint snapping, connection waits, SQL, local packing, every retry,
 cost preparation, and search. Completed candidates from a deadline-interrupted
 attempt can still be serialized and returned with `status=deadline`. Busy planner
-slots return HTTP 429; busy connection leases return HTTP 503. Local graph and
-hill stores are request-owned and released after response construction, with no
-retained planner graph cache.
+slots return HTTP 429; busy connection leases return HTTP 503. Reference local
+graphs and hill stores are request-owned and released after response construction.
+Numeric working sets can remain in the per-artifact bounded LRU; endpoint hill
+detail, overlays, search state, and cost caches remain request-local.
 
 The lazy full-JSON bridge has been removed. With SQLite selected, all path API
 operations work without the source graph/measurement files, and config advertises
@@ -457,9 +463,17 @@ for comparison; there is no automatic fallback when the extension is missing.
 The kernel preserves midpoint sampling and the fixed left/right frame. Python
 checks the request deadline before and after the call; Rust receives a remaining
 duration and checks its own elapsed time at bounded sample intervals. The first
-binding keeps the interpreter lock during each short call. A*, cost composition,
-and request caches remain in Python; spatial batching and native graph ownership
-are [later decisions](roadmap.md#next-rust-integration-kernel-and-interactive-routing).
+binding keeps the interpreter lock during each short call. This scalar adapter
+serves the Python reference planner. The numeric backend evaluates shape, reuse,
+and hill costs inside Rust traversal, retaining cost caches for the request.
+`NumericGraph` retains immutable chunk owners and releases the interpreter lock
+during graph construction and native searches. Cross-window chunk reuse and
+broader interaction validation remain in the
+[roadmap](roadmap.md#next-native-routing-validation-and-interactive-latency).
+
+The packed indexes and Python search buffers described below belong to the
+reference backend; numeric traversal uses the separate
+[numeric format](numeric-routing-format.md).
 
 Each policy index prepares an arc eligibility mask and segment directions.
 All policies share outgoing/incoming arc-index buffers and int64 node offsets;
@@ -560,8 +574,9 @@ geometry at their serialization boundaries. Endpoint overlays retain sparse adde
 points while sharing all base buffers. Node metadata still retains its WGS84
 longitude/latitude scalars; measurements retain their independently sampled vertices.
 
-Raw node/segment metadata and object-based display indexes remain due for
-the next [shared-index migration](roadmap.md#next-shared-integer-indexing-and-compact-prepared-data).
+Node/segment metadata and display indexes also use packed storage, as described
+above. Remaining storage work is tracked under
+[shared integer indexing](roadmap.md#supporting-work-shared-integer-indexing-and-compact-prepared-data).
 These storage/callback changes do not alter the cost model or integration kernel. The
 [packed-hill report](archive/history/35-packed-hill-storage.md) records equivalence
 and storage measurements; the [integer-cost report](archive/history/36-indexed-planner-costs.md)

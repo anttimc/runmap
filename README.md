@@ -4,7 +4,7 @@ A hobby project for exploring running-path hilliness across the Helsinki capital
 and experimenting with elevation data and routing mathematics.
 
 The map supports terrain and path-gradient exploration, path inspection,
-distance highlighting from a selected start, and home–turnaround–home run
+distance shells from a selected start, and home–turnaround–home run
 planning with optional hill avoidance. See the [guide](docs/guide.md) for
 behavior and limitations, and the [goals](docs/goals.md) for intended outcomes.
 
@@ -29,7 +29,7 @@ pnpm --dir web dev
 Open the URL printed by Vite. Data is not included in Git; follow
 [development and data preparation](docs/development.md) for a fresh checkout.
 Missing path artifacts leave terrain exploration available.
-An exported sibling `network.sqlite` enables selective path delivery; see
+The default path backend requires an exported sibling `network.sqlite`; see
 [SQLite setup](docs/development.md#export-a-sqlite-network-dataset). Exploration
 and run planning load bounded local graphs without the source JSON. A matching
 `numeric-routing-v2.sqlite` enables native run planning and distance exploration

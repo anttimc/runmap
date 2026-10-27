@@ -11,6 +11,9 @@ exists, and [roadmap](roadmap.md) for outstanding work.
 | [Roadmap](roadmap.md) | Outstanding work, priorities, and acceptance criteria |
 | [Architecture](architecture.md) | Current data flow, artifacts, and component boundaries |
 | [Development](development.md) | Setup, preparation, commands, and configuration |
+| [Numeric routing format](numeric-routing-format.md) | Numeric artifact versions, identity, binary layout, and native working-set boundaries |
+| [100 ms routing architecture](100ms-routing-architecture.md) | Routing latency target, dated observations, and outstanding performance acceptance |
+| [Distance shells](distance-shells.md) | Delivered distance visualization, approximation semantics, methods, and limits |
 | [Terrain mathematics](reference/terrain-mathematics.md) | Terrain calculations |
 | [Routing mathematics](reference/routing-mathematics.md) | Planner calculations |
 | [Archive](archive/README.md) | Dated plans, experiments, and supporting artifacts |

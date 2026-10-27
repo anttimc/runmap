@@ -30,20 +30,22 @@ Select Distance from start and choose a location on the map. Snapping chooses
 the nearest eligible prepared segment; inspection can offer nearby alternatives.
 The connector shows the snap offset, not a validated access path.
 
-The budget defaults to **3 km of forward network distance**. Full emphasis means
-an entire measured interval can be traversed from the snapped start within that
-budget. Return distance is excluded, and a return connection is not guaranteed.
-The highlighted intervals need not all fit into one run. An interval crossing
-the budget boundary may remain conservatively unhighlighted.
+The budget defaults to **3 km of forward network distance**. Return distance is
+excluded, and a return connection is not guaranteed. Choose Grid or Filtered
+triangulation to display filled 0.5 km distance bands over the basemap; the final
+band can be shorter. The method selector reports generation time.
 
-Colors show shortest legal outward distance to interval midpoints in 0.5 km
-bands across the selected budget. Gray means beyond budget, excluded,
-disconnected, or unavailable; it never means zero distance. Clearing the start
-restores gradient view.
+The bands interpolate shortest legal outward distances sampled along the network.
+Filled ground between paths is approximate and does not establish that it can be
+traversed. Both methods clip to prepared coverage but have no water or barrier
+polygons. Unfilled areas do not establish why distance is unavailable.
+See [distance shells](distance-shells.md) for approximation and method details.
 
-Known wording issue: a generated status label still says “outing — retracing
-allowed.” Interpret the tool using the forward-budget definition above; the
-label correction is tracked in the [roadmap](roadmap.md).
+Distance mode hides path vector layers; click a mapped path to snap and inspect
+its original samples and distance information. Clearing the start restores
+gradient view. Shell display requires a prepared SQLite network and matching
+numeric routing artifact. Datasets without numeric routing retain gradient
+display and inspection, with the distance control disabled.
 
 ## Plan run
 

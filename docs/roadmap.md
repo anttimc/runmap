@@ -8,9 +8,10 @@ remaining acceptance gates complete.
 
 ## Next: correctness and local acceptance
 
-- Correct the Explore status label that still describes a round-trip outing.
-  Acceptance: labels, help, inspection, and budget behavior consistently describe
-  forward distance and make no return guarantee.
+- Replace the remaining “minimum outing” wording in interval inspection with
+  forward-distance terminology. The Explore status label already says return
+  distance is excluded. Acceptance: labels, help, inspection, and budget behavior
+  consistently describe forward distance and make no return guarantee.
 - Review familiar flat corridors, short/sustained hills, rolling paths,
   bridges/underpasses, stairs, restrictions, missing surfaces, and extract edges.
   Reuse the [source-derived fixtures](archive/history/30-routing-preferences-audit.json),
@@ -157,27 +158,26 @@ memory savings and output/search comparisons.
 2. Reduce temporary record decoding during SQLite local graph loading if
    representative latency/RSS measurements justify it. Versioned prepared
    features and packed local arrays are implemented; temporary JSON/feature
-   records still contribute to peak request memory. Separate mapped numeric
-   sidecars require benchmark justification.
+   records still contribute to peak request memory on the reference backend.
+   The numeric artifact already provides a separate native search path; further
+   storage changes require representative benchmark justification.
 
-Do not introduce a generic feature registry or move graph ownership/search into
-Rust as part of this migration. Those are separate decisions supported by later
-measurements. Numeric packing provides the expected memory saving; changing
-dictionary keys to integers alone does not establish one.
+Keep the reference backend's shared-index work separate from the delivered native
+numeric backend. Avoid a generic feature registry. Measure memory savings and
+search time for each storage change; integer dictionary keys alone do not
+establish a compact representation.
 
-## Next: Rust integration kernel and interactive routing
+## Next: native routing validation and interactive latency
 
 The product goal is responsive route updates when moving the start or turnaround
 or changing the centre-cost width. The learning goal is to implement a small
-low-level numerical algorithm in Rust. The first per-geometry kernel is delivered;
-its boundary and behavior are in [architecture](architecture.md), build commands
-in [development](development.md#native-integration-kernel), and initial evidence
-in the [dated report](archive/history/33-rust-integration-kernel.md). Kernel
-speedup alone does not establish instant backend or browser response.
-
-Python A* now uses a prepared integer index with shared endpoint overlays. The
-[integer-index report](archive/history/34-integer-search-index.md) records its
-separate benchmark; this does not move search or per-edge costs into Rust.
+low-level numerical algorithm in Rust. Scalar integration and native numeric
+traversal with cost evaluation are delivered. The numeric backend retains bounded
+immutable working sets and sparse exploration snapshots; the Python backend
+remains a correctness reference. See [architecture](architecture.md),
+[build commands](development.md#native-integration-kernel), and the
+[100 ms target and recorded measurements](100ms-routing-architecture.md).
+Cached local timings do not establish instant backend or browser response.
 
 ### Broaden native validation and profiling
 
@@ -195,9 +195,10 @@ separate benchmark; this does not move search or per-edge costs into Rust.
   and hills enabled. Record p50/p95 latency, sample counts, expanded states,
   machine/toolchain, and dataset/settings identities. Include two concurrent
   planners and bursts of changing inputs to expose queueing and stale work.
-- Measure whether releasing the interpreter lock benefits the existing two-planner
-  concurrency case without adding excessive overhead to tiny calls. The current
-  binding holds it; field results remain request-local.
+- Measure contention and throughput with two concurrent planners. Native graph
+  construction and search release the interpreter lock; the scalar integration
+  adapter used by the reference planner still holds it. Evaluate releasing it
+  for scalar calls only if measured benefits justify the overhead.
 - Save fresh flamegraphs and cProfile reports alongside previous local profiles,
   preserving old evidence. Python profiling sees the native call as one frame;
   use Rust/native profiling only if its internal cost needs investigation.
@@ -213,13 +214,15 @@ stale-response suppression. Establish an explicit backend and visible-interactio
 latency budget on the target machine before claiming instant response. Avoid
 using repeated identical-request cache hits as the acceptance workload.
 
-If the remaining Python work misses that budget, profile again and consider
-moving A* together with cost evaluation and its feature cache into Rust. Avoid a
-native search that calls Python for every edge. Persistent native graph data,
-incremental search, and spatial batching are later decisions supported by that
-profile, rather than prerequisites for the first kernel. Use the existing dense
-IDs as the starting point for a native graph boundary, preserving their lifetime
-and overlay semantics instead of converting the full graph on each interaction.
+Native traversal already evaluates costs without per-edge Python callbacks and
+caches immutable working sets for exact bounds. Expansion still rereads chunks
+and builds another native index. Implement byte-bounded chunk reuse across bounds
+only with generation, concurrency, and ownership guarantees; benchmark changed
+endpoints, overlapping windows, and long runs. Further work on incremental search,
+spatial batching, or hierarchical acceleration should follow profiles and preserve
+request-specific costs and valid lower bounds. The
+[100 ms architecture](100ms-routing-architecture.md#latency-budget-and-acceptance)
+defines the backend target and outstanding acceptance matrix.
 
 ## Planned: routing improvements
 

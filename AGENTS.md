@@ -17,3 +17,15 @@ operation is needed instead of restating what is obvious from the code.
 
 Use `uv` to manage Python environments and dependencies and to run Python
 commands, including tests.
+
+# Documentation
+
+Keep maintained documentation up to date in the same change as implementation
+changes. Update the relevant guide, architecture, setup/configuration, and
+mathematical references when behavior, defaults, contracts, or component
+boundaries change. Follow `docs/README.md` for authoritative topic ownership.
+
+Remove completed implementation work from the roadmap, retaining any outstanding
+validation or user acceptance as explicit tasks. Distinguish current behavior
+from planned work and historical measurements. Check affected links and anchors;
+preserve dated archive reports as historical evidence.
