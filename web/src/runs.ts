@@ -153,6 +153,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   let turnaround: Location | undefined;
   let dragging = false;
   let response: RunResponse | undefined;
+  let responseInputs: string | undefined;
   let selected = 0;
   let generating = false;
   let abort: AbortController | undefined;
@@ -164,8 +165,8 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   let pickStatus = "";
   const status = element("run-status");
   const avoidance = element<HTMLInputElement>("run-avoidance");
-  const centre = element<HTMLInputElement>("run-centre");
   const hills = element<HTMLInputElement>("run-hills");
+  const orientation = element<HTMLSelectElement>("run-orientation");
   const hillCapability = options.runPlanner?.preference_capabilities.hills;
   const supportedHillLevels = hillCapability?.supported_levels ?? ["off"];
   const availableHillPresets = hillPresets.filter((preset) =>
@@ -204,7 +205,6 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       turnaround,
       options.state.policy,
       avoidance.value,
-      centre.checked,
       hills.value,
     ]);
   let observedInputs = inputsKey();
@@ -262,15 +262,10 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
         const midpoint: Location = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
         const radius = distance * Number(avoidance.value);
         features.push(line([a, b], "guide"));
-        if (centre.checked) {
-          centreMarker.setLngLat(circlePoint(midpoint, radius, 0)).addTo(map);
-          features.push(line(circleCoordinates(midpoint, radius), "centre"));
-        }
-        element("run-avoidance-value").textContent =
-          `${Math.round(radius)} m (${Math.round(Number(avoidance.value) * 100)}%)`;
-      } else
-        element("run-avoidance-value").textContent =
-          `${Math.round(Number(avoidance.value) * 100)}% of endpoint separation`;
+        centreMarker.setLngLat(circlePoint(midpoint, radius, 0)).addTo(map);
+        features.push(line(circleCoordinates(midpoint, radius), "centre"));
+      }
+      element("run-avoidance-value").textContent = `${Math.round(Number(avoidance.value) * 100)}%`;
     }
     const candidate = response?.candidates[selected];
     if (candidate) {
@@ -302,17 +297,18 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     generateButton.disabled = generating || !home || !turnaround;
     generateButton.textContent = generating ? "Generating run…" : "Generate run";
     generateButton.setAttribute("aria-busy", String(generating));
-    element<HTMLButtonElement>("run-fit").disabled = !response?.candidates.length;
-    element("run-results").hidden = !response?.candidates.length;
+    element<HTMLButtonElement>("run-fit").disabled = !candidate;
+    element("run-results").hidden = !candidate;
   }
   function pick(value?: "home" | "turnaround"): void {
+    if (value) document.dispatchEvent(new Event("plannerpick"));
     const wasPicking = Boolean(choosing);
     if (value && !wasPicking) pickStatus = status.textContent ?? "";
     choosing = value;
     element("run-home").textContent =
-      value === "home" ? "Cancel" : options.state.home ? "Change" : "Set home";
+      value === "home" ? "Cancel" : options.state.home ? "Change" : "Set";
     element("run-turnaround").textContent =
-      value === "turnaround" ? "Cancel" : turnaround ? "Change" : "Set turnaround";
+      value === "turnaround" ? "Cancel" : turnaround ? "Change" : "Set";
     element("run-home").setAttribute("aria-pressed", String(value === "home"));
     element("run-turnaround").setAttribute("aria-pressed", String(value === "turnaround"));
     element("run-home").setAttribute(
@@ -378,42 +374,35 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
         status.textContent = (error as Error).message;
     }
   }
+  function selectOrientation(): void {
+    selected =
+      response?.candidates.findIndex(
+        (candidate) => candidate.outbound_left === (orientation.value === "clockwise"),
+      ) ?? -1;
+  }
   function candidates(): void {
-    element("run-candidates").replaceChildren();
-    response?.candidates.forEach((candidate, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.setAttribute("aria-pressed", String(index === selected));
-      const shape =
-        candidate.encloses_centre === true
-          ? "Encloses centre"
-          : candidate.encloses_centre === false
-            ? "Does not enclose centre"
-            : "Retracing or crossings: enclosure unclear";
-      const equivalent =
-        candidate.equivalent_to === null
-          ? undefined
-          : response?.candidates[candidate.equivalent_to];
-      button.textContent =
-        `${candidateName(candidate)} · ${(candidate.distance_m / 1000).toFixed(2)} km\n` +
-        `${Math.round(candidate.repeated_distance_m)} m repeated${equivalent ? " · same route geometry" : ""}`;
-      if (index === selected)
-        element("run-detail-content").textContent =
-          `Out ${(candidate.outbound.distance_m / 1000).toFixed(2)} km · back ${(candidate.returning.distance_m / 1000).toFixed(2)} km. ${shape} · closest approach ${Math.round(candidate.closest_centre_m)} m. ${candidateName(candidate) !== "Out and back" ? "Clockwise and counter-clockwise describe the planning preference; crossings and retracing may complicate the actual loop. " : ""}${response?.coverage_note ?? ""}`;
-      if (index === selected) showTerrain(candidate);
-      button.addEventListener("click", () => {
-        selected = index;
-        candidates();
-        draw();
-      });
-      element("run-candidates").append(button);
-    });
+    const container = element("run-candidates");
+    container.replaceChildren();
+    const candidate = response?.candidates[selected];
+    if (!candidate) return;
+    const summary = document.createElement("div");
+    summary.className = "run-summary";
+    summary.textContent = `${(candidate.distance_m / 1000).toFixed(2)} km`;
+    container.append(summary);
+    const shape =
+      candidate.encloses_centre === true
+        ? "Encloses centre"
+        : candidate.encloses_centre === false
+          ? "Does not enclose centre"
+          : "Retracing or crossings: enclosure unclear";
+    element("run-detail-content").textContent =
+      `Out ${(candidate.outbound.distance_m / 1000).toFixed(2)} km · back ${(candidate.returning.distance_m / 1000).toFixed(2)} km. ${Math.round(candidate.repeated_distance_m)} m repeated. ${shape} · closest approach ${Math.round(candidate.closest_centre_m)} m. ${response?.coverage_note ?? ""}`;
+    showTerrain(candidate);
   }
   function showTerrain(candidate: Candidate): void {
     const observations = [candidate.outbound.observations, candidate.returning.observations];
-    const note = element("run-terrain-note");
-    note.hidden = observations.every((item) => item.terrain_valid_fraction === null);
-    if (note.hidden) return;
+    const note = element("run-detail-content");
+    if (observations.every((item) => item.terrain_valid_fraction === null)) return;
     const ascent = observations.reduce((total, item) => total + (item.estimated_ascent_m ?? 0), 0);
     const descent = observations.reduce(
       (total, item) => total + (item.estimated_descent_m ?? 0),
@@ -424,7 +413,8 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       0,
     );
     const hasTerrain = observations.some((item) => (item.terrain_valid_fraction ?? 0) > 0);
-    note.textContent =
+    note.textContent +=
+      " " +
       `${hasTerrain ? `Estimated terrain: ↑${Math.round(ascent)} m / ↓${Math.round(descent)} m. ` : "Terrain estimates unavailable. "}` +
       (fallback > 0.01
         ? `${Math.round(fallback)} m uses a conservative hill penalty because terrain is missing or uncertain. Ascent/descent may be incomplete or based on ground beneath a bridge or tunnel.`
@@ -436,6 +426,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     abort?.abort();
     abort = new AbortController();
     const current = ++sequence;
+    const requestedInputs = inputsKey();
     generating = true;
     draw();
     status.textContent = response?.candidates.length
@@ -451,7 +442,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
           ...options.state.policy,
           settings: {
             avoidance_ratio: Number(avoidance.value),
-            centre_enabled: centre.checked,
+            centre_enabled: true,
           },
           preferences: { hills: hillPreset().level },
         },
@@ -461,12 +452,15 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       if (next.dataset_id !== options.datasetId)
         throw new Error("Dataset changed; reload the map.");
       response = next;
-      selected = 0;
+      responseInputs = requestedInputs;
+      selectOrientation();
       homeSnap = next.home;
       turnaroundSnap = next.turnaround;
       const message =
         next.status === "complete"
-          ? `${next.candidates.length} runs · ${next.elapsed_s.toFixed(2)} s.`
+          ? selected >= 0
+            ? "Run ready."
+            : "No run found for this orientation. Try the other direction."
           : next.status === "deadline"
             ? "Search deadline reached. Any completed runs are shown."
             : next.status === "area_limited"
@@ -529,8 +523,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     const midpoint: Location = [(a.lng + b.lng) / 2, (a.lat + b.lat) / 2];
     avoidance.value = String(separation(midpoint, location) / distance);
     const radius = distance * Number(avoidance.value);
-    element("run-avoidance-value").textContent =
-      `${Math.round(radius)} m (${Math.round(Number(avoidance.value) * 100)}%)`;
+    element("run-avoidance-value").textContent = `${Math.round(Number(avoidance.value) * 100)}%`;
     (map.getSource("run-geometry") as GeoJSONSource).setData({
       type: "FeatureCollection",
       features: [
@@ -629,8 +622,21 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     pick("home");
     candidates();
   });
+  document.addEventListener("distancepick", () => pick());
+  orientation.addEventListener("change", () => {
+    selectOrientation();
+    candidates();
+    draw();
+    if (response)
+      status.textContent = generating
+        ? "Generating… displayed run uses previous settings."
+        : responseInputs !== inputsKey()
+          ? "Displayed run uses previous settings. Generate again to update."
+          : selected >= 0
+            ? "Run ready."
+            : "No run found for this orientation. Try the other direction.";
+  });
   avoidance.addEventListener("input", invalidate);
-  centre.addEventListener("change", invalidate);
   hills.addEventListener("input", () => {
     updateHillPreset();
     invalidate();

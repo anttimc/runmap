@@ -35,7 +35,265 @@
           </div>
         </header>
         <div id="tool-content" class="panel-content">
-          <h2 class="section-title layer-heading">Map layers</h2>
+          <section class="layer-section planner-section">
+            <div class="heading-row planner-heading">
+              <h2 class="section-title">Plan run</h2>
+              <button id="run-clear" class="text-button" type="button" hidden>Clear</button>
+              <label class="layer-switch"
+                ><input
+                  id="plan-enabled"
+                  type="checkbox"
+                  role="switch"
+                  aria-label="Plan run"
+                  disabled /><span aria-hidden="true"></span
+              ></label>
+            </div>
+            <div id="run-controls" class="section-options" hidden>
+              <div class="endpoint-row">
+                <div><strong>Home</strong><span id="run-home-value">Choose on map</span></div>
+                <button id="run-home" type="button" aria-label="Set home on map">Set</button>
+              </div>
+              <div class="endpoint-row">
+                <div>
+                  <strong>Turnaround</strong><span id="run-turnaround-value">Choose on map</span>
+                </div>
+                <button id="run-turnaround" type="button" aria-label="Set turnaround on map">
+                  Set
+                </button>
+              </div>
+              <label class="control-label" for="run-orientation">Orientation</label>
+              <select
+                id="run-orientation"
+                title="Choose the preferred travel direction around the midpoint. Paths and crossings can affect the final shape."
+              >
+                <option value="clockwise">Clockwise</option>
+                <option value="counter-clockwise">Counter-clockwise</option>
+              </select>
+              <div class="control-label">
+                <span
+                  ><label for="run-avoidance">Loop width</label>
+                  <span class="help-tip"
+                    ><button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="More information"
+                      aria-expanded="false"
+                    >
+                      ?</button
+                    ><span role="tooltip" class="help-content" id="run-shape-help">
+                      A soft preference to go around the midpoint, not a minimum clearance. Zero
+                      disables shape penalties while keeping route preferences. The selected
+                      orientation guides the route around the midpoint.
+                    </span></span
+                  ></span
+                ><output id="run-avoidance-value"></output>
+              </div>
+              <input
+                id="run-avoidance"
+                type="range"
+                min="0"
+                max="0.6"
+                step="0.01"
+                value="0.18"
+                aria-describedby="run-shape-help"
+              />
+              <div id="run-preferences" hidden>
+                <div class="control-label">
+                  <span
+                    ><label for="run-hills">Avoid hills</label>
+                    <span class="help-tip"
+                      ><button
+                        type="button"
+                        class="help-trigger"
+                        aria-label="About hill avoidance"
+                        aria-expanded="false"
+                      >
+                        ?</button
+                      ><span role="tooltip" class="help-content"
+                        ><span id="run-hills-description">No preference for flatter paths.</span
+                        ><br />Prefer gentler climbs using a running effort estimate adjusted to
+                        soften slopes below 5%. Flat terrain and moderate descents add no hill
+                        penalty. Missing or uncertain terrain uses a conservative fallback.</span
+                      ></span
+                    ></span
+                  ><output id="run-hills-value" for="run-hills">Off</output>
+                </div>
+                <input
+                  id="run-hills"
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="1"
+                  value="0"
+                  disabled
+                  aria-valuetext="Off"
+                  aria-describedby="run-hills-description"
+                />
+                <div id="run-hills-labels" class="range-notes" aria-hidden="true">
+                  <span>Off</span><span>Low</span><span>High</span>
+                </div>
+              </div>
+              <div id="run-results" hidden>
+                <div class="heading-row section-heading">
+                  <h2 class="section-title">Your run</h2>
+                  <button id="run-fit" type="button" disabled>Fit run</button>
+                </div>
+                <div class="route-key" aria-label="Selected run direction">
+                  <span
+                    ><i class="run-key"></i
+                    ><span id="run-direction-label">Arrows show travel direction</span></span
+                  >
+                </div>
+                <div id="run-candidates" class="run-candidates"></div>
+
+                <div id="run-details">
+                  <span class="help-tip"
+                    ><button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="More information"
+                      aria-expanded="false"
+                    >
+                      ?</button
+                    ><span role="tooltip" class="help-content" id="run-detail-content"></span
+                  ></span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <footer id="run-footer" class="planner-footer" hidden>
+          <p id="run-status" class="explanation" role="status">Choose home and a turnaround.</p>
+          <div class="footer-actions">
+            <button id="run-generate" class="primary-button" type="button" disabled>
+              Generate run</button
+            ><button id="run-cancel" type="button" hidden>Cancel</button>
+          </div>
+        </footer>
+      </section>
+      <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+        <header class="heading-row">
+          <h2 id="settings-title">Settings</h2>
+          <button id="settings-close" type="button" autofocus>Close</button>
+        </header>
+        <div class="settings-content">
+          <section id="settings-paths" aria-labelledby="path-rules-title">
+            <h3 id="path-rules-title">Paths &amp; routing</h3>
+            <span class="help-tip"
+              ><button
+                type="button"
+                class="help-trigger"
+                aria-label="More information"
+                aria-expanded="false"
+              >
+                ?</button
+              ><span role="tooltip" class="help-content"
+                >Applies to distance highlighting and run planning.</span
+              ></span
+            >
+            <div class="path-settings">
+              <label class="control-label" for="path-surface">Allowed surfaces</label>
+              <select id="path-surface" disabled>
+                <option value="all">All prepared candidate paths</option>
+                <option value="surfaced">Paved / gravel surface tags</option>
+              </select>
+              <span class="help-tip"
+                ><button
+                  type="button"
+                  class="help-trigger"
+                  aria-label="More information"
+                  aria-expanded="false"
+                >
+                  ?</button
+                ><span role="tooltip" class="help-content">
+                  Surface tags describe material; they do not prove maintenance. Unknown surfaces
+                  stay explicit.
+                </span></span
+              >
+              <label class="contour-toggle"
+                ><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid
+                stairs</label
+              >
+              <details class="settings-group">
+                <summary>Endpoint snapping</summary>
+                <label class="control-label" for="outing-radius">Maximum snap offset (m)</label>
+                <input
+                  id="outing-radius"
+                  type="number"
+                  min="1"
+                  max="200"
+                  step="1"
+                  value="50"
+                  disabled
+                />
+                <span class="help-tip"
+                  ><button
+                    type="button"
+                    class="help-trigger"
+                    aria-label="More information"
+                    aria-expanded="false"
+                  >
+                    ?</button
+                  ><span role="tooltip" class="help-content">
+                    How far a selected location may move to an eligible path. Connectors are visual,
+                    not validated access routes.
+                  </span></span
+                >
+              </details>
+              <details class="settings-group">
+                <summary>Prepared network and measurements</summary>
+                <ul id="path-importer-notes"></ul>
+                <p id="path-settings" class="explanation"></p>
+              </details>
+            </div>
+          </section>
+          <section id="settings-map" aria-labelledby="map-settings-title">
+            <h3 id="map-settings-title">Map appearance</h3>
+            <span class="help-tip"
+              ><button
+                type="button"
+                class="help-trigger"
+                aria-label="More information"
+                aria-expanded="false"
+              >
+                ?</button
+              ><span role="tooltip" class="help-content"
+                >Display only. Your generated run stays valid.</span
+              ></span
+            >
+            <label class="contour-toggle"
+              ><input
+                id="path-hide-building-access"
+                type="checkbox"
+                checked
+                disabled
+                aria-describedby="building-access-help"
+              />
+              Hide building-access dead ends</label
+            >
+            <span class="help-tip"
+              ><button
+                type="button"
+                class="help-trigger"
+                aria-label="More information"
+                aria-expanded="false"
+              >
+                ?</button
+              ><span role="tooltip" class="help-content" id="building-access-help">
+                Affects all path colors. Starts can still snap to these paths; the basemap may show
+                them faintly.
+              </span></span
+            >
+
+            <label class="contour-toggle"
+              ><input id="contours-visible" type="checkbox" checked /> Elevation contours</label
+            >
+          </section>
+        </div>
+      </dialog>
+      <aside class="map-legend" aria-label="Map layers and legend">
+        <details class="map-layer-panel" open>
+          <summary>Map layers</summary>
           <section class="layer-section">
             <div class="layer-row">
               <button
@@ -54,13 +312,23 @@
                   type="checkbox"
                   role="switch"
                   aria-label="Background gradient"
+                  checked
                   disabled /><span aria-hidden="true"></span
               ></label>
             </div>
             <div id="background-controls" class="section-options" hidden>
-              <p class="explanation">
-                Colors show terrain slope, rather than steepness along a path.
-              </p>
+              <span class="help-tip"
+                ><button
+                  type="button"
+                  class="help-trigger"
+                  aria-label="More information"
+                  aria-expanded="false"
+                >
+                  ?</button
+                ><span role="tooltip" class="help-content">
+                  Colors show terrain slope, rather than steepness along a path.
+                </span></span
+              >
               <div id="gradient-options">
                 <label class="contour-toggle"
                   ><input id="path-flatter" type="checkbox" disabled /> Highlight flat paths</label
@@ -82,9 +350,18 @@
                     disabled
                     aria-describedby="flat-path-help"
                   />
-                  <p id="flat-path-help" class="explanation">
-                    Green outlines mark paths with a flat stretch of at least 50 m. Display only.
-                  </p>
+                  <span class="help-tip"
+                    ><button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="More information"
+                      aria-expanded="false"
+                    >
+                      ?</button
+                    ><span role="tooltip" class="help-content" id="flat-path-help">
+                      Green outlines mark paths with a flat stretch of at least 50 m. Display only.
+                    </span></span
+                  >
                 </div>
               </div>
               <label class="control-label" for="opacity">
@@ -101,7 +378,7 @@
                 class="section-toggle"
                 type="button"
                 data-section="path-controls"
-                aria-expanded="true"
+                aria-expanded="false"
                 aria-controls="path-controls"
               >
                 Path gradient
@@ -112,14 +389,22 @@
                   type="checkbox"
                   role="switch"
                   aria-label="Path gradient"
-                  checked
                   disabled /><span aria-hidden="true"></span
               ></label>
             </div>
-            <div id="path-controls" class="section-options">
-              <p id="mode-description" class="explanation">
-                Colors show steepness along paths. Click a path to inspect its profile.
-              </p>
+            <div id="path-controls" class="section-options" hidden>
+              <span class="help-tip"
+                ><button
+                  type="button"
+                  class="help-trigger"
+                  aria-label="More information"
+                  aria-expanded="false"
+                >
+                  ?</button
+                ><span role="tooltip" class="help-content" id="mode-description">
+                  Colors show steepness along paths. Click a path to inspect its profile.
+                </span></span
+              >
             </div>
           </section>
           <section class="layer-section">
@@ -144,10 +429,19 @@
               ></label>
             </div>
             <div id="distance-controls" class="section-options outing-controls" hidden>
-              <p class="explanation">
-                Distance uses the same start as the run planner. Turn on the layer to see filled 500
-                m bands.
-              </p>
+              <span class="help-tip"
+                ><button
+                  type="button"
+                  class="help-trigger"
+                  aria-label="More information"
+                  aria-expanded="false"
+                >
+                  ?</button
+                ><span role="tooltip" class="help-content">
+                  Distance uses the same start as the run planner. Turn on the layer to see filled
+                  500 m bands.
+                </span></span
+              >
               <div class="heading-row outing-actions">
                 <button id="outing-set-start" type="button" disabled>Set start on map</button>
                 <button id="outing-clear-start" type="button" disabled>Clear start</button>
@@ -175,259 +469,73 @@
                 </select>
                 <p id="distance-shell-status" class="explanation" role="status"></p>
               </details>
-              <details class="inline-help">
-                <summary>About distance highlighting</summary>
-                <p class="explanation">
+
+              <span class="help-tip"
+                ><button
+                  type="button"
+                  class="help-trigger"
+                  aria-label="More information"
+                  aria-expanded="false"
+                >
+                  ?</button
+                ><span role="tooltip" class="help-content">
                   Colors show 500 m bands of shortest legal distance along the path network. Filled
                   areas between paths are approximate; they do not imply access across water or
                   other barriers. Return distance is not included. Click a mapped path to inspect
                   its exact network distance.
-                </p>
-              </details>
-            </div>
-          </section>
-          <section class="layer-section planner-section">
-            <div class="layer-row">
-              <button
-                id="plan-section"
-                class="section-toggle"
-                type="button"
-                data-section="run-controls"
-                aria-expanded="false"
-                aria-controls="run-controls"
-                disabled
+                </span></span
               >
-                Plan run
-              </button>
-            </div>
-            <div id="run-controls" class="section-options" hidden>
-              <div class="endpoint-row">
-                <div><strong>Home</strong><span id="run-home-value">Choose on map</span></div>
-                <button id="run-home" type="button">Set home</button>
-              </div>
-              <div class="endpoint-row">
-                <div>
-                  <strong>Turnaround</strong><span id="run-turnaround-value">Choose on map</span>
-                </div>
-                <button id="run-turnaround" type="button">Set turnaround</button>
-              </div>
-              <div class="heading-row section-heading">
-                <h2 class="section-title">Run shape</h2>
-                <button id="run-clear" class="text-button" type="button">Clear locations</button>
-              </div>
-              <label class="control-label" for="run-avoidance"
-                >Loop width <output id="run-avoidance-value"></output
-              ></label>
-              <input
-                id="run-avoidance"
-                type="range"
-                min="0"
-                max="0.6"
-                step="0.01"
-                value="0.18"
-                aria-describedby="run-shape-help"
-              />
-              <details class="inline-help">
-                <summary>How loop width works</summary>
-                <p id="run-shape-help" class="explanation">
-                  A soft preference to go around the midpoint, not a minimum clearance. Zero
-                  disables shape penalties while keeping route preferences. Each direction is
-                  planned separately; both may choose the same route when other preferences
-                  dominate.
-                </p>
-                <label class="contour-toggle"
-                  ><input id="run-centre" type="checkbox" checked /> Centre avoidance</label
-                >
-                <p class="explanation">
-                  Turning centre avoidance off keeps side and reuse preferences at nonzero widths.
-                </p>
-              </details>
-              <div id="run-preferences" hidden>
-                <h2 class="section-title section-heading">Route preferences</h2>
-                <label class="control-label" for="run-hills"
-                  >Avoid hills <output id="run-hills-value" for="run-hills">Off</output></label
-                >
-                <input
-                  id="run-hills"
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="1"
-                  value="0"
-                  disabled
-                  aria-valuetext="Off"
-                  aria-describedby="run-hills-description"
-                />
-                <div id="run-hills-labels" class="range-notes" aria-hidden="true">
-                  <span>Off</span><span>Low</span><span>High</span>
-                </div>
-                <p id="run-hills-description" class="explanation">
-                  No preference for flatter paths.
-                </p>
-                <details class="inline-help">
-                  <summary>About hill avoidance</summary>
-                  <p id="run-hills-help" class="explanation">
-                    Prefer gentler, longer climbs over short steep climbs. The running energy curve
-                    from
-                    <a
-                      href="https://doi.org/10.1152/japplphysiol.01177.2001"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      >Minetti et al. (2002)</a
-                    >
-                    is adjusted to soften climbs below 5% and increasingly discourage steeper
-                    climbs. Only effort above flat running adds a hill penalty; flat terrain and
-                    moderate descents add none. Bridge, tunnel, and missing terrain estimates use a
-                    conservative fallback. Terrain estimates are independent of the map background.
-                  </p>
-                </details>
-              </div>
-              <div id="run-results" hidden>
-                <div class="heading-row section-heading">
-                  <h2 class="section-title">Your runs</h2>
-                  <button id="run-fit" type="button" disabled>Fit run</button>
-                </div>
-                <div class="route-key" aria-label="Selected run direction">
-                  <span
-                    ><i class="run-key"></i
-                    ><span id="run-direction-label">Arrows show travel direction</span></span
-                  >
-                </div>
-                <div id="run-candidates" class="run-candidates"></div>
-                <p id="run-terrain-note" class="explanation" hidden></p>
-                <details id="run-details" class="inline-help">
-                  <summary>Selected run details</summary>
-                  <p id="run-detail-content" class="explanation"></p>
-                </details>
-              </div>
-              <footer id="run-footer" class="planner-footer">
-                <p id="run-status" class="explanation" role="status">
-                  Choose home and a turnaround.
-                </p>
-                <div class="footer-actions">
-                  <button id="run-generate" class="primary-button" type="button" disabled>
-                    Generate run</button
-                  ><button id="run-cancel" type="button" hidden>Cancel</button>
-                </div>
-              </footer>
             </div>
           </section>
-          <div class="settings-links"><button type="button" data-settings>Settings</button></div>
-          <p id="path-status" class="explanation" role="status">Loading path configuration…</p>
-        </div>
-      </section>
-      <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
-        <header class="heading-row">
-          <h2 id="settings-title">Settings</h2>
-          <button id="settings-close" type="button" autofocus>Close</button>
-        </header>
-        <div class="settings-content">
-          <section id="settings-paths" aria-labelledby="path-rules-title">
-            <h3 id="path-rules-title">Paths &amp; routing</h3>
-            <p class="explanation">Applies to distance highlighting and run planning.</p>
-            <div class="path-settings">
-              <label class="control-label" for="path-surface">Allowed surfaces</label>
-              <select id="path-surface" disabled>
-                <option value="all">All prepared candidate paths</option>
-                <option value="surfaced">Paved / gravel surface tags</option>
-              </select>
-              <p class="explanation">
-                Surface tags describe material; they do not prove maintenance. Unknown surfaces stay
-                explicit.
-              </p>
-              <label class="contour-toggle"
-                ><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid
-                stairs</label
-              >
-              <details class="settings-group">
-                <summary>Endpoint snapping</summary>
-                <label class="control-label" for="outing-radius">Maximum snap offset (m)</label>
-                <input
-                  id="outing-radius"
-                  type="number"
-                  min="1"
-                  max="200"
-                  step="1"
-                  value="50"
-                  disabled
-                />
-                <p class="explanation">
-                  How far a selected location may move to an eligible path. Connectors are visual,
-                  not validated access routes.
-                </p>
-              </details>
-              <details class="settings-group">
-                <summary>Prepared network and measurements</summary>
-                <ul id="path-importer-notes"></ul>
-                <p id="path-settings" class="explanation"></p>
-              </details>
-            </div>
-          </section>
-          <section id="settings-map" aria-labelledby="map-settings-title">
-            <h3 id="map-settings-title">Map appearance</h3>
-            <p class="explanation">Display only. Your generated run stays valid.</p>
-            <label class="contour-toggle"
-              ><input
-                id="path-hide-building-access"
-                type="checkbox"
-                checked
-                disabled
-                aria-describedby="building-access-help"
-              />
-              Hide building-access dead ends</label
-            >
-            <p id="building-access-help" class="explanation">
-              Affects all path colors. Starts can still snap to these paths; the basemap may show
-              them faintly.
-            </p>
-
-            <label class="contour-toggle"
-              ><input id="contours-visible" type="checkbox" checked /> Elevation contours</label
-            >
-          </section>
-        </div>
-      </dialog>
-      <aside class="map-legend" aria-label="Map legend">
-        <h2 id="path-legend-title" class="section-title">Path gradient</h2>
-        <div
-          id="gradient-legend"
-          class="gradient-legend"
-          aria-label="Along-path gradient magnitude bands"
-        >
-          <div class="continuous-key">
-            <div id="path-gradient-ramp" class="continuous-ramp"></div>
-            <div id="path-gradient-ticks"></div>
-          </div>
-        </div>
-        <div
-          id="distance-legend"
-          class="gradient-legend"
-          hidden
-          aria-label="Network distance from start"
-        >
-          <div class="continuous-key">
-            <div class="legend-heading"><span>Distance from start</span></div>
-            <div id="distance-ramp" class="continuous-ramp"></div>
-            <div id="distance-ticks">0–3 km · each color = 0.5 km</div>
-          </div>
-        </div>
-
-        <div id="flat-legend" class="legend legend-symbols" hidden>
-          <span
-            ><i class="flat-path"></i
-            ><span>Flat paths · <span id="flat-legend-value">≤3%</span></span></span
+        </details>
+        <p id="path-status" class="explanation" role="status">Loading path configuration…</p>
+        <div class="legend-content">
+          <h2 id="path-legend-title" class="section-title">Path gradient</h2>
+          <div
+            id="gradient-legend"
+            class="gradient-legend"
+            aria-label="Along-path gradient magnitude bands"
           >
-        </div>
-        <div id="terrain-legend" class="legend" aria-label="Terrain slope magnitude legend">
-          <div class="legend-heading"><span>Terrain slope</span><span>grade</span></div>
-          <div class="legend-body">
-            <div id="legend-bar" class="legend-bar"></div>
-            <div id="legend-labels" class="legend-labels"></div>
+            <div class="continuous-key">
+              <div id="path-gradient-ramp" class="continuous-ramp"></div>
+              <div id="path-gradient-ticks"></div>
+            </div>
           </div>
+          <div
+            id="distance-legend"
+            class="gradient-legend"
+            hidden
+            aria-label="Network distance from start"
+          >
+            <div class="continuous-key">
+              <div class="legend-heading"><span>Distance from start</span></div>
+              <div id="distance-ramp" class="continuous-ramp"></div>
+              <div id="distance-ticks">0–3 km · each color = 0.5 km</div>
+            </div>
+          </div>
+
+          <div id="flat-legend" class="legend legend-symbols" hidden>
+            <span
+              ><i class="flat-path"></i
+              ><span>Flat paths · <span id="flat-legend-value">≤3%</span></span></span
+            >
+          </div>
+          <div id="terrain-legend" class="legend" aria-label="Terrain slope magnitude legend">
+            <div class="legend-heading"><span>Terrain slope</span><span>grade</span></div>
+            <div class="legend-body">
+              <div id="legend-bar" class="legend-bar"></div>
+              <div id="legend-labels" class="legend-labels"></div>
+            </div>
+          </div>
+          <button class="legend-more" type="button" popovertarget="legend-help">
+            Legend details
+          </button>
         </div>
-        <button class="legend-more" type="button" popovertarget="legend-help">
-          Legend details
-        </button>
+        <div class="settings-links">
+          <button type="button" data-settings title="Paths, routing and map settings">
+            Settings
+          </button>
+        </div>
       </aside>
       <div
         id="legend-help"
@@ -452,10 +560,19 @@
           Colors show sampled grade magnitude. Inspection shows signed grade.
         </p>
         <p id="path-lod-note" class="explanation" hidden></p>
-        <p class="explanation">
-          Distance shading shows reachable areas, not access between paths. Paths outside prepared
-          coverage are basemap context.
-        </p>
+        <span class="help-tip"
+          ><button
+            type="button"
+            class="help-trigger"
+            aria-label="More information"
+            aria-expanded="false"
+          >
+            ?</button
+          ><span role="tooltip" class="help-content">
+            Distance shading shows reachable areas, not access between paths. Paths outside prepared
+            coverage are basemap context.
+          </span></span
+        >
       </div>
       <section
         id="path-inspection"

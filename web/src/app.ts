@@ -62,12 +62,17 @@ export async function startMapTools(map: Map, stops: ColorStop[]): Promise<void>
     setHome,
   });
 
-  element<HTMLButtonElement>("plan-section").disabled = false;
-  document.addEventListener("sectionchange", () => {
-    state.mode = element("run-controls").hidden ? "explore" : "plan";
-    paths.modeChanged();
+  const planEnabled = element<HTMLInputElement>("plan-enabled");
+  planEnabled.disabled = false;
+  planEnabled.addEventListener("change", () => {
+    state.mode = planEnabled.checked ? "plan" : "explore";
+    element("run-controls").hidden = !planEnabled.checked;
+    element("run-footer").hidden = !planEnabled.checked;
+    element("run-clear").hidden = !planEnabled.checked;
+    if (planEnabled.checked) paths.modeChanged();
     planner?.modeChanged();
   });
+  document.addEventListener("plannerpick", () => paths.modeChanged());
 
   for (const id of ["path-surface", "path-avoid-stairs", "outing-radius"]) {
     element<HTMLInputElement | HTMLSelectElement>(id).addEventListener("change", (event) => {

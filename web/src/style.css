@@ -61,7 +61,7 @@ summary {
 select,
 input[type="number"] {
   width: 100%;
-  padding: 9px;
+  padding: 6px 8px;
   border: 1px solid #b9c3c0;
   border-radius: 7px;
   color: inherit;
@@ -70,7 +70,7 @@ input[type="number"] {
 }
 input[type="range"] {
   width: 100%;
-  margin: 12px 0 4px;
+  margin: 6px 0 2px;
   accent-color: #087f8c;
 }
 input[type="checkbox"] {
@@ -106,7 +106,7 @@ output {
   z-index: 2;
   top: 18px;
   left: 18px;
-  width: 350px;
+  width: 240px;
   max-height: calc(100dvh - 36px);
   border-radius: 16px;
   display: flex;
@@ -115,7 +115,7 @@ output {
 }
 .panel-header {
   flex: none;
-  padding: 18px 18px 0;
+  padding: 14px 12px 0;
 }
 h1 {
   margin: 0;
@@ -156,7 +156,7 @@ h1 {
   display: none;
 }
 .panel-content {
-  padding: 16px 18px;
+  padding: 10px 12px;
   overflow-y: auto;
   min-height: 0;
   overscroll-behavior: contain;
@@ -171,7 +171,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 50px;
+  min-height: 38px;
 }
 .section-toggle {
   flex: 1;
@@ -180,11 +180,11 @@ h1 {
   align-items: center;
   gap: 10px;
   border: 0;
-  padding: 12px 4px;
+  padding: 7px 0;
   background: transparent;
   text-align: left;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
 }
 .section-toggle::before {
   content: "›";
@@ -195,14 +195,14 @@ h1 {
   transform: rotate(90deg);
 }
 .section-options {
-  padding: 0 4px 16px;
+  padding: 0 0 10px;
 }
 .section-options > .explanation:first-child {
   margin-top: 0;
 }
 .planner-section {
-  margin-top: 14px;
-  border-top: 1px solid #d7ded8;
+  margin-top: 0;
+  border: 0;
 }
 .layer-switch {
   position: relative;
@@ -264,14 +264,14 @@ h1 {
   overflow-wrap: anywhere;
 }
 .control-label {
-  margin: 16px 0 6px;
+  margin: 10px 0 4px;
   font-size: 0.82rem;
   font-weight: 600;
 }
 .contour-toggle {
   display: block;
   font-size: 0.8rem;
-  margin-top: 14px;
+  margin-top: 8px;
   line-height: 1.45;
 }
 .section-title {
@@ -280,7 +280,7 @@ h1 {
   font-weight: 650;
 }
 .section-heading {
-  margin-top: 20px;
+  margin-top: 12px;
 }
 .text-button {
   border: 0;
@@ -294,11 +294,17 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 11px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #dce1da;
 }
 .endpoint-row:first-child {
   padding-top: 0;
+}
+.endpoint-row > div {
+  min-width: 0;
+}
+.endpoint-row button {
+  flex-shrink: 0;
 }
 .endpoint-row strong {
   display: block;
@@ -348,7 +354,7 @@ h1 {
 }
 .planner-footer {
   flex: none;
-  padding: 12px 18px 16px;
+  padding: 10px 12px 12px;
   border-top: 1px solid #d6ddd5;
   background: #f3f5ef;
 }
@@ -442,18 +448,18 @@ h1 {
   margin: 0;
 }
 .settings-content {
-  padding: 0 18px 24px;
+  padding: 0 16px 16px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 .settings-content h3 {
   font-size: 0.86rem;
-  margin: 20px 0 0;
+  margin: 14px 0 6px;
 }
 .settings-group {
   border-top: 1px solid #d6ddd5;
-  margin-top: 20px;
-  padding-top: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
 }
 .settings-group ul {
   padding-left: 18px;
@@ -462,7 +468,7 @@ h1 {
   color: #596568;
 }
 .terrain-controls {
-  margin-top: 20px;
+  margin-top: 12px;
 }
 .range-notes {
   font-size: 0.68rem;
@@ -510,7 +516,10 @@ h1 {
   z-index: 2;
   top: 18px;
   right: 18px;
-  width: 240px;
+  width: 260px;
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 12px;
   border-radius: 12px;
 }
@@ -682,7 +691,7 @@ h1 {
   margin-bottom: 7px;
 }
 .inspection-panel details {
-  margin-top: 20px;
+  margin-top: 12px;
 }
 .inspection-panel pre {
   white-space: pre-wrap;
@@ -696,11 +705,8 @@ h1 {
   max-height: calc(100dvh - 230px);
 }
 @media (max-width: 900px) and (min-width: 601px) {
-  .controls {
-    width: 310px;
-  }
   .map-legend {
-    width: 210px;
+    width: 240px;
   }
   .inspection-panel {
     width: min(350px, calc(100vw - 350px));
@@ -711,12 +717,12 @@ h1 {
     top: auto;
     bottom: max(10px, env(safe-area-inset-bottom));
     left: 10px;
-    width: calc(100vw - 20px);
+    width: min(240px, calc(100vw - 20px));
     max-height: 62dvh;
     border-radius: 16px;
   }
   .panel-header {
-    padding: 12px 14px 0;
+    padding: 12px 12px 0;
   }
   h1 {
     font-size: 1.25rem;
@@ -730,10 +736,10 @@ h1 {
     font-size: 0.68rem;
   }
   .panel-content {
-    padding: 12px 14px;
+    padding: 12px;
   }
   .planner-footer {
-    padding: 10px 14px 12px;
+    padding: 10px 12px 12px;
   }
   .controls.is-collapsed .panel-content {
     display: none;
@@ -741,8 +747,12 @@ h1 {
   .controls.is-collapsed .planner-footer {
     border-top: 0;
   }
+  .controls.is-collapsed .panel-header {
+    padding-bottom: 10px;
+  }
   .map-legend {
-    width: 190px;
+    width: 220px;
+    max-height: 32dvh;
     padding: 10px;
     top: max(10px, env(safe-area-inset-top));
     right: 10px;
@@ -794,4 +804,93 @@ h1 {
 }
 .run-centre-handle:active {
   cursor: grabbing;
+}
+
+.planner-heading {
+  margin-bottom: 8px;
+}
+.planner-heading h2 {
+  font-size: 1rem;
+  flex: 1;
+}
+.controls:has(#plan-enabled:not(:checked)) .sheet-toggle {
+  display: none;
+}
+.run-summary {
+  font-size: 1.3rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.map-layer-panel > summary {
+  font-size: 0.82rem;
+  padding-bottom: 4px;
+}
+.legend-content {
+  padding-top: 12px;
+}
+.map-legend .control-label {
+  font-size: 0.74rem;
+}
+.map-legend .layer-row {
+  gap: 6px;
+}
+.help-tip {
+  display: inline-flex;
+  vertical-align: middle;
+}
+.help-trigger {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 0.68rem;
+  color: #57716a;
+  background: transparent;
+}
+.help-content {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid #b9c3c0;
+  border-radius: 8px;
+  background: #fffdf8;
+  color: #41564f;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  box-shadow: 0 5px 20px #19262b26;
+}
+#run-controls > .help-tip {
+  margin-top: 4px;
+}
+#run-preferences > .help-tip {
+  margin-top: 4px;
+}
+#run-details {
+  margin-top: 6px;
+}
+#path-status {
+  margin-top: 6px;
+}
+@media (max-width: 600px) {
+  .map-legend .section-toggle {
+    font-size: 0.72rem;
+  }
+  .map-legend .layer-row {
+    min-height: 34px;
+  }
+  .controls .header-actions {
+    gap: 4px;
+  }
+  .controls .status[data-kind="ready"] {
+    display: none;
+  }
+}
+
+#path-status[data-state="ready"] {
+  display: none;
 }

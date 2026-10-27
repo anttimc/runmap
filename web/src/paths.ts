@@ -693,6 +693,7 @@ export function startPaths(
   const showPathAnalysis = (): boolean => pathGradient.checked || highlightFlat();
   let choosingStart = false;
   function chooseStartMode(active: boolean): void {
+    if (active) document.dispatchEvent(new Event("distancepick"));
     choosingStart = active;
     setStart.textContent = active ? "Cancel start selection" : "Set start on map";
     setStart.setAttribute("aria-pressed", String(active));
