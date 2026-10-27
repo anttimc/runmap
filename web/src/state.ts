@@ -1,15 +1,15 @@
-import type { Location, PathPolicy } from "./api-types";
+import type { Location, PathPolicy, RunMode } from "./api-types";
 
-export type ToolMode = "explore" | "plan";
+export type PlannerMode = "off" | RunMode;
 
 /** Shared inputs owned by the application coordinator. */
 export interface SharedState {
-  /** Editing focus only; map layers remain independent. */
-  mode: ToolMode;
+  /** Planner activation only; map layers remain independent. */
+  plannerMode: PlannerMode;
   home: Location | undefined;
   policy: Readonly<PathPolicy>;
 }
 
 export function createSharedState(policy: PathPolicy): SharedState {
-  return { mode: "explore", home: undefined, policy: { ...policy } };
+  return { plannerMode: "off", home: undefined, policy: { ...policy } };
 }

@@ -58,7 +58,7 @@ and hosted storage are [future work](roadmap.md).
 | `routing/baseline.py`, `experiments/` | CLI anchor baseline and standalone measurements/experiments |
 | `api/` | Terrain/path delivery, inspection, snapshots, and bounded planner requests |
 | `web/src/main.ts`, `map-style.ts` | Map startup, terrain controls, and declarative basemap style |
-| `web/src/app.ts`, `state.ts` | Shared home/path policy, mode switching, and map-click dispatch |
+| `web/src/app.ts`, `state.ts` | Shared home/path policy, planner activation, and map-click dispatch |
 | `web/src/api.ts`, `api-types.ts` | HTTP transport, error handling, and frontend request/response types |
 | `web/src/paths.ts`, `runs.ts`, `layout.ts` | Feature interaction/rendering and responsive controls |
 
@@ -69,11 +69,25 @@ a scalar arc-cost callback with explicit request data and fixed leg context; it 
 require a plugin registry. Its integer search view references the same physical
 segments and directed arc records as the serialized graph.
 
-The frontend coordinator owns shared state and notifies exploration/planning
-controllers when inputs or mode change. Features read shared state and request
-home changes through a callback; they do not modify each other's controls.
-Exploration mode is held in TypeScript rather than hidden form controls. The
-shared API module preserves cancellation and reports HTTP failures consistently;
+The frontend coordinator owns the shared home/start and routing policy and
+notifies path and planner controllers when those inputs change. The Plan run
+selector offers Off, One way, and Round trip / loop. Shared state tracks its
+`PlannerMode` separately from temporary endpoint picking; background gradient,
+path gradient, and distance shading have independent visibility controls. Layer controls and legends
+live in the Map layers panel; shared routing and map appearance settings live in
+the Settings dialog. The [guide](guide.md) describes the current controls.
+
+Features request home changes through a shared callback. Planner endpoint picking
+gets first chance to consume map clicks; otherwise the path controller handles
+distance-start selection or inspection. Starting either picking gesture cancels
+the other. Turning planning off removes editing markers and circle guides while
+leaving the generated route visible. Changing route type cancels pending requests,
+clears the previous result, and retains endpoint inputs and loop settings. The
+Orientation selector chooses the round-trip candidate shown by the compact
+summary and route layer. One-way results have one leg and hide orientation and
+midpoint/loop-width controls.
+
+The shared API module preserves cancellation and reports HTTP failures consistently;
 its response types are compile-time contracts, not runtime schema validation.
 DOM lookups use one helper that reports missing markup during setup. Prettier
 formats frontend sources; strict TypeScript checks also reject unused code.
@@ -441,12 +455,28 @@ not reached within budget share `beyond_budget`,
 including disconnected intervals, while policy-excluded intervals retain their
 separate state.
 
-Run requests split both snapped endpoints in one temporary overlay. The planner
-uses A* with a calibrated graph-distance lower bound, lazy shared shape integrals,
-directed hill features, and fixed return-leg reuse context. Costs are finite,
-nonnegative, and at least physical length. Legs are optimized sequentially;
-there is no globally optimal loop guarantee. Request caches do not persist
+Run requests split both snapped endpoints in one temporary overlay. Both modes use
+the existing directed A* search: Rust numeric traversal when a matching numeric
+artifact is loaded, or the Python reference search otherwise. One-way planning
+searches once with distance and enabled route preferences, using zero centre/side/
+reuse strengths. Round trips use lazy shared shape integrals, directed hill
+features, and fixed return-leg reuse context. Costs are finite, nonnegative, and
+at least physical length. Round-trip legs are optimized sequentially; there is
+no globally optimal loop guarantee. Request caches do not persist
 across requests. See the [routing reference](reference/routing-mathematics.md).
+
+The run API accepts `mode: "one_way" | "round_trip"`, defaulting to `round_trip`
+when omitted. Endpoint fields remain `home` and `turnaround` for request
+compatibility; in one-way mode they mean start and destination. Responses echo
+`mode` and candidates contain ordered `legs`: one outward leg or outward then
+return. The previous candidate `outbound`/`returning` fields are replaced by
+`legs`; API consumers and benchmark readers use that contract. Each leg retains
+geometry, distance, cost breakdown, physical traversals, observations, and search
+counts. Candidate validation enforces leg counts by mode. Orientation and centre
+diagnostics are null for one-way candidates. The returned cost configuration
+reports effective shape settings/strengths, including zero width for one way.
+SQLite expansion, frontier/source checks, deadlines, and concurrency bounds apply
+to either mode and inspect all legs present. No native artifact rebuild is needed.
 
 Graph-index preparation batch-projects node and segment coordinates to EPSG:3067
 and calibrates the distance lower bound once. Policy indexes share this geometry.

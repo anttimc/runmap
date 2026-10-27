@@ -1,6 +1,7 @@
 """Prepare request geometry and share lazy shape integration between searches."""
 
 import math
+from dataclasses import replace
 from collections.abc import Mapping
 
 from runmap.paths.exploration import Snap
@@ -15,9 +16,17 @@ from runmap.routing.deadlines import check_deadline
 from runmap.routing.fields import integrate_fields
 from runmap.routing.geometry import projected_points, indexed_segment_points
 from runmap.routing.integer_graph import IntegerArc, integer_arc, integer_segment_id
-from runmap.routing.run_types import RunSettings
+from runmap.routing.run_types import RunMode, RunSettings
 from runmap.routing.search import GraphData
 from runmap.routing.types import Arc
+
+
+def effective_run_settings(settings: RunSettings, mode: RunMode) -> RunSettings:
+    """One-way routes use preferences without round-trip shape costs."""
+    if mode not in ("one_way", "round_trip"):
+        raise ValueError("Unsupported run mode")
+    validate_settings(settings)
+    return replace(settings, avoidance_ratio=0) if mode == "one_way" else settings
 
 
 def validate_settings(settings: RunSettings) -> None:

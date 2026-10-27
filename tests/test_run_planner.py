@@ -9,14 +9,14 @@ from collections.abc import Callable
 
 from test_routing import graph_document
 from runmap.paths.exploration import Snap
-from runmap.routing.cost_preparation import build_request_cost_data, resolve_traversal
+from runmap.routing.cost_preparation import build_request_cost_data, resolve_traversal, validate_settings
 from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
 from runmap.routing.costs import arc_cost
 from runmap.routing.fields import integrate_fields
 from runmap.routing.geometry import indexed_node_point, indexed_segment_points
 from runmap.routing.integer_graph import IntegerArc
 from runmap.routing.run_planner import (RunSettings, endpoint_overlay, plan_run,
-                                        distance_heuristic, projected_points, validate_settings, penalty_strengths)
+                                        distance_heuristic, projected_points, penalty_strengths)
 from runmap.paths.exploration import split_start_graph
 from runmap.routing.search import GraphData, PathResult, apply_profile, arc_usable, build_graph_index, route_coordinates, shortest_path
 
@@ -59,7 +59,7 @@ class RunPlannerTests(unittest.TestCase):
         for candidate in result.candidates:
             self.assertAlmostEqual(candidate.distance_m, 660)
             self.assertAlmostEqual(candidate.repeated_distance_m, 330)
-            coordinates = route_coordinates(result.overlay.graph, candidate.outbound.arc_ids)
+            coordinates = route_coordinates(result.overlay.graph, candidate.legs[0].path.arc_ids)
             self.assertAlmostEqual(coordinates[0][0], 24.802, places=5)
             self.assertAlmostEqual(coordinates[-1][0], 24.808, places=5)
         self.assertEqual(len(self.index.segments), 2)
@@ -67,7 +67,7 @@ class RunPlannerTests(unittest.TestCase):
 
     def test_shared_junction_keeps_both_split_segments(self) -> None:
         overlay = endpoint_overlay(self.index, self.snap("ab", .5), self.snap("bc", .5))
-        path = shortest_path(overlay.graph, overlay.home, overlay.turnaround)
+        path = shortest_path(overlay.graph, overlay.start, overlay.destination)
         assert path is not None
         self.assertAlmostEqual(path.cost, 825)
         self.assertTrue(all(arc_usable(overlay.graph, overlay.graph.arcs[a]) for a in path.arc_ids))
@@ -87,7 +87,7 @@ class RunPlannerTests(unittest.TestCase):
         self.assertIs(overlay.graph.projected.wgs84, self.index.projected.wgs84)
         self.assertIs(self.index.projected.node_ids, self.index.integer.node_ids)
         self.assertIs(self.index.projected.segment_ids, self.index.integer.segment_ids)
-        self.assertNotIn(overlay.home, self.index.integer.node_indices)
+        self.assertNotIn(overlay.start, self.index.integer.node_indices)
 
     def test_cached_lower_bound_accounts_for_short_temporary_arcs(self) -> None:
         home = replace(self.snap("ab", .2), graph_offset_m=1)
@@ -98,7 +98,7 @@ class RunPlannerTests(unittest.TestCase):
             heuristic = distance_heuristic(graph, None)
             for arc in graph.arcs.values():
                 self.assertLessEqual(heuristic(arc["from"], arc["to"]), arc["length_m"])
-        for graph, start, end in ((overlay.graph, overlay.home, overlay.turnaround),
+        for graph, start, end in ((overlay.graph, overlay.start, overlay.destination),
                                   (exploration, "@snapped-start", "c")):
             astar = shortest_path(graph, start, end, heuristic=distance_heuristic(graph, None))
             self.assertEqual(astar, shortest_path(graph, start, end))
@@ -111,7 +111,7 @@ class RunPlannerTests(unittest.TestCase):
         with patch("runmap.routing.cost_preparation.projected_points", side_effect=AssertionError), \
                 patch("runmap.routing.run_planner.projected_points", side_effect=AssertionError):
             heuristic = distance_heuristic(overlay.graph, None)
-            result = shortest_path(overlay.graph, overlay.home, overlay.turnaround,
+            result = shortest_path(overlay.graph, overlay.start, overlay.destination,
                                    heuristic=heuristic,
                                    arc_cost=lambda arc: arc_cost(arc, data=data, cache=cache,
                                                                leg=LegCostContext(True), deadline=None))
@@ -129,8 +129,8 @@ class RunPlannerTests(unittest.TestCase):
         result = plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5),
                           RunSettings(centre_enabled=False, side_strength=0, reuse_strength=0))
         for candidate in result.candidates:
-            self.assertAlmostEqual(candidate.outbound.cost, candidate.distance_m / 2)
-            self.assertAlmostEqual(candidate.returning.cost, candidate.distance_m / 2)
+            self.assertAlmostEqual(candidate.legs[0].path.cost, candidate.distance_m / 2)
+            self.assertAlmostEqual(candidate.legs[1].path.cost, candidate.distance_m / 2)
 
     def test_zero_avoidance_disables_all_preferences_and_retraces(self) -> None:
         result = plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5),
@@ -139,13 +139,13 @@ class RunPlannerTests(unittest.TestCase):
         self.assertEqual(len(result.candidates), 1)
         candidate = result.candidates[0]
         graph = result.overlay.graph
-        shortest = shortest_path(graph, result.overlay.home, result.overlay.turnaround)
+        shortest = shortest_path(graph, result.overlay.start, result.overlay.destination)
         assert shortest is not None
-        self.assertAlmostEqual(candidate.outbound.cost, shortest.cost)
-        self.assertAlmostEqual(candidate.returning.cost, shortest.cost)
+        self.assertAlmostEqual(candidate.legs[0].path.cost, shortest.cost)
+        self.assertAlmostEqual(candidate.legs[1].path.cost, shortest.cost)
         self.assertAlmostEqual(candidate.repeated_distance_m, candidate.distance_m / 2)
-        self.assertEqual(route_coordinates(graph, candidate.outbound.arc_ids),
-                         list(reversed(route_coordinates(graph, candidate.returning.arc_ids))))
+        self.assertEqual(route_coordinates(graph, candidate.legs[0].path.arc_ids),
+                         list(reversed(route_coordinates(graph, candidate.legs[1].path.arc_ids))))
 
     def test_zero_avoidance_still_honours_oneway(self) -> None:
         self.index = replace(self.index, segments=dict(self.index.segments))
@@ -214,7 +214,7 @@ class RunPlannerTests(unittest.TestCase):
         data = build_request_cost_data(overlay.graph, self.snap("ab", .2),
                                        self.snap("ab", .8), RunSettings())
         cache = RequestCostCache()
-        arc = overlay.graph.arcs[overlay.graph.outgoing[overlay.home][0]]
+        arc = overlay.graph.arcs[overlay.graph.outgoing[overlay.start][0]]
         unused = LegCostContext(True)
         baseline = arc_cost(arc, data=data, cache=cache, leg=unused, deadline=None)
         segment = data.index.segment_indices[arc["segment_id"]]
@@ -241,10 +241,10 @@ class RunPlannerTests(unittest.TestCase):
             result = plan_run(self.index, self.snap("ab", .2), self.snap("bc", .5),
                               RunSettings(avoidance_ratio=width))
             for candidate in result.candidates:
-                self.assertEqual(candidate.outbound_costs.reuse, 0)
-                self.assertEqual(candidate.returning_costs.reuse > 0, width > 0)
-                for path, costs in ((candidate.outbound, candidate.outbound_costs),
-                                    (candidate.returning, candidate.returning_costs)):
+                self.assertEqual(candidate.legs[0].costs.reuse, 0)
+                self.assertEqual(candidate.legs[1].costs.reuse > 0, width > 0)
+                for path, costs in ((candidate.legs[0].path, candidate.legs[0].costs),
+                                    (candidate.legs[1].path, candidate.legs[1].costs)):
                     self.assertAlmostEqual(path.cost, costs.total)
                     self.assertGreaterEqual(costs.total, costs.distance_m)
                     self.assertEqual((costs.hills, costs.signals, costs.busy_roads, costs.non_green), (0, 0, 0, 0))
@@ -253,7 +253,7 @@ class RunPlannerTests(unittest.TestCase):
         home, turnaround = self.snap("ab", .2), self.snap("ab", .8)
         overlay = endpoint_overlay(self.index, home, turnaround)
         data = build_request_cost_data(overlay.graph, home, turnaround, RunSettings(), parts=overlay.parts)
-        path = shortest_path(overlay.graph, overlay.home, overlay.turnaround)
+        path = shortest_path(overlay.graph, overlay.start, overlay.destination)
         assert path is not None
         arc = overlay.graph.arcs[path.arc_ids[0]]
         forward = resolve_traversal(data, arc)

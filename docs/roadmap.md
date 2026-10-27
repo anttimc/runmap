@@ -6,10 +6,37 @@ historical passing tests and smoke checks do not complete local runner review.
 The priorities below consolidate the previous plans without marking their
 remaining acceptance gates complete.
 
+## Next: one-way and round-trip planning
+
+Local runner acceptance for the [delivered route modes](guide.md#plan-run)
+remains outstanding:
+
+- Review familiar one-way and round-trip routes with hills Off/Low/High, including
+  directed paths without a return, moved endpoints, and loop-width changes.
+  Record dataset/settings identities and explain any reference/native differences.
+- Check keyboard-only use, endpoint and circle dragging, Fit run, shared-start
+  edits from distance controls, and all layer combinations on desktop and mobile.
+  Automated browser checks use controlled route responses; real route quality and
+  local runner acceptance remain separate.
+- Measure representative one-way and round-trip backend and visible interaction
+  latency, including cold/warm requests and concurrent planners. Fewer searches
+  alone do not establish responsive interaction.
+
+### Deferred: planned-route terrain inspection
+
+Route elevation/gradient plotting is postponed. The intended follow-up replaces
+segment gradient/profile inspection with inspection of the selected complete
+planned route, in travel order, for either planning mode. Current segment
+inspection remains available. Before that follow-up, resolve absolute elevation
+versus integrated relative height change,
+preparation/storage implications, and the remaining scope of path metadata and
+distance inspection. Route inspection must handle partial/reversed/repeated
+traversals, gaps and uncertainty, independently of whether hill avoidance is on.
+
 ## Next: correctness and local acceptance
 
 - Replace the remaining “minimum outing” wording in interval inspection with
-  forward-distance terminology. The Explore status label already says return
+  forward-distance terminology. The Distance from start label already says return
   distance is excluded. Acceptance: labels, help, inspection, and budget behavior
   consistently describe forward distance and make no return guarantee.
 - Review familiar flat corridors, short/sustained hills, rolling paths,
@@ -24,6 +51,11 @@ remaining acceptance gates complete.
   failure states, mode restoration, inspection, and Fit run. Historical browser
   reports include superseded hill models. Acceptance: current controls behave
   consistently and undesirable runs can be reproduced.
+- Update `web/scripts/check-distance-shells.mjs` for the current layer switches,
+  persistent path hit testing, and combined layer display. Remove its obsolete
+  zero-path-tile assertion and validate shared-start changes with planning enabled
+  and disabled. Acceptance: the browser script runs against current markup and
+  verifies both shell methods, cancellation, inspection, and layer combinations.
 - Measure current preparation size/time, startup memory, cold/warm tile delivery,
   browser responsiveness, and start/policy/budget changes on a recorded machine.
   Existing tile benchmarks demonstrate specific payload/source-processing gains;
@@ -239,8 +271,9 @@ Deliver these independently after their data and validation gates pass:
 
 Feedback tools such as copied reproducible request records, advanced shape
 settings, field/repetition overlays, and longer inspection stretches remain
-follow-ups driven by the local review. Cross-junction flat/hill discovery and
-absolute-elevation profiles need explicit scope before implementation.
+follow-ups driven by the local review. Cross-junction flat/hill discovery needs
+explicit scope before implementation. Route terrain inspection is deferred as
+described [above](#deferred-planned-route-terrain-inspection).
 
 ## Planned: terrain and maintainability
 

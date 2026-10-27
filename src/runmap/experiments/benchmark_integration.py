@@ -57,7 +57,7 @@ def verify_routes(expected: RunResult, actual: RunResult) -> None:
     if expected.outcomes != actual.outcomes or len(expected.candidates) != len(actual.candidates):
         raise ValueError("Planner outcomes differ")
     for first, second in zip(expected.candidates, actual.candidates):
-        for a, b in ((first.outbound, second.outbound), (first.returning, second.returning)):
+        for a, b in ((first.legs[0].path, second.legs[0].path), (first.legs[1].path, second.legs[1].path)):
             if a.arc_ids != b.arc_ids or not math.isclose(a.cost, b.cost, rel_tol=1e-12, abs_tol=1e-9):
                 raise ValueError("Planner paths or costs differ")
 

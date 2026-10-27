@@ -115,8 +115,8 @@ def planner_outputs(data: PathData) -> dict[str, object]:
                                   preferences=PreferenceSettings(hills=hills), hills=data.hills)
                 results[key] = digest(dict(candidates=[asdict(candidate) for candidate in result.candidates],
                                            outcomes=result.outcomes, preferences=asdict(result.preferences),
-                                           coordinates=[(route_coordinates(result.overlay.graph, c.outbound.arc_ids),
-                                                         route_coordinates(result.overlay.graph, c.returning.arc_ids))
+                                           coordinates=[(route_coordinates(result.overlay.graph, c.legs[0].path.arc_ids),
+                                                         route_coordinates(result.overlay.graph, c.legs[1].path.arc_ids))
                                                         for c in result.candidates]))
                 timings[key] = result.elapsed_s*1000
     return dict(planners=results, planner_ms=timings)

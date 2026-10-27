@@ -83,7 +83,7 @@ def benchmark(graph_path: Path, *, cases: tuple[LocalCase, ...] = CASES,
                 candidates: list[dict[str, object]] = []
                 for candidate in result.candidates:
                     legs: list[dict[str, object]] = []
-                    for leg in (candidate.outbound, candidate.returning):
+                    for leg in (candidate.legs[0], candidate.legs[1]):
                         observed = sum_hill_features(traversal_hills(data.hills, TraversalRef(
                             item.segment_id, min(item.start_m, item.end_m), max(item.start_m, item.end_m),
                             item.start_m > item.end_m)) for item in leg.traversals)

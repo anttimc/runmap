@@ -101,13 +101,13 @@ class IntegerGraphTests(unittest.TestCase):
         self.assertIs(dense.node_ids, base.node_ids)
         self.assertEqual(base.extra_arcs, ())
         self.assertEqual(base.outgoing_overrides, {})
-        self.assertNotIn(overlay.home, base.node_indices)
+        self.assertNotIn(overlay.start, base.node_indices)
         self.assertEqual(sorted(dense.node_indices.values()), list(range(len(base.node_ids) + 2)))
         for arc_id in overlay.graph.arcs:
             prepared = integer_arc(dense, dense.arc_indices[arc_id])
             self.assertEqual(external_arc(dense, prepared.index)['id'], arc_id)
-        self.assertEqual(shortest_path(overlay.graph, overlay.home, overlay.turnaround),
-                         shortest_path_string(overlay.graph, overlay.home, overlay.turnaround))
+        self.assertEqual(shortest_path(overlay.graph, overlay.start, overlay.destination),
+                         shortest_path_string(overlay.graph, overlay.start, overlay.destination))
 
     def test_exploration_overlay_and_relaxed_policy(self) -> None:
         document = fixture()

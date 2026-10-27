@@ -168,17 +168,20 @@ export interface Leg {
   distance_m: number;
   observations: TerrainObservations;
 }
+export type RunMode = "one_way" | "round_trip";
 export interface Candidate {
-  outbound_left: boolean;
-  outbound: Leg;
-  returning: Leg;
+  mode: RunMode;
+  outbound_left: boolean | null;
+  legs: Leg[];
   distance_m: number;
   repeated_distance_m: number;
-  closest_centre_m: number;
+  closest_centre_m: number | null;
   encloses_centre: boolean | null;
   equivalent_to: number | null;
 }
 export interface RunResponse {
+  mode: RunMode;
+  cost_model: { shape_settings: { avoidance_ratio: number } };
   dataset_id: string;
   status: string;
   home: Snap | null;

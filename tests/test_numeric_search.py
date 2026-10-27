@@ -133,7 +133,7 @@ class NumericSearchTests(unittest.TestCase):
                         cache = RequestCostCache()
                         used = frozenset(overlay.graph.integer.segment_indices.values())
                         leg = LegCostContext(right, frozenset(used))
-                        expected = shortest_path(overlay.graph, overlay.home, overlay.turnaround,
+                        expected = shortest_path(overlay.graph, overlay.start, overlay.destination,
                             indexed_arc_cost=lambda arc: indexed_arc_cost(arc, data=data, cache=cache, leg=leg, deadline=None))
                         breakdown = path_cost_breakdown(expected.arc_ids, data, cache, leg)
                         shape = NumericShapeCosts(points[0], points[1], settings, right,
@@ -194,8 +194,8 @@ class NumericSearchTests(unittest.TestCase):
                     self.assertEqual(len(actual.candidates), len(expected.candidates))
                     for a, e in zip(actual.candidates, expected.candidates):
                         self.assertEqual(a.outbound_left, e.outbound_left)
-                        self.assertAlmostEqual(a.outbound.cost, e.outbound.cost, delta=1e-4)
-                        self.assertAlmostEqual(a.returning.cost, e.returning.cost, delta=1e-4)
+                        self.assertAlmostEqual(a.legs[0].cost, e.legs[0].path.cost, delta=1e-4)
+                        self.assertAlmostEqual(a.legs[1].cost, e.legs[1].path.cost, delta=1e-4)
 
     def test_same_segment_partial_hills_match_reference_in_both_directions(self) -> None:
         profile = exploration_profile(avoid_stairs=False)
@@ -208,7 +208,7 @@ class NumericSearchTests(unittest.TestCase):
                     request = build_request_cost_data(overlay.graph, home, end, RunSettings(avoidance_ratio=0),
                         parts=overlay.parts, preferences=PreferenceSettings(hills="high"), hills=local.hills)
                     cache, leg = RequestCostCache(), LegCostContext(True)
-                    expected = shortest_path(overlay.graph, overlay.home, overlay.turnaround,
+                    expected = shortest_path(overlay.graph, overlay.start, overlay.destination,
                         indexed_arc_cost=lambda arc: indexed_arc_cost(arc, data=request, cache=cache, leg=leg, deadline=None))
                     expected_cost = expected.cost
                 else:
@@ -341,15 +341,17 @@ class NumericSearchTests(unittest.TestCase):
         with closing(open_network_database(reference)) as connection:
             local = load_local_network(connection, BOUNDS)
         home, turnaround = Snap("ab", 0, 0, lon[0], lat[0], 0), Snap("ab", 100, 100, lon[1], lat[1], 0)
-        for width in (0, .18):
-            for level in ("off", "high"):
-                settings, preferences = RunSettings(avoidance_ratio=width), PreferenceSettings(hills=level)
-                expected = plan_run(local.routing, home, turnaround, settings, preferences=preferences, hills=local.hills)
-                actual = numeric_plan_run(loaded, NumericEndpoint(node_id=ids["a"]), NumericEndpoint(node_id=ids["b"]),
-                    xy[0], xy[1], settings, preferences=preferences)
-                self.assertEqual(actual.outcomes, expected.outcomes)
-                for a, b in zip(actual.candidates, expected.candidates):
-                    self.assertAlmostEqual(a.outbound.cost, b.outbound.cost, delta=1e-3)
-                    self.assertAlmostEqual(a.returning.cost, b.returning.cost, delta=1e-3)
-                    if width == 0 and level == "high":
-                        self.assertGreater(len(a.outbound.arc_ids), 1)
+        for mode in ("one_way", "round_trip"):
+            for width in (0, .18):
+                for level in ("off", "high"):
+                    settings, preferences = RunSettings(avoidance_ratio=width), PreferenceSettings(hills=level)
+                    expected = plan_run(local.routing, home, turnaround, settings, preferences=preferences, hills=local.hills, mode=mode)
+                    actual = numeric_plan_run(loaded, NumericEndpoint(node_id=ids["a"]), NumericEndpoint(node_id=ids["b"]),
+                        xy[0], xy[1], settings, preferences=preferences, mode=mode)
+                    self.assertEqual(actual.outcomes, expected.outcomes)
+                    for a, b in zip(actual.candidates, expected.candidates):
+                        self.assertAlmostEqual(a.legs[0].cost, b.legs[0].path.cost, delta=1e-3)
+                        if mode == "round_trip":
+                            self.assertAlmostEqual(a.legs[1].cost, b.legs[1].path.cost, delta=1e-3)
+                        if (width == 0 or mode == "one_way") and level == "high":
+                            self.assertGreater(len(a.legs[0].arc_ids), 1)

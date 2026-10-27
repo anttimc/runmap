@@ -162,7 +162,7 @@ class HillTests(unittest.TestCase):
                     data = build_request_cost_data(current, self.home, self.turnaround, settings,
                                                    parts=overlay.parts, preferences=preference, hills=hills)
                     cache = RequestCostCache()
-                    result = shortest_path(current, overlay.home, overlay.turnaround,
+                    result = shortest_path(current, overlay.start, overlay.destination,
                                            indexed_arc_cost=partial(indexed_arc_cost, data=data, cache=cache,
                                                                     leg=LegCostContext(True), deadline=None),
                                            indexed_heuristic=indexed_distance_heuristic(current, None))
@@ -206,7 +206,7 @@ class HillTests(unittest.TestCase):
             result = plan_run(self.index, self.home, self.turnaround, RunSettings(),
                               preferences=PreferenceSettings(hills=level), hills=hills)
             for candidate in result.candidates:
-                self.assertEqual(candidate.outbound_costs.hills + candidate.returning_costs.hills, 0)
+                self.assertEqual(candidate.legs[0].costs.hills + candidate.legs[1].costs.hills, 0)
                 self.assertEqual(candidate.distance_m, 240)
 
     def test_response_has_no_cap_and_tails_are_continuous_positive_and_increasing(self) -> None:
@@ -262,6 +262,19 @@ class HillTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "contiguous"):
             build_hill_data(self.index, document)
 
+    def test_one_way_hills_choose_a_gentler_outward_route_without_searching_return(self) -> None:
+        hills = self.hills([10])
+        with patch("runmap.routing.run_planner.shortest_path", wraps=shortest_path) as search:
+            result = plan_run(self.index, self.home, self.turnaround, RunSettings(), mode="one_way",
+                              preferences=PreferenceSettings(hills="high"), hills=hills)
+        self.assertEqual(search.call_count, 1)
+        self.assertEqual(result.candidates[0].legs[0].path.arc_ids, ("ac:f", "cb:f"))
+        reverse = plan_run(self.index, self.turnaround, self.home, RunSettings(), mode="one_way",
+                           preferences=PreferenceSettings(hills="high"), hills=hills)
+        self.assertEqual(reverse.candidates[0].legs[0].traversals[0].segment_id, "ab")
+        self.assertTrue(reverse.candidates[0].legs[0].traversals[0].reverse)
+        self.assertEqual(reverse.candidates[0].legs[0].observations.estimated_descent_m, 10)
+
     def test_zero_width_hills_search_return_independently_and_use_both_directions(self) -> None:
         hills = self.hills([10])
         with patch("runmap.routing.run_planner.reverse_path", side_effect=AssertionError("Cannot retrace asymmetric costs")):
@@ -269,15 +282,15 @@ class HillTests(unittest.TestCase):
                               preferences=PreferenceSettings(hills="high"), hills=hills)
         self.assertEqual(len(result.candidates), 1)
         candidate = result.candidates[0]
-        self.assertEqual(candidate.outbound.arc_ids, ("ac:f", "cb:f"))
-        self.assertEqual(candidate.returning_traversals[0].segment_id, "ab")
-        self.assertTrue(candidate.returning_traversals[0].reverse)
+        self.assertEqual(candidate.legs[0].path.arc_ids, ("ac:f", "cb:f"))
+        self.assertEqual(candidate.legs[1].traversals[0].segment_id, "ab")
+        self.assertTrue(candidate.legs[1].traversals[0].reverse)
         self.assertEqual(candidate.distance_m, 240)
-        self.assertEqual(candidate.returning_costs.hills, 0)
-        self.assertEqual(candidate.outbound_costs.hills, 0)
-        self.assertEqual(candidate.returning_observations.estimated_descent_m, 10)
-        self.assertAlmostEqual(candidate.returning.cost, candidate.returning_costs.total)
-        self.assertEqual((candidate.returning_costs.centre, candidate.returning_costs.side, candidate.returning_costs.reuse), (0, 0, 0))
+        self.assertEqual(candidate.legs[1].costs.hills, 0)
+        self.assertEqual(candidate.legs[0].costs.hills, 0)
+        self.assertEqual(candidate.legs[1].observations.estimated_descent_m, 10)
+        self.assertAlmostEqual(candidate.legs[1].path.cost, candidate.legs[1].costs.total)
+        self.assertEqual((candidate.legs[1].costs.centre, candidate.legs[1].costs.side, candidate.legs[1].costs.reuse), (0, 0, 0))
         off = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0))
         self.assertGreater(candidate.distance_m, off.candidates[0].distance_m)
 
@@ -294,11 +307,11 @@ class HillTests(unittest.TestCase):
                 result = plan_run(index, self.home, self.turnaround, RunSettings(avoidance_ratio=0),
                                   preferences=PreferenceSettings(hills=level), hills=hills)
                 candidate = result.candidates[0]
-                self.assertEqual(candidate.outbound.arc_ids, ("ac:f", "cb:f"))
-                self.assertEqual(candidate.outbound_observations.estimated_ascent_m, 10)
-                self.assertEqual(sum(index.arcs[arc]["length_m"] for arc in candidate.outbound.arc_ids), 200)
-                self.assertEqual(candidate.returning_traversals[0].segment_id, "ab")
-                self.assertTrue(candidate.returning_traversals[0].reverse)
+                self.assertEqual(candidate.legs[0].path.arc_ids, ("ac:f", "cb:f"))
+                self.assertEqual(candidate.legs[0].observations.estimated_ascent_m, 10)
+                self.assertEqual(sum(index.arcs[arc]["length_m"] for arc in candidate.legs[0].path.arc_ids), 200)
+                self.assertEqual(candidate.legs[1].traversals[0].segment_id, "ab")
+                self.assertTrue(candidate.legs[1].traversals[0].reverse)
 
     def test_high_accepts_longer_mild_climb_without_flat_energy_charge(self) -> None:
         hills = build_hill_data(self.index, hill_document(
@@ -306,10 +319,10 @@ class HillTests(unittest.TestCase):
         result = plan_run(self.index, self.home, self.turnaround, RunSettings(avoidance_ratio=0),
                           preferences=PreferenceSettings(hills="high"), hills=hills)
         candidate = result.candidates[0]
-        self.assertEqual(candidate.outbound.arc_ids, ("ac:f", "cb:f"))
-        self.assertAlmostEqual(candidate.outbound_observations.estimated_ascent_m, 5)
+        self.assertEqual(candidate.legs[0].path.arc_ids, ("ac:f", "cb:f"))
+        self.assertAlmostEqual(candidate.legs[0].observations.estimated_ascent_m, 5)
         self.assertEqual(sum(result.overlay.graph.arcs[a]["length_m"]
-                             for a in candidate.outbound.arc_ids), 140)
+                             for a in candidate.legs[0].path.arc_ids), 140)
         # Both alternatives gain 5 m; the previous full-energy term chose 100 m at 5%.
         self.assertLess(100 * (1 + 6 * grade_response(5)),
                         140 * (1 + 6 * grade_response(25 / 7)))
@@ -330,10 +343,10 @@ class HillTests(unittest.TestCase):
         for candidate in result.candidates:
             assert graph.integer is not None
             used = frozenset(graph.integer.segment_indices[graph.arcs[arc]["segment_id"]]
-                             for arc in candidate.outbound.arc_ids)
-            legs = ((candidate.outbound, result.overlay.home, result.overlay.turnaround,
+                             for arc in candidate.legs[0].path.arc_ids)
+            legs = ((candidate.legs[0].path, result.overlay.start, result.overlay.destination,
                      LegCostContext(candidate.outbound_left)),
-                    (candidate.returning, result.overlay.turnaround, result.overlay.home,
+                    (candidate.legs[1].path, result.overlay.destination, result.overlay.start,
                      LegCostContext(not candidate.outbound_left, used)))
             for path, start, end, context in legs:
                 oracle = shortest_path(graph, start, end, arc_cost=partial(
@@ -349,9 +362,9 @@ class HillTests(unittest.TestCase):
                                        parts=overlay.parts, preferences=PreferenceSettings(hills="high"), hills=hills)
         cache = RequestCostCache()
         cost = partial(arc_cost, data=data, cache=cache, leg=LegCostContext(True), deadline=None)
-        astar = shortest_path(overlay.graph, overlay.home, overlay.turnaround, arc_cost=cost,
+        astar = shortest_path(overlay.graph, overlay.start, overlay.destination, arc_cost=cost,
                               heuristic=distance_heuristic(overlay.graph, None))
-        dijkstra = shortest_path(overlay.graph, overlay.home, overlay.turnaround, arc_cost=cost)
+        dijkstra = shortest_path(overlay.graph, overlay.start, overlay.destination, arc_cost=cost)
         assert astar is not None and dijkstra is not None
         self.assertEqual(astar.arc_ids, dijkstra.arc_ids)
         self.assertEqual(astar.cost, dijkstra.cost)

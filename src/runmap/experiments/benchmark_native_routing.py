@@ -44,7 +44,7 @@ def _canonical_result(result: NumericRunResult) -> str:
     rows = [dict(left=c.outbound_left,
                  legs=[dict(cost=p.cost, arcs=p.arc_ids.tolist(), segments=p.segment_ids.tolist(),
                             starts=p.start_m.tolist(), ends=p.end_m.tolist(), components=p.components.tolist())
-                       for p in (c.outbound, c.returning)]) for c in result.candidates]
+                       for p in c.legs]) for c in result.candidates]
     return hashlib.sha256(json.dumps(dict(outcomes=result.outcomes, candidates=rows), sort_keys=True).encode()).hexdigest()
 
 
@@ -61,7 +61,7 @@ def _compare_reference(database: Path, bounds: Bounds, options: RunRequest, home
                         frontier_nodes=local.frontier_indices)
     differences = [abs(a.cost-b.cost)
         for native, original in zip(actual.candidates, expected.candidates)
-        for a, b in ((native.outbound, original.outbound), (native.returning, original.returning))]
+        for a, b in zip(native.legs, (leg.path for leg in original.legs))]
     equivalent = (actual.outcomes == expected.outcomes and len(actual.candidates) == len(expected.candidates)
                   and all(d < .001 for d in differences))
     return dict(equivalent_costs=equivalent, maximum_cost_difference=max(differences, default=0),

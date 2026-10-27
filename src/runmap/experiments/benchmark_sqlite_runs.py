@@ -38,7 +38,7 @@ def reader(database: Path, graph: Path, backend: Literal["sqlite", "json"]) -> d
                 result = generate_database_run(data, options) if isinstance(data, SQLitePathData) else generate_run(data, options)
                 candidates = [candidate.model_dump(mode="json") for candidate in result.candidates]
                 for candidate in candidates:
-                    for leg in (candidate["outbound"], candidate["returning"]):
+                    for leg in candidate["legs"]:
                         leg.pop("expanded_nodes")
                 canonical = dict(status=result.status, candidates=candidates,
                                  home=None if result.home is None else asdict(result.home),

@@ -62,14 +62,17 @@ export async function startMapTools(map: Map, stops: ColorStop[]): Promise<void>
     setHome,
   });
 
-  const planEnabled = element<HTMLInputElement>("plan-enabled");
-  planEnabled.disabled = false;
-  planEnabled.addEventListener("change", () => {
-    state.mode = planEnabled.checked ? "plan" : "explore";
-    element("run-controls").hidden = !planEnabled.checked;
-    element("run-footer").hidden = !planEnabled.checked;
-    element("run-clear").hidden = !planEnabled.checked;
-    if (planEnabled.checked) paths.modeChanged();
+  const planMode = element<HTMLSelectElement>("plan-mode");
+  planMode.disabled = false;
+  planMode.addEventListener("change", () => {
+    state.plannerMode =
+      planMode.value === "one_way" || planMode.value === "round_trip" ? planMode.value : "off";
+    const enabled = state.plannerMode !== "off";
+    element("run-controls").hidden = !enabled;
+    element("run-footer").hidden = !enabled;
+    element("run-clear").hidden = !enabled;
+    document.querySelector<HTMLElement>(".controls")!.dataset.planning = String(enabled);
+    if (enabled) paths.modeChanged();
     planner?.modeChanged();
   });
   document.addEventListener("plannerpick", () => paths.modeChanged());

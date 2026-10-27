@@ -1,18 +1,20 @@
 # Distance shells
 
-In **Explore → Distance from start**, choose a start and a forward distance
-budget, then select **Grid** or **Filtered triangulation**. Both display filled
-500 m bands with thin outlines over the normal basemap. The final band can be
+In **Map layers**, turn on **Distance from start** and choose the shared start
+and a forward distance budget. Under its **Advanced options**, select **Grid** or
+**Filtered triangulation**. Both display filled 500 m bands with thin outlines
+over the normal basemap. The final band can be
 shorter. The method selector reports generation time so the two methods can be
-compared. Clicking a mapped path snaps to the network and opens the existing
-inspection panel, including its original distance and terrain samples.
+compared. Clicking a mapped path opens the inspection panel with its original
+distance and terrain samples. Inspection uses prepared hit geometry when present
+and falls back to network snapping when no path is hit.
 
 The filled space between paths is an approximate distance surface, not evidence
 that the intervening ground can be traversed. Neither algorithm has water or
 barrier polygons. Both are clipped to prepared coverage. Shell display requires
 the SQLite backend and its matching numeric routing artifact; configuration
 advertises available methods. Datasets without numeric routing retain gradient
-display and inspection; the distance button is disabled. Distance path colors,
+display and inspection; the distance switch is disabled. Distance path colors,
 snapshot MVTs, and `/api/paths/explore` have been removed.
 
 ## Shared distance samples
@@ -88,10 +90,13 @@ are read under the pinned artifact's lock, which is released before sampling,
 surface generation, and polygon assembly. Sample buffers are sealed read-only.
 
 The frontend uses one GeoJSON source with fill/outline layers below basemap
-roads and labels. Distance mode hides all path vector layers, including hit
-testing, so it does not request path tiles. Inspection instead uses the snap
-endpoint. Changing inputs aborts prior fetches and clears stale shell data;
-sequence checks prevent late responses from replacing the current result.
+roads and labels. Background gradient, Path gradient, and Distance from start
+have independent visibility controls. Path hit testing remains available, and
+path tiles may be requested while distance shading is on. Background gradient
+opacity is reduced to 30% of its selected value while the distance layer is on.
+The shared start also drives run planning; the distance budget applies only to
+distance exploration. Changing inputs aborts prior fetches and clears stale shell
+data; sequence checks prevent late responses from replacing the current result.
 
 ## Verification
 
@@ -101,9 +106,10 @@ clipping, cache coalescing, immutable samples, request identity, expiry, and
 HTTP validators. Frontend tests cover transport, expiry errors, matching legend
 colors, and layer/source behavior.
 
-The browser check exercises actual MapLibre rendering, both methods, snapshot
-reuse, zero path tile requests in distance mode, click inspection, rapid budget
-changes, clearing the start, and returning to gradient mode:
+The browser script below predates the independent map-layer controls. Its UI
+selectors and zero-path-tile assertion require updating before it can validate
+the current UI. Current browser acceptance is tracked in the
+[roadmap](roadmap.md#next-correctness-and-local-acceptance).
 
 ```sh
 # Vite on 5173, API on 8000, Chrome remote debugger on 9231
@@ -111,6 +117,6 @@ cd web
 node scripts/check-distance-shells.mjs ../artifacts/distance-shells/browser
 ```
 
-Screenshots and browser observations are saved in that artifact directory. The
-earlier algorithm measurements and reproduction commands are retained in the
+The script saves screenshots and observations in that artifact directory. Earlier
+algorithm measurements and reproduction commands are retained in the
 [prototype report](archive/history/53-distance-shells.md).

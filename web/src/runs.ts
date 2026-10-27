@@ -15,10 +15,12 @@ import type {
   PreferenceLevel,
   RunPlannerConfiguration,
   RunResponse,
+  RunMode,
   Snap,
 } from "./api-types";
 import type { SharedState } from "./state";
 import { element } from "./dom";
+import { candidateName, candidateDetails, runCoordinates } from "./run-results";
 
 const hillPresets: { level: PreferenceLevel; label: string; description: string }[] = [
   { level: "off", label: "Off", description: "No preference for flatter paths." },
@@ -85,18 +87,6 @@ function circleCoordinates(midpoint: Location, radius: number): Location[] {
   );
 }
 
-function candidateName(candidate: Candidate): string {
-  const outbound = candidate.outbound.coordinates;
-  const returning = candidate.returning.coordinates;
-  const retraced =
-    outbound.length === returning.length &&
-    outbound.every((point, index) => {
-      const reverse = returning[returning.length - 1 - index];
-      return Math.abs(point[0] - reverse[0]) < 1e-9 && Math.abs(point[1] - reverse[1]) < 1e-9;
-    });
-  return retraced ? "Out and back" : candidate.outbound_left ? "Clockwise" : "Counter-clockwise";
-}
-
 function addRunLayers(map: Map): void {
   map.addSource("run-geometry", { type: "geojson", data: empty });
   map.addLayer({
@@ -148,7 +138,10 @@ function addRunLayers(map: Map): void {
 }
 
 export function startRunPlanner(map: Map, options: Options): RunControls {
-  const active = (): boolean => options.state.mode === "plan";
+  const active = (): boolean => options.state.plannerMode !== "off";
+  let routeMode: RunMode = "round_trip";
+  const roundTrip = (): boolean => routeMode === "round_trip";
+  const endpointLabel = (): string => (roundTrip() ? "turnaround" : "destination");
   let choosing: "home" | "turnaround" | undefined;
   let turnaround: Location | undefined;
   let dragging = false;
@@ -201,10 +194,11 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   element("run-preferences").hidden = hills.disabled;
   const inputsKey = (): string =>
     JSON.stringify([
+      routeMode,
       options.state.home,
       turnaround,
       options.state.policy,
-      avoidance.value,
+      roundTrip() ? avoidance.value : "0",
       hills.value,
     ]);
   let observedInputs = inputsKey();
@@ -212,7 +206,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     new Marker({ color: "#193c38", draggable: true }),
     new Marker({ color: "#805523", draggable: true }),
   ];
-  markers[0].getElement().title = "Home";
+  markers[0].getElement().title = "Start";
   markers[1].getElement().title = "Turnaround";
   const handle = document.createElement("button");
   handle.type = "button";
@@ -257,7 +251,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       }
       if (home && a) features.push(line([home, a], "guide"));
       if (turnaround && b) features.push(line([turnaround, b], "guide"));
-      if (a && b) {
+      if (a && b && roundTrip()) {
         const distance = separation(a, b);
         const midpoint: Location = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
         const radius = distance * Number(avoidance.value);
@@ -269,12 +263,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     }
     const candidate = response?.candidates[selected];
     if (candidate) {
-      features.push(
-        line(
-          [...candidate.outbound.coordinates, ...candidate.returning.coordinates.slice(1)],
-          "route",
-        ),
-      );
+      features.push(line(runCoordinates(candidate), "route"));
       element("run-direction-label").textContent =
         `${candidateName(candidate)} · arrows show travel direction`;
     }
@@ -314,25 +303,25 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     element("run-home").setAttribute(
       "aria-label",
       value === "home"
-        ? "Cancel home selection"
+        ? "Cancel start selection"
         : options.state.home
-          ? "Change home"
-          : "Set home on map",
+          ? "Change start"
+          : "Set start on map",
     );
     element("run-turnaround").setAttribute(
       "aria-label",
       value === "turnaround"
-        ? "Cancel turnaround selection"
+        ? `Cancel ${endpointLabel()} selection`
         : turnaround
-          ? "Change turnaround"
-          : "Set turnaround on map",
+          ? `Change ${endpointLabel()}`
+          : `Set ${endpointLabel()} on map`,
     );
     map.getCanvas().style.cursor = value ? "crosshair" : "";
     if (value)
       status.textContent =
         value === "home"
           ? "Click the map to set your start."
-          : "Click the map to set your turnaround.";
+          : `Click the map to set your ${endpointLabel()}.`;
     else if (wasPicking) status.textContent = pickStatus;
   }
   function invalidate(): void {
@@ -365,9 +354,9 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       if (current !== snapSequence) return;
       [homeSnap, turnaroundSnap] = snaps;
       if (home && !homeSnap)
-        status.textContent = "Home has no eligible path within the snap radius.";
+        status.textContent = "Start has no eligible path within the snap radius.";
       else if (turnaround && !turnaroundSnap)
-        status.textContent = "Turnaround has no eligible path within the snap radius.";
+        status.textContent = `${roundTrip() ? "Turnaround" : "Destination"} has no eligible path within the snap radius.`;
       draw();
     } catch (error) {
       if (current === snapSequence && (error as Error).name !== "AbortError")
@@ -375,6 +364,10 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     }
   }
   function selectOrientation(): void {
+    if (!roundTrip() || response?.cost_model.shape_settings.avoidance_ratio === 0) {
+      selected = response?.candidates.length ? 0 : -1;
+      return;
+    }
     selected =
       response?.candidates.findIndex(
         (candidate) => candidate.outbound_left === (orientation.value === "clockwise"),
@@ -389,18 +382,12 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     summary.className = "run-summary";
     summary.textContent = `${(candidate.distance_m / 1000).toFixed(2)} km`;
     container.append(summary);
-    const shape =
-      candidate.encloses_centre === true
-        ? "Encloses centre"
-        : candidate.encloses_centre === false
-          ? "Does not enclose centre"
-          : "Retracing or crossings: enclosure unclear";
     element("run-detail-content").textContent =
-      `Out ${(candidate.outbound.distance_m / 1000).toFixed(2)} km · back ${(candidate.returning.distance_m / 1000).toFixed(2)} km. ${Math.round(candidate.repeated_distance_m)} m repeated. ${shape} · closest approach ${Math.round(candidate.closest_centre_m)} m. ${response?.coverage_note ?? ""}`;
+      `${candidateDetails(candidate)} ${response?.coverage_note ?? ""}`;
     showTerrain(candidate);
   }
   function showTerrain(candidate: Candidate): void {
-    const observations = [candidate.outbound.observations, candidate.returning.observations];
+    const observations = candidate.legs.map((leg) => leg.observations);
     const note = element("run-detail-content");
     if (observations.every((item) => item.terrain_valid_fraction === null)) return;
     const ascent = observations.reduce((total, item) => total + (item.estimated_ascent_m ?? 0), 0);
@@ -427,6 +414,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     abort = new AbortController();
     const current = ++sequence;
     const requestedInputs = inputsKey();
+    const requestedMode = routeMode;
     generating = true;
     draw();
     status.textContent = response?.candidates.length
@@ -437,11 +425,12 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       const next = await requestRun(
         {
           dataset_id: options.datasetId,
+          mode: requestedMode,
           home: { longitude: home[0], latitude: home[1] },
           turnaround: { longitude: turnaround[0], latitude: turnaround[1] },
           ...options.state.policy,
           settings: {
-            avoidance_ratio: Number(avoidance.value),
+            avoidance_ratio: roundTrip() ? Number(avoidance.value) : 0,
             centre_enabled: true,
           },
           preferences: { hills: hillPreset().level },
@@ -449,6 +438,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
         abort.signal,
       );
       if (current !== sequence) return;
+      if (next.mode !== requestedMode) throw new Error("Route mode changed; generate again.");
       if (next.dataset_id !== options.datasetId)
         throw new Error("Dataset changed; reload the map.");
       response = next;
@@ -466,8 +456,10 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
             : next.status === "area_limited"
               ? "The search reached its area limit. Try closer endpoints."
               : next.status === "no_eligible_snap"
-                ? `${!next.home ? "Home" : "Turnaround"} could not snap to an eligible path.`
-                : "No complete return run connects these points under the current path filters.";
+                ? `${!next.home ? "Start" : roundTrip() ? "Turnaround" : "Destination"} could not snap to an eligible path.`
+                : roundTrip()
+                  ? "No complete return run connects these points under the current path filters."
+                  : "No route reaches the destination under the current path filters.";
       status.textContent = message;
       candidates();
       draw();
@@ -500,7 +492,8 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     }, 0);
   }
   markers.forEach((marker, index) => {
-    marker.getElement().title = index === 0 ? "Drag to move home" : "Drag to move turnaround";
+    marker.getElement().title =
+      index === 0 ? "Drag to move start" : `Drag to move ${endpointLabel()}`;
     marker.on("dragstart", beginDrag);
     marker.on("dragend", () => {
       const point = marker.getLngLat();
@@ -541,8 +534,9 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     invalidate();
     endDrag();
   });
+  let finishCircleDrag: (() => void) | undefined;
   function dragCircle(event: MapMouseEvent | MapTouchEvent): void {
-    if (!active()) return;
+    if (!active() || !roundTrip()) return;
     event.preventDefault();
     const panEnabled = map.dragPan.isEnabled();
     beginDrag();
@@ -556,6 +550,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       centreMarker.setLngLat(circlePoint(midpoint, radius, 0));
     };
     const finish = (): void => {
+      finishCircleDrag = undefined;
       map.off("mousemove", move);
       map.off("touchmove", move);
       map.off("mouseup", finish);
@@ -565,6 +560,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       invalidate();
       endDrag();
     };
+    finishCircleDrag = finish;
     map.on("mousemove", move);
     map.on("touchmove", move);
     map.on("mouseup", finish);
@@ -580,7 +576,29 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     map.getCanvas().style.cursor = choosing ? "crosshair" : "";
   });
   function modeChanged(): void {
-    if (active() && observedInputs !== inputsKey()) invalidate();
+    finishCircleDrag?.();
+    dragging = false;
+    const interrupted = generating;
+    abort?.abort();
+    ++sequence;
+    generating = false;
+    element("run-cancel").hidden = true;
+    snappingAbort?.abort();
+    ++snapSequence;
+    pick();
+    if (interrupted) status.textContent = "Request cancelled. Generate again to update.";
+    const nextMode = options.state.plannerMode;
+    if (nextMode !== "off" && nextMode !== routeMode) {
+      routeMode = nextMode;
+      response = undefined;
+      responseInputs = undefined;
+      selected = -1;
+      homeSnap = turnaroundSnap = null;
+      invalidate();
+    } else if (active() && observedInputs !== inputsKey()) invalidate();
+    element("run-endpoint-label").textContent = roundTrip() ? "Turnaround" : "Destination";
+    element("run-shape-controls").hidden = !roundTrip();
+    markers[1].getElement().title = "Drag to move " + endpointLabel();
     pick(
       active()
         ? !options.state.home
@@ -590,10 +608,9 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
             : undefined
         : undefined,
     );
+    candidates();
     draw();
-    if (active()) {
-      void snapEndpoints();
-    }
+    if (active()) void snapEndpoints();
   }
   function sharedInputsChanged(): void {
     snappingAbort?.abort();
@@ -652,9 +669,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     const candidate = response?.candidates[selected];
     if (!candidate) return;
     const bounds = new LngLatBounds();
-    [...candidate.outbound.coordinates, ...candidate.returning.coordinates].forEach((point) =>
-      bounds.extend(point),
-    );
+    runCoordinates(candidate).forEach((point) => bounds.extend(point));
     map.fitBounds(bounds, { padding: mapPadding(), maxZoom: 16 });
   });
   return {

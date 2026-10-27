@@ -1,4 +1,4 @@
-"""Distance-based two-leg runs over the prepared pedestrian network."""
+"""Directed one-way and round-trip runs over the prepared pedestrian network."""
 
 from collections import ChainMap, Counter
 from dataclasses import replace
@@ -10,9 +10,9 @@ from collections.abc import Callable
 
 from runmap.paths.exploration import Snap, legal_directions, segment_reason
 from runmap.routing.cost_preparation import (
-    build_request_cost_data, penalty_strengths, resolve_traversal, validate_settings,
+    build_request_cost_data, effective_run_settings, penalty_strengths, resolve_traversal,
 )
-from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache
+from runmap.routing.cost_types import LegCostContext, PreferenceSettings, RequestCostCache, RequestCostData
 from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.costs import indexed_arc_cost, path_cost_breakdown, path_observations
 from runmap.routing.hill_types import HillData
@@ -21,7 +21,7 @@ from runmap.routing.geometry import (prepare_projected_geometry, projected_point
                                      indexed_node_point, indexed_segment_points)
 from runmap.routing.integer_graph import extend_integer_graph, integer_arc, integer_segment_id
 from runmap.routing.run_types import (
-    PhysicalPart, RunCandidate, RunOverlay, RunResult, RunSettings,
+    PhysicalPart, RunCandidate, RunLeg, RunMode, RunOverlay, RunResult, RunSettings,
 )
 from runmap.routing.search import GraphData, PathResult, arc_usable, shortest_path
 from runmap.routing.types import Arc, Node, Segment
@@ -134,25 +134,37 @@ def indexed_distance_heuristic(graph: GraphData, deadline: float | None) -> Call
     return estimate
 
 
+def _run_leg(path: PathResult, data: RequestCostData, cache: RequestCostCache,
+             context: LegCostContext) -> RunLeg:
+    return RunLeg(path, path_cost_breakdown(path.arc_ids, data, cache, context),
+                  tuple(resolve_traversal(data, data.graph.arcs[a]) for a in path.arc_ids),
+                  path_observations(path.arc_ids, data, cache))
+
+
+def _run_candidate(legs: tuple[RunLeg, ...], graph: GraphData, left: bool | None) -> RunCandidate:
+    counts = Counter(graph.arcs[a]["segment_id"] for leg in legs for a in leg.path.arc_ids)
+    repeated = sum(graph.segments[s]["length_m"] * (count - 1) for s, count in counts.items())
+    distance = sum(graph.arcs[a]["length_m"] for leg in legs for a in leg.path.arc_ids)
+    return RunCandidate(left, legs, distance, repeated)
+
+
 def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettings,
-             deadline: float | None = None, *,
+             deadline: float | None = None, *, mode: RunMode = "round_trip",
              preferences: PreferenceSettings = PreferenceSettings(),
              hills: HillData | None = None,
              frontier_nodes: frozenset[int] = frozenset()) -> RunResult:
-    """Construct both side assignments, retaining completed runs on deadline expiry."""
+    """Plan directed routes, retaining completed candidates on deadline expiry."""
     started = monotonic()
-    validate_settings(settings)
+    settings = effective_run_settings(settings, mode)
     resolved = resolve_preferences(preferences, hills=hills)
     if resolved.weights.hills and hills is not None and hills.graph is not index.document:
         raise ValueError("Hill features belong to a different prepared graph")
     overlay = endpoint_overlay(index, home, turnaround, deadline)
     graph = overlay.graph
     heuristic = indexed_distance_heuristic(graph, deadline)
-    cost_data = build_request_cost_data(graph, home, turnaround, settings,
-                                       parts=overlay.parts, preferences=preferences, hills=hills)
-    cost_cache = RequestCostCache()
-    zero_width = cost_data.shape_disabled
-
+    data = build_request_cost_data(graph, home, turnaround, settings,
+                                   parts=overlay.parts, preferences=preferences, hills=hills)
+    cache = RequestCostCache()
     candidates: list[RunCandidate] = []
     reached_frontier: set[int] = set()
 
@@ -160,48 +172,36 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
         if node in frontier_nodes:
             reached_frontier.add(node)
 
+    def search_leg(start: str, end: str, context: LegCostContext) -> PathResult | None:
+        return shortest_path(graph, start, end,
+            indexed_arc_cost=partial(indexed_arc_cost, data=data, cache=cache, leg=context, deadline=deadline),
+            indexed_heuristic=heuristic, deadline=deadline, visit_node=observe if frontier_nodes else None)
+
     outcomes: list[Literal["complete", "unreachable", "deadline"]] = []
-    for left in ((True,) if zero_width else (True, False)):
+    for left in ((True,) if data.shape_disabled else (True, False)):
         try:
             outbound_context = LegCostContext(left)
-            outbound = shortest_path(graph, overlay.home, overlay.turnaround,
-                                     indexed_arc_cost=partial(indexed_arc_cost, data=cost_data, cache=cost_cache,
-                                                      leg=outbound_context, deadline=deadline),
-                                     indexed_heuristic=heuristic, deadline=deadline,
-                                     visit_node=observe if frontier_nodes else None)
+            outbound = search_leg(overlay.start, overlay.destination, outbound_context)
             if outbound is None:
                 outcomes.append("unreachable")
                 continue
-            used = frozenset(integer_arc(cost_data.index, cost_data.index.arc_indices[a]).segment
-                             for a in outbound.arc_ids)
-            return_context = LegCostContext(not left, used)
-            returning = reverse_path(graph, outbound) if zero_width and cost_data.hills is None else None
-            if returning is None:
-                returning = shortest_path(graph, overlay.turnaround, overlay.home,
-                                      indexed_arc_cost=partial(indexed_arc_cost, data=cost_data, cache=cost_cache,
-                                                       leg=return_context, deadline=deadline),
-                                      indexed_heuristic=heuristic, deadline=deadline,
-                                      visit_node=observe if frontier_nodes else None)
-            if returning is None:
-                outcomes.append("unreachable")
-                continue
-            counts = Counter(graph.arcs[a]["segment_id"] for a in outbound.arc_ids + returning.arc_ids)
-            repeated = sum(graph.segments[s]["length_m"] * (count - 1) for s, count in counts.items())
-            distance = sum(graph.arcs[a]["length_m"] for a in outbound.arc_ids + returning.arc_ids)
-            candidates.append(RunCandidate(
-                left, outbound, returning, distance, repeated,
-                path_cost_breakdown(outbound.arc_ids, cost_data, cost_cache, outbound_context),
-                path_cost_breakdown(returning.arc_ids, cost_data, cost_cache, return_context),
-                tuple(resolve_traversal(cost_data, graph.arcs[a]) for a in outbound.arc_ids),
-                tuple(resolve_traversal(cost_data, graph.arcs[a]) for a in returning.arc_ids),
-                path_observations(outbound.arc_ids, cost_data, cost_cache),
-                path_observations(returning.arc_ids, cost_data, cost_cache),
-            ))
+            legs = (_run_leg(outbound, data, cache, outbound_context),)
+            if mode == "round_trip":
+                used = frozenset(integer_arc(data.index, data.index.arc_indices[a]).segment for a in outbound.arc_ids)
+                return_context = LegCostContext(not left, used)
+                returning = reverse_path(graph, outbound) if data.shape_disabled and data.hills is None else None
+                if returning is None:
+                    returning = search_leg(overlay.destination, overlay.start, return_context)
+                if returning is None:
+                    outcomes.append("unreachable")
+                    continue
+                legs += (_run_leg(returning, data, cache, return_context),)
+            candidates.append(_run_candidate(legs, graph, left if mode == "round_trip" else None))
             outcomes.append("complete")
         except TimeoutError:
             outcomes.append("deadline")
     return RunResult(overlay, tuple(candidates), tuple(outcomes), monotonic() - started,
-                     cost_data.preferences, frozenset(reached_frontier))
+                     data.preferences, frozenset(reached_frontier))
 
 
 def reverse_path(graph: GraphData, path: PathResult) -> PathResult | None:

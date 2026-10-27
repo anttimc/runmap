@@ -9,8 +9,9 @@ See [architecture](../architecture.md) for request/cache lifetimes and the
 [guide](../guide.md) for controls and result interpretation. This model is
 separate from the CLI anchor-baseline experiment.
 
-The planner finds paths from home to a turnaround point and back. It minimizes
-route distance plus penalties for loop shape, repeated paths and hills:
+The planner supports a directed one-way route from start to destination and a
+round trip from start through a turnaround and back. Round trips minimize route
+distance plus penalties for loop shape, repeated paths and hills:
 
 $$
 \boxed{C(P)=L(P)+C_{\mathrm{centre}}(P)+C_{\mathrm{side}}(P)
@@ -22,13 +23,19 @@ wins when its penalty savings exceed its additional distance. There is no fixed
 target distance. Access rules, surface selection and stair avoidance determine
 which paths are eligible before scoring.
 
+One-way mode minimizes $C_{\mathrm{one\ way}}(P)=L(P)+C_{\mathrm{hills}}(P)$
+with one directed search. Effective loop width is zero, so centre, side, and reuse
+strengths are zero regardless of saved round-trip settings. Hill preferences,
+access rules, and surface/stair policies still apply. A return connection is not
+required. Zero-width round-trip mode still requires both outward and return paths.
+
 ## 1. Geometry and settings
 
 Coordinates are projected into EPSG:3067, in metres. Define:
 
 | Symbol | Meaning | Default |
 | --- | --- | ---: |
-| $H,T$ | Snapped home and turnaround positions | User selected |
+| $H,T$ | Snapped start and turnaround positions (destination for one way) | User selected |
 | $D=\lVert T-H\rVert$ | Straight-line separation | Derived |
 | $M=(H+T)/2$ | Midpoint | Derived |
 | $a$ | Loop avoidance ratio | 0.18 |
@@ -209,9 +216,10 @@ $$
 
 Low chooses the shorter climb. High accepts 40 extra metres for the milder slope.
 
-## 5. Selecting the loop
+## 5. Selecting the route
 
-For each side assignment, the planner:
+One-way mode returns one candidate containing the lowest-cost outward path.
+Round-trip mode returns two-leg candidates. For each side assignment, the planner:
 
 1. Finds the lowest-cost outbound path with one preferred side.
 2. Finds the lowest-cost return path with the opposite preferred side and a

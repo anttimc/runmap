@@ -18,7 +18,7 @@ from runmap.api.sqlite_runs import RunAreaLimits, generate_database_run
 from runmap.paths.numeric_database import export_numeric_database
 from runmap.routing.numeric_planner import NumericRunResult, numeric_plan_run
 from runmap.routing.numeric_search import LoadedNumericGraph, NumericEndpoint, Point
-from runmap.routing.run_types import RunSettings
+from runmap.routing.run_types import RunMode, RunSettings
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.types import EdgeProfile, GraphDocument
 from test_path_api import fixture
@@ -29,6 +29,9 @@ from test_sqlite_runs import detour_graph
 class NumericRunTests(unittest.TestCase):
     setUp = test_sqlite_runs.SQLiteRunTests.setUp
     options = test_sqlite_runs.SQLiteRunTests.options
+    test_one_way_succeeds_without_return_and_matches_reference = test_sqlite_runs.SQLiteRunTests.test_one_way_succeeds_without_return_and_matches_reference
+    test_one_way_expands_detours_and_reports_area_and_deadline_limits = test_sqlite_runs.SQLiteRunTests.test_one_way_expands_detours_and_reports_area_and_deadline_limits
+    test_one_way_policies_and_reversed_partial_endpoints = test_sqlite_runs.SQLiteRunTests.test_one_way_policies_and_reversed_partial_endpoints
 
     def publish(self, graph: GraphDocument) -> tuple[SQLitePathData, Path]:
         data, source = test_sqlite_runs.SQLiteRunTests.publish(self, graph)
@@ -62,7 +65,7 @@ class NumericRunTests(unittest.TestCase):
                             for a, b in zip(actual.candidates, expected.candidates):
                                 self.assertAlmostEqual(a.distance_m, b.distance_m, places=5)
                                 self.assertAlmostEqual(a.repeated_distance_m, b.repeated_distance_m, places=5)
-                                for x, y in ((a.outbound, b.outbound), (a.returning, b.returning)):
+                                for x, y in ((a.legs[0], b.legs[0]), (a.legs[1], b.legs[1])):
                                     self.assertAlmostEqual(x.cost, y.cost, places=4)
                                     self.assertEqual(x.traversals, y.traversals)
                                     self.assertEqual(x.coordinates, y.coordinates)
@@ -166,14 +169,15 @@ class NumericRunTests(unittest.TestCase):
                 expected = generate_run(load_path_data(source), options)
                 self.assertEqual(actual.status, expected.status)
                 for a, b in zip(actual.candidates, expected.candidates):
-                    self.assertAlmostEqual(a.outbound.cost, b.outbound.cost, places=4)
-                    self.assertAlmostEqual(a.returning.cost, b.returning.cost, places=4)
+                    self.assertAlmostEqual(a.legs[0].cost, b.legs[0].cost, places=4)
+                    self.assertAlmostEqual(a.legs[1].cost, b.legs[1].cost, places=4)
 
     def test_deadline_retains_complete_candidates(self) -> None:
         data, _ = self.publish(detour_graph())
         def partial(graph: LoadedNumericGraph, home: NumericEndpoint, turnaround: NumericEndpoint,
                     home_point: Point, turnaround_point: Point, settings: RunSettings, *,
-                    profile: EdgeProfile, preferences: PreferenceSettings, deadline: float) -> NumericRunResult:
+                    profile: EdgeProfile, preferences: PreferenceSettings, deadline: float,
+                    mode: RunMode) -> NumericRunResult:
             result = numeric_plan_run(graph, home, turnaround, home_point, turnaround_point, settings,
                                       profile=profile, preferences=preferences, deadline=deadline)
             return replace(result, candidates=result.candidates[:1], outcomes=("complete", "deadline"))

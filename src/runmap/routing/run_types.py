@@ -6,6 +6,8 @@ from typing import Literal
 from runmap.routing.search import GraphData, PathResult
 from runmap.routing.cost_types import CostBreakdown, PhysicalPart, PreferenceObservations, ResolvedPreferences, TraversalRef
 
+RunMode = Literal["one_way", "round_trip"]
+
 
 @dataclass(frozen=True)
 class RunSettings:
@@ -20,24 +22,25 @@ class RunSettings:
 @dataclass(frozen=True)
 class RunOverlay:
     graph: GraphData
-    home: str
-    turnaround: str
+    start: str
+    destination: str
     parts: dict[int, PhysicalPart]
 
 
 @dataclass(frozen=True)
+class RunLeg:
+    path: PathResult
+    costs: CostBreakdown
+    traversals: tuple[TraversalRef, ...]
+    observations: PreferenceObservations
+
+
+@dataclass(frozen=True)
 class RunCandidate:
-    outbound_left: bool
-    outbound: PathResult
-    returning: PathResult
+    outbound_left: bool | None
+    legs: tuple[RunLeg, ...]
     distance_m: float
     repeated_distance_m: float
-    outbound_costs: CostBreakdown
-    returning_costs: CostBreakdown
-    outbound_traversals: tuple[TraversalRef, ...]
-    returning_traversals: tuple[TraversalRef, ...]
-    outbound_observations: PreferenceObservations
-    returning_observations: PreferenceObservations
 
 
 @dataclass(frozen=True)

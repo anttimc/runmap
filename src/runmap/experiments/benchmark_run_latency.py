@@ -82,9 +82,9 @@ def _request_sample(data: SQLitePathData, options: RunRequest, timeout_s: float,
     canonical = response.model_dump(mode="json", exclude={"elapsed_s"})
     return dict(elapsed_ms=elapsed_ms, phases_ms=phases.milliseconds, phase_calls=phases.calls,
                 status=response.status,
-                candidates=[dict(distance_m=c.distance_m, outbound_distance_m=c.outbound.distance_m,
-                                 returning_distance_m=c.returning.distance_m,
-                                 expanded_nodes=c.outbound.expanded_nodes+c.returning.expanded_nodes)
+                candidates=[dict(distance_m=c.distance_m, outbound_distance_m=c.legs[0].distance_m,
+                                 returning_distance_m=c.legs[1].distance_m,
+                                 expanded_nodes=c.legs[0].expanded_nodes+c.legs[1].expanded_nodes)
                             for c in response.candidates], response_bytes=len(payload.encode()),
                 response_sha256=hashlib.sha256(json.dumps(canonical, sort_keys=True).encode()).hexdigest(),
                 search=None if response.search is None else response.search.model_dump(mode="json"))

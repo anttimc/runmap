@@ -3,16 +3,16 @@
 import math
 from threading import BoundedSemaphore
 from time import monotonic
-from typing import Literal
+from typing import Literal, Self
 
 from fastapi import HTTPException
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from shapely.geometry import LineString, Point, Polygon
 
 from runmap.api.paths import PathData, path_policy_index
 from runmap.paths.exploration import Snap, snap_candidates
 from runmap.routing.run_planner import RunSettings, plan_run, projected_points
-from runmap.routing.cost_preparation import resolve_shape_strengths
+from runmap.routing.cost_preparation import effective_run_settings, resolve_shape_strengths
 from runmap.routing.cost_settings import (
     COST_MODEL_VERSION, COST_UNITS, preference_capabilities, resolve_preferences,
 )
@@ -21,7 +21,7 @@ from runmap.routing.cost_types import (
     PreferenceWeightTables, ResolvedPreferences, ShapeStrengths,
 )
 from runmap.routing.search import route_coordinates
-from runmap.routing.run_types import RunResult
+from runmap.routing.run_types import RunMode, RunResult
 from runmap.routing.hill_types import HillModel
 from runmap.routing.types import Bounds
 from runmap.routing.deadlines import check_deadline
@@ -66,6 +66,7 @@ class CostConfigurationResponse(BaseModel):
 
 class PlannerConfiguration(BaseModel):
     available: bool = True
+    modes: tuple[RunMode, ...] = ("one_way", "round_trip")
     defaults: SettingsRequest = Field(default_factory=SettingsRequest)
     preference_defaults: PreferencesRequest = Field(default_factory=PreferencesRequest)
     cost_model_version: str = COST_MODEL_VERSION
@@ -79,6 +80,7 @@ class PlannerConfiguration(BaseModel):
 class RunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     dataset_id: str = Field(max_length=100)
+    mode: RunMode = "round_trip"
     home: EndpointRequest
     turnaround: EndpointRequest
     settings: SettingsRequest = Field(default_factory=SettingsRequest)
@@ -105,14 +107,26 @@ class LegResponse(BaseModel):
 
 
 class CandidateResponse(BaseModel):
-    outbound_left: bool
-    outbound: LegResponse
-    returning: LegResponse
+    mode: RunMode
+    legs: list[LegResponse] = Field(min_length=1, max_length=2)
+    outbound_left: bool | None = None
     distance_m: float
     repeated_distance_m: float
-    closest_centre_m: float
-    encloses_centre: bool | None
+    closest_centre_m: float | None = None
+    encloses_centre: bool | None = None
     equivalent_to: int | None = None
+
+    @model_validator(mode="after")
+    def validate_route_mode(self) -> Self:
+        expected = 1 if self.mode == "one_way" else 2
+        if len(self.legs) != expected:
+            raise ValueError("Leg count must match route mode")
+        if self.mode == "round_trip" and (self.outbound_left is None or self.closest_centre_m is None):
+            raise ValueError("Round-trip routes require shape diagnostics")
+        if self.mode == "one_way" and any(value is not None for value in (
+                self.outbound_left, self.closest_centre_m, self.encloses_centre)):
+            raise ValueError("One-way routes cannot have round-trip shape diagnostics")
+        return self
 
 
 class RunSearchAttempt(BaseModel):
@@ -133,6 +147,7 @@ class RunSearchMetadata(BaseModel):
 
 
 class RunResponse(BaseModel):
+    mode: RunMode = "round_trip"
     dataset_id: str
     cost_model: CostConfigurationResponse
     status: Literal["complete", "unreachable", "deadline", "no_eligible_snap", "area_limited"]
@@ -143,6 +158,12 @@ class RunResponse(BaseModel):
     elapsed_s: float = 0
     coverage_note: str = "Routes use the prepared network; missing coverage can omit better connections."
     search: RunSearchMetadata | None = None
+
+    @model_validator(mode="after")
+    def validate_candidate_modes(self) -> Self:
+        if any(candidate.mode != self.mode for candidate in self.candidates):
+            raise ValueError("Candidate modes must match response mode")
+        return self
 
 
 def generate_run(data: PathData, options: RunRequest, timeout_s: float = 15) -> RunResponse:
@@ -159,10 +180,10 @@ def generate_run(data: PathData, options: RunRequest, timeout_s: float = 15) -> 
 
 def _generate_run(data: PathData, options: RunRequest, deadline: float) -> RunResponse:
     started = monotonic()
-    settings = RunSettings(**options.settings.model_dump())
+    settings = effective_run_settings(RunSettings(**options.settings.model_dump()), options.mode)
     preferences = PreferenceSettings(**options.preferences.model_dump())
     cost_model = CostConfigurationResponse(
-        shape_settings=options.settings, shape_strengths=resolve_shape_strengths(settings),
+        shape_settings=options.settings.model_copy(update={"avoidance_ratio": settings.avoidance_ratio}), shape_strengths=resolve_shape_strengths(settings),
         preferences=resolve_preferences(preferences, hills=data.hills), capabilities=preference_capabilities(data.hills),
         hill_model=data.hills.model if data.hills else None,
     )
@@ -171,53 +192,57 @@ def _generate_run(data: PathData, options: RunRequest, deadline: float) -> RunRe
                               options.radius_m, options.home.segment_id)
     turnaround, _ = snap_candidates(data, index, options.turnaround.longitude, options.turnaround.latitude,
                                     options.radius_m, options.turnaround.segment_id)
-    response = RunResponse(dataset_id=data.dataset_id, cost_model=cost_model,
+    response = RunResponse(dataset_id=data.dataset_id, mode=options.mode, cost_model=cost_model,
                            status="no_eligible_snap", home=home, turnaround=turnaround)
     if home is None or turnaround is None:
         return response
     try:
-        result = plan_run(index, home, turnaround, settings, deadline, preferences=preferences, hills=data.hills)
+        result = plan_run(index, home, turnaround, settings, deadline, preferences=preferences, hills=data.hills, mode=options.mode)
     except TimeoutError:
         return response.model_copy(update={"status": "deadline", "elapsed_s": monotonic() - started})
     return render_run_result(response, result, started)
 
 
+def candidate_coordinates(legs: list[LegResponse]) -> list[list[float]]:
+    return [point for index, leg in enumerate(legs) for point in (leg.coordinates[1:] if index else leg.coordinates)]
+
+
+def candidate_response(response: RunResponse, legs: list[LegResponse],
+                       outbound_left: bool | None, repeated_distance_m: float) -> CandidateResponse:
+    """Share geometry diagnostics between reference and numeric routes."""
+    distance = sum(leg.distance_m for leg in legs)
+    line = LineString(projected_points(candidate_coordinates(legs)))
+    closest, enclosed = None, None
+    if response.mode == "round_trip":
+        assert response.home is not None and response.turnaround is not None
+        a, b = projected_points([[s.longitude, s.latitude] for s in (response.home, response.turnaround)])
+        centre = Point((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        closest = line.distance(centre)
+        enclosed = Polygon(line.coords).contains(centre) if line.is_simple and line.is_ring and closest > .01 else None
+    equivalent = next((i for i, prior in enumerate(response.candidates)
+        if abs(prior.distance_m - distance) < .01 and line.equals(LineString(
+            projected_points(candidate_coordinates(prior.legs))))), None)
+    return CandidateResponse(mode=response.mode, legs=legs, outbound_left=outbound_left,
+        distance_m=distance, repeated_distance_m=repeated_distance_m,
+        closest_centre_m=closest, encloses_centre=enclosed, equivalent_to=equivalent)
+
+
 def render_run_result(response: RunResponse, result: RunResult, started: float,
-                        deadline: float | None = None) -> RunResponse:
-    """Serialize complete candidate legs using the same physical traversal semantics."""
-    home, turnaround = response.home, response.turnaround
-    assert home is not None and turnaround is not None
+                      deadline: float | None = None) -> RunResponse:
+    """Serialize complete routes using their ordered physical traversals."""
     graph = result.overlay.graph
-    home_point, end_point = projected_points([[home.longitude, home.latitude], [turnaround.longitude, turnaround.latitude]])
-    centre = Point((home_point[0] + end_point[0]) / 2, (home_point[1] + end_point[1]) / 2)
     for candidate in result.candidates:
         check_deadline(deadline)
-        legs = [LegResponse(coordinates=[list(p) for p in route_coordinates(graph, leg.arc_ids)],
-                            distance_m=sum(graph.arcs[a]["length_m"] for a in leg.arc_ids),
-                            cost=leg.cost, expanded_nodes=leg.expanded_nodes, cost_breakdown=costs,
-                            observations=observations)
-                for leg, costs, observations in ((candidate.outbound, candidate.outbound_costs, candidate.outbound_observations),
-                                                 (candidate.returning, candidate.returning_costs, candidate.returning_observations))]
-        points = projected_points(legs[0].coordinates + legs[1].coordinates[1:])
-        line = LineString(points)
-        simple = line.is_simple and line.is_ring
-        closest = line.distance(centre)
-        enclosed = Polygon(points).contains(centre) if simple and closest > .01 else None
-        for leg_response, traversals in zip(legs, (candidate.outbound_traversals, candidate.returning_traversals)):
-            for traversal in traversals:
-                start, end = traversal.graph_start_m, traversal.graph_end_m
-                if traversal.reverse:
-                    start, end = end, start
-                leg_response.traversals.append(TraversalResponse(segment_id=traversal.segment_id,
-                                                                 start_m=start, end_m=end))
-        equivalent = next((i for i, prior in enumerate(response.candidates)
-                           if abs(prior.distance_m - candidate.distance_m) < .01
-                           and line.equals(LineString(projected_points(
-                               prior.outbound.coordinates + prior.returning.coordinates[1:])))), None)
-        response.candidates.append(CandidateResponse(outbound_left=candidate.outbound_left,
-                                   outbound=legs[0], returning=legs[1], distance_m=candidate.distance_m,
-                                   repeated_distance_m=candidate.repeated_distance_m,
-                                   closest_centre_m=closest, encloses_centre=enclosed, equivalent_to=equivalent))
+        legs: list[LegResponse] = []
+        for leg in candidate.legs:
+            traversals = [TraversalResponse(segment_id=t.segment_id,
+                start_m=t.graph_end_m if t.reverse else t.graph_start_m,
+                end_m=t.graph_start_m if t.reverse else t.graph_end_m) for t in leg.traversals]
+            legs.append(LegResponse(coordinates=[list(p) for p in route_coordinates(graph, leg.path.arc_ids)],
+                distance_m=sum(graph.arcs[a]["length_m"] for a in leg.path.arc_ids),
+                cost=leg.path.cost, expanded_nodes=leg.path.expanded_nodes, cost_breakdown=leg.costs,
+                observations=leg.observations, traversals=traversals))
+        response.candidates.append(candidate_response(response, legs, candidate.outbound_left, candidate.repeated_distance_m))
     response.status = "deadline" if "deadline" in result.outcomes else ("complete" if result.candidates else "unreachable")
     response.outcomes = list(result.outcomes)
     response.elapsed_s = monotonic() - started

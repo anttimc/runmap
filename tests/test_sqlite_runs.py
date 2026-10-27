@@ -20,7 +20,7 @@ from runmap.api.sqlite_runs import RunAreaLimits, generate_database_run, initial
 from runmap.paths.database import export_network_database
 from runmap.paths.graph import write_graph_outputs
 from runmap.routing.run_planner import plan_run
-from runmap.routing.run_types import RunResult, RunSettings
+from runmap.routing.run_types import RunMode, RunResult, RunSettings
 from runmap.routing.search import GraphData
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.hill_types import HillData
@@ -74,6 +74,67 @@ class SQLiteRunTests(unittest.TestCase):
             lon, lat = [24.801, 24.803], [60.2, 60.2]
         return RunRequest(dataset_id=data.dataset_id, home={"longitude": lon[0], "latitude": lat[0]},
                           turnaround={"longitude": lon[1], "latitude": lat[1]})
+
+    def test_one_way_succeeds_without_return_and_matches_reference(self) -> None:
+        data, source = self.publish(fixture())
+        reference = load_path_data(source)
+        for level in ("off", "low", "high"):
+            options = self.options(data).model_copy(update={"mode": "one_way",
+                "preferences": PreferencesRequest(hills=level)})
+            actual, expected = generate_database_run(data, options), generate_run(reference, options)
+            self.assertEqual(actual.status, "complete")
+            self.assertEqual(actual.mode, "one_way")
+            self.assertEqual(actual.cost_model, expected.cost_model)
+            self.assertEqual(actual.outcomes, ["complete"])
+            self.assertEqual(len(actual.candidates), 1)
+            self.assertEqual(len(actual.candidates[0].legs), 1)
+            leg, expected_leg = actual.candidates[0].legs[0], expected.candidates[0].legs[0]
+            self.assertAlmostEqual(leg.distance_m, 110, places=4)
+            self.assertAlmostEqual(leg.cost, expected_leg.cost, places=4)
+            self.assertEqual(leg.traversals, expected_leg.traversals)
+            self.assertEqual(leg.coordinates, expected_leg.coordinates)
+            self.assertEqual((leg.cost_breakdown.centre, leg.cost_breakdown.side, leg.cost_breakdown.reuse), (0, 0, 0))
+            reverse = options.model_copy(update={"home": options.turnaround, "turnaround": options.home})
+            self.assertEqual(generate_database_run(data, reverse).status, "unreachable")
+            round_trip = options.model_copy(update={"mode": "round_trip"})
+            self.assertEqual(generate_database_run(data, round_trip).status, "unreachable")
+            missing = options.model_copy(update={"home": options.home.model_copy(update={"longitude": 20})})
+            self.assertEqual(generate_database_run(data, missing).status, "no_eligible_snap")
+            with self.assertRaises(ValueError):
+                generate_database_run(data, options.model_copy(update={"turnaround": options.home}))
+
+    def test_one_way_expands_detours_and_reports_area_and_deadline_limits(self) -> None:
+        data, source = self.publish(detour_graph())
+        options = self.options(data, detour=True).model_copy(update={"mode": "one_way"})
+        actual = generate_database_run(data, options)
+        expected = generate_run(load_path_data(source), options)
+        self.assertEqual(actual.status, "complete")
+        self.assertGreater(actual.search.retries, 0)
+        self.assertAlmostEqual(actual.candidates[0].distance_m, expected.candidates[0].distance_m, places=4)
+        limited = generate_database_run(data, options, limits=RunAreaLimits(max_retries=0))
+        self.assertEqual(limited.status, "area_limited")
+        self.assertFalse(limited.candidates)
+        with patch("runmap.api.sqlite_runs.database_snap", side_effect=TimeoutError):
+            self.assertEqual(generate_database_run(data, options).status, "deadline")
+
+    def test_one_way_policies_and_reversed_partial_endpoints(self) -> None:
+        graph = fixture()
+        graph["segments"][0]["backward"] = True
+        graph["segments"][0]["tags"]["highway"] = "steps"
+        graph["segments"][0]["tags"]["surface"] = "dirt"
+        graph["arcs"].append({"id": "s:b", "segment_id": "s", "from": "2", "to": "1", "length_m": 220})
+        data, source = self.publish(graph)
+        reference = load_path_data(source)
+        options = self.options(data).model_copy(update={"mode": "one_way", "avoid_stairs": False})
+        reverse = options.model_copy(update={"home": options.turnaround, "turnaround": options.home})
+        for request in (options, reverse):
+            actual = generate_database_run(data, request)
+            expected = generate_run(reference, request)
+            self.assertEqual(actual.status, "complete")
+            self.assertEqual(actual.candidates[0].legs[0].traversals, expected.candidates[0].legs[0].traversals)
+            self.assertEqual(actual.candidates[0].legs[0].coordinates, expected.candidates[0].legs[0].coordinates)
+            for exclusion in ({"avoid_stairs": True}, {"surface": "surfaced"}):
+                self.assertEqual(generate_database_run(data, request.model_copy(update=exclusion)).status, "no_eligible_snap")
 
     def test_costs_policies_partial_endpoints_and_hills_match_reference_without_sources(self) -> None:
         graph = fixture()
@@ -211,7 +272,7 @@ class SQLiteRunTests(unittest.TestCase):
 
         def partial(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettings, deadline: float,
                       *, preferences: PreferenceSettings, hills: HillData | None,
-                      frontier_nodes: frozenset[int]) -> RunResult:
+                      frontier_nodes: frozenset[int], mode: RunMode) -> RunResult:
             result = plan_run(index, home, turnaround, settings, deadline, preferences=preferences,
                                hills=hills, frontier_nodes=frontier_nodes)
             return replace(result, candidates=result.candidates[:1], outcomes=("complete", "deadline"))

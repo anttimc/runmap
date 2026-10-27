@@ -8,9 +8,7 @@ import sqlite3
 from time import monotonic
 from typing import cast
 
-from shapely.geometry import LineString, Point, Polygon
-
-from runmap.api.runs import CandidateResponse, LegResponse, RunResponse, TraversalResponse
+from runmap.api.runs import LegResponse, RunResponse, TraversalResponse, candidate_response
 from runmap.paths.exploration import Snap
 from runmap.routing.cost_types import CostBreakdown, PreferenceObservations
 from runmap.routing.deadlines import check_deadline
@@ -30,7 +28,7 @@ class RouteSegments:
 
 def load_route_segments(connection: sqlite3.Connection, result: NumericRunResult,
                         deadline: float | None) -> RouteSegments:
-    numbers = {int(s) for c in result.candidates for p in (c.outbound, c.returning) for s in p.segment_ids}
+    numbers = {int(s) for c in result.candidates for p in c.legs for s in p.segment_ids}
     records: dict[int, Segment] = {}
     for number in numbers:
         check_deadline(deadline)
@@ -52,7 +50,7 @@ def load_route_segments(connection: sqlite3.Connection, result: NumericRunResult
 def route_near_boundary(segments: RouteSegments, result: NumericRunResult, snaps: tuple[Snap, Snap],
                         bounds: Bounds, margin: float) -> bool:
     west, south, east, north = bounds
-    spans = {(int(n), float(a), float(b)) for c in result.candidates for p in (c.outbound, c.returning)
+    spans = {(int(n), float(a), float(b)) for c in result.candidates for p in c.legs
              for n, a, b in zip(p.segment_ids, p.start_m, p.end_m)}
     for number, a, b in spans:
         segment = segments.records[number]
@@ -110,7 +108,7 @@ def _leg(path: NumericPath, segments: RouteSegments, snaps: tuple[Snap, Snap], h
 
 def _repeated(candidate: NumericRunCandidate) -> float:
     spans: dict[int, list[tuple[float, int]]] = defaultdict(list)
-    for path in (candidate.outbound, candidate.returning):
+    for path in candidate.legs:
         for number, a, b in zip(path.segment_ids, path.start_m, path.end_m):
             low, high = sorted((float(a), float(b)))
             spans[int(number)].extend(((low, 1), (high, -1)))
@@ -128,21 +126,10 @@ def render_numeric_result(response: RunResponse, result: NumericRunResult, segme
                           started: float, *, hills: bool, deadline: float | None = None) -> RunResponse:
     assert response.home is not None and response.turnaround is not None
     snaps = response.home, response.turnaround
-    home, end = projected_points([[s.longitude, s.latitude] for s in snaps])
-    centre = Point((home[0]+end[0])/2, (home[1]+end[1])/2)
     for candidate in result.candidates:
-        legs = [_leg(p, segments, snaps, hills, deadline) for p in (candidate.outbound, candidate.returning)]
-        points = projected_points(legs[0].coordinates + legs[1].coordinates[1:])
-        line = LineString(points)
-        closest = line.distance(centre)
-        enclosed = Polygon(points).contains(centre) if line.is_simple and line.is_ring and closest > .01 else None
-        distance = sum(leg.distance_m for leg in legs)
-        equivalent = next((i for i, prior in enumerate(response.candidates)
-            if abs(prior.distance_m-distance) < .01 and line.equals(LineString(projected_points(
-                prior.outbound.coordinates + prior.returning.coordinates[1:])))), None)
-        response.candidates.append(CandidateResponse(outbound_left=candidate.outbound_left,
-            outbound=legs[0], returning=legs[1], distance_m=distance, repeated_distance_m=_repeated(candidate),
-            closest_centre_m=closest, encloses_centre=enclosed, equivalent_to=equivalent))
+        check_deadline(deadline)
+        legs = [_leg(p, segments, snaps, hills, deadline) for p in candidate.legs]
+        response.candidates.append(candidate_response(response, legs, candidate.outbound_left, _repeated(candidate)))
     response.status = "deadline" if "deadline" in result.outcomes else ("complete" if result.candidates else "unreachable")
     response.outcomes = list(result.outcomes)
     response.elapsed_s = monotonic()-started

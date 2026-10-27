@@ -13,7 +13,7 @@
   <body>
     <main id="app">
       <div id="map" aria-label="Interactive Leppävaara terrain map"></div>
-      <section class="controls" aria-labelledby="controls-title">
+      <section class="controls" aria-labelledby="controls-title" data-planning="false">
         <header class="panel-header">
           <div class="heading-row">
             <div>
@@ -39,64 +39,64 @@
             <div class="heading-row planner-heading">
               <h2 class="section-title">Plan run</h2>
               <button id="run-clear" class="text-button" type="button" hidden>Clear</button>
-              <label class="layer-switch"
-                ><input
-                  id="plan-enabled"
-                  type="checkbox"
-                  role="switch"
-                  aria-label="Plan run"
-                  disabled /><span aria-hidden="true"></span
-              ></label>
+              <select id="plan-mode" aria-label="Plan run" disabled>
+                <option value="off">Off</option>
+                <option value="one_way">One way</option>
+                <option value="round_trip">Round trip / loop</option>
+              </select>
             </div>
             <div id="run-controls" class="section-options" hidden>
               <div class="endpoint-row">
-                <div><strong>Home</strong><span id="run-home-value">Choose on map</span></div>
-                <button id="run-home" type="button" aria-label="Set home on map">Set</button>
+                <div><strong>Start</strong><span id="run-home-value">Choose on map</span></div>
+                <button id="run-home" type="button" aria-label="Set start on map">Set</button>
               </div>
               <div class="endpoint-row">
                 <div>
-                  <strong>Turnaround</strong><span id="run-turnaround-value">Choose on map</span>
+                  <strong id="run-endpoint-label">Turnaround</strong
+                  ><span id="run-turnaround-value">Choose on map</span>
                 </div>
                 <button id="run-turnaround" type="button" aria-label="Set turnaround on map">
                   Set
                 </button>
               </div>
-              <label class="control-label" for="run-orientation">Orientation</label>
-              <select
-                id="run-orientation"
-                title="Choose the preferred travel direction around the midpoint. Paths and crossings can affect the final shape."
-              >
-                <option value="clockwise">Clockwise</option>
-                <option value="counter-clockwise">Counter-clockwise</option>
-              </select>
-              <div class="control-label">
-                <span
-                  ><label for="run-avoidance">Loop width</label>
-                  <span class="help-tip"
-                    ><button
-                      type="button"
-                      class="help-trigger"
-                      aria-label="More information"
-                      aria-expanded="false"
-                    >
-                      ?</button
-                    ><span role="tooltip" class="help-content" id="run-shape-help">
-                      A soft preference to go around the midpoint, not a minimum clearance. Zero
-                      disables shape penalties while keeping route preferences. The selected
-                      orientation guides the route around the midpoint.
-                    </span></span
-                  ></span
-                ><output id="run-avoidance-value"></output>
+              <div id="run-shape-controls">
+                <label class="control-label" for="run-orientation">Orientation</label>
+                <select
+                  id="run-orientation"
+                  title="Choose the preferred travel direction around the midpoint. Paths and crossings can affect the final shape."
+                >
+                  <option value="clockwise">Clockwise</option>
+                  <option value="counter-clockwise">Counter-clockwise</option>
+                </select>
+                <div class="control-label">
+                  <span
+                    ><label for="run-avoidance">Loop width</label>
+                    <span class="help-tip"
+                      ><button
+                        type="button"
+                        class="help-trigger"
+                        aria-label="More information"
+                        aria-expanded="false"
+                      >
+                        ?</button
+                      ><span role="tooltip" class="help-content" id="run-shape-help">
+                        A soft preference to go around the midpoint, not a minimum clearance. Zero
+                        disables shape penalties while keeping route preferences. The selected
+                        orientation guides the route around the midpoint.
+                      </span></span
+                    ></span
+                  ><output id="run-avoidance-value"></output>
+                </div>
+                <input
+                  id="run-avoidance"
+                  type="range"
+                  min="0"
+                  max="0.6"
+                  step="0.01"
+                  value="0.18"
+                  aria-describedby="run-shape-help"
+                />
               </div>
-              <input
-                id="run-avoidance"
-                type="range"
-                min="0"
-                max="0.6"
-                step="0.01"
-                value="0.18"
-                aria-describedby="run-shape-help"
-              />
               <div id="run-preferences" hidden>
                 <div class="control-label">
                   <span
@@ -163,7 +163,9 @@
           </section>
         </div>
         <footer id="run-footer" class="planner-footer" hidden>
-          <p id="run-status" class="explanation" role="status">Choose home and a turnaround.</p>
+          <p id="run-status" class="explanation" role="status">
+            Choose endpoints, then generate a run.
+          </p>
           <div class="footer-actions">
             <button id="run-generate" class="primary-button" type="button" disabled>
               Generate run</button

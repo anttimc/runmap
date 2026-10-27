@@ -8,20 +8,19 @@ import numpy as np
 from numpy.typing import NDArray
 
 from runmap.routing.cost_settings import prepared_preference_capabilities, resolve_prepared_preferences
-from runmap.routing.cost_preparation import validate_settings
+from runmap.routing.cost_preparation import effective_run_settings
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.numeric_search import (LoadedNumericGraph, NumericEndpoint, NumericPath, NumericShapeCosts,
                                            Point, numeric_shortest_path)
-from runmap.routing.run_types import RunSettings
+from runmap.routing.run_types import RunMode, RunSettings
 from runmap.routing.types import EdgeProfile
 
 
 @dataclass(frozen=True)
 class NumericRunCandidate:
-    outbound_left: bool
-    outbound: NumericPath
-    returning: NumericPath
+    outbound_left: bool | None
+    legs: tuple[NumericPath, ...]
 
 
 @dataclass(frozen=True)
@@ -39,8 +38,8 @@ def _used_spans(path: NumericPath) -> tuple[tuple[int, float, float], ...]:
 def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaround: NumericEndpoint,
                      home_point: Point, turnaround_point: Point, settings: RunSettings = RunSettings(), *,
                      profile: EdgeProfile | None = None, preferences: PreferenceSettings = PreferenceSettings(),
-                     deadline: float | None = None) -> NumericRunResult:
-    validate_settings(settings)
+                     deadline: float | None = None, mode: RunMode = "round_trip") -> NumericRunResult:
+    settings = effective_run_settings(settings, mode)
     if not all(math.isfinite(v) for v in (*home_point, *turnaround_point)) or math.dist(home_point, turnaround_point) < .01:
         raise ValueError("Home and turnaround must be finite and spatially distinct")
     capabilities = prepared_preference_capabilities(graph.metadata.models.hill_model, graph.metadata.hill_valid_fraction)
@@ -58,14 +57,17 @@ def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaroun
             if outbound.cost is None:
                 outcomes.append("unreachable")
                 continue
-            returning = numeric_shortest_path(graph, turnaround, home, profile=profile,
-                hill_weight=resolved.weights.hills,
-                shape=replace(shape, penalize_right=not left, used_spans=_used_spans(outbound)), deadline=deadline)
-            frontiers.append(returning.frontier_node_ids)
-            if returning.cost is None:
-                outcomes.append("unreachable")
-                continue
-            candidates.append(NumericRunCandidate(left, outbound, returning))
+            legs = (outbound,)
+            if mode == "round_trip":
+                returning = numeric_shortest_path(graph, turnaround, home, profile=profile,
+                    hill_weight=resolved.weights.hills,
+                    shape=replace(shape, penalize_right=not left, used_spans=_used_spans(outbound)), deadline=deadline)
+                frontiers.append(returning.frontier_node_ids)
+                if returning.cost is None:
+                    outcomes.append("unreachable")
+                    continue
+                legs += (returning,)
+            candidates.append(NumericRunCandidate(left if mode == "round_trip" else None, legs))
             outcomes.append("complete")
         except TimeoutError:
             outcomes.append("deadline")

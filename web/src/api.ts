@@ -6,6 +6,7 @@ import type {
   PathPolicy,
   PreferenceLevel,
   RunResponse,
+  RunMode,
   SnapshotResponse,
   Snap,
   ShellMethod,
@@ -25,6 +26,7 @@ interface SnapshotRequest extends PathPolicy {
 }
 
 interface RunRequest extends PathPolicy {
+  mode: RunMode;
   dataset_id: string;
   home: { longitude: number; latitude: number };
   turnaround: { longitude: number; latitude: number };

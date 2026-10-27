@@ -17,7 +17,7 @@ from runmap.paths.coverage import near_coverage_boundary
 from runmap.paths.database import count_network_segments
 from runmap.paths.exploration import Snap
 from runmap.paths.local_network import LocalNetwork, load_local_network
-from runmap.routing.cost_preparation import resolve_shape_strengths
+from runmap.routing.cost_preparation import effective_run_settings, resolve_shape_strengths
 from runmap.routing.cost_settings import prepared_preference_capabilities, resolve_prepared_preferences
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.deadlines import check_deadline
@@ -61,11 +61,11 @@ def generate_database_run(data: SQLitePathData, options: RunRequest, timeout_s: 
 def _generate_run(data: SQLitePathData, options: RunRequest, started: float,
                    timeout_s: float, limits: RunAreaLimits) -> RunResponse:
     deadline = started + timeout_s
-    settings = RunSettings(**options.settings.model_dump())
+    settings = effective_run_settings(RunSettings(**options.settings.model_dump()), options.mode)
     preferences = PreferenceSettings(**options.preferences.model_dump())
     capabilities = prepared_preference_capabilities(data.metadata.models.hill_model, data.metadata.hill_valid_fraction)
-    response = RunResponse(dataset_id=data.dataset_id, status="no_eligible_snap", search=RunSearchMetadata(),
-        cost_model=CostConfigurationResponse(shape_settings=options.settings,
+    response = RunResponse(dataset_id=data.dataset_id, mode=options.mode, status="no_eligible_snap", search=RunSearchMetadata(),
+        cost_model=CostConfigurationResponse(shape_settings=options.settings.model_copy(update={"avoidance_ratio": settings.avoidance_ratio}),
             shape_strengths=resolve_shape_strengths(settings),
             preferences=resolve_prepared_preferences(preferences, capabilities), capabilities=capabilities,
             hill_model=data.metadata.models.hill_model))
@@ -123,7 +123,7 @@ def _plan_windows(data: SQLitePathData, options: RunRequest, response: RunRespon
             attempt.nodes = len(local.routing.nodes)
             check_deadline(deadline)
             result = plan_run(local.routing, response.home, response.turnaround, settings, deadline,
-                               preferences=preferences, hills=local.hills, frontier_nodes=local.frontier_indices)
+                               preferences=preferences, hills=local.hills, frontier_nodes=local.frontier_indices, mode=options.mode)
             attempt.reached_frontier = bool(result.reached_frontier)
             attempt.source_coverage_limited = _source_limited(data, result, response)
             if "deadline" in result.outcomes:
@@ -170,8 +170,8 @@ def _retry_reason(local: LocalNetwork, result: RunResult, bounds: Bounds, limits
     graph = result.overlay.graph
     assert graph.integer is not None
     for candidate in result.candidates:
-        for leg in (candidate.outbound, candidate.returning):
-            for key in leg.arc_ids:
+        for leg in candidate.legs:
+            for key in leg.path.arc_ids:
                 check_deadline(deadline)
                 arc = integer_arc(graph.integer, graph.integer.arc_indices[key])
                 if any(x <= west + margin or x >= east - margin or y <= south + margin or y >= north - margin
@@ -188,7 +188,7 @@ def _retry_reason(local: LocalNetwork, result: RunResult, bounds: Bounds, limits
 
 def _source_limited(data: SQLitePathData, result: RunResult, response: RunResponse) -> bool:
     segments = {traversal.segment_id for candidate in result.candidates
-                for traversal in (*candidate.outbound_traversals, *candidate.returning_traversals)}
+                for leg in candidate.legs for traversal in leg.traversals}
     if any(near_coverage_boundary(data.coverage, result.overlay.graph.segments[key]["geometry"])
            for key in segments):
         return True
@@ -221,7 +221,7 @@ def _plan_numeric_windows(data: SQLitePathData, options: RunRequest, response: R
                                                        include_hill_intervals=preferences.hills != "off")
         attempt.nodes = graph.native.node_count
         result = numeric_plan_run(graph, home, turnaround, points[0], points[1], settings,
-            profile=exploration_profile(options.surface, options.avoid_stairs), preferences=preferences, deadline=deadline)
+            profile=exploration_profile(options.surface, options.avoid_stairs), preferences=preferences, deadline=deadline, mode=options.mode)
         expired = "deadline" in result.outcomes
         with data.pool.connection(deadline=None if expired else deadline) as connection:
             segments = load_route_segments(connection, result, None if expired else deadline)

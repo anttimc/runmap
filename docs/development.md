@@ -438,6 +438,22 @@ Browser/local-runner acceptance remains separate in the
 [roadmap](roadmap.md). For an already synchronized environment, use
 `uv run --offline --no-sync python …` to avoid dependency resolution.
 
+The planner browser smoke check uses Vite on 5173, the API on 8000, and a separate
+headless Chrome debugger on 9232. For headless MapLibre rendering, start Chrome
+with `--use-angle=swiftshader --enable-unsafe-swiftshader` and an isolated temporary
+user-data directory. Then run from the repository root:
+
+```sh
+node web/scripts/check-run-planning.mjs
+```
+
+It checks route-type transitions, independent layers, Orientation, Off, Clear,
+late responses, failure messages, and mobile layout. Route responses are controlled
+fixtures; map startup, snapping, and layers use the local API. Screenshots and
+observations default to `/private/tmp/runmap-planning-check`; pass another directory
+as the first argument. Use real routes separately for local runner acceptance and
+latency measurements.
+
 ## Experiments and reports
 
 The CLI anchor baseline remains a separate experiment, with its own distance,

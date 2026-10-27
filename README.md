@@ -3,10 +3,11 @@
 A hobby project for exploring running-path hilliness across the Helsinki capital area,
 and experimenting with elevation data and routing mathematics.
 
-The map supports terrain and path-gradient exploration, path inspection,
-distance shells from a selected start, and home–turnaround–home run
-planning with optional hill avoidance. See the [guide](docs/guide.md) for
-behavior and limitations, and the [goals](docs/goals.md) for intended outcomes.
+The map has independent terrain-gradient, path-gradient, and distance layers,
+path inspection, and an opt-in planner for one-way routes or round trips with
+optional hill avoidance. Routing and map appearance settings live in a Settings dialog.
+See the [guide](docs/guide.md) for behavior and limitations, and the
+[goals](docs/goals.md) for intended outcomes.
 
 ## Quick start
 

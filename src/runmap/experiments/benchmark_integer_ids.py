@@ -91,8 +91,8 @@ def benchmark_scenario(data: PathData, index: GraphData, scenario: Scenario,
     with string_planner():
         actual = plan_run(index, home, turnaround, scenario.settings)
     verify_routes(expected, actual)
-    if [(c.outbound.expanded_nodes, c.returning.expanded_nodes) for c in expected.candidates] != [
-            (c.outbound.expanded_nodes, c.returning.expanded_nodes) for c in actual.candidates]:
+    if [(c.legs[0].path.expanded_nodes, c.legs[1].path.expanded_nodes) for c in expected.candidates] != [
+            (c.legs[0].path.expanded_nodes, c.legs[1].path.expanded_nodes) for c in actual.candidates]:
         raise ValueError('Expansion counts differ')
     string_time, integer_time = measure_pair(integer_route, integer_route, repeats, string_planner)
 
@@ -103,11 +103,11 @@ def benchmark_scenario(data: PathData, index: GraphData, scenario: Scenario,
         return float(arc['length_m'])
 
     def integer_search() -> object:
-        return shortest_path(overlay.graph, overlay.home, overlay.turnaround,
+        return shortest_path(overlay.graph, overlay.start, overlay.destination,
                              heuristic=heuristic, arc_cost=length_cost)
 
     def string_search() -> object:
-        return shortest_path_string(overlay.graph, overlay.home, overlay.turnaround,
+        return shortest_path_string(overlay.graph, overlay.start, overlay.destination,
                                     heuristic=heuristic, arc_cost=length_cost)
 
     if integer_search() != string_search():

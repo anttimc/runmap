@@ -88,7 +88,7 @@ class PreparedTraversalTests(unittest.TestCase):
                 with patch("runmap.routing.search.pedestrian_directions", side_effect=AssertionError), \
                         patch("runmap.routing.profiles.pedestrian_directions", side_effect=AssertionError):
                     overlay = endpoint_overlay(index, home, turnaround)
-                    start, end = overlay.home, overlay.turnaround
+                    start, end = overlay.start, overlay.destination
                     if oneway == "-1":
                         start, end = end, start
                     self.assertIsNotNone(shortest_path(overlay.graph, start, end))

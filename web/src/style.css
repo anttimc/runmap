@@ -807,13 +807,20 @@ h1 {
 }
 
 .planner-heading {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
   margin-bottom: 8px;
 }
 .planner-heading h2 {
   font-size: 1rem;
-  flex: 1;
 }
-.controls:has(#plan-enabled:not(:checked)) .sheet-toggle {
+.planner-heading select {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+.controls[data-planning="false"] .sheet-toggle {
   display: none;
 }
 .run-summary {
