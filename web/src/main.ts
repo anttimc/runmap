@@ -1,9 +1,7 @@
 import {
   AttributionControl,
-  ImageSource,
   Map,
   NavigationControl,
-  RasterTileSource,
   setWorkerUrl,
   type MapSourceDataEvent,
 } from "maplibre-gl";
@@ -27,26 +25,16 @@ import {
 // worker and its shared module, then gives MapLibre the production URL.
 setWorkerUrl(maplibreWorkerUrl);
 
-const wavelengthInput = element<HTMLInputElement>("wavelength");
-const wavelengthValue = element<HTMLOutputElement>("wavelength-value");
+const backgroundSmoothingM = 40;
 const opacityInput = element<HTMLInputElement>("opacity");
 const opacityValue = element<HTMLOutputElement>("opacity-value");
+const backgroundLayer = element<HTMLInputElement>("layer-background");
+const distanceLayer = element<HTMLInputElement>("layer-distance");
 const status = element<HTMLSpanElement>("status");
 const legendBar = element<HTMLDivElement>("legend-bar");
 const legendLabels = element<HTMLDivElement>("legend-labels");
 
 let map: Map;
-let debounceTimer: number | undefined;
-let terrainTileTemplate: string | undefined;
-
-function terrainUrl(wavelength: number): string {
-  return `/api/terrain.png?wavelength_m=${wavelength}&max_size=1600`;
-}
-
-function terrainTiles(wavelength: number): string[] {
-  if (!terrainTileTemplate) return [];
-  return [terrainTileTemplate.replace("{wavelength}", String(wavelength))];
-}
 
 function setStatus(message: string, kind: "ready" | "busy" | "error" = "ready"): void {
   status.textContent = message;
@@ -80,33 +68,24 @@ function renderLegend(stops: MapConfig["slope_legend"]): void {
   );
 }
 
-function updateTerrain(wavelength: number): void {
-  setStatus("Updating…", "busy");
-  const source = map.getSource("terrain");
-  if (terrainTileTemplate) {
-    (source as RasterTileSource | undefined)?.setTiles(terrainTiles(wavelength));
-  } else {
-    (source as ImageSource | undefined)?.updateImage({ url: terrainUrl(wavelength) });
+function updateBackground(): void {
+  const opacity = Number(opacityInput.value);
+  const visible = backgroundLayer.checked && opacity > 0;
+  opacityValue.value = `${opacity}%`;
+  element("terrain-legend").hidden = !visible;
+  if (map?.getLayer("terrain-slope")) {
+    map.setLayoutProperty("terrain-slope", "visibility", visible ? "visible" : "none");
+    map.setPaintProperty(
+      "terrain-slope",
+      "raster-opacity",
+      (opacity / 100) * (distanceLayer.checked ? 0.3 : 1),
+    );
   }
-}
-
-function scheduleTerrainUpdate(): void {
-  const wavelength = Number(wavelengthInput.value);
-  wavelengthValue.value = wavelength === 0 ? "Raw" : `${wavelength} m`;
-  window.clearTimeout(debounceTimer);
-  debounceTimer = window.setTimeout(() => updateTerrain(wavelength), 180);
 }
 
 async function start(): Promise<void> {
   startLayout();
   const config = await loadMapConfig();
-  terrainTileTemplate = config.terrain_tiles?.template;
-  const setting = config.smoothing;
-  wavelengthInput.min = String(setting.minimum);
-  wavelengthInput.max = String(setting.maximum);
-  wavelengthInput.step = String(setting.step);
-  wavelengthInput.value = String(setting.default);
-  wavelengthValue.value = `${setting.default} m`;
   renderLegend(config.slope_legend);
 
   const styleUrl = import.meta.env.VITE_MAP_STYLE_URL as string | undefined;
@@ -134,7 +113,9 @@ async function start(): Promise<void> {
     if (config.terrain_tiles) {
       map.addSource("terrain", {
         type: "raster",
-        tiles: terrainTiles(setting.default),
+        tiles: [
+          config.terrain_tiles.template.replace("{wavelength}", String(backgroundSmoothingM)),
+        ],
         tileSize: config.terrain_tiles.tile_size,
         minzoom: config.terrain_tiles.min_zoom,
         maxzoom: config.terrain_tiles.max_zoom,
@@ -144,7 +125,7 @@ async function start(): Promise<void> {
     } else {
       map.addSource("terrain", {
         type: "image",
-        url: terrainUrl(setting.default),
+        url: `/api/terrain.png?wavelength_m=${backgroundSmoothingM}&max_size=1600`,
         coordinates: config.image_coordinates,
       });
     }
@@ -153,6 +134,7 @@ async function start(): Promise<void> {
         id: "terrain-slope",
         type: "raster",
         source: "terrain",
+        layout: { visibility: "none" },
         paint: {
           "raster-opacity": Number(opacityInput.value) / 100,
           "raster-fade-duration": 0,
@@ -224,30 +206,23 @@ async function start(): Promise<void> {
       ],
       { padding: 42, duration: 0 },
     );
-    wavelengthInput.disabled = false;
     opacityInput.disabled = false;
+    backgroundLayer.disabled = false;
+    updateBackground();
     setStatus("Loading overlay…", "busy");
     void startMapTools(map, config.slope_legend);
   });
 
-  wavelengthInput.addEventListener("input", scheduleTerrainUpdate);
-  wavelengthInput.addEventListener("change", () => {
-    window.clearTimeout(debounceTimer);
-    updateTerrain(Number(wavelengthInput.value));
-  });
   element<HTMLInputElement>("contours-visible").addEventListener("change", (event) => {
     const visible = (event.target as HTMLInputElement).checked;
     for (const id of ["elevation-contours-minor", "elevation-contours-index"]) {
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
     }
   });
-  opacityInput.addEventListener("input", () => {
-    const opacity = Number(opacityInput.value);
-    opacityValue.value = `${opacity}%`;
-    if (map.getLayer("terrain-slope")) {
-      map.setPaintProperty("terrain-slope", "raster-opacity", opacity / 100);
-    }
-  });
+  opacityInput.addEventListener("input", updateBackground);
+  backgroundLayer.addEventListener("change", updateBackground);
+  distanceLayer.addEventListener("change", updateBackground);
+  updateBackground();
 }
 
 void start().catch((error) => {

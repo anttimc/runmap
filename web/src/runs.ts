@@ -107,20 +107,12 @@ function addRunLayers(map: Map): void {
     paint: { "line-color": "#55636a", "line-width": 1.5, "line-dasharray": [3, 3] },
   });
   map.addLayer({
-    id: "run-casing",
-    type: "line",
-    source: "run-geometry",
-    filter: ["==", ["get", "kind"], "route"],
-    layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#fff", "line-width": 8, "line-opacity": 0.9 },
-  });
-  map.addLayer({
     id: "run-route",
     type: "line",
     source: "run-geometry",
     filter: ["==", ["get", "kind"], "route"],
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#2367c0", "line-width": 5 },
+    paint: { "line-color": "#2367c0", "line-width": 1.5, "line-gap-width": 6 },
   });
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 32;
@@ -279,17 +271,17 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       } else
         element("run-avoidance-value").textContent =
           `${Math.round(Number(avoidance.value) * 100)}% of endpoint separation`;
-      const candidate = response?.candidates[selected];
-      if (candidate) {
-        features.push(
-          line(
-            [...candidate.outbound.coordinates, ...candidate.returning.coordinates.slice(1)],
-            "route",
-          ),
-        );
-        element("run-direction-label").textContent =
-          `${candidateName(candidate)} · arrows show travel direction`;
-      }
+    }
+    const candidate = response?.candidates[selected];
+    if (candidate) {
+      features.push(
+        line(
+          [...candidate.outbound.coordinates, ...candidate.returning.coordinates.slice(1)],
+          "route",
+        ),
+      );
+      element("run-direction-label").textContent =
+        `${candidateName(candidate)} · arrows show travel direction`;
     }
     displayFeatures = features;
     (map.getSource("run-geometry") as GeoJSONSource).setData({

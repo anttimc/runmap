@@ -30,7 +30,7 @@ import type { SharedState } from "./state";
 import { element } from "./dom";
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
-const neutralPathColor = "#727980";
+const lowGradePathColor = "#a1d99b";
 
 function renderDistanceLegend(maximumKm: number): void {
   const maximumM = maximumKm * 1000;
@@ -149,6 +149,23 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
     },
     before,
   );
+  for (const [id, color, scale] of [
+    ["path-flat-halo", "#fffdf8", 3.5],
+    ["path-flat-outline", "#238443", 2.5],
+  ] as const) {
+    map.addLayer(
+      {
+        id,
+        type: "line",
+        source: "path-intervals",
+        "source-layer": "paths",
+        minzoom: config.tile_min_zoom,
+        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": color, "line-width": pathWidth(["literal", scale]) },
+      },
+      before,
+    );
+  }
   map.addLayer(
     {
       id: "path-casing",
@@ -403,6 +420,7 @@ function applyPathEmphasis(map: Map, highlightFlat: boolean, threshold: number):
   const flat: ExpressionSpecification = [
     "all",
     measured,
+    ["!=", ["get", "eligible"], false],
     ["has", "flat_min_grade_50m"],
     ["<=", ["coalesce", ["get", "flat_min_grade_50m"], 11], threshold],
   ];
@@ -410,9 +428,10 @@ function applyPathEmphasis(map: Map, highlightFlat: boolean, threshold: number):
     map.setPaintProperty(layer, "line-opacity", alpha);
   map.setPaintProperty("path-grades", "line-opacity", alpha);
   map.setPaintProperty("path-casing", "line-opacity", pathCasingOpacity(alpha));
-  const scale: ExpressionSpecification = highlightFlat ? ["case", flat, 1.5, 1] : ["literal", 1];
-  map.setPaintProperty("path-grades", "line-width", pathWidth(scale));
-  map.setPaintProperty("path-casing", "line-width", pathWidth(scale, true));
+  for (const layer of ["path-flat-halo", "path-flat-outline"]) {
+    map.setFilter(layer, flat);
+    map.setLayoutProperty(layer, "visibility", highlightFlat ? "visible" : "none");
+  }
 }
 
 function renderInspection(map: Map, result: Inspection): void {
@@ -572,14 +591,15 @@ export function startPaths(
   config: PathConfig,
   options: Options,
 ): PathControls {
-  const stops = slopeStops.map((stop) =>
-    stop.percent <= 2 ? { ...stop, color: neutralPathColor } : stop,
-  );
+  const stops = slopeStops
+    .filter((stop) => stop.percent === 0 || stop.percent >= 10)
+    .map((stop) => (stop.percent === 0 ? { ...stop, color: lowGradePathColor } : stop));
   const status = element("path-status");
   const panel = element("path-inspection");
   const reverse = element<HTMLInputElement>("path-reverse");
-  const gradientMode = element<HTMLButtonElement>("mode-gradient");
-  const distanceMode = element<HTMLButtonElement>("mode-distance");
+  const pathGradient = element<HTMLInputElement>("layer-path");
+  const backgroundGradient = element<HTMLInputElement>("layer-background");
+  const distanceLayer = element<HTMLInputElement>("layer-distance");
   const hideBuildingAccess = element<HTMLInputElement>("path-hide-building-access");
   const flatter = element<HTMLInputElement>("path-flatter");
   const flatThreshold = element<HTMLInputElement>("path-flat-threshold");
@@ -600,8 +620,8 @@ export function startPaths(
   );
   budget.value = String(config.default_budget_km);
   for (const control of [
-    gradientMode,
-    distanceMode,
+    pathGradient,
+    distanceLayer,
     hideBuildingAccess,
     flatter,
     flatThreshold,
@@ -611,11 +631,11 @@ export function startPaths(
     control.disabled = false;
   addPathLayers(map, config, stops);
   addShellLayers(map);
-  distanceMode.disabled = !config.shell_methods?.length;
-  distanceMode.title = distanceMode.disabled
+  distanceLayer.disabled = !config.shell_methods?.length;
+  distanceLayer.title = distanceLayer.disabled
     ? "Distance shells require prepared numeric routing data."
     : "";
-  shellMethod.disabled = distanceMode.disabled;
+  shellMethod.disabled = distanceLayer.disabled;
   if (!config.shell_methods?.length)
     shellStatus.textContent = "Shell display is unavailable for this dataset.";
   renderGradientLegend(stops);
@@ -668,10 +688,9 @@ export function startPaths(
   let tileFailed = false;
   let inspectionSequence = 0;
   let selected: string | undefined;
-  let exploreMetric: "gradient" | "distance" = "gradient";
-  const currentMetric = (): "gradient" | "distance" =>
-    options.state.mode === "plan" ? "gradient" : exploreMetric;
-  const distanceEnabled = (): boolean => currentMetric() === "distance";
+  const distanceEnabled = (): boolean => distanceLayer.checked;
+  const highlightFlat = (): boolean => backgroundGradient.checked && flatter.checked;
+  const showPathAnalysis = (): boolean => pathGradient.checked || highlightFlat();
   let choosingStart = false;
   function chooseStartMode(active: boolean): void {
     choosingStart = active;
@@ -764,7 +783,7 @@ export function startPaths(
   function updateLodLegend(): void {
     const zoom = Math.floor(map.getZoom());
     const note = element("path-lod-note");
-    note.hidden = distanceEnabled() || zoom < config.tile_min_zoom || zoom > 14;
+    note.hidden = !pathGradient.checked || zoom < config.tile_min_zoom || zoom > 14;
     note.textContent = `Zoomed-out grade colors use ${zoom <= 12 ? 2 : 1}% bins, rounded up. Inspection shows original samples.`;
   }
   function coverageStatus(): void {
@@ -772,13 +791,13 @@ export function startPaths(
     updateLegendVisibility();
     updateMetricDescription();
     if (!distanceEnabled() && map.getZoom() < config.tile_min_zoom) {
-      setStatus("Zoom in for path gradients. Background colors show terrain slope.", "zoom_in");
+      setStatus("Zoom in to inspect prepared paths and flat stretches.", "zoom_in");
       context(false);
       return;
     }
     if (preparing || tileFailed) return;
     if (distanceEnabled()) {
-      context(false);
+      context(pathGradient.checked);
       if (options.state.home && !currentSnapshot) return;
       const loaded = !!installedShell && map.isSourceLoaded("distance-shells");
       setStatus(
@@ -802,7 +821,7 @@ export function startPaths(
       setStatus("Outside prepared path coverage. Basemap paths are context.", "outside_coverage");
       context(false);
     } else {
-      context(true);
+      context(pathGradient.checked);
       const crosses =
         bounds.getWest() < w ||
         bounds.getEast() > e ||
@@ -817,6 +836,9 @@ export function startPaths(
     }
   }
   async function updateViewport(): Promise<void> {
+    installTiles(
+      config.tile_template.replace("{policy}", policy()).replace("{variant}", variant()),
+    );
     const params = parameters();
     const outing = addOutingParameters(params);
     // Shell methods and visibility never invalidate the distance search.
@@ -838,10 +860,6 @@ export function startPaths(
       currentSnapshot = undefined;
       snapshotKey = "";
       clearShells();
-      if (!distanceEnabled())
-        installTiles(
-          config.tile_template.replace("{policy}", policy()).replace("{variant}", variant()),
-        );
       showStart();
       coverageStatus();
       return;
@@ -976,81 +994,71 @@ export function startPaths(
   shellMethod.addEventListener("change", refresh);
   function updateMetric(): void {
     updateLodLegend();
-    const distance = currentMetric() === "distance";
-    const shells = distanceEnabled();
-    hideBuildingAccess.disabled = shells;
-    for (const id of ["path-hit", "path-casing", "path-grades", "path-uncertain", "path-stairs"])
-      map.setLayoutProperty(id, "visibility", shells ? "none" : "visible");
-    showShellLayers(map, shells, Number(budget.value) * 1000);
-    if (!shells) setShellData(map);
-    const highlightFlat = !distance && options.state.mode === "explore" && flatter.checked;
+    const distance = distanceEnabled();
+    const analysis = showPathAnalysis();
+    map.setLayoutProperty("path-hit", "visibility", "visible");
+    for (const id of ["path-casing", "path-grades", "path-uncertain", "path-stairs"])
+      map.setLayoutProperty(id, "visibility", pathGradient.checked ? "visible" : "none");
+    map.setLayoutProperty("path-coverage", "visibility", analysis ? "visible" : "none");
+    showShellLayers(map, distance, Number(budget.value) * 1000);
+    if (!distance) setShellData(map);
     const threshold = Number(flatThreshold.value);
-    const maximumKm = Number(budget.value);
-    gradientMode.setAttribute("aria-pressed", String(!distance));
-    distanceMode.setAttribute("aria-pressed", String(distance));
-    element("distance-controls").hidden = !distance;
-    element("gradient-options").hidden = distance;
     element("flat-threshold-controls").hidden = !flatter.checked;
     element("path-flat-threshold-value").textContent = `${threshold}%`;
-    element("path-legend-title").textContent = distance
-      ? "Distance from start"
-      : highlightFlat
-        ? `Path gradient · flat ≤${threshold}%`
-        : "Path gradient";
-    renderGradientLegend(stops);
-    renderDistanceLegend(maximumKm);
-    const gradeColor: ExpressionSpecification = gradientExpression(stops);
-    map.setPaintProperty("path-grades", "line-color", gradeColor);
+    element("flat-legend-value").textContent = `≤${threshold}% · at least 50 m`;
+    renderDistanceLegend(Number(budget.value));
+    applyPathEmphasis(map, highlightFlat(), threshold);
     updateLegendVisibility();
     updateMetricDescription();
-    applyPathEmphasis(map, highlightFlat, threshold);
-    if (options.state.mode === "plan") map.setPaintProperty("path-grades", "line-opacity", 0.4);
+    coverageStatus();
   }
   function updateMetricDescription(): void {
-    const distance = distanceEnabled();
-    const overview = !distance && map.getZoom() < config.tile_min_zoom;
-    const highlightFlat = !distance && options.state.mode === "explore" && flatter.checked;
-    const threshold = Number(flatThreshold.value);
-    element("mode-description").textContent = distance
-      ? "Choose a start to see network distance in filled 500 m shells."
-      : overview
-        ? "Background colors show terrain slope. Zoom in for path gradients and inspection."
-        : highlightFlat
-          ? `Flat stretches of at least 50 m, with grades up to ${threshold}%, are highlighted.`
-          : "Compare path steepness. Click a path to inspect its profile.";
-    element("metric-note").textContent = distance
-      ? "Filled colors show 0.5 km bands of shortest legal network distance. Areas between paths are approximate and do not imply off-path access or access across water. Shells stop at prepared coverage; the final band may be shorter. Click a mapped path for its exact network distance."
-      : overview
-        ? "Terrain slope describes the ground, not steepness along a path. A path following a hillside contour can be flat. Zoom in to see computed path gradients."
-        : `${highlightFlat ? `Flat stretches of at least 50 m within a mapped segment use thicker lines. Other paths retain their normal gradient rendering; uncertain grades remain dashed. The length/grade test uses original samples before tile clipping or grade bins. ` : ""}Colors show grade magnitude. At zooms 13–14, grade uses rounded-up 1% bins. Inspection shows original signed samples. Paths outside prepared coverage are basemap context.`;
-    flatter.disabled = distance || overview;
-    flatThreshold.disabled = distance || overview;
+    const overview = map.getZoom() < config.tile_min_zoom;
+    element("mode-description").textContent = overview
+      ? "Zoom in to see colors showing steepness along paths and inspect their profiles."
+      : "Colors show steepness along paths. Click a path to inspect its profile.";
+    element("metric-note").textContent = [
+      pathGradient.checked
+        ? "Path colors show grade magnitude along paths. Inspection shows original signed samples."
+        : "Paths use the neutral map styling.",
+      backgroundGradient.checked
+        ? "Background colors show terrain slope. A path following a hillside contour can be flat. Terrain colors are softened while distance shading is on."
+        : "",
+      distanceEnabled()
+        ? "Filled colors show 0.5 km bands of shortest legal network distance. Areas between paths are approximate and do not imply off-path access. Return distance is not included."
+        : "",
+      highlightFlat()
+        ? `Green outlines mark paths containing stretches of at least 50 m with grades up to ${Number(flatThreshold.value)}%.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    flatter.disabled = !backgroundGradient.checked;
+    flatThreshold.disabled = !backgroundGradient.checked;
   }
   function updateLegendVisibility(): void {
     const bounds = map.getBounds();
     const [west, south, east, north] = config.bounds_wgs84;
-    const visible =
-      (distanceEnabled() || map.getZoom() >= config.tile_min_zoom) &&
+    const covered =
       bounds.getEast() >= west &&
       bounds.getWest() <= east &&
       bounds.getNorth() >= south &&
       bounds.getSouth() <= north;
-    element("path-legend-title").hidden = !visible;
-    element("gradient-legend").hidden = !visible || currentMetric() === "distance";
-    element("distance-legend").hidden = !visible || currentMetric() !== "distance";
+    const visible = covered && map.getZoom() >= config.tile_min_zoom;
+    element("path-legend-title").hidden = !visible || !pathGradient.checked;
+    element("gradient-legend").hidden = !visible || !pathGradient.checked;
+    element("distance-legend").hidden = !covered || !distanceEnabled();
+    element("flat-legend").hidden = !visible || !highlightFlat();
   }
-  for (const [button, value] of [
-    [gradientMode, "gradient"],
-    [distanceMode, "distance"],
-  ] as const) {
-    button.addEventListener("click", () => {
-      if (exploreMetric === value) return;
-      exploreMetric = value;
-      chooseStartMode(value === "distance" && !options.state.home);
-      showStart();
-      refresh();
-    });
-  }
+  pathGradient.addEventListener("change", updateMetric);
+  backgroundGradient.addEventListener("change", updateMetric);
+  distanceLayer.addEventListener("change", () => {
+    const needsStart = distanceEnabled() && !options.state.home;
+    if (needsStart && element("distance-controls").hidden) element("distance-section").click();
+    chooseStartMode(needsStart);
+    showStart();
+    refresh();
+  });
   flatter.addEventListener("change", updateMetric);
   flatThreshold.addEventListener("input", updateMetric);
   setStart.addEventListener("click", () => chooseStartMode(!choosingStart));
@@ -1065,16 +1073,15 @@ export function startPaths(
       options.setHome([event.lngLat.lng, event.lngLat.lat]);
       return;
     }
-    if (distanceEnabled()) {
-      void inspectShellPath([event.lngLat.lng, event.lngLat.lat]);
-      return;
-    }
     const hits = map.queryRenderedFeatures(event.point, { layers: ["path-hit"] });
     const feature = [
       ...new globalThis.Map(hits.map((hit) => [hit.properties.segment_id, hit])).values(),
     ][0];
     const id = feature?.properties.segment_id as string | undefined;
-    if (!id) return;
+    if (!id) {
+      if (distanceEnabled()) void inspectShellPath([event.lngLat.lng, event.lngLat.lat]);
+      return;
+    }
     selected = id;
     reverse.checked = false;
     void inspectSelected();
@@ -1122,7 +1129,6 @@ export function startPaths(
   return {
     modeChanged: () => {
       chooseStartMode(false);
-      refresh();
     },
     homeChanged: refresh,
     policyChanged: refresh,

@@ -4,7 +4,7 @@ import type { ColorStop, Location, PathConfig, PathPolicy } from "./api-types";
 import { element } from "./dom";
 import { startPaths, type PathControls } from "./paths";
 import { startRunPlanner, type RunControls } from "./runs";
-import { createSharedState, type ToolMode } from "./state";
+import { createSharedState } from "./state";
 
 function readPathPolicy(): PathPolicy {
   const surface = element<HTMLSelectElement>("path-surface").value;
@@ -13,45 +13,6 @@ function readPathPolicy(): PathPolicy {
     avoid_stairs: element<HTMLInputElement>("path-avoid-stairs").checked,
     radius_m: Number(element<HTMLInputElement>("outing-radius").value),
   };
-}
-
-function showMode(mode: ToolMode): void {
-  const planning = mode === "plan";
-  element("run-controls").hidden = !planning;
-  element("explore-controls").hidden = planning;
-  element("run-footer").hidden = !planning;
-  for (const [id, selected] of [
-    ["tool-explore", !planning],
-    ["tool-run", planning],
-  ] as const) {
-    const tab = element<HTMLButtonElement>(id);
-    tab.disabled = false;
-    tab.setAttribute("aria-selected", String(selected));
-    tab.tabIndex = selected ? 0 : -1;
-  }
-}
-
-function bindModeTabs(changeMode: (mode: ToolMode) => void): void {
-  const tabs = [element<HTMLButtonElement>("tool-explore"), element<HTMLButtonElement>("tool-run")];
-  for (const [index, tab] of tabs.entries()) {
-    tab.addEventListener("click", () => changeMode(index === 0 ? "explore" : "plan"));
-    tab.addEventListener("keydown", (event) => {
-      const next =
-        event.key === "ArrowRight"
-          ? (index + 1) % tabs.length
-          : event.key === "ArrowLeft"
-            ? (index + tabs.length - 1) % tabs.length
-            : event.key === "Home"
-              ? 0
-              : event.key === "End"
-                ? tabs.length - 1
-                : undefined;
-      if (next === undefined || tabs[next].disabled) return;
-      event.preventDefault();
-      tabs[next].focus();
-      tabs[next].click();
-    });
-  }
 }
 
 async function readyPathConfig(): Promise<PathConfig | undefined> {
@@ -101,14 +62,12 @@ export async function startMapTools(map: Map, stops: ColorStop[]): Promise<void>
     setHome,
   });
 
-  bindModeTabs((mode) => {
-    if (mode === state.mode) return;
-    state.mode = mode;
-    showMode(mode);
+  element<HTMLButtonElement>("plan-section").disabled = false;
+  document.addEventListener("sectionchange", () => {
+    state.mode = element("run-controls").hidden ? "explore" : "plan";
     paths.modeChanged();
     planner?.modeChanged();
   });
-  showMode(state.mode);
 
   for (const id of ["path-surface", "path-avoid-stairs", "outing-radius"]) {
     element<HTMLInputElement | HTMLSelectElement>(id).addEventListener("change", (event) => {

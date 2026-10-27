@@ -4,6 +4,7 @@ export type ToolMode = "explore" | "plan";
 
 /** Shared inputs owned by the application coordinator. */
 export interface SharedState {
+  /** Editing focus only; map layers remain independent. */
   mode: ToolMode;
   home: Location | undefined;
   policy: Readonly<PathPolicy>;

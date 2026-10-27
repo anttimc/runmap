@@ -27,10 +27,6 @@ export function startLayout(): void {
   const dialog = element<HTMLDialogElement>("settings-dialog");
   for (const opener of document.querySelectorAll<HTMLButtonElement>("[data-settings]")) {
     opener.addEventListener("click", () => {
-      const paths = opener.dataset.settings === "paths";
-      element("settings-paths").hidden = !paths;
-      element("settings-map").hidden = paths;
-      element("settings-title").textContent = paths ? "Path settings" : "Map settings";
       dialog.showModal();
     });
   }
@@ -47,12 +43,18 @@ export function startLayout(): void {
       dialog.close();
   });
 
-  const opacity = element<HTMLInputElement>("opacity");
-  const updateLegend = (): void => {
-    element("terrain-legend").hidden = Number(opacity.value) === 0;
-  };
-  opacity.addEventListener("input", updateLegend);
-  updateLegend();
+  const sections = document.querySelectorAll<HTMLButtonElement>("[data-section]");
+  for (const button of sections) {
+    button.addEventListener("click", () => {
+      const open = button.getAttribute("aria-expanded") !== "true";
+      for (const other of sections) {
+        const expanded = other === button && open;
+        other.setAttribute("aria-expanded", String(expanded));
+        element(other.dataset.section!).hidden = !expanded;
+      }
+      document.dispatchEvent(new Event("sectionchange"));
+    });
+  }
   new ResizeObserver(() => {
     document.documentElement.style.setProperty(
       "--tool-height",
