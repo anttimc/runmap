@@ -54,6 +54,10 @@ it is also the input to SQLite export.
 
 ## Prepared network SQLite database
 
+The [sqleton schema visualization](network-schema.svg) is generated from the
+local database, including indexes, graph chunk tables, and SQLite R-tree shadow
+tables. See [generation instructions](schema-visualization.md) to refresh it.
+
 The current network schema version is **3**. Export prepares dataset-wide access,
 boundary, display, classification, and hill features before persisting them.
 Runtime windows use those results directly; cropping a graph must not change its

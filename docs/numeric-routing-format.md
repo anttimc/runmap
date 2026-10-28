@@ -5,6 +5,10 @@ This implements numeric storage for the
 artifact alongside the reference database, used by the HTTP planner and distance
 exploration with bounded working-set caching.
 
+The [sqleton schema visualization](reference/numeric-routing-schema.svg) shows
+the database tables, indexes, and declared foreign keys. See
+[generation instructions](reference/schema-visualization.md) to refresh it.
+
 ## Export and read
 
 ```sh
