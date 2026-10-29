@@ -42,6 +42,15 @@ The [packed geometry report](history/39-packed-geometry.md) records the followin
 WGS84/projected coordinate migration and capital-area graph memory comparison.
 The [packed arc report](history/40-packed-arcs.md) records numeric arc/adjacency
 storage, shared policy masks, and the memory/search-time tradeoff.
+The [loop-length grid report](history/54-loop-length-grid.md) records the first
+turnaround/width parameter-space sample, length surfaces, width sweeps, and
+planner failures before choosing a surrogate model or automatic search method.
+The [loop-length baseline report](history/55-loop-length-baselines.md) compares
+polynomial and network-informed means with buffered spatial holdouts and maps
+the remaining residual structure.
+The [Pasila repetition](history/56-pasila-loop-length.md) repeats the grid and
+six-model spatial validation at a second start, with comparable settings and
+side-by-side errors against Leppävaara.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

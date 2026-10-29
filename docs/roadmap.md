@@ -299,6 +299,28 @@ described [above](#deferred-planned-route-terrain-inspection).
   feature map layers from the interaction controllers. Make remaining feature
   state explicit where DOM values or status text currently carry it.
 
+## Loop recommendation experiments
+
+The [loop-length grid experiment](development.md#loop-length-parameter-grid)
+samples turnaround position and width using the existing planner. Remaining work:
+
+- Review sampled route quality with a local runner; repeat at contrasting
+  locations and preference presets before drawing general conclusions. The
+  [first grid report](archive/history/54-loop-length-grid.md) records the initial
+  measurements and visual inspection.
+- Resolve snapped-endpoint offset validation errors recorded by the grid, using
+  the archived failing inputs separately from unreachable routes.
+- Extend validation of the [initial polynomial baselines](archive/history/55-loop-length-baselines.md)
+  beyond the [Pasila repetition](archive/history/56-pasila-loop-length.md) to
+  additional starts and preference presets; test coefficient transfer between
+  starts. Test a residual uncertainty model and
+  network/partition features using held-out spatial regions and width slices;
+  establish calibrated uncertainty near route switches and crossings. Check
+  target-length success and route repetition.
+- Compare coarse-to-fine sampling and model-guided search under equal routing-call
+  and wall-clock budgets. Choose direction semantics, target tolerance, and route
+  quality criteria before adding automatic turnaround selection to the app.
+
 ## Optional / later
 
 Public hosting needs a suitable basemap arrangement and attribution, repeatable
@@ -308,8 +330,8 @@ CDN adapters, multiple API workers, administrator acquisition jobs, and public
 acquisition controls are not delivered infrastructure.
 
 Wider public coverage or a private Jämsä region needs explicitly selected bounds
-and preparation. Running-time models, target-duration/length tuning, automatic
-turnaround selection, route import/export, and movable-centre/enclosure controls
+and preparation. Running-time models, target-duration tuning,
+route import/export, and movable-centre/enclosure controls
 remain optional increments. A bounded Odin or Go experiment is optional when
 profiling or a learning objective justifies it.
 

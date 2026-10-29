@@ -472,6 +472,136 @@ latency measurements.
 
 ## Experiments and reports
 
+### Loop-length parameter grid
+
+Sample the existing round-trip planner over turnaround position and loop width:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.loop_length_grid \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  artifacts/loop-length-grid/leppavaara-north \
+  --home 24.795 60.216 --bearing 0 \
+  --forward 300 2500 --lateral -1500 1500 --grid 20 20 \
+  --widths 0 0.06 0.12 0.18 0.24 0.30 0.36 0.42
+```
+
+The matching `numeric-routing-v2.sqlite` must be beside the network database.
+Use a fresh output directory; existing samples are never overwritten. A pilot
+can use `--grid 3 3 --widths 0 0.18 0.42`. Defaults match the full command above.
+This is an offline experiment, not an automatic route recommendation feature.
+
+Turnaround coordinates form a rectangular grid in EPSG:3067. Bearing is clockwise
+from projected grid north; forward distance follows the bearing, and positive
+lateral distance goes left. Requested positions are snapped using the production
+API, with a default 50 m radius. Each of the 400 positions is evaluated at eight
+widths, giving 3,200 evaluations. Width is the existing `avoidance_ratio`, not a
+geometric width in metres. Both side assignments are retained; zero width has
+one candidate. Other shape settings retain their application defaults.
+
+`--hills off|low|high`, `--surface all|surfaced`, `--allow-stairs`, `--snap-radius`,
+and `--timeout` control fixed preferences and per-evaluation limits. Defaults
+are hills Off, all surfaces, stairs avoided, and a 15 s deadline. Widths must
+increase strictly and satisfy the planner's shape-setting limits. Widths at the
+same position run consecutively to share the bounded native working-set cache.
+Timings include in-process snapping, preparation, routing, and response geometry;
+they exclude dataset load, serialization, plotting, HTTP, and browser work.
+
+The output directory contains:
+
+- `manifest.json`: grid/settings, dataset/model identities, source revision and
+  source digest, machine, limits, completion state, and timing summary.
+- `samples.jsonl.gz`: one API response per evaluation, including snapped endpoints,
+  outcomes, search diagnostics, cost configuration, route geometry, traversal
+  identity, lengths, and preference observations. Planner `ValueError` failures
+  have a null response and an explicit exception type/message instead.
+- `observations.csv`: one row per candidate, or an explicit empty-candidate row
+  for failed evaluations. Physical distance and optimization cost are separate.
+- `summary.json`: evaluation and spatial-position coverage, length range, route
+  fingerprints, neighboring spatial length changes, width decreases, planner
+  error messages, timing percentiles, and plotting-source identity.
+- `length-surfaces`, `outcomes`, `width-sweeps`, and `route-examples`, each as PNG
+  and SVG. Length panels share a color scale and show both side assignments.
+
+Only evaluations with status `complete` contribute to length surfaces and
+length-change summaries. Partial candidates remain in the raw records/CSV.
+Missing snaps, unreachable routes, deadlines, area limits, and planner errors
+have distinct outcome colors. Grey length cells indicate missing complete results.
+Zero-width length is shared across both side panels for comparison, without
+inventing a second sampled candidate. Heatmap cells show samples; they do not
+establish traversability or continuity between turnaround positions. Width curves
+connect sampled values without fitting a proxy. The six sweep positions span
+the spatial grid; when a width increase reduces length by more than 1 m, the
+largest such decrease replaces one representative sweep. Route fingerprints identify
+ordered partial traversals, so different snapped endpoints can have different
+hashes even when routes largely follow the same corridor.
+
+Rebuild plots and CSV/summary from completed saved samples without routing again:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.plot_loop_length_grid \
+  artifacts/loop-length-grid/leppavaara-north
+```
+
+Interrupted runs retain `complete: false`; rerun into a fresh directory. Sampling
+uses the production planner's bounded-area expansion heuristic and does not prove
+globally optimal loops. A single location and fixed preference preset do not
+establish predictor accuracy or generalization to other networks.
+The [2026-10-28 report](archive/history/54-loop-length-grid.md) preserves the first
+full grid's measurements and plots, including its explicit 3 s deadline override.
+
+### Loop-length baseline fits
+
+Fit small polynomial baselines and compare residuals on the completed grid:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.fit_loop_length \
+  artifacts/loop-length-grid/leppavaara-north \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  artifacts/loop-length-fit/leppavaara-north
+```
+
+The input is the raw compressed grid plus its completed manifest; the database
+and matching numeric artifact must have the same dataset identity. Use a fresh
+analysis directory. Only completed evaluations supply length labels, retaining
+both sides and counting the zero-width candidate once. Saved grid files are not
+modified. Preferences and the direction frame come from the grid manifest.
+
+Two unpenalized Dijkstra searches compute outward and return distances at each
+snapped turnaround under the original surface/stair policy. Reverse endpoint
+interpolation reverses the segment's allowed directions. The feature search
+budget is the largest observed feasible leg plus 100 m; this sets computation
+extent, while the features themselves are independently computed shortest
+distances. Bounds use the prepared projected-distance lower bound, and a reached
+loaded frontier rejects the feature computation. Zero-width label agreement is
+reported as an independent check, not used to construct the features.
+
+Six ordinary least-squares models compare proportional and affine radial trends,
+angular terms, network-distance scaling, an anchored network baseline, and an
+affine radial trend with network-detour interactions. Width is normalized by
+0.18. Models are pooled across side assignments, have no monotonicity or positivity
+constraints, and are intended for the sampled domain. Exact basis terms, units,
+and full-data coefficients are saved in `report.json`.
+
+Validation leaves one spatial block out at a time. All widths and sides at each
+position stay together; training excludes a buffer around the block. Defaults
+are `--block-size 5 --buffer 1`, yielding sixteen folds on the 20 × 20 grid.
+Full-data fits are reported separately from held-out predictions. Model
+comparison is exploratory; it is not a separate untouched final test set or
+validation across starts/preferences.
+
+Outputs include `network-features.json`, `predictions.csv` with fitted and
+held-out predictions, and `report.json` with provenance, coefficients, metrics,
+per-width errors, spatial residual correlation, largest errors, and feature
+preparation timings. PNG/SVG figures show prediction comparison, held-out
+residual maps, residuals versus inputs, and error versus width. Residuals mean
+actual minus predicted length; maps average side assignments without fabricating
+missing labels. The [first fit report](archive/history/55-loop-length-baselines.md)
+preserves measured results and interpretation.
+The [Pasila repetition](archive/history/56-pasila-loop-length.md) uses the same
+grid and validation settings at a second start, with locally refitted models.
+
+### Other experiments
+
 The CLI anchor baseline remains a separate experiment, with its own distance,
 ascent, stairs, and overlap settings:
 
