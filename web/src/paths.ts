@@ -33,18 +33,19 @@ import { element } from "./dom";
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
 const lowGradePathColor = "#a1d99b";
 
-function renderDistanceLegend(maximumKm: number): void {
+function renderDistanceLegend(maximumKm: number, detour = false): void {
   const maximumM = maximumKm * 1000;
-  const bands = distanceBands(maximumM);
+  const intervalM = detour ? 200 : distanceBandM;
+  const bands = distanceBands(maximumM, intervalM);
   element("distance-ramp").style.background = `linear-gradient(to right, ${bands
     .map(
       (band) =>
-        `${band.color} ${(100 * band.startM) / maximumM}% ${(100 * Math.min(band.startM + distanceBandM, maximumM)) / maximumM}%`,
+        `${band.color} ${(100 * band.startM) / maximumM}% ${(100 * Math.min(band.startM + intervalM, maximumM)) / maximumM}%`,
     )
     .join(", ")})`;
   const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
   element("distance-ticks").textContent =
-    `0–${formatter.format(maximumKm)} km · each color = 0.5 km`;
+    `0–${formatter.format(maximumKm)} km${detour ? " extra travel" : ""} · each color = ${intervalM} m`;
 }
 
 function renderGradientLegend(stops: ColorStop[]): void {
@@ -609,6 +610,8 @@ export function startPaths(
   const clearStart = element<HTMLButtonElement>("outing-clear-start");
   const outingStatus = element("outing-status");
   const shellMethod = element<HTMLSelectElement>("distance-shell-method");
+  const subtractStraightLine = element<HTMLInputElement>("distance-subtract-straight-line");
+  const networkDistance = element<HTMLInputElement>("distance-network");
   const shellStatus = element("distance-shell-status");
   const setStatus = (message: string, state: string) => {
     status.textContent = message;
@@ -637,6 +640,8 @@ export function startPaths(
     ? "Distance shells require prepared numeric routing data."
     : "";
   shellMethod.disabled = distanceLayer.disabled;
+  subtractStraightLine.disabled = distanceLayer.disabled;
+  networkDistance.disabled = distanceLayer.disabled;
   if (!config.shell_methods?.length)
     shellStatus.textContent = "Shell display is unavailable for this dataset.";
   renderGradientLegend(stops);
@@ -686,6 +691,7 @@ export function startPaths(
   let preparing = false;
   let pendingView = "";
   let installedShell = "";
+  let shellMaximumM = 1;
   let tileFailed = false;
   let inspectionSequence = 0;
   let selected: string | undefined;
@@ -846,7 +852,7 @@ export function startPaths(
     // Shell methods and visibility never invalidate the distance search.
     params.delete("hide_building_access");
     const key = outing ? params.toString() : "";
-    const viewKey = `${key}|${distanceEnabled() ? shellMethod.value : variant()}`;
+    const viewKey = `${key}|${distanceEnabled() ? `${shellMethod.value}|${subtractStraightLine.checked}` : variant()}`;
     if (outing && key === snapshotKey && preparing && pendingView === viewKey) return;
     pendingView = viewKey;
     viewportAbort?.abort();
@@ -910,15 +916,20 @@ export function startPaths(
           result.snapshot_id,
           method,
           viewportAbort.signal,
+          subtractStraightLine.checked,
         );
         if (sequence !== viewportSequence) return;
         if (
           shells.dataset_id !== config.dataset_id ||
           shells.snapshot_id !== result.snapshot_id ||
-          shells.method !== method
+          shells.method !== method ||
+          shells.subtract_straight_line !== subtractStraightLine.checked
         )
           throw new Error("Distance shell response changed — try again.");
+        shellMaximumM = shells.maximum_m;
         setShellData(map, shells);
+        showShellLayers(map, true, shellMaximumM, shells.interval_m);
+        renderDistanceLegend(shellMaximumM / 1000, subtractStraightLine.checked);
         installedShell = viewKey;
         const label = shells.method_used === "grid" ? "Grid" : "Filtered triangulation";
         shellStatus.textContent = `${label} · ${shells.features.length} bands · ${(shells.generation_ms / 1000).toFixed(2)} s${shells.method_used !== method ? " · sparse network fallback" : ""}`;
@@ -994,6 +1005,8 @@ export function startPaths(
     if (budget.reportValidity()) refresh();
   });
   shellMethod.addEventListener("change", refresh);
+  subtractStraightLine.addEventListener("change", refresh);
+  networkDistance.addEventListener("change", refresh);
   function updateMetric(): void {
     updateLodLegend();
     const distance = distanceEnabled();
@@ -1002,19 +1015,38 @@ export function startPaths(
     for (const id of ["path-casing", "path-grades", "path-uncertain", "path-stairs"])
       map.setLayoutProperty(id, "visibility", pathGradient.checked ? "visible" : "none");
     map.setLayoutProperty("path-coverage", "visibility", analysis ? "visible" : "none");
-    showShellLayers(map, distance, Number(budget.value) * 1000);
+    showShellLayers(
+      map,
+      distance,
+      subtractStraightLine.checked ? shellMaximumM : Number(budget.value) * 1000,
+      subtractStraightLine.checked ? 200 : distanceBandM,
+    );
     if (!distance) setShellData(map);
     const threshold = Number(flatThreshold.value);
     element("flat-threshold-controls").hidden = !flatter.checked;
     element("path-flat-threshold-value").textContent = `${threshold}%`;
     element("flat-legend-value").textContent = `≤${threshold}% · at least 50 m`;
-    renderDistanceLegend(Number(budget.value));
+    renderDistanceLegend(
+      subtractStraightLine.checked ? shellMaximumM / 1000 : Number(budget.value),
+      subtractStraightLine.checked,
+    );
     applyPathEmphasis(map, highlightFlat(), threshold);
     updateLegendVisibility();
     updateMetricDescription();
     coverageStatus();
   }
   function updateMetricDescription(): void {
+    const extraTravel = subtractStraightLine.checked;
+    element("distance-mode-description").textContent = extraTravel
+      ? "Spot detours around water, railways and other obstacles. Colors show extra distance compared with a straight line, scaled to the largest detour in this area."
+      : "See how far you can reach along the path network.";
+    element("distance-legend-heading").textContent = extraTravel
+      ? "Extra travel"
+      : "Distance from start";
+    element("distance-legend").setAttribute(
+      "aria-label",
+      extraTravel ? "Extra travel beyond straight-line distance" : "Network distance from start",
+    );
     const overview = map.getZoom() < config.tile_min_zoom;
     element("mode-description").textContent = overview
       ? "Zoom in to see colors showing steepness along paths and inspect their profiles."
@@ -1027,7 +1059,7 @@ export function startPaths(
         ? "Background colors show terrain slope. A path following a hillside contour can be flat. Terrain colors are softened while distance shading is on."
         : "",
       distanceEnabled()
-        ? "Filled colors show 0.5 km bands of shortest legal network distance. Areas between paths are approximate and do not imply off-path access. Return distance is not included."
+        ? `Filled colors show ${subtractStraightLine.checked ? "200 m" : "500 m"} bands of ${subtractStraightLine.checked ? "extra travel beyond straight-line distance" : "shortest legal network distance"}. Areas between paths are approximate and do not imply off-path access. Return distance is not included.`
         : "",
       highlightFlat()
         ? `Green outlines mark paths containing stretches of at least 50 m with grades up to ${Number(flatThreshold.value)}%.`

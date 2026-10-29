@@ -901,3 +901,57 @@ h1 {
 #path-status[data-state="ready"] {
   display: none;
 }
+
+/* Keep distance and detour choices visible in the main exploration controls. */
+.distance-modes {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+.distance-modes legend {
+  font-size: 0.74rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.distance-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid #c6cfca;
+  border-radius: 8px;
+  padding: 9px;
+  cursor: pointer;
+}
+.distance-mode:has(input:checked) {
+  border-color: #387969;
+  background: #eaf3ed;
+}
+.distance-mode:has(input:focus-visible) {
+  outline: 2px solid #387969;
+  outline-offset: 2px;
+}
+.distance-mode:has(input:disabled) {
+  opacity: 0.55;
+  cursor: default;
+}
+.distance-mode input {
+  flex: 0 0 auto;
+  margin: 3px 0 0;
+  accent-color: #387969;
+}
+.distance-mode strong,
+.distance-mode small {
+  display: block;
+}
+.distance-mode strong {
+  font-size: 0.78rem;
+}
+.distance-mode small {
+  margin-top: 3px;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: #41564f;
+}

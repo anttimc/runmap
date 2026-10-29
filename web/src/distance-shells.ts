@@ -6,17 +6,20 @@ import { turboColors } from "./turbo.ts";
 export const distanceBandM = 500;
 export const shellLayerIds = ["distance-shell-fill", "distance-shell-boundaries"];
 
-export function distanceBands(maximumM: number): { startM: number; color: string }[] {
-  const count = Math.max(1, Math.ceil(maximumM / distanceBandM));
+export function distanceBands(
+  maximumM: number,
+  intervalM = distanceBandM,
+): { startM: number; color: string }[] {
+  const count = Math.max(1, Math.ceil(maximumM / intervalM));
   return Array.from({ length: count }, (_, index) => {
     const colorIndex =
       count === 1 ? 0 : Math.floor((index * (turboColors.length - 1)) / (count - 1));
-    return { startM: index * distanceBandM, color: turboColors[colorIndex] };
+    return { startM: index * intervalM, color: turboColors[colorIndex] };
   });
 }
 
-export function shellColor(maximumM: number): ExpressionSpecification {
-  const bands = distanceBands(maximumM);
+export function shellColor(maximumM: number, intervalM = distanceBandM): ExpressionSpecification {
+  const bands = distanceBands(maximumM, intervalM);
   return [
     "step",
     ["get", "lower_m"],
@@ -61,8 +64,13 @@ export function setShellData(map: Map, data?: FeatureCollection): void {
   );
 }
 
-export function showShellLayers(map: Map, visible: boolean, maximumM: number): void {
+export function showShellLayers(
+  map: Map,
+  visible: boolean,
+  maximumM: number,
+  intervalM = distanceBandM,
+): void {
   for (const id of shellLayerIds)
     map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
-  map.setPaintProperty("distance-shell-fill", "fill-color", shellColor(maximumM));
+  map.setPaintProperty("distance-shell-fill", "fill-color", shellColor(maximumM, intervalM));
 }

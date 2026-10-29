@@ -431,24 +431,38 @@
               ></label>
             </div>
             <div id="distance-controls" class="section-options outing-controls" hidden>
-              <span class="help-tip"
-                ><button
-                  type="button"
-                  class="help-trigger"
-                  aria-label="More information"
-                  aria-expanded="false"
-                >
-                  ?</button
-                ><span role="tooltip" class="help-content">
-                  Distance uses the same start as the run planner. Turn on the layer to see filled
-                  500 m bands.
-                </span></span
-              >
+              <fieldset class="distance-modes">
+                <legend>Color the map by</legend>
+                <label class="distance-mode">
+                  <input id="distance-network" type="radio" name="distance-mode" checked disabled />
+                  <span
+                    ><strong>Distance from start</strong
+                    ><small>Shortest distance along paths · 500 m bands</small></span
+                  >
+                </label>
+                <label class="distance-mode">
+                  <input
+                    id="distance-subtract-straight-line"
+                    type="radio"
+                    name="distance-mode"
+                    disabled
+                  />
+                  <span
+                    ><strong>Extra travel</strong
+                    ><small>Distance beyond a straight line · 200 m bands</small></span
+                  >
+                </label>
+              </fieldset>
+              <p id="distance-mode-description" class="explanation">
+                See how far you can reach along the path network.
+              </p>
               <div class="heading-row outing-actions">
                 <button id="outing-set-start" type="button" disabled>Set start on map</button>
                 <button id="outing-clear-start" type="button" disabled>Clear start</button>
               </div>
-              <label class="control-label" for="outing-budget">Forward distance budget (km)</label>
+              <label class="control-label" for="outing-budget"
+                >Explore within (km along paths)</label
+              >
               <input
                 id="outing-budget"
                 type="number"
@@ -458,6 +472,9 @@
                 value="3"
                 disabled
               />
+              <p class="explanation">
+                The same start is used for run planning. Return distance is not included.
+              </p>
               <p id="outing-status" class="explanation" role="status">
                 Choose a start to enable distance highlighting.
               </p>
@@ -481,9 +498,9 @@
                 >
                   ?</button
                 ><span role="tooltip" class="help-content">
-                  Colors show 500 m bands of shortest legal distance along the path network. Filled
-                  areas between paths are approximate; they do not imply access across water or
-                  other barriers. Return distance is not included. Click a mapped path to inspect
+                  Colors show either distance along paths or extra travel beyond a straight line.
+                  Filled areas between paths are approximate; they do not imply access across water
+                  or other barriers. Return distance is not included. Click a mapped path to inspect
                   its exact network distance.
                 </span></span
               >
@@ -510,7 +527,9 @@
             aria-label="Network distance from start"
           >
             <div class="continuous-key">
-              <div class="legend-heading"><span>Distance from start</span></div>
+              <div class="legend-heading">
+                <span id="distance-legend-heading">Distance from start</span>
+              </div>
               <div id="distance-ramp" class="continuous-ramp"></div>
               <div id="distance-ticks">0–3 km · each color = 0.5 km</div>
             </div>

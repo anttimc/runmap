@@ -17,6 +17,19 @@ advertises available methods. Datasets without numeric routing retain gradient
 display and inspection; the distance switch is disabled. Distance path colors,
 snapshot MVTs, and `/api/paths/explore` have been removed.
 
+Choose **Extra travel** under **Color the map by** in the main distance controls
+to color by extra travel: shortest legal network distance minus the straight-line distance from
+the snapped start, clamped to zero. Both distances use EPSG:3067 metres. This
+highlights detours around obstacles. The forward budget still limits the search;
+it is not an extra-travel budget. Extra-travel bands are 200 m wide and the legend identifies
+extra travel; **Distance from start** bands remain 500 m. The extra-travel color scale
+and legend end at the largest extra distance among the reached samples, with a
+1 m minimum scale for zero-detour results. The last band can be shorter than
+200 m. The API reports this scale endpoint as `maximum_m`; standard mode reports
+the forward budget. Path inspection continues to report the original network distance.
+Subtraction happens at network samples before either surface is interpolated;
+samples beyond the forward budget are excluded in this mode.
+
 ## Shared distance samples
 
 Both methods use the existing forward-Dijkstra snapshot. For a segment of length
@@ -69,6 +82,10 @@ Prepare an exploration with `POST /api/paths/snapshots`, then request:
 GET /api/paths/snapshots/{snapshot_id}/shells?dataset_id={dataset_id}&method=grid
 GET /api/paths/snapshots/{snapshot_id}/shells?dataset_id={dataset_id}&method=triangulation
 ```
+
+`subtract_straight_line=true` enables extra-travel bands (default `false`); the
+response echoes this flag. Switching it reuses cached search and network samples,
+with separate encoded response cache entries.
 
 `cell_m` optionally selects 25, 50 (default), or 100 m; the UI uses 50 m. The
 response is a GeoJSON FeatureCollection of MultiPolygons with `lower_m` and

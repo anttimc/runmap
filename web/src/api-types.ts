@@ -145,6 +145,8 @@ export interface ShellResponse extends FeatureCollection<
   snapshot_id: string;
   method: ShellMethod;
   method_used: ShellMethod;
+  subtract_straight_line: boolean;
+  maximum_m: number;
   cell_m: number;
   interval_m: number;
   generation_ms: number;

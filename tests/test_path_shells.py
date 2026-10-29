@@ -54,6 +54,9 @@ class PathShellTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result["method"], method)
                 self.assertTrue(result["features"])
                 self.assertTrue(all(shape(feature["geometry"]).is_valid for feature in result["features"]))
+            status, detour = await get(prefix + "&subtract_straight_line=true")
+            self.assertEqual(status, 200)
+            self.assertTrue(detour["subtract_straight_line"])
             self.assertEqual((await get(prefix + "&method=unknown"))[0], 422)
             self.assertEqual((await get(prefix + "&cell_m=1"))[0], 400)
             self.assertEqual((await get(prefix.replace(self.data.dataset_id, "stale")))[0], 409)
@@ -111,6 +114,31 @@ class PathShellTests(unittest.IsolatedAsyncioTestCase):
         geometry = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
         collection = GeometryCollection([geometry, LineString([(10, 10), (20, 20)])])
         self.assertEqual(path_shells.polygon_parts(collection), (geometry,))
+
+    def test_detour_subtracts_direct_distance_and_preserves_budget(self) -> None:
+        samples = DistanceSamples(np.array([[0., 0.], [3., 4.], [6., 8.], [1., 0.]]),
+                                  np.array([0., 12., 10., 21.]))
+        result = path_shells.detour_samples(samples, (0., 0.), 20)
+        np.testing.assert_array_equal(result.distances, [0., 7., 0.])
+        np.testing.assert_array_equal(samples.distances, [0., 12., 10., 21.])
+        self.assertFalse(result.distances.flags.writeable)
+
+    def test_detour_cache_is_separate_and_reuses_samples(self) -> None:
+        with patch.object(path_shells, "load_shell_samples", wraps=path_shells.load_shell_samples) as reader:
+            normal, _, _ = self.shells.render(self.snapshot, "grid")
+            for method in ("grid", "triangulation"):
+                encoded, hit, _ = self.shells.render(self.snapshot, method, subtract_straight_line=True)
+                self.assertFalse(hit)
+                response = json.loads(encoded)
+                self.assertLess(response["maximum_m"], self.snapshot.budget_km * 1000)
+                self.assertTrue(all(feature["properties"]["upper_m"] <= response["maximum_m"]
+                                    for feature in response["features"]))
+                self.assertTrue(json.loads(encoded)["subtract_straight_line"])
+                self.assertEqual(json.loads(encoded)["interval_m"], 200)
+            self.assertEqual(reader.call_count, 1)
+        self.assertFalse(json.loads(normal)["subtract_straight_line"])
+        self.assertEqual(json.loads(normal)["interval_m"], 500)
+        self.assertTrue(self.shells.render(self.snapshot, "grid", subtract_straight_line=True)[1])
 
     def test_snapshot_distances_are_not_mutated(self) -> None:
         before = self.snapshot.distances.outward.values.copy()

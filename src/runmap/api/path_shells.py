@@ -105,6 +105,17 @@ def load_shell_samples(data: SQLitePathData, snapshot: Snapshot, settings: Shell
     return result
 
 
+def detour_samples(samples: DistanceSamples, start_xy: tuple[float, float], maximum_m: float) -> DistanceSamples:
+    """Measure extra travel within the original budget without altering cached samples."""
+    reached = samples.distances <= maximum_m
+    xy = samples.xy[reached]
+    direct = np.linalg.norm(xy - np.asarray(start_xy), axis=1)
+    distances = np.maximum(0, samples.distances[reached] - direct)
+    xy.setflags(write=False)
+    distances.setflags(write=False)
+    return DistanceSamples(xy, distances)
+
+
 def generate_bands(samples: DistanceSamples, maximum_m: float, settings: ShellSettings, method: ShellMethod,
                     deadline: float) -> tuple[tuple[DistanceBand, ...], ShellMethod]:
     if method == "triangulation":
@@ -128,43 +139,50 @@ class PathShellService:
         self.workers = BoundedSemaphore(2)
         self.coverage = projected_coverage(paths.data) if isinstance(paths.data, SQLitePathData) else None
 
-    def render(self, snapshot: Snapshot, method: ShellMethod, cell_m: float = 50) -> tuple[bytes, bool, float]:
+    def render(self, snapshot: Snapshot, method: ShellMethod, cell_m: float = 50,
+               subtract_straight_line: bool = False) -> tuple[bytes, bool, float]:
         if method not in {"grid", "triangulation"} or cell_m not in {25, 50, 100}:
             raise ValueError("Unknown shell method or resolution")
         started = monotonic()
         deadline = started + 20
-        settings = ShellSettings(cell_m=cell_m)
-        key = repr((snapshot.id, method, settings))
-        result, hit = self.responses.compute(key, lambda: self._generate(snapshot, settings, method, deadline),
+        settings = ShellSettings(cell_m=cell_m, interval_m=200 if subtract_straight_line else 500)
+        key = repr((snapshot.id, method, settings, subtract_straight_line))
+        result, hit = self.responses.compute(key, lambda: self._generate(snapshot, settings, method, deadline, subtract_straight_line),
             lambda result: len(result.encoded) + 256, deadline=deadline, allow_oversized=True)
         return result.encoded, hit, (monotonic() - started) * 1000
 
     def _generate(self, snapshot: Snapshot, settings: ShellSettings, method: ShellMethod,
-                   deadline: float) -> ShellPayload:
+                   deadline: float, subtract_straight_line: bool) -> ShellPayload:
         if not self.workers.acquire(timeout=max(0, deadline - monotonic())):
             raise TimeoutError("Distance shell generation is busy; try again")
         try:
-            return self._encode(snapshot, settings, method, deadline)
+            return self._encode(snapshot, settings, method, deadline, subtract_straight_line)
         finally:
             self.workers.release()
 
     def _encode(self, snapshot: Snapshot, settings: ShellSettings, method: ShellMethod,
-                 deadline: float) -> ShellPayload:
+                 deadline: float, subtract_straight_line: bool) -> ShellPayload:
         started = monotonic()
         data = self.paths.data
         if not isinstance(data, SQLitePathData) or self.coverage is None:
             raise ValueError("Distance shells require prepared numeric routing data")
-        samples, sample_hit = self.samples.compute(repr((snapshot.id, settings)),
+        samples, sample_hit = self.samples.compute(repr((snapshot.id, ShellSettings(cell_m=settings.cell_m))),
             lambda: load_shell_samples(data, snapshot, settings, deadline), retained_exploration_bytes,
             deadline=deadline, allow_oversized=True)
+        if subtract_straight_line:
+            snap = snapshot.distances.snap
+            x, y = transform("EPSG:4326", "EPSG:3067", [snap.longitude], [snap.latitude])
+            samples = detour_samples(samples, (x[0], y[0]), snapshot.budget_km * 1000)
         sampled = monotonic()
-        bands, used = generate_bands(samples, snapshot.budget_km * 1000, settings, method, deadline)
+        maximum_m = (max(1.0, float(np.max(samples.distances))) if subtract_straight_line
+                     else snapshot.budget_km * 1000)
+        bands, used = generate_bands(samples, maximum_m, settings, method, deadline)
         contoured = monotonic()
         features, vertices = shell_features(bands, self.coverage)
         check_deadline(deadline)
         result: dict[str, object] = {"type": "FeatureCollection", "features": features,
             "dataset_id": data.dataset_id, "snapshot_id": snapshot.id, "method": method, "method_used": used,
-            "cell_m": settings.cell_m, "interval_m": settings.interval_m, "vertices": vertices,
+            "maximum_m": maximum_m, "subtract_straight_line": subtract_straight_line, "cell_m": settings.cell_m, "interval_m": settings.interval_m, "vertices": vertices,
             "sample_cache_hit": sample_hit, "generation_ms": (monotonic() - started) * 1000,
             "sampling_ms": (sampled - started) * 1000, "surface_ms": (contoured - sampled) * 1000}
         return ShellPayload(json.dumps(result, separators=(",", ":"), allow_nan=False).encode())

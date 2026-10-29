@@ -58,3 +58,21 @@ test("shell polygons stay below roads and clear without replacing their source",
   assert.equal(visibility.get("distance-shell-fill.visibility"), "none");
   assert.equal(sources.size, 1);
 });
+
+test("extra-travel colors span the observed maximum in 200 m bands", () => {
+  const bands = distanceBands(550, 200);
+  assert.deepEqual(
+    bands.map((band) => band.startM),
+    [0, 200, 400],
+  );
+  assert.deepEqual(shellColor(550, 200), [
+    "step",
+    ["get", "lower_m"],
+    bands[0].color,
+    200,
+    bands[1].color,
+    400,
+    bands[2].color,
+  ]);
+  assert.equal(bands.at(-1).color, distanceBands(3000).at(-1).color);
+});
