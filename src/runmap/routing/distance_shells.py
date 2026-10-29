@@ -8,6 +8,7 @@ import contourpy
 import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial import cKDTree
+from scipy.ndimage import gaussian_filter
 from runmap.routing.deadlines import check_deadline
 
 from runmap.paths.numeric_format import NumericChunk
@@ -24,6 +25,7 @@ class ShellSettings:
     radius_m: float = 150
     interval_m: float = 500
     max_cells: int = 4_000_000
+    smoothing_m: float = 0
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,8 @@ class DistanceBand:
 
 
 def validate_shell_settings(settings: ShellSettings) -> None:
+    if not math.isfinite(settings.smoothing_m) or settings.smoothing_m < 0:
+        raise ValueError("Shell smoothing must be finite and nonnegative")
     if not all(math.isfinite(v) and v > 0 for v in
                (settings.cell_m, settings.radius_m, settings.interval_m)) or settings.max_cells < 4:
         raise ValueError("Shell dimensions must be finite and positive, with at least four cells")
@@ -168,6 +172,24 @@ def build_distance_grid(samples: DistanceSamples, settings: ShellSettings, *,
         block = values[row:row + 128].reshape(-1)
         block[valid] = samples.distances[nearest[valid]]
     return DistanceGrid(x, y, values)
+
+
+def smooth_distance_grid(grid: DistanceGrid, settings: ShellSettings, *,
+                         deadline: float | None = None) -> DistanceGrid:
+    """Soften nearest-sample steps while retaining the original support mask."""
+    validate_shell_settings(settings)
+    if settings.smoothing_m == 0:
+        return grid
+    check_deadline(deadline)
+    valid = np.isfinite(grid.values)
+    sigma = settings.smoothing_m / settings.cell_m
+    weighted = gaussian_filter(np.where(valid, grid.values, 0), sigma, mode="constant", cval=0)
+    check_deadline(deadline)
+    weights = gaussian_filter(valid.astype(np.float64), sigma, mode="constant", cval=0)
+    result = np.full_like(grid.values, np.nan)
+    np.divide(weighted, weights, out=result, where=valid & (weights > 0))
+    check_deadline(deadline)
+    return DistanceGrid(grid.x, grid.y, result)
 
 
 def distance_bands(grid: DistanceGrid, maximum_m: float, settings: ShellSettings) -> tuple[DistanceBand, ...]:

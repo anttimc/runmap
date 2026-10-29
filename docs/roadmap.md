@@ -35,6 +35,12 @@ traversals, gaps and uncertainty, independently of whether hill avoidance is on.
 
 ## Next: correctness and local acceptance
 
+- Review Off/Light/Strong distance contour smoothing in both distance modes around
+  shorelines, railway crossings, narrow corridors, and disconnected paths. Check
+  that small detours remain visible and masked holes survive; compare generation
+  times on representative budgets. Light (25 m sigma) is the implemented default;
+  visual acceptance and representative latency measurements remain outstanding.
+
 - Replace the remaining “minimum outing” wording in interval inspection with
   forward-distance terminology. The Distance from start label already says return
   distance is excluded. Acceptance: labels, help, inspection, and budget behavior

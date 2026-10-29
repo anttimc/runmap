@@ -77,10 +77,11 @@ test("shell transport selects a method on the same snapshot and preserves expiry
     assert.equal(parsed.pathname, "/api/paths/snapshots/snapshot/shells");
     assert.equal(parsed.searchParams.get("dataset_id"), "dataset");
     assert.equal(parsed.searchParams.get("method"), "triangulation");
+    assert.equal(parsed.searchParams.get("smoothing_m"), "50");
     return Response.json(shells);
   });
   assert.deepEqual(
-    await loadDistanceShells("dataset", "snapshot", "triangulation", controller.signal),
+    await loadDistanceShells("dataset", "snapshot", "triangulation", controller.signal, false, 50),
     shells,
   );
   context.mock.method(globalThis, "fetch", async () =>

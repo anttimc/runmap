@@ -1,7 +1,8 @@
 # Distance shells
 
 In **Map layers**, turn on **Distance from start** and choose the shared start
-and a forward distance budget. Under its **Advanced options**, select **Grid** or
+and a forward distance budget (1–50 km, in 1 km steps). Explanations for the
+color modes, budget, and smoothing are available from their info popups. Under its **Advanced options**, select **Grid** or
 **Filtered triangulation**. Both display filled 500 m bands with thin outlines
 over the normal basemap. The final band can be
 shorter. The method selector reports generation time so the two methods can be
@@ -48,6 +49,15 @@ chunks; display measurements and path vector-tile encoding are not needed.
 
 The default grid spacing is 50 m. A KD tree assigns each grid point its nearest
 sample's network distance within 150 m; points farther from samples stay masked.
+Before contouring, **Contour smoothing** in Advanced options offers Off, Light
+(default, 25 m Gaussian sigma), and Strong (50 m sigma). Smoothing operates on
+the displayed metric, after straight-line subtraction for Extra travel. Gaussian
+weighted values are divided by Gaussian valid-cell weights; the original mask
+is restored, so missing areas remain missing. It can blend nearby values across
+narrow gaps and soften real barrier-related jumps. It does not change routing,
+inspection, the budget, or the color scale based on unsmoothed samples. Mask and
+coverage edges can still look angular. All bands share the same smoothed surface.
+
 ContourPy extracts filled bands between consecutive 500 m thresholds. Zero-area
 rings at exact threshold extrema are removed. Holes and separate components are
 preserved, with no independent simplification of adjacent rings.
@@ -66,6 +76,9 @@ levels, then the resulting fragments are merged with Shapely. Shared edge
 crossings use canonical endpoint ordering; millimetre precision removes
 floating-point slivers. Interior rings survive the merge. Constant-threshold
 triangles belong to one band, avoiding overlapping filled areas.
+
+Triangulation is not smoothed. Its smoothing control is disabled, but the selected
+setting is used if sparse geometry falls back to Grid.
 
 The API does not depend on Matplotlib. The earlier triangulation benchmark used
 Matplotlib's public contour API; its contour-only timings are not timings for
@@ -86,6 +99,10 @@ GET /api/paths/snapshots/{snapshot_id}/shells?dataset_id={dataset_id}&method=tri
 `subtract_straight_line=true` enables extra-travel bands (default `false`); the
 response echoes this flag. Switching it reuses cached search and network samples,
 with separate encoded response cache entries.
+
+`smoothing_m` selects 0, 25 (default), or 50 m Gaussian sigma. Responses echo
+`smoothing_m` and report `smoothing_used_m` (zero for effective triangulation).
+Smoothing changes reuse sampled geometry, with separate response cache entries.
 
 `cell_m` optionally selects 25, 50 (default), or 100 m; the UI uses 50 m. The
 response is a GeoJSON FeatureCollection of MultiPolygons with `lower_m` and

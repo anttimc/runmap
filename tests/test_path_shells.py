@@ -59,6 +59,7 @@ class PathShellTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(detour["subtract_straight_line"])
             self.assertEqual((await get(prefix + "&method=unknown"))[0], 422)
             self.assertEqual((await get(prefix + "&cell_m=1"))[0], 400)
+            self.assertEqual((await get(prefix + "&smoothing_m=75"))[0], 400)
             self.assertEqual((await get(prefix.replace(self.data.dataset_id, "stale")))[0], 409)
             self.assertEqual((await get(prefix.replace(self.snapshot.id, "expired")))[0], 410)
             with patch("runmap.api.path_tiles.monotonic", return_value=monotonic() + 1000):
@@ -139,6 +140,19 @@ class PathShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(json.loads(normal)["subtract_straight_line"])
         self.assertEqual(json.loads(normal)["interval_m"], 500)
         self.assertTrue(self.shells.render(self.snapshot, "grid", subtract_straight_line=True)[1])
+
+    def test_smoothing_cache_and_validation(self) -> None:
+        with patch.object(path_shells, "load_shell_samples", wraps=path_shells.load_shell_samples) as reader:
+            for smoothing in (0, 25, 50):
+                encoded, hit, _ = self.shells.render(self.snapshot, "grid", smoothing_m=smoothing)
+                self.assertFalse(hit)
+                result = json.loads(encoded)
+                self.assertEqual(result["smoothing_used_m"], smoothing)
+                self.assertEqual(result["smoothing_m"], smoothing)
+                self.assertTrue(self.shells.render(self.snapshot, "grid", smoothing_m=smoothing)[1])
+            self.assertEqual(reader.call_count, 1)
+        with self.assertRaises(ValueError):
+            self.shells.render(self.snapshot, "grid", smoothing_m=75)
 
     def test_snapshot_distances_are_not_mutated(self) -> None:
         before = self.snapshot.distances.outward.values.copy()

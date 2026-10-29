@@ -20,7 +20,7 @@ from runmap.paths.numeric_format import decode_numeric_chunk
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.distance_mesh import (MeshUnavailableError, build_distance_mesh, triangulated_bands)
 from runmap.routing.distance_shells import (DistanceBand, DistanceSamples, ShellSettings, build_distance_grid,
-    distance_bands, merge_distance_samples, sample_numeric_chunk)
+    distance_bands, merge_distance_samples, sample_numeric_chunk, smooth_distance_grid)
 from runmap.routing.numeric_exploration import NumericDistanceData
 from runmap.routing.profiles import exploration_profile
 
@@ -126,6 +126,7 @@ def generate_bands(samples: DistanceSamples, maximum_m: float, settings: ShellSe
             # A single line or isolated start has no area for a triangular surface.
             pass
     grid = build_distance_grid(samples, settings, deadline=deadline)
+    grid = smooth_distance_grid(grid, settings, deadline=deadline)
     return distance_bands(grid, maximum_m, settings), "grid"
 
 
@@ -140,12 +141,13 @@ class PathShellService:
         self.coverage = projected_coverage(paths.data) if isinstance(paths.data, SQLitePathData) else None
 
     def render(self, snapshot: Snapshot, method: ShellMethod, cell_m: float = 50,
-               subtract_straight_line: bool = False) -> tuple[bytes, bool, float]:
-        if method not in {"grid", "triangulation"} or cell_m not in {25, 50, 100}:
-            raise ValueError("Unknown shell method or resolution")
+               subtract_straight_line: bool = False, smoothing_m: float = 25) -> tuple[bytes, bool, float]:
+        if method not in {"grid", "triangulation"} or cell_m not in {25, 50, 100} or smoothing_m not in {0, 25, 50}:
+            raise ValueError("Unknown shell method, resolution, or smoothing")
         started = monotonic()
         deadline = started + 20
-        settings = ShellSettings(cell_m=cell_m, interval_m=200 if subtract_straight_line else 500)
+        settings = ShellSettings(cell_m=cell_m, interval_m=200 if subtract_straight_line else 500,
+                                 smoothing_m=smoothing_m)
         key = repr((snapshot.id, method, settings, subtract_straight_line))
         result, hit = self.responses.compute(key, lambda: self._generate(snapshot, settings, method, deadline, subtract_straight_line),
             lambda result: len(result.encoded) + 256, deadline=deadline, allow_oversized=True)
@@ -182,6 +184,7 @@ class PathShellService:
         check_deadline(deadline)
         result: dict[str, object] = {"type": "FeatureCollection", "features": features,
             "dataset_id": data.dataset_id, "snapshot_id": snapshot.id, "method": method, "method_used": used,
+            "smoothing_m": settings.smoothing_m, "smoothing_used_m": settings.smoothing_m if used == "grid" else 0,
             "maximum_m": maximum_m, "subtract_straight_line": subtract_straight_line, "cell_m": settings.cell_m, "interval_m": settings.interval_m, "vertices": vertices,
             "sample_cache_hit": sample_hit, "generation_ms": (monotonic() - started) * 1000,
             "sampling_ms": (sampled - started) * 1000, "surface_ms": (contoured - sampled) * 1000}

@@ -112,9 +112,11 @@ export function loadDistanceShells(
   method: ShellMethod,
   signal: AbortSignal,
   subtractStraightLine = false,
+  smoothingM = 25,
 ): Promise<ShellResponse> {
   const parameters = new URLSearchParams({ dataset_id: datasetId, method });
   parameters.set("subtract_straight_line", String(subtractStraightLine));
+  parameters.set("smoothing_m", String(smoothingM));
   return requestJson(
     `/api/paths/snapshots/${encodeURIComponent(snapshotId)}/shells?${parameters}`,
     { signal },

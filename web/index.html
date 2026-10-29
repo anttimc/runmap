@@ -432,13 +432,27 @@
             </div>
             <div id="distance-controls" class="section-options outing-controls" hidden>
               <fieldset class="distance-modes">
-                <legend>Color the map by</legend>
+                <legend>
+                  Color the map by
+                  <span class="help-tip"
+                    ><button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="About distance colors"
+                      aria-expanded="false"
+                    >
+                      ?</button
+                    ><span role="tooltip" class="help-content" id="distance-mode-description"
+                      >Distance from start: shortest distance along paths, in 500 m bands. Extra
+                      travel: distance beyond a straight line, in 200 m bands. Highlights detours
+                      around water, railways and other obstacles, with colors scaled to the largest
+                      extra distance in the explored area.</span
+                    ></span
+                  >
+                </legend>
                 <label class="distance-mode">
                   <input id="distance-network" type="radio" name="distance-mode" checked disabled />
-                  <span
-                    ><strong>Distance from start</strong
-                    ><small>Shortest distance along paths · 500 m bands</small></span
-                  >
+                  <span><strong>Distance from start</strong></span>
                 </label>
                 <label class="distance-mode">
                   <input
@@ -447,34 +461,38 @@
                     name="distance-mode"
                     disabled
                   />
-                  <span
-                    ><strong>Extra travel</strong
-                    ><small>Distance beyond a straight line · 200 m bands</small></span
-                  >
+                  <span><strong>Extra travel</strong></span>
                 </label>
               </fieldset>
-              <p id="distance-mode-description" class="explanation">
-                See how far you can reach along the path network.
-              </p>
               <div class="heading-row outing-actions">
                 <button id="outing-set-start" type="button" disabled>Set start on map</button>
                 <button id="outing-clear-start" type="button" disabled>Clear start</button>
               </div>
-              <label class="control-label" for="outing-budget"
-                >Explore within (km along paths)</label
-              >
+              <div class="control-label">
+                <label for="outing-budget">Explore within (km along paths)</label>
+                <span class="help-tip"
+                  ><button
+                    type="button"
+                    class="help-trigger"
+                    aria-label="About the exploration distance"
+                    aria-expanded="false"
+                  >
+                    ?</button
+                  ><span role="tooltip" class="help-content"
+                    >The budget limits distance along paths in both color modes. The same start is
+                    used for run planning. Return distance is not included.</span
+                  ></span
+                >
+              </div>
               <input
                 id="outing-budget"
                 type="number"
-                min="0.1"
+                min="1"
                 max="50"
-                step="0.1"
+                step="1"
                 value="3"
                 disabled
               />
-              <p class="explanation">
-                The same start is used for run planning. Return distance is not included.
-              </p>
               <p id="outing-status" class="explanation" role="status">
                 Choose a start to enable distance highlighting.
               </p>
@@ -485,6 +503,26 @@
                 <select id="distance-shell-method" disabled>
                   <option value="grid">Grid</option>
                   <option value="triangulation">Filtered triangulation</option>
+                </select>
+                <div class="control-label">
+                  <label for="distance-smoothing">Contour smoothing</label>
+                  <span class="help-tip"
+                    ><button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="About contour smoothing"
+                      aria-expanded="false"
+                    >
+                      ?</button
+                    ><span role="tooltip" class="help-content" id="distance-smoothing-note"
+                      >Softens Grid contours. Does not change path distances.</span
+                    ></span
+                  >
+                </div>
+                <select id="distance-smoothing" aria-describedby="distance-smoothing-note" disabled>
+                  <option value="0">Off</option>
+                  <option value="25" selected>Light</option>
+                  <option value="50">Strong</option>
                 </select>
                 <p id="distance-shell-status" class="explanation" role="status"></p>
               </details>

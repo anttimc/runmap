@@ -153,3 +153,6 @@ summarize intervals, while inspection retains original measurements.
 Distance exploration offers visible **Distance from start** and **Extra travel**
 choices. Extra travel highlights detours around obstacles within the distance budget; see
 [distance shells](distance-shells.md).
+
+Grid distance contours use Light smoothing by default. Advanced options offers
+Off, Light, or Strong contour smoothing; path inspection distances stay unchanged.

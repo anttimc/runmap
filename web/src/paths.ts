@@ -612,6 +612,7 @@ export function startPaths(
   const shellMethod = element<HTMLSelectElement>("distance-shell-method");
   const subtractStraightLine = element<HTMLInputElement>("distance-subtract-straight-line");
   const networkDistance = element<HTMLInputElement>("distance-network");
+  const smoothing = element<HTMLSelectElement>("distance-smoothing");
   const shellStatus = element("distance-shell-status");
   const setStatus = (message: string, state: string) => {
     status.textContent = message;
@@ -852,7 +853,7 @@ export function startPaths(
     // Shell methods and visibility never invalidate the distance search.
     params.delete("hide_building_access");
     const key = outing ? params.toString() : "";
-    const viewKey = `${key}|${distanceEnabled() ? `${shellMethod.value}|${subtractStraightLine.checked}` : variant()}`;
+    const viewKey = `${key}|${distanceEnabled() ? `${shellMethod.value}|${subtractStraightLine.checked}|${smoothing.value}` : variant()}`;
     if (outing && key === snapshotKey && preparing && pendingView === viewKey) return;
     pendingView = viewKey;
     viewportAbort?.abort();
@@ -917,13 +918,15 @@ export function startPaths(
           method,
           viewportAbort.signal,
           subtractStraightLine.checked,
+          Number(smoothing.value),
         );
         if (sequence !== viewportSequence) return;
         if (
           shells.dataset_id !== config.dataset_id ||
           shells.snapshot_id !== result.snapshot_id ||
           shells.method !== method ||
-          shells.subtract_straight_line !== subtractStraightLine.checked
+          shells.subtract_straight_line !== subtractStraightLine.checked ||
+          shells.smoothing_m !== Number(smoothing.value)
         )
           throw new Error("Distance shell response changed — try again.");
         shellMaximumM = shells.maximum_m;
@@ -1007,6 +1010,7 @@ export function startPaths(
   shellMethod.addEventListener("change", refresh);
   subtractStraightLine.addEventListener("change", refresh);
   networkDistance.addEventListener("change", refresh);
+  smoothing.addEventListener("change", refresh);
   function updateMetric(): void {
     updateLodLegend();
     const distance = distanceEnabled();
@@ -1036,10 +1040,12 @@ export function startPaths(
     coverageStatus();
   }
   function updateMetricDescription(): void {
+    smoothing.disabled = distanceLayer.disabled || shellMethod.value !== "grid";
+    element("distance-smoothing-note").textContent =
+      shellMethod.value === "grid"
+        ? "Softens Grid contours. Does not change path distances."
+        : "Smoothing applies only if triangulation falls back to Grid.";
     const extraTravel = subtractStraightLine.checked;
-    element("distance-mode-description").textContent = extraTravel
-      ? "Spot detours around water, railways and other obstacles. Colors show extra distance compared with a straight line, scaled to the largest detour in this area."
-      : "See how far you can reach along the path network.";
     element("distance-legend-heading").textContent = extraTravel
       ? "Extra travel"
       : "Distance from start";

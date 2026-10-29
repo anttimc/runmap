@@ -9,7 +9,7 @@ from shapely.geometry import MultiPolygon, Polygon, shape
 from runmap.experiments.benchmark_distance_shells import shells_geojson
 from runmap.paths.numeric_format import ChunkCounts, NumericChunk, NumericArray
 from runmap.routing.distance_shells import (DistanceGrid, DistanceSamples, ShellSettings, build_distance_grid,
-    distance_bands, sample_numeric_chunk)
+    distance_bands, sample_numeric_chunk, smooth_distance_grid)
 from runmap.routing.numeric_search import NumericDistances, NumericEndpoint
 
 
@@ -34,6 +34,30 @@ def distances(nodes: list[int], values: list[float]) -> NumericDistances:
 
 
 class DistanceShellTests(unittest.TestCase):
+    def test_smoothing_preserves_mask_and_constant_values(self) -> None:
+        values = np.full((9, 9), 75.)
+        values[3:6, 3:6] = np.nan
+        grid = DistanceGrid(np.arange(9.), np.arange(9.), values)
+        for cell_m in (25, 50, 100):
+            result = smooth_distance_grid(grid, ShellSettings(cell_m=cell_m, smoothing_m=50))
+            np.testing.assert_array_equal(np.isnan(result.values), np.isnan(values))
+            np.testing.assert_allclose(result.values[np.isfinite(values)], 75)
+        np.testing.assert_array_equal(grid.values, values)
+        self.assertIs(smooth_distance_grid(grid, ShellSettings()), grid)
+
+    def test_smoothing_softens_steps_without_overshoot(self) -> None:
+        values = np.zeros((9, 9))
+        values[:, 5:] = 200
+        grid = DistanceGrid(np.arange(9.), np.arange(9.), values)
+        light = smooth_distance_grid(grid, ShellSettings(smoothing_m=25))
+        strong = smooth_distance_grid(grid, ShellSettings(smoothing_m=50))
+        self.assertGreater(light.values[4, 4], 0)
+        self.assertLess(light.values[4, 5], 200)
+        self.assertGreater(strong.values[4, 3], light.values[4, 3])
+        self.assertGreaterEqual(float(strong.values.min()), 0)
+        self.assertLessEqual(float(strong.values.max()), 200)
+        np.testing.assert_array_equal(grid.values, values)
+
     def test_partial_start_and_one_way_distances(self) -> None:
         start = NumericEndpoint(segment_id=7, graph_offset_m=400, point=(375400, 6675000))
         for backward in (False, True):
