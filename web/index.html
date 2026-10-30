@@ -145,6 +145,7 @@
                   >
                 </div>
                 <div id="run-candidates" class="run-candidates"></div>
+                <button id="run-elevation" type="button" disabled>Show elevation</button>
 
                 <div id="run-details">
                   <span class="help-tip"
@@ -404,7 +405,7 @@
                 >
                   ?</button
                 ><span role="tooltip" class="help-content" id="mode-description">
-                  Colors show steepness along paths. Click a path to inspect its profile.
+                  Colors show steepness along paths. Click a planned route to explore elevation.
                 </span></span
               >
             </div>
@@ -551,8 +552,7 @@
                 ><span role="tooltip" class="help-content">
                   Colors show either distance along paths or extra travel beyond a straight line.
                   Filled areas between paths are approximate; they do not imply access across water
-                  or other barriers. Return distance is not included. Click a mapped path to inspect
-                  its exact network distance.
+                  or other barriers. Return distance is not included.
                 </span></span
               >
             </div>
@@ -647,16 +647,36 @@
         >
       </div>
       <section
-        id="path-inspection"
+        id="route-inspection"
         class="inspection-panel"
-        aria-label="Path segment inspection"
+        aria-label="Route elevation profile"
         hidden
       >
         <div class="heading-row">
-          <label><input id="path-reverse" type="checkbox" /> Reverse inspection direction</label>
-          <button id="path-close" type="button" aria-label="Close segment inspection">Close</button>
+          <div class="control-label">
+            <h2>Route elevation</h2>
+            <span class="help-tip">
+              <button
+                type="button"
+                class="help-trigger"
+                aria-label="About route elevation"
+                aria-expanded="false"
+              >
+                ?
+              </button>
+              <span
+                id="route-profile-help"
+                role="tooltip"
+                class="help-content"
+                popover="manual"
+              ></span>
+            </span>
+          </div>
+          <button id="route-profile-close" type="button" aria-label="Close route elevation">
+            Close
+          </button>
         </div>
-        <div id="path-inspection-content" aria-live="polite"></div>
+        <div id="route-profile-content" aria-live="polite"></div>
       </section>
     </main>
     <script type="module" src="/src/main.ts"></script>

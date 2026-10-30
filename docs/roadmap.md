@@ -22,16 +22,16 @@ remains outstanding:
   latency, including cold/warm requests and concurrent planners. Fewer searches
   alone do not establish responsive interaction.
 
-### Deferred: planned-route terrain inspection
+### Route elevation: local acceptance
 
-Route elevation/gradient plotting is postponed. The intended follow-up replaces
-segment gradient/profile inspection with inspection of the selected complete
-planned route, in travel order, for either planning mode. Current segment
-inspection remains available. Before that follow-up, resolve absolute elevation
-versus integrated relative height change,
-preparation/storage implications, and the remaining scope of path metadata and
-distance inspection. Route inspection must handle partial/reversed/repeated
-traversals, gaps and uncertainty, independently of whether hill avoidance is on.
+- Review the [route elevation profile](guide.md#route-elevation) on familiar flat,
+  hilly, closed-loop, and out-and-back routes in both planning modes. Check
+  absolute heights, ascent/descent, partial and repeated stretches, terrain gaps,
+  and structure uncertainty, including hills Off.
+- Check chart/map exploration, keyboard and mobile use, close/reopen, stale
+  responses, orientation changes, and both endpoint-selection tools.
+- Record cold/warm profile latency and height preparation time/size on the local
+  dataset. Automated checks do not complete local runner acceptance.
 
 ## Next: correctness and local acceptance
 
@@ -41,10 +41,6 @@ traversals, gaps and uncertainty, independently of whether hill avoidance is on.
   times on representative budgets. Light (25 m sigma) is the implemented default;
   visual acceptance and representative latency measurements remain outstanding.
 
-- Replace the remaining “minimum outing” wording in interval inspection with
-  forward-distance terminology. The Distance from start label already says return
-  distance is excluded. Acceptance: labels, help, inspection, and budget behavior
-  consistently describe forward distance and make no return guarantee.
 - Review familiar flat corridors, short/sustained hills, rolling paths,
   bridges/underpasses, stairs, restrictions, missing surfaces, and extract edges.
   Reuse the [source-derived fixtures](archive/history/30-routing-preferences-audit.json),
@@ -58,10 +54,9 @@ traversals, gaps and uncertainty, independently of whether hill avoidance is on.
   reports include superseded hill models. Acceptance: current controls behave
   consistently and undesirable runs can be reproduced.
 - Update `web/scripts/check-distance-shells.mjs` for the current layer switches,
-  persistent path hit testing, and combined layer display. Remove its obsolete
-  zero-path-tile assertion and validate shared-start changes with planning enabled
+  combined layer display. Validate shared-start changes with planning enabled
   and disabled. Acceptance: the browser script runs against current markup and
-  verifies both shell methods, cancellation, inspection, and layer combinations.
+  verifies both shell methods, cancellation and layer combinations.
 - Measure current preparation size/time, startup memory, cold/warm tile delivery,
   browser responsiveness, and start/policy/budget changes on a recorded machine.
   Existing tile benchmarks demonstrate specific payload/source-processing gains;
@@ -278,8 +273,8 @@ Deliver these independently after their data and validation gates pass:
 Feedback tools such as copied reproducible request records, advanced shape
 settings, field/repetition overlays, and longer inspection stretches remain
 follow-ups driven by the local review. Cross-junction flat/hill discovery needs
-explicit scope before implementation. Route terrain inspection is deferred as
-described [above](#deferred-planned-route-terrain-inspection).
+explicit scope before implementation. Route terrain inspection has outstanding
+[local acceptance](#route-elevation-local-acceptance).
 
 ## Planned: terrain and maintainability
 
@@ -301,8 +296,8 @@ described [above](#deferred-planned-route-terrain-inspection).
   and add static checking when domain types are coherent.
 - Add preparation implementation identity to provenance. Measure before adding
   cross-request field caching; preserve inspectable exports during SQLite migration.
-- Continue frontend separation by extracting inspection/chart rendering and
-  feature map layers from the interaction controllers. Make remaining feature
+- Continue frontend separation by extracting feature map layers from the
+  interaction controllers. Make remaining feature
   state explicit where DOM values or status text currently carry it.
 
 ## Loop recommendation experiments

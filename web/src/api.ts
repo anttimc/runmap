@@ -1,6 +1,7 @@
 /** HTTP transport, cancellation, and server error handling for map features. */
 import type {
-  Inspection,
+  RouteProfile,
+  Traversal,
   Location,
   MapConfig,
   PathConfig,
@@ -70,7 +71,7 @@ async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
 
 function postJson<T>(
   url: string,
-  body: SnapshotRequest | RunRequest,
+  body: SnapshotRequest | RunRequest | { dataset_id: string; legs: Traversal[][] },
   signal: AbortSignal,
 ): Promise<T> {
   return requestJson<T>(url, {
@@ -89,14 +90,12 @@ export function loadPathConfig(): Promise<PathConfig | UnavailablePathConfig> {
   return requestJson("/api/paths/config");
 }
 
-export function loadInspection(
-  segmentId: string,
-  parameters: URLSearchParams,
+export function loadRouteProfile(
+  datasetId: string,
+  legs: Traversal[][],
   signal: AbortSignal,
-): Promise<Inspection> {
-  return requestJson(`/api/paths/segments/${encodeURIComponent(segmentId)}?${parameters}`, {
-    signal,
-  });
+): Promise<RouteProfile> {
+  return postJson("/api/paths/run/profile", { dataset_id: datasetId, legs }, signal);
 }
 
 export function prepareSnapshot(

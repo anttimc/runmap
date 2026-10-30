@@ -7,8 +7,12 @@ import path from "node:path";
 
 const directory = process.argv[2] ?? "/private/tmp/runmap-planning-check";
 fs.mkdirSync(directory, { recursive: true });
-const tabs = await (await fetch("http://127.0.0.1:9232/json")).json();
-const socket = new WebSocket(tabs.find((tab) => tab.type === "page").webSocketDebuggerUrl);
+const tab = await (
+  await fetch(`http://127.0.0.1:${process.env.RUNMAP_DEBUG_PORT ?? 9232}/json/new?about:blank`, {
+    method: "PUT",
+  })
+).json();
+const socket = new WebSocket(tab.webSocketDebuggerUrl);
 await new Promise((resolve) => socket.addEventListener("open", resolve));
 let sequence = 0;
 let holdRun = false;
@@ -17,6 +21,44 @@ let runError = false;
 const pending = new Map();
 const requests = [];
 const exceptions = [];
+let profileRequests = 0;
+
+async function answerProfile(event) {
+  profileRequests++;
+  const request = JSON.parse(event.request.postData);
+  const intervals = [0, 1, 2].map((index) => ({
+    start_m: index * 400,
+    end_m: (index + 1) * 400,
+    start_elevation_m: index === 1 ? null : 20 + index * 4,
+    end_elevation_m: index === 1 ? null : 24 + index * 4,
+    grade_percent: index === 1 ? null : 1,
+    coordinates: [
+      [24.795 + index * 0.005, 60.216],
+      [24.8 + index * 0.005, 60.216],
+    ],
+    quality_flags: index === 1 ? ["missing_terrain"] : index === 2 ? ["bridge"] : [],
+  }));
+  await call("Fetch.fulfillRequest", {
+    requestId: event.requestId,
+    responseCode: 200,
+    responseHeaders: [{ name: "Content-Type", value: "application/json" }],
+    body: Buffer.from(
+      JSON.stringify({
+        dataset_id: request.dataset_id,
+        manifest_id: "fixture",
+        wavelength_m: 40,
+        sampling_interval_m: 10,
+        distance_m: 1200,
+        turnaround_m: request.legs.length === 2 ? 600 : null,
+        ascent_m: 8,
+        descent_m: 0,
+        valid_length_fraction: 2 / 3,
+        totals_complete: false,
+        intervals,
+      }),
+    ).toString("base64"),
+  });
+}
 
 function call(method, params = {}) {
   const id = ++sequence;
@@ -36,8 +78,18 @@ function routeResponse(request) {
     estimated_descent_m: null,
     terrain_valid_fraction: null,
   };
-  const outbound = { coordinates, distance_m: 1200, observations };
-  const back = { coordinates: [...coordinates].reverse(), distance_m: 1200, observations };
+  const outbound = {
+    coordinates,
+    distance_m: 1200,
+    observations,
+    traversals: [{ segment_id: "s", start_m: 0, end_m: 1200 }],
+  };
+  const back = {
+    coordinates: [...coordinates].reverse(),
+    distance_m: 1200,
+    observations,
+    traversals: [{ segment_id: "s", start_m: 1200, end_m: 0 }],
+  };
   const base = {
     mode,
     legs: [outbound],
@@ -104,7 +156,9 @@ socket.addEventListener("message", async (event) => {
   if (message.method !== "Fetch.requestPaused") return;
   try {
     const event = message.params;
-    if (event.request.url.includes("/api/paths/run")) {
+    if (event.request.url.includes("/api/paths/run/profile")) {
+      await answerProfile(event);
+    } else if (event.request.url.includes("/api/paths/run")) {
       requests.push(JSON.parse(event.request.postData));
       if (holdRun) heldRun = event;
       else await answerRun(event);
@@ -187,9 +241,10 @@ try {
     patterns: [
       { urlPattern: "*/src/main.ts*", requestStage: "Response" },
       { urlPattern: "*/api/paths/run", requestStage: "Request" },
+      { urlPattern: "*/api/paths/run/profile", requestStage: "Request" },
     ],
   });
-  await call("Page.navigate", { url: "http://127.0.0.1:5173/" });
+  await call("Page.navigate", { url: process.env.RUNMAP_CHECK_URL ?? "http://127.0.0.1:5173/" });
   await until(`window.__map && !document.getElementById('plan-mode').disabled`);
   assert.equal(await evaluate(`document.getElementById('plan-mode').value`), "off");
   assert.equal((await view()).controls, false);
@@ -210,10 +265,39 @@ try {
   );
   await screenshot("one-way-desktop");
 
+  assert.equal(await evaluate(`!!document.getElementById('path-inspection')`), false);
+  await evaluate(`document.getElementById('run-elevation').click()`);
+  await until(`!!document.querySelector('#route-profile-content svg')`);
+  assert.equal(profileRequests, 1);
+  assert.match(
+    await evaluate(`document.getElementById('route-profile-content').textContent`),
+    /67% elevation coverage/,
+  );
+  await evaluate(`document.querySelector('#route-profile-content input').focus()`);
+  assert.equal(
+    await evaluate(
+      `document.querySelector('.maplibregl-marker[title="Elevation profile location"]') !== null`,
+    ),
+    true,
+  );
+  await screenshot("route-elevation-desktop");
+  await evaluate(`const slider = document.querySelector('#route-profile-content input');
+    slider.value = '1'; slider.dispatchEvent(new Event('input'));`);
+  assert.match(
+    await evaluate(`document.querySelector('#route-profile-content .sample-readout').textContent`),
+    /Elevation unavailable/,
+  );
+  await evaluate(`document.getElementById('route-profile-close').click()`);
+  await evaluate(`const point = window.__map.project([24.805,60.2205]);
+    window.__map.fire('click', {lngLat:{lng:24.805,lat:60.2205},point,originalEvent:new MouseEvent('click')}); void 0;`);
+  await until(`!document.getElementById('route-inspection').hidden`);
+  assert.equal(profileRequests, 1, "route click reuses cached elevation");
+
   await evaluate(`for (const id of ['layer-path', 'layer-distance']) {
     const input = document.getElementById(id); input.checked = true; input.dispatchEvent(new Event('change'));
   }`);
   await mode("round_trip");
+  assert.equal(await evaluate(`document.getElementById('route-inspection').hidden`), true);
   const round = await view();
   assert.equal(round.endpoint, "Turnaround");
   assert.equal(round.shape, true);
@@ -288,7 +372,25 @@ try {
     true,
   );
   await screenshot("one-way-mobile");
+  await evaluate(`for (const [lng, lat] of [[24.795, 60.216], [24.815, 60.225]]) {
+    window.__map.fire('click', {lngLat: {lng, lat}, point: window.__map.project([lng, lat]), originalEvent: new MouseEvent('click')});
+  }; void 0;`);
+  await until(`!document.getElementById('run-generate').disabled`);
+  await evaluate(`document.getElementById('run-generate').click()`);
+  await until(`document.getElementById('run-candidates').textContent.includes('1.20')`);
+  await evaluate(`document.getElementById('run-elevation').click()`);
+  await until(
+    `!!document.querySelector('#route-profile-content svg') && !document.getElementById('route-inspection').hidden`,
+  );
+  assert.equal(
+    await evaluate(
+      `document.getElementById('route-inspection').getBoundingClientRect().right <= innerWidth`,
+    ),
+    true,
+  );
+  await screenshot("route-elevation-mobile");
   await mode("round_trip");
+  assert.equal(await evaluate(`document.getElementById('route-inspection').hidden`), true);
   assert.equal((await view()).shape, true);
   await screenshot("round-trip-mobile");
   assert.deepEqual(exceptions, []);

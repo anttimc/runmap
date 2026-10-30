@@ -1,4 +1,4 @@
-/** Coordinate path layers, distance exploration, and segment inspection. */
+/** Coordinate path layers and distance exploration. */
 import {
   Marker,
   type GeoJSONSource,
@@ -7,8 +7,8 @@ import {
   type AddLayerObject,
   type MapMouseEvent,
 } from "maplibre-gl";
-import type { Feature, FeatureCollection, LineString, Point } from "geojson";
-import { ApiError, loadDistanceShells, loadInspection, prepareSnapshot, snapEndpoint } from "./api";
+import type { Feature, FeatureCollection, LineString } from "geojson";
+import { ApiError, loadDistanceShells, prepareSnapshot } from "./api";
 import {
   addShellLayers,
   distanceBandM,
@@ -18,9 +18,6 @@ import {
 } from "./distance-shells";
 import type {
   ColorStop,
-  Inclusion,
-  Inspection,
-  Interval,
   Location,
   PathConfig,
   SnapshotResponse,
@@ -101,12 +98,6 @@ function setData(map: Map, source: string, data: FeatureCollection): void {
 function collection(features: Feature[]): FeatureCollection {
   return { type: "FeatureCollection", features };
 }
-function reliable(interval: Interval): boolean {
-  return (
-    interval.valid && !interval.quality_flags.some((flag) => flag === "bridge" || flag === "tunnel")
-  );
-}
-
 function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
   const before = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
   map.addSource("path-coverage", {
@@ -122,9 +113,6 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
     },
     before,
   );
-  for (const id of ["path-selection", "path-hover", "path-arrows"]) {
-    map.addSource(id, { type: "geojson", data: empty });
-  }
   map.addSource("path-intervals", {
     type: "vector",
     tiles: [
@@ -136,27 +124,6 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
     minzoom: config.tile_min_zoom,
     maxzoom: config.tile_max_zoom,
   });
-  map.addLayer(
-    {
-      id: "path-hit",
-      type: "line",
-      source: "path-intervals",
-      "source-layer": "paths",
-      minzoom: config.tile_min_zoom,
-      paint: { "line-width": 14, "line-opacity": 0 },
-    },
-    before,
-  );
-  map.addLayer(
-    {
-      id: "path-selection",
-      type: "line",
-      source: "path-selection",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#142b40", "line-width": 9, "line-opacity": 0.8 },
-    },
-    before,
-  );
   for (const [id, color, scale] of [
     ["path-flat-halo", "#fffdf8", 3.5],
     ["path-flat-outline", "#238443", 2.5],
@@ -239,163 +206,6 @@ function addPathLayers(map: Map, config: PathConfig, stops: ColorStop[]): void {
     },
     before,
   );
-  map.addLayer(
-    {
-      id: "path-hover",
-      type: "line",
-      source: "path-hover",
-      paint: { "line-color": "#20bce0", "line-width": 7 },
-    },
-    before,
-  );
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 28;
-  const ctx = canvas.getContext("2d")!;
-  ctx.beginPath();
-  ctx.moveTo(14, 3);
-  ctx.lineTo(24, 20);
-  ctx.lineTo(14, 16);
-  ctx.lineTo(4, 20);
-  ctx.closePath();
-  ctx.fillStyle = "#142b40";
-  ctx.fill();
-  ctx.strokeStyle = "#fffdf5";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  map.addImage("uphill-arrow", ctx.getImageData(0, 0, 28, 28));
-  map.addLayer(
-    {
-      id: "path-arrows",
-      type: "symbol",
-      source: "path-arrows",
-      minzoom: config.min_zoom,
-      layout: {
-        "icon-image": "uphill-arrow",
-        "icon-size": 0.65,
-        "icon-rotate": ["get", "bearing"],
-        "icon-rotation-alignment": "map",
-        "icon-allow-overlap": true,
-      },
-    },
-    before,
-  );
-}
-
-function selectedArrows(result: Inspection): FeatureCollection<Point> {
-  const features: Feature<Point>[] = [];
-  let previous = -Infinity;
-  for (const interval of result.intervals) {
-    if (
-      !reliable(interval) ||
-      Math.abs(interval.grade_percent!) < 1e-6 ||
-      interval.start_m - previous < 30
-    )
-      continue;
-    previous = interval.start_m;
-    let [a, b] = interval.geometry;
-    if (interval.grade_percent! < 0) [a, b] = [b, a];
-    const bearing =
-      (Math.atan2((b[0] - a[0]) * Math.cos((a[1] * Math.PI) / 180), b[1] - a[1]) * 180) / Math.PI;
-    features.push({
-      type: "Feature",
-      properties: { bearing },
-      geometry: { type: "Point", coordinates: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] },
-    });
-  }
-  return { type: "FeatureCollection", features };
-}
-
-function profileChart(result: Inspection, hover: (interval?: Interval) => void): SVGSVGElement {
-  const ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", "0 0 360 150");
-  svg.setAttribute("role", "group");
-  svg.setAttribute(
-    "aria-label",
-    "Estimated terrain height change. Focus or hover a sample to inspect its signed grade.",
-  );
-  const heights = result.intervals.flatMap((i) =>
-    i.valid ? [i.relative_start_m!, i.relative_end_m!] : [],
-  );
-  const low = Math.min(0, ...heights),
-    high = Math.max(1, ...heights);
-  const length = result.intervals.at(-1)?.end_m || 1;
-  const x = (m: number) => 36 + (314 * m) / length;
-  const y = (m: number) => 117 - (99 * (m - low)) / (high - low);
-  for (const [value, label] of [
-    [high, `${high.toFixed(1)} m`],
-    [low, `${low.toFixed(1)} m`],
-  ] as const) {
-    const node = document.createElementNS(ns, "text");
-    node.setAttribute("x", "2");
-    node.setAttribute("y", String(y(value) + 4));
-    node.textContent = label;
-    svg.append(node);
-  }
-  const labeledRuns = new Set<number>();
-  for (const interval of result.intervals) {
-    const hit = document.createElementNS(ns, "rect");
-    hit.setAttribute("x", String(x(interval.start_m)));
-    hit.setAttribute("y", "12");
-    hit.setAttribute("width", String(Math.max(1, x(interval.end_m) - x(interval.start_m))));
-    hit.setAttribute("height", "111");
-    hit.setAttribute("fill", interval.valid ? "transparent" : "#d2d5d7");
-    hit.setAttribute("tabindex", "0");
-    hit.setAttribute("role", "img");
-    hit.setAttribute(
-      "aria-label",
-      `${interval.start_m.toFixed(0)}–${interval.end_m.toFixed(0)} metres: ${interval.valid ? `${interval.grade_percent!.toFixed(1)} percent` : "missing terrain"}`,
-    );
-    hit.addEventListener("pointerenter", () => hover(interval));
-    hit.addEventListener("focus", () => hover(interval));
-    hit.addEventListener("blur", () => hover());
-    svg.append(hit);
-    if (interval.valid) {
-      const line = document.createElementNS(ns, "line");
-      line.setAttribute("x1", String(x(interval.start_m)));
-      line.setAttribute("x2", String(x(interval.end_m)));
-      line.setAttribute("y1", String(y(interval.relative_start_m!)));
-      line.setAttribute("y2", String(y(interval.relative_end_m!)));
-      line.setAttribute("stroke", reliable(interval) ? "#087f8c" : "#8b619e");
-      line.setAttribute("stroke-width", "2.5");
-      line.setAttribute("pointer-events", "none");
-      svg.append(line);
-      if (interval.profile_run! > 0 && !labeledRuns.has(interval.profile_run!)) {
-        labeledRuns.add(interval.profile_run!);
-        const reset = document.createElementNS(ns, "text");
-        reset.setAttribute("x", String(x(interval.start_m)));
-        reset.setAttribute("y", "10");
-        reset.textContent = "reset";
-        svg.append(reset);
-      }
-    }
-  }
-  const distance = document.createElementNS(ns, "text");
-  distance.setAttribute("x", "36");
-  distance.setAttribute("y", "145");
-  distance.textContent = `0 → ${length.toFixed(0)} m along path (EPSG:3067)`;
-  svg.append(distance);
-  svg.addEventListener("pointerleave", () => hover());
-  return svg;
-}
-
-function inclusionText(interval: Inclusion): string {
-  if (!interval.inclusion_state) return "";
-  const reason =
-    interval.inclusion_state === "included"
-      ? "within budget"
-      : interval.inclusion_state === "excluded"
-        ? `excluded: ${interval.inclusion_reason}`
-        : "outside budget";
-  const minimum =
-    interval.minimum_inclusion_m == null
-      ? ""
-      : ` · minimum outing ${(interval.minimum_inclusion_m / 1000).toFixed(3)} km`;
-  const outward =
-    interval.distance_from_start_m == null
-      ? ""
-      : ` · from start ${(interval.distance_from_start_m / 1000).toFixed(3)} km`;
-  return ` · ${reason}${minimum}${outward}${interval.coverage_limited ? " · coverage limited" : ""}`;
 }
 
 function pathWidth(scale: ExpressionSpecification, casing = false): ExpressionSpecification {
@@ -442,149 +252,12 @@ function applyPathEmphasis(map: Map, highlightFlat: boolean, threshold: number):
   }
 }
 
-function renderInspection(map: Map, result: Inspection): void {
-  const content = element("path-inspection-content");
-  const tags = result.segment.tags;
-  content.replaceChildren(
-    text("h2", tags.name || "Unnamed segment"),
-    text(
-      "p",
-      `${tags.highway || "path"} · ${result.segment.length_m.toFixed(0)} m · ${result.surface_class} surface`,
-      "segment-subtitle",
-    ),
-  );
-  if (result.visibility_reason) {
-    const reason =
-      result.visibility_reason === "building_access_driveway"
-        ? "Building-access driveway"
-        : "Dead end leading to a building entrance";
-    content.append(
-      text(
-        "p",
-        `${reason}. ${result.hidden_by_building_access ? "Hidden from path colors." : "Shown because the building-access filter is off."}`,
-        "quality-note",
-      ),
-    );
-  }
-  if (!result.eligible)
-    content.append(
-      text(
-        "p",
-        `Excluded by current eligibility: ${result.eligibility_reason}. Geometry remains available for inspection.`,
-        "quality-note",
-      ),
-    );
-  if (result.outing_label) content.append(text("p", result.outing_label, "explanation"));
-  const stats = text(
-    "p",
-    `↑ ${result.ascent_m.toFixed(1)} m   ↓ ${result.descent_m.toFixed(1)} m`,
-    "segment-stats",
-  );
-  content.append(
-    stats,
-    text(
-      "p",
-      `${result.totals_complete ? "Complete sampled length" : "Partial estimates"} · ${(100 * result.valid_length_fraction).toFixed(1)}% valid length.`,
-      "explanation",
-    ),
-  );
-  const flags = [...new Set(result.intervals.flatMap((i) => i.quality_flags))];
-  if (flags.length) {
-    const groundNote = flags.some((flag) => flag === "bridge" || flag === "tunnel")
-      ? " Bridge/tunnel values estimate the ground, not the path deck."
-      : "";
-    const areaNote = flags.includes("pedestrian_area_perimeter")
-      ? " Pedestrian areas use mapped perimeters."
-      : "";
-    content.append(
-      text(
-        "p",
-        `Quality: ${flags.map((flag) => flag.replaceAll("_", " ")).join(", ")}.${groundNote}${areaNote}`,
-        "quality-note",
-      ),
-    );
-  }
-  const sample = text("p", "Hover or focus the profile to inspect signed grade.", "sample-readout");
-  const hover = (interval?: Interval) => {
-    setData(map, "path-hover", collection(interval ? [lineFeature(interval.geometry)] : []));
-    sample.textContent = interval
-      ? `${interval.start_m.toFixed(0)}–${interval.end_m.toFixed(0)} m · ${interval.valid ? `${interval.grade_percent! >= 0 ? "+" : ""}${interval.grade_percent!.toFixed(1)}%` : "missing terrain"}${reliable(interval) ? "" : " · uncertain"}${inclusionText(interval)}`
-      : "Hover or focus the profile to inspect signed grade.";
-  };
-  content.append(
-    text("h3", "Estimated terrain height change"),
-    profileChart(result, hover),
-    sample,
-    text(
-      "p",
-      "Relative to the start of each valid run. Gaps reset to zero. This is integrated terrain change, not absolute altitude or surveyed path elevation.",
-      "explanation",
-    ),
-    text("h3", "Uphill sections"),
-  );
-  if (!result.uphill_sections.length)
-    content.append(text("p", "No positive-grade samples in this direction.", "explanation"));
-  const list = document.createElement("ul");
-  for (const section of result.uphill_sections)
-    list.append(
-      text(
-        "li",
-        `At ${section.start_m.toFixed(0)} m: ${section.length_m.toFixed(0)} m long, +${section.gain_m.toFixed(1)} m, mean ${section.mean_grade_percent.toFixed(1)}%, peak ${section.peak_grade_percent.toFixed(1)}%${section.uncertain ? " (uncertain ground estimate)" : ""}`,
-      ),
-    );
-  content.append(list, text("h3", "Surface and access evidence"));
-  const evidence = [
-    "surface",
-    "smoothness",
-    "tracktype",
-    "foot",
-    "access",
-    "foot:forward",
-    "foot:backward",
-    "oneway:foot",
-    "bridge",
-    "tunnel",
-    "area",
-  ]
-    .filter((key) => tags[key])
-    .map((key) => `${key}=${tags[key]}`);
-  content.append(
-    text(
-      "p",
-      evidence.length ? evidence.join(" · ") : "No surface or access tags recorded.",
-      "evidence",
-    ),
-    text(
-      "p",
-      `Current traversal: forward ${result.traversal_permissions.forward ? "allowed" : "disallowed"}, backward ${result.traversal_permissions.backward ? "allowed" : "disallowed"}. Inspection direction is independent of traversal permission.`,
-      "explanation",
-    ),
-  );
-  const details = document.createElement("details");
-  details.append(text("summary", "Measurement source and settings"));
-  details.append(
-    text(
-      "pre",
-      JSON.stringify(
-        {
-          dataset_id: result.dataset_id,
-          segment_id: result.segment_id,
-          method: result.method,
-          source: result.source,
-        },
-        null,
-        2,
-      ),
-    ),
-  );
-  content.append(details);
-}
-
 export interface PathControls {
   modeChanged: () => void;
   homeChanged: () => void;
   policyChanged: () => void;
   click: (event: MapMouseEvent) => void;
+  picking: () => boolean;
 }
 
 interface Options {
@@ -603,8 +276,6 @@ export function startPaths(
     .filter((stop) => stop.percent === 0 || stop.percent >= 10)
     .map((stop) => (stop.percent === 0 ? { ...stop, color: lowGradePathColor } : stop));
   const status = element("path-status");
-  const panel = element("path-inspection");
-  const reverse = element<HTMLInputElement>("path-reverse");
   const pathGradient = element<HTMLInputElement>("layer-path");
   const backgroundGradient = element<HTMLInputElement>("layer-background");
   const distanceLayer = element<HTMLInputElement>("layer-distance");
@@ -688,7 +359,6 @@ export function startPaths(
       );
   };
   let viewportAbort: AbortController | undefined;
-  let inspectionAbort: AbortController | undefined;
   let viewportSequence = 0;
   let activeSource = "path-intervals";
   let activeTemplate = config.tile_template
@@ -704,8 +374,6 @@ export function startPaths(
   let shellMaximumM = 1;
   let shellInterval = 1;
   let tileFailed = false;
-  let inspectionSequence = 0;
-  let selected: string | undefined;
   const distanceEnabled = (): boolean => distanceLayer.checked;
   const highlightFlat = (): boolean => backgroundGradient.checked && flatter.checked;
   const showPathAnalysis = (): boolean => pathGradient.checked || highlightFlat();
@@ -803,14 +471,14 @@ export function startPaths(
     const zoom = Math.floor(map.getZoom());
     const note = element("path-lod-note");
     note.hidden = !pathGradient.checked || zoom < config.tile_min_zoom || zoom > 14;
-    note.textContent = `Zoomed-out grade colors use ${zoom <= 12 ? 2 : 1}% bins, rounded up. Inspection shows original samples.`;
+    note.textContent = `Zoomed-out grade colors use ${zoom <= 12 ? 2 : 1}% bins, rounded up. `;
   }
   function coverageStatus(): void {
     updateLodLegend();
     updateLegendVisibility();
     updateMetricDescription();
     if (!distanceEnabled() && map.getZoom() < config.tile_min_zoom) {
-      setStatus("Zoom in to inspect prepared paths and flat stretches.", "zoom_in");
+      setStatus("Zoom in to see prepared paths and flat stretches.", "zoom_in");
       context(false);
       return;
     }
@@ -823,7 +491,7 @@ export function startPaths(
         !options.state.home
           ? "Choose a start to display distance shells."
           : loaded
-            ? "Distance shells ready · click a mapped path to inspect."
+            ? "Distance shells ready."
             : "Drawing distance shells…",
         !options.state.home ? "choose_start" : loaded ? "ready" : "loading",
       );
@@ -848,7 +516,7 @@ export function startPaths(
         bounds.getNorth() > n;
       setStatus(
         map.isSourceLoaded(activeSource)
-          ? `Click a path to inspect${crosses ? " · view crosses prepared coverage boundary" : ""}`
+          ? `Prepared paths ready${crosses ? " · view crosses prepared coverage boundary" : ""}`
           : "Loading path tiles…",
         map.isSourceLoaded(activeSource) ? "ready" : "loading",
       );
@@ -986,39 +654,9 @@ export function startPaths(
     tileFailed = true;
     setStatus(`Path tile failed to load. ${error.message}`, "failed");
   });
-  async function inspectSelected(): Promise<void> {
-    inspectionAbort?.abort();
-    inspectionAbort = new AbortController();
-    const sequence = ++inspectionSequence;
-    if (!selected) return;
-    panel.hidden = false;
-    setData(map, "path-selection", empty);
-    setData(map, "path-hover", empty);
-    setData(map, "path-arrows", empty);
-    element("path-inspection-content").replaceChildren(text("p", "Loading segment…"));
-    const params = parameters();
-    params.set("reverse", String(reverse.checked));
-    addOutingParameters(params);
-    try {
-      const result = await loadInspection(selected, params, inspectionAbort.signal);
-      if (sequence !== inspectionSequence) return;
-      if (result.dataset_id !== config.dataset_id)
-        throw new Error("Dataset changed — reload the map.");
-      setData(map, "path-selection", collection([lineFeature(result.segment.geometry)]));
-      setData(map, "path-arrows", selectedArrows(result));
-      renderInspection(map, result);
-    } catch (error) {
-      if (sequence !== inspectionSequence || (error as Error).name === "AbortError") return;
-      setData(map, "path-selection", empty);
-      element("path-inspection-content").replaceChildren(
-        text("p", `Inspection failed. ${(error as Error).message}`),
-      );
-    }
-  }
   function refresh(): void {
     updateMetric();
     void updateViewport();
-    void inspectSelected();
   }
   map.on("moveend", coverageStatus);
   hideBuildingAccess.addEventListener("change", refresh);
@@ -1034,7 +672,6 @@ export function startPaths(
     updateLodLegend();
     const distance = distanceEnabled();
     const analysis = showPathAnalysis();
-    map.setLayoutProperty("path-hit", "visibility", "visible");
     for (const id of ["path-casing", "path-grades", "path-uncertain", "path-stairs"])
       map.setLayoutProperty(id, "visibility", pathGradient.checked ? "visible" : "none");
     map.setLayoutProperty("path-coverage", "visibility", analysis ? "visible" : "none");
@@ -1078,11 +715,11 @@ export function startPaths(
     );
     const overview = map.getZoom() < config.tile_min_zoom;
     element("mode-description").textContent = overview
-      ? "Zoom in to see colors showing steepness along paths and inspect their profiles."
-      : "Colors show steepness along paths. Click a path to inspect its profile.";
+      ? "Zoom in to see colors showing steepness along paths."
+      : "Colors show steepness along paths. Click a planned route to explore elevation.";
     element("metric-note").textContent = [
       pathGradient.checked
-        ? "Path colors show grade magnitude along paths. Inspection shows original signed samples."
+        ? "Path colors show grade magnitude along paths."
         : "Paths use the neutral map styling.",
       backgroundGradient.checked
         ? "Background colors show terrain slope. A path following a hillside contour can be flat. Terrain colors are softened while distance shading is on."
@@ -1136,60 +773,11 @@ export function startPaths(
       options.setHome([event.lngLat.lng, event.lngLat.lat]);
       return;
     }
-    const hits = map.queryRenderedFeatures(event.point, { layers: ["path-hit"] });
-    const feature = [
-      ...new globalThis.Map(hits.map((hit) => [hit.properties.segment_id, hit])).values(),
-    ][0];
-    const id = feature?.properties.segment_id as string | undefined;
-    if (!id) {
-      if (distanceEnabled()) void inspectShellPath([event.lngLat.lng, event.lngLat.lat]);
-      return;
-    }
-    selected = id;
-    reverse.checked = false;
-    void inspectSelected();
   }
-  async function inspectShellPath(location: Location): Promise<void> {
-    inspectionAbort?.abort();
-    inspectionAbort = new AbortController();
-    const sequence = ++inspectionSequence;
-    try {
-      const snap = await snapEndpoint(
-        config.dataset_id,
-        location,
-        options.state.policy,
-        inspectionAbort.signal,
-      );
-      if (sequence !== inspectionSequence || !snap) return;
-      selected = snap.segment_id;
-      reverse.checked = false;
-      void inspectSelected();
-    } catch (error) {
-      if (sequence !== inspectionSequence || (error as Error).name === "AbortError") return;
-      setStatus(`Path inspection failed. ${(error as Error).message}`, "failed");
-    }
-  }
-  map.on("mouseenter", "path-hit", () => {
-    map.getCanvas().style.cursor =
-      choosingStart || options.plannerPicking() ? "crosshair" : "pointer";
-  });
-  map.on("mouseleave", "path-hit", () => {
-    map.getCanvas().style.cursor = choosingStart || options.plannerPicking() ? "crosshair" : "";
-  });
-  reverse.addEventListener("change", () => {
-    void inspectSelected();
-  });
-  element("path-close").addEventListener("click", () => {
-    inspectionAbort?.abort();
-    inspectionSequence++;
-    selected = undefined;
-    panel.hidden = true;
-    for (const source of ["path-selection", "path-hover", "path-arrows"])
-      setData(map, source, empty);
-  });
   updateMetric();
   void updateViewport();
   return {
+    picking: () => choosingStart,
     modeChanged: () => {
       chooseStartMode(false);
     },

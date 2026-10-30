@@ -71,7 +71,7 @@ for tiles, snapping, and inspection.
 
 Distance exploration and run planning share the prepared network, eligibility
 policies, snapping semantics, and numeric graph service. Exploration computes
-forward distances that can be reused for distance shading and inspection. Planning
+forward distances that can be reused for distance shading. Planning
 builds one-way or round-trip candidates with route-specific preferences.
 Distance surfaces and candidate geometry are assembled in Python from search
 results, while the browser handles presentation.
@@ -112,6 +112,12 @@ The browser owns map rendering, interaction state, and requests to the API.
 A coordinator shares the start location and routing policy between path
 exploration and planning. Feature controllers own their requests and displayed
 results. Map-layer visibility is independent of planner activation.
+
+Route elevation is a separate on-demand read of ordered traversal geometry and
+manifest-pinned smoothed height COGs. It does not execute a routing search or
+depend on hill preferences. The browser profile controller owns cancellation,
+a bounded result cache, chart exploration, and the map location marker. Segment
+click inspection is removed; path controllers own layers and distance starts.
 
 The frontend cancels superseded fetches and rejects late responses so old work
 cannot replace the current selection. Server computation has its own deadlines;

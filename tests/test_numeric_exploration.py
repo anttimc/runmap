@@ -215,15 +215,15 @@ class NumericExplorationEndpointTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(app.state, "paths", self.data, create=True), \
                 patch.object(app.state, "path_tiles", service, create=True), \
                 patch("runmap.api.sqlite_exploration.load_local_network", side_effect=AssertionError("Python graph")):
-            query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&longitude=24.801&latitude=60.2&budget_km=.1"
-            self.assertEqual((await get("/api/paths/segments/s?"+query))[0], 200)
-            self.assertEqual((await get("/api/paths/segments/s?"+query+"&dataset_id=stale"))[0], 409)
+            body = {"longitude": 24.801, "latitude": 60.2, "budget_km": .1, "dataset_id": app.state.paths.dataset_id}
+            self.assertEqual((await get("/api/paths/snapshots", body))[0], 200)
+            self.assertEqual((await get("/api/paths/snapshots", {**body, "dataset_id": "stale"}))[0], 409)
             request = Request({"type": "http", "app": app, "headers": []})
             options = SnapshotRequest(longitude=24.801, latitude=60.2, budget_km=.1, dataset_id=self.data.dataset_id)
             self.assertEqual(prepare_path_snapshot(request, options).status_code, 200)
             app.state.path_tiles = PathTileService(self.data, exploration_limits=ExplorationLimits(max_area_km2=.001))
-            status, result = await get("/api/paths/segments/s?"+query)
+            status, result = await get("/api/paths/snapshots", body)
             self.assertEqual(status, 422)
             self.assertEqual(result["status"], "area_limited")
             app.state.path_tiles = PathTileService(self.data, preparation_deadline=-1)
-            self.assertEqual((await get("/api/paths/segments/s?"+query))[0], 504)
+            self.assertEqual((await get("/api/paths/snapshots", body))[0], 504)

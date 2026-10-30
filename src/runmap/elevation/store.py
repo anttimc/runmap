@@ -17,7 +17,9 @@ from runmap.regions import (
     ANALYSIS_CRS,
     PROCESSING_HALO_M,
     SOURCE_RESOLUTION_M,
+    Tile,
 )
+from numpy.typing import NDArray
 from runmap.sources.mml import Bounds, download_elevation
 from runmap.terrain.derivatives import terrain_gradient, uphill_bearing_degrees
 from runmap.terrain.smoothing import thin_plate_smooth
@@ -384,7 +386,8 @@ class ElevationStore:
                     PROCESSING_HALO_M, source_digest,
                 ),
             ).fetchone()
-        if ready is not None and self._absolute(ready["path"]).exists():
+        if (ready is not None and self._absolute(ready["path"]).exists()
+                and self._absolute(ready["path"]).with_suffix(".height.tif").exists()):
             return self._absolute(ready["path"])
 
         elevation, _ = self.read_bounds(manifest_id, expanded)
@@ -409,6 +412,7 @@ class ElevationStore:
         ).astype(np.uint16)
         relative = Path("derived") / f"v{DERIVED_ALGORITHM_VERSION}" / source_digest[:16] / f"w{wavelength:03d}" / f"{tile.id}.tif"
         destination = self.root / relative
+        self._write_height_cog(destination.with_suffix(".height.tif"), tile, smoothed[core], wavelength, source_digest)
         self._write_derived_cog(
             destination,
             tile,
@@ -427,6 +431,27 @@ class ElevationStore:
                 ),
             )
         return destination
+
+    @staticmethod
+    def _write_height_cog(destination: Path, tile: Tile, elevation: NDArray[np.float64],
+                          wavelength: int, source_digest: str) -> None:
+        """Retain the smoothed surface for absolute route profiles without quantizing heights."""
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        partial = destination.with_suffix(".tif.part")
+        try:
+            with rasterio.open(
+                partial, "w", driver="COG", width=elevation.shape[1], height=elevation.shape[0],
+                count=1, dtype="float32", crs=ANALYSIS_CRS,
+                transform=from_origin(tile.west, tile.north, SOURCE_RESOLUTION_M, SOURCE_RESOLUTION_M),
+                nodata=float("nan"), compress="ZSTD", blocksize=512,
+            ) as dataset:
+                dataset.write(elevation.astype(np.float32), 1)
+                dataset.set_band_description(1, "smoothed_terrain_elevation_m")
+                dataset.update_tags(wavelength_m=wavelength, source_digest=source_digest,
+                                    algorithm="spectral-thin-plate", algorithm_version=DERIVED_ALGORITHM_VERSION)
+            partial.replace(destination)
+        finally:
+            partial.unlink(missing_ok=True)
 
     @staticmethod
     def _write_derived_cog(destination, tile, magnitude, bearing, wavelength, source_digest):

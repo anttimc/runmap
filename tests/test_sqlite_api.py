@@ -186,9 +186,6 @@ class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
                     data = app.state.paths
                     self.assertIsInstance(data, SQLitePathData)
                     self.assertEqual((await get("/api/paths/config"))[0], 200)
-                    self.assertEqual((await get("/api/paths/segments/s?reverse=true"))[1]["reverse"], True)
-                    self.assertEqual((await get("/api/paths/segments/missing"))[0], 404)
-                    self.assertEqual((await get("/api/paths/segments/s?surface=invalid"))[0], 400)
                     self.assertEqual((await get("/api/paths/snap?longitude=24.801&latitude=60.2"))[1]["status"], "ready")
                     self.assertEqual((await get("/api/paths/snap?longitude=24.8&latitude=60.2&dataset_id=stale"))[0], 409)
                     query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15"
@@ -238,9 +235,7 @@ class SQLiteEndpointTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(status, 200)
                 self.assertEqual(config["tile_min_zoom"], 13)
                 self.assertTrue(config["run_planner"]["available"])
-                self.assertEqual((await get("/api/paths/segments/s"))[0], 200)
                 query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&longitude=24.801&latitude=60.2"
-                self.assertEqual((await get("/api/paths/segments/s?" + query))[0], 200)
                 self.assertFalse(hasattr(data, "legacy"))
 
 

@@ -59,13 +59,6 @@ export interface PathConfig {
   importer_notes: string[];
   initial_view: { longitude: number; latitude: number; zoom: number };
 }
-export interface Inclusion {
-  inclusion_state?: "included" | "beyond_budget" | "excluded";
-  inclusion_reason?: string;
-  minimum_inclusion_m?: number | null;
-  coverage_limited?: boolean;
-  distance_from_start_m?: number | null;
-}
 export interface Snap {
   segment_id: string;
   graph_offset_m: number;
@@ -78,52 +71,6 @@ export interface StartResponse {
   status: string;
   requested: [number, number];
   snap: Snap | null;
-}
-export interface Interval extends Inclusion {
-  interval_index: number;
-  start_m: number;
-  end_m: number;
-  grade_percent: number | null;
-  valid: boolean;
-  quality_flags: string[];
-  geometry: number[][];
-  relative_start_m: number | null;
-  relative_end_m: number | null;
-  profile_run: number | null;
-}
-export interface Inspection {
-  dataset_id: string;
-  segment_id: string;
-  reverse: boolean;
-  segment: {
-    geometry: number[][];
-    length_m: number;
-    tags: Record<string, string>;
-    forward: boolean;
-    backward: boolean;
-  };
-  intervals: Interval[];
-  ascent_m: number;
-  descent_m: number;
-  valid_length_fraction: number;
-  totals_complete: boolean;
-  surface_class: string;
-  visibility_reason: string | null;
-  hidden_by_building_access: boolean;
-  eligible: boolean;
-  traversal_permissions: { forward: boolean; backward: boolean };
-  eligibility_reason: string | null;
-  outing_label?: string;
-  source: Record<string, unknown>;
-  method: Record<string, unknown>;
-  uphill_sections: {
-    start_m: number;
-    length_m: number;
-    gain_m: number;
-    mean_grade_percent: number;
-    peak_grade_percent: number;
-    uncertain: boolean;
-  }[];
 }
 export interface SnapshotResponse {
   status: string;
@@ -176,6 +123,12 @@ export interface Leg {
   coordinates: Location[];
   distance_m: number;
   observations: TerrainObservations;
+  traversals: Traversal[];
+}
+export interface Traversal {
+  segment_id: string;
+  start_m: number;
+  end_m: number;
 }
 export type RunMode = "one_way" | "round_trip";
 export interface Candidate {
@@ -198,4 +151,27 @@ export interface RunResponse {
   candidates: Candidate[];
   elapsed_s: number;
   coverage_note: string;
+}
+
+export interface ProfileInterval {
+  start_m: number;
+  end_m: number;
+  start_elevation_m: number | null;
+  end_elevation_m: number | null;
+  grade_percent: number | null;
+  coordinates: Location[];
+  quality_flags: string[];
+}
+export interface RouteProfile {
+  dataset_id: string;
+  manifest_id: string | null;
+  wavelength_m: number;
+  sampling_interval_m: number;
+  distance_m: number;
+  turnaround_m: number | null;
+  ascent_m: number;
+  descent_m: number;
+  valid_length_fraction: number;
+  totals_complete: boolean;
+  intervals: ProfileInterval[];
 }

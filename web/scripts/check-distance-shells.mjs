@@ -128,15 +128,12 @@ try {
     requests.filter((url) => url.endsWith("/api/paths/snapshots")).length,
     snapshotRequests,
   );
-  assert.equal(requests.filter((url) => url.includes("/api/paths/tiles/")).length, 0);
   await screenshot("triangulation-5km");
   await evaluate(
     `window.__map.fire('click', {lngLat:{lng:24.795,lat:60.216}, point:window.__map.project([24.795,60.216]), originalEvent:{target:window.__map.getCanvas()}}); void 0;`,
   );
-  await until(
-    `!document.getElementById('path-inspection').hidden && window.__map.getSource('path-selection').serialize().data.features.length > 0`,
-  );
-  observations.inspection = true;
+  assert.equal(await evaluate(`document.getElementById('path-inspection') === null`), true);
+  observations.segmentInspectionRemoved = true;
   await evaluate(`document.getElementById('distance-shell-method').value='grid';
     document.getElementById('distance-shell-method').dispatchEvent(new Event('change'));
     document.getElementById('outing-budget').value='1';

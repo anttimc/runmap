@@ -5,7 +5,7 @@ import {
   ApiError,
   loadDistanceShells,
   loadMapConfig,
-  loadInspection,
+  loadRouteProfile,
   prepareSnapshot,
 } from "../src/api.ts";
 
@@ -35,7 +35,11 @@ test("inspection cancellation reaches fetch and retains AbortError identity", as
     });
   });
 
-  const pending = loadInspection("segment", new URLSearchParams(), controller.signal);
+  const pending = loadRouteProfile(
+    "dataset",
+    [[{ segment_id: "s", start_m: 0, end_m: 10 }]],
+    controller.signal,
+  );
   controller.abort();
   await assert.rejects(pending, { name: "AbortError" });
 });

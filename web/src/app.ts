@@ -87,7 +87,11 @@ export async function startMapTools(map: Map, stops: ColorStop[]): Promise<void>
     });
   }
   map.on("click", (event) => {
-    if (planner?.click([event.lngLat.lng, event.lngLat.lat])) return;
+    if (paths.picking()) {
+      paths.click(event);
+      return;
+    }
+    if (planner?.click([event.lngLat.lng, event.lngLat.lat], event.point)) return;
     paths.click(event);
   });
 }

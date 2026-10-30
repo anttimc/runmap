@@ -192,23 +192,23 @@ class PathQueryTests(unittest.TestCase):
         self.assertTrue(sections[1]["uncertain"])
 
 
-async def get(url):
+async def get(url, body=None):
     path, _, query = url.partition("?")
     messages = []
     async def receive():
-        return {"type": "http.request", "body": b"", "more_body": False}
+        return {"type": "http.request", "body": b"" if body is None else json.dumps(body).encode(), "more_body": False}
     async def send(message):
         messages.append(message)
     await app({"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
-               "method": "GET", "scheme": "http", "path": path, "raw_path": path.encode(),
-               "query_string": query.encode(), "headers": [], "server": ("test", 80), "client": ("test", 1)}, receive, send)
+               "method": "GET" if body is None else "POST", "scheme": "http", "path": path, "raw_path": path.encode(),
+               "query_string": query.encode(), "headers": [] if body is None else [(b"content-type", b"application/json")], "server": ("test", 80), "client": ("test", 1)}, receive, send)
     status = next(message["status"] for message in messages if message["type"] == "http.response.start")
     body = b"".join(message.get("body", b"") for message in messages if message["type"] == "http.response.body")
     return status, json.loads(body)
 
 
 class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
-    async def test_building_filter_applies_to_viewport_and_inspection(self) -> None:
+    async def test_building_filter_applies_to_viewport(self) -> None:
         from runmap.paths.dead_ends import Classification
         with TemporaryDirectory() as directory:
             paths = write_graph_outputs(fixture(), directory)
@@ -220,26 +220,20 @@ class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((code, hidden["status"], hidden["features"]), (200, "ready", []))
             _, visible = await get(f"/api/paths/viewport?{query}&hide_building_access=false")
             self.assertEqual({item["properties"]["segment_id"] for item in visible["features"]}, {"s"})
-            self.assertTrue((await get("/api/paths/segments/s"))[1]["hidden_by_building_access"])
-            self.assertFalse((await get("/api/paths/segments/s?hide_building_access=false"))[1]["hidden_by_building_access"])
 
     async def test_api_success_missing_invalid_and_stale_identity(self):
         with TemporaryDirectory() as directory:
             paths = write_graph_outputs(fixture(), directory)
             app.state.paths = load_path_data(paths["graph"])
             self.assertEqual((await get("/api/paths/config"))[1]["status"], "ready")
-            self.assertEqual((await get("/api/paths/segments/s?reverse=true"))[1]["reverse"], True)
-            self.assertEqual((await get("/api/paths/segments/missing"))[0], 404)
-            self.assertEqual((await get("/api/paths/segments/s?dataset_id=stale"))[0], 409)
             self.assertEqual((await get("/api/paths/viewport?west=24.79&south=60.19&east=24.81&north=60.21&zoom=15"))[0], 200)
             self.assertEqual((await get("/api/paths/viewport?west=25&south=61&east=24&north=60&zoom=15"))[0], 400)
             self.assertEqual((await get("/api/paths/viewport"))[0], 422)
             app.state.paths = None
             app.state.path_status = "unavailable"
             self.assertEqual((await get("/api/paths/config"))[1]["status"], "unavailable")
-            self.assertEqual((await get("/api/paths/segments/s"))[0], 503)
 
-    async def test_snap_and_inspection_share_profile_and_dataset(self):
+    async def test_snap_eligibility_and_removed_segment_inspection(self):
         with TemporaryDirectory() as directory:
             paths = write_graph_outputs(fixture(), directory)
             app.state.paths = load_path_data(paths["graph"])
@@ -249,14 +243,9 @@ class PathEndpointTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(snapped["status"], "ready")
             query = f"west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&{base}"
             self.assertEqual((await get(f"/api/paths/explore?{query}"))[0], 404)
-            self.assertEqual((await get(f"/api/paths/segments/s?{query}&dataset_id=stale"))[0], 409)
-            self.assertEqual((await get(f"/api/paths/segments/s?{query}&budget_km=0"))[0], 422)
             self.assertEqual((await get(f"/api/paths/snap?{base}&surface=unknown"))[0], 400)
             self.assertEqual((await get(f"/api/paths/snap?{base}&segment_id=missing"))[1]["status"], "no_eligible_snap")
-            code, inspected = await get(f"/api/paths/segments/s?reverse=true&{base}")
-            self.assertEqual(code, 200)
-            self.assertEqual({item["inclusion_state"] for item in inspected["intervals"]}, {"included", "beyond_budget"})
-            self.assertEqual((await get("/api/paths/segments/s?longitude=24.8"))[0], 400)
+            self.assertEqual((await get("/api/paths/segments/s"))[0], 404)
 
     async def test_missing_or_corrupt_artifacts_do_not_break_terrain_startup(self):
         for error, expected in [(FileNotFoundError(), "unavailable"), (ValueError("identity mismatch"), "failed"), (KeyError("segments"), "failed")]:

@@ -8,10 +8,10 @@ import {
   type MapTouchEvent,
 } from "maplibre-gl";
 import type { FeatureCollection, Feature, LineString } from "geojson";
+import { startRouteProfile } from "./route-profile";
 import { mapPadding } from "./layout";
 import { requestRun, snapEndpoint } from "./api";
 import type {
-  Candidate,
   Location,
   PreferenceLevel,
   RunPlannerConfiguration,
@@ -41,7 +41,7 @@ export interface RunControls {
   homeChanged: () => void;
   policyChanged: () => void;
   picking: () => boolean;
-  click: (location: Location) => boolean;
+  click: (location: Location, point: MapMouseEvent["point"]) => boolean;
 }
 interface Options {
   datasetId: string;
@@ -217,6 +217,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   handle.setAttribute("aria-label", "Loop width: drag to resize");
   const centreMarker = new Marker({ element: handle, draggable: true });
   addRunLayers(map);
+  const profile = startRouteProfile(map, options.datasetId);
   map.addLayer({
     id: "run-centre-circle",
     type: "line",
@@ -288,6 +289,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     generateButton.textContent = generating ? "Generating run…" : "Generate run";
     generateButton.setAttribute("aria-busy", String(generating));
     element<HTMLButtonElement>("run-fit").disabled = !candidate;
+    element<HTMLButtonElement>("run-elevation").disabled = !candidate;
     element("run-results").hidden = !candidate;
   }
   function pick(value?: "home" | "turnaround"): void {
@@ -326,6 +328,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     else if (wasPicking) status.textContent = pickStatus;
   }
   function invalidate(): void {
+    profile.close();
     observedInputs = inputsKey();
     abort?.abort();
     ++sequence;
@@ -375,6 +378,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       ) ?? -1;
   }
   function candidates(): void {
+    profile.close();
     const container = element("run-candidates");
     container.replaceChildren();
     const candidate = response?.candidates[selected];
@@ -385,28 +389,6 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     container.append(summary);
     element("run-detail-content").textContent =
       `${candidateDetails(candidate)} ${response?.coverage_note ?? ""}`;
-    showTerrain(candidate);
-  }
-  function showTerrain(candidate: Candidate): void {
-    const observations = candidate.legs.map((leg) => leg.observations);
-    const note = element("run-detail-content");
-    if (observations.every((item) => item.terrain_valid_fraction === null)) return;
-    const ascent = observations.reduce((total, item) => total + (item.estimated_ascent_m ?? 0), 0);
-    const descent = observations.reduce(
-      (total, item) => total + (item.estimated_descent_m ?? 0),
-      0,
-    );
-    const fallback = observations.reduce(
-      (total, item) => total + (item.terrain_fallback_distance_m ?? 0),
-      0,
-    );
-    const hasTerrain = observations.some((item) => (item.terrain_valid_fraction ?? 0) > 0);
-    note.textContent +=
-      " " +
-      `${hasTerrain ? `Estimated terrain: ↑${Math.round(ascent)} m / ↓${Math.round(descent)} m. ` : "Terrain estimates unavailable. "}` +
-      (fallback > 0.01
-        ? `${Math.round(fallback)} m uses a conservative hill penalty because terrain is missing or uncertain. Ascent/descent may be incomplete or based on ground beneath a bridge or tunnel.`
-        : "Terrain estimates cover the selected run; they are not surveyed path elevations.");
   }
   async function generate(): Promise<void> {
     const home = options.state.home;
@@ -476,6 +458,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     }
   }
   function beginDrag(): void {
+    profile.close();
     dragging = true;
     pick();
     snappingAbort?.abort();
@@ -577,6 +560,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     map.getCanvas().style.cursor = choosing ? "crosshair" : "";
   });
   function modeChanged(): void {
+    profile.close();
     finishCircleDrag?.();
     dragging = false;
     const interrupted = generating;
@@ -673,14 +657,25 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     runCoordinates(candidate).forEach((point) => bounds.extend(point));
     map.fitBounds(bounds, { padding: mapPadding(), maxZoom: 16 });
   });
+  element("run-elevation").addEventListener("click", () => {
+    const candidate = response?.candidates[selected];
+    if (candidate) void profile.open(candidate);
+  });
   return {
     modeChanged,
     homeChanged: sharedInputsChanged,
     policyChanged: sharedInputsChanged,
     picking: () => Boolean(choosing),
-    click: (location) => {
+    click: (location, point) => {
       if (dragging) return true;
-      if (!active() || !choosing) return false;
+      if (!choosing) {
+        const candidate = response?.candidates[selected];
+        if (candidate && map.queryRenderedFeatures(point, { layers: ["run-route"] }).length) {
+          void profile.open(candidate);
+          return true;
+        }
+        return false;
+      }
       const endpoint = choosing;
       pick();
       if (endpoint === "home") {

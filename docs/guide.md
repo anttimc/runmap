@@ -18,15 +18,8 @@ include background opacity, initially 75%, and Highlight flat paths. Terrain
 colors are softened while distance shading is on.
 
 Path gradient colors prepared path intervals by absolute along-path grade.
-Click a path to inspect signed grades, relative height change, estimated ascent
-and descent, surface/access tags, and segment-local uphill sections. Hover or
-focus the profile to locate its interval on the map. Reverse inspection changes
-the displayed direction, not legal traversal permissions.
-
-The profile integrates sampled terrain gradients. It is relative to the segment
-start, not absolute altitude or surveyed path elevation. Missing samples break
-the profile into separate runs. Bridges and tunnels use uncertain ground-surface
-estimates; stairs and pedestrian-area perimeters retain their quality warnings.
+Elevation exploration is available for complete planned routes. Individual path
+segments no longer open an inspection panel.
 
 **Highlight flat paths**, under Background gradient, emphasizes measured stretches
 of at least 50 m within one graph segment. The maximum absolute-grade threshold
@@ -39,8 +32,8 @@ while Background gradient is on, independently of the Path gradient switch.
 
 Turn on Distance from start. If no start exists, selection begins automatically;
 otherwise it uses the shared start. Its options include Set start on map and
-Clear start. Snapping chooses the nearest eligible prepared segment; inspection
-can offer nearby alternatives. The connector shows the snap offset, not a
+Clear start. Snapping chooses the nearest eligible prepared segment.
+The connector shows the snap offset, not a
 validated access path.
 
 The budget defaults to **3 km of forward network distance**. Return distance is
@@ -56,12 +49,10 @@ polygons. Unfilled areas do not establish why distance is unavailable.
 See [distance shells](distance-shells.md) for approximation and method details.
 
 Distance shading can appear with path-gradient colors and flat-path highlights.
-Click a mapped path to inspect its original samples and distance information;
-where no prepared hit geometry is found, inspection tries a nearby network snap.
 Clearing the start removes distance shading and updates the planner's shared
 start; the other layer switches keep their settings. Shell display requires a
 prepared SQLite network and matching numeric routing artifact. Datasets without numeric routing retain gradient
-display and inspection, with the distance control disabled.
+display and route elevation, with the distance control disabled.
 
 ## Plan run
 
@@ -80,7 +71,7 @@ hill preferences, and Generate run in the panel footer.
 4. Your run shows the selected route's distance and direction arrows. Use Fit run
    to frame it. Details help shows the destination distance for one-way routes;
    round-trip details include outbound/return distances, repetition, and shape
-   diagnostics. Available terrain estimates appear in details for either type.
+   diagnostics. Click the route or select **Show elevation** to open its profile.
    Cancel stops waiting in the browser; server work has its own deadline.
 
 One way finds one legal directed path to the destination, minimizing distance
@@ -101,8 +92,31 @@ requests, and clears the previous result. Switching Off hides controls and editi
 markers while keeping the last generated route visible. Returning to the same
 type retains its result; changed routing inputs are marked out of date. Clear
 resets the run and shared start. Map layers retain their settings throughout.
-While no planner endpoint is being picked, map clicks remain available for path
-inspection or distance-start selection.
+Endpoint and distance-start selection take priority over route inspection.
+
+### Route elevation
+
+Click the selected route, or use **Show elevation** while planning is enabled.
+The chart shows sampled smoothed ground elevation in metres against cumulative
+route distance. Round trips include both legs and mark the turnaround. Repeated
+stretches appear each time they are travelled. Hover over the chart or focus the
+distance slider and use arrow keys to locate a sample on the map and read its
+elevation and signed grade. Close or Escape dismisses the panel.
+
+The profile shows estimated ascent/descent and elevation coverage independently
+of Avoid hills. The info button beside Route elevation explains smoothing,
+gaps, and terrain uncertainty. Missing heights break the line and make totals incomplete;
+later samples retain their absolute heights. Dashed purple sections flag uncertain
+terrain, including bridges, tunnels, stairs, and pedestrian-area perimeters.
+Ground elevations may differ from the actual path, particularly on structures.
+Profile totals come from sampled heights and can differ from the gradient-based
+hill-avoidance diagnostics. Profiles load on demand and clear when route inputs,
+orientation, or planning mode change. A displayed route with previous settings
+can still be inspected explicitly.
+
+Existing elevation installations need their height tiles prepared once; see
+[Prepare elevation](development.md#prepare-elevation). Missing tiles show gaps
+or an unavailable message. Route planning still works.
 
 Avoid hills offers **Off / Low / High** when prepared measurements are available.
 It penalizes terrain-derived excess effort, with an additional preference for
@@ -123,7 +137,7 @@ sections, and GPX export are not available.
 Open Settings from the map legend. **Paths & routing** offers all prepared
 candidates or explicitly paved/gravel surfaces, with unknown surface tags kept
 explicit. Stairs are avoided by default. Access, pedestrian direction, and
-prepared route boundaries govern inspection eligibility,
+prepared route boundaries govern eligibility for
 snapping, exploration, and planning. Display filters cannot restore paths rejected
 during import. The default snap radius is 50 m, configurable up to 200 m under
 Endpoint snapping.
@@ -148,11 +162,11 @@ background smoothing values are available through the terrain API.
 Source-elevation contours occur every 5 m, with 25 m contours emphasized;
 they show terrain shape but have no elevation labels to resolve uphill sign.
 Path tiles appear from zoom 10 through 16 and overzoom thereafter; coarse colors
-summarize intervals, while inspection retains original measurements.
+summarize intervals.
 
 Distance exploration offers visible **Distance from start**, **Extra travel (distance)**, and **Extra travel (%)**
 choices. Extra travel highlights detours around obstacles within the distance budget; see
 [distance shells](distance-shells.md).
 
 Grid distance contours use Light smoothing by default. Advanced options offers
-Off, Light, or Strong contour smoothing; path inspection distances stay unchanged.
+Off, Light, or Strong contour smoothing; network distances stay unchanged.

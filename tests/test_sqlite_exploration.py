@@ -188,16 +188,16 @@ class SQLiteExplorationEndpointTests(unittest.IsolatedAsyncioTestCase):
                     patch.object(Path, "read_text", side_effect=AssertionError("source read")):
                 app.state.paths = data
                 app.state.path_tiles = PathTileService(data)
-                query = "west=24.799&south=60.199&east=24.805&north=60.201&zoom=15&longitude=24.801&latitude=60.2&budget_km=.1"
-                self.assertEqual((await get("/api/paths/segments/s?" + query))[0], 200)
-                self.assertEqual((await get("/api/paths/segments/s?" + query + "&dataset_id=stale"))[0], 409)
+                body = {"longitude": 24.801, "latitude": 60.2, "budget_km": .1, "dataset_id": app.state.paths.dataset_id}
+                self.assertEqual((await get("/api/paths/snapshots", body))[0], 200)
+                self.assertEqual((await get("/api/paths/snapshots", {**body, "dataset_id": "stale"}))[0], 409)
                 request = Request({"type": "http", "app": app, "headers": []})
                 options = SnapshotRequest(longitude=24.801, latitude=60.2, budget_km=.1, dataset_id=data.dataset_id)
                 self.assertEqual(prepare_path_snapshot(request, options).status_code, 200)
                 app.state.path_tiles = PathTileService(data, exploration_limits=ExplorationLimits(max_area_km2=.001))
-                status, result = await get("/api/paths/segments/s?" + query)
+                status, result = await get("/api/paths/snapshots", body)
                 self.assertEqual(status, 422)
                 self.assertEqual(result["status"], "area_limited")
                 app.state.path_tiles = PathTileService(data, preparation_deadline=-1)
-                self.assertEqual((await get("/api/paths/segments/s?" + query))[0], 504)
+                self.assertEqual((await get("/api/paths/snapshots", body))[0], 504)
                 self.assertFalse(hasattr(data, "legacy"))

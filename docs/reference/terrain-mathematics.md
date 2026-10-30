@@ -48,6 +48,25 @@ The profile estimates smoothed ground
 height change; it is not sampled absolute elevation, does not establish bridge
 or tunnel height, and is not constrained to integrate to zero around a loop.
 
+### Planned-route elevation profiles
+
+The route chart samples absolute heights from the retained smoothed terrain
+surface, rather than integrating the gradient measurements above. Each segment
+uses fixed anchors at no more than 10 m graph-chainage spacing, plus geometry
+vertices and traversal endpoints. Reversal visits the same anchors backwards;
+repeated traversals retain separate positions along cumulative route distance.
+Bilinear raster sampling preserves unknown cells as gaps; sampling clamps to
+the nearest cell centre at a core edge. Heights at a repeated coordinate agree,
+so a closed route ends at its starting elevation without an imposed correction.
+Terrain is still a ground estimate, including beneath bridges and tunnels.
+
+For consecutive valid heights `h0`, `h1` over graph distance `d`, displayed
+grade is `100 * (h1 - h0) / d`. Ascent sums positive differences; descent sums
+negative differences by magnitude. Gaps contribute neither ascent nor descent,
+reduce distance coverage, and mark totals incomplete. Heights after gaps remain
+absolute. Profile totals may differ from gradient-based routing observations
+because sampling/interpolation and differentiation are different operations.
+
 ## Thin-plate smoothing and its DCT implementation
 
 This note derives the smoother in `src/runmap/terrain/smoothing.py` from the

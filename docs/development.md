@@ -117,6 +117,12 @@ Preparation downloads missing source tiles, validates their structure and finite
 coverage, converts them to COGs, and activates an immutable coverage manifest
 under `data/elevation/`. Ready source tiles are reused. Precompute builds the
 default derived terrain; other advertised presets are generated on demand.
+Precompute also writes float32 `.height.tif` siblings for route elevation profiles.
+Rerun the precompute command above for an existing installation to add these
+files. Use the region/manifest and wavelength associated with the path dataset;
+profiles do not substitute the current background terrain source. No path or
+numeric routing rebuild is required. The single-raster terrain override does not
+supply manifest-pinned route heights.
 The dry run lists required tiles without downloading them. See
 [prepared data](reference/prepared-data.md#elevation-products) for grids and artifact identities.
 

@@ -13,7 +13,7 @@ See [architecture](../architecture.md) for the service boundaries and
 | `GET /api/regions/{region_id}/terrain/v{version}/{manifest_id}/w{wavelength}/{z}/{x}/{y}.png` | Versioned terrain tiles |
 | `GET /api/regions/{region_id}/contours/v{version}/{manifest_id}/{z}/{x}/{y}.mvt` | Source-elevation contour tiles |
 | `GET /api/paths/config` | Dataset, coverage, policy options, tile templates, and planner/shell capabilities |
-| `GET /api/paths/segments/{segment_id}` | Original measurements, profile, metadata, and optional start-distance inspection |
+| `POST /api/paths/run/profile` | Absolute terrain elevation profile for ordered route traversals |
 | `GET /api/paths/snap` | Eligible endpoint snap and nearby alternatives |
 | `POST /api/paths/snapshots` | Prepare a forward-distance exploration snapshot |
 | `GET /api/paths/snapshots/{snapshot_id}/shells` | Distance shells as GeoJSON |
@@ -23,6 +23,28 @@ See [architecture](../architecture.md) for the service boundaries and
 `GET /api/paths/viewport` is a diagnostic GeoJSON path query. `/api/terrain.png`
 serves the single-raster override. Configuration responses advertise currently
 supported capabilities; clients should not infer them from basemap coverage.
+
+## Route elevation profiles
+
+`POST /api/paths/run/profile` accepts `dataset_id` and `legs`, an ordered list
+of one or two traversal lists. Each traversal contains `segment_id`, `start_m`,
+and `end_m` in graph chainage, as returned by run planning. Decreasing offsets
+mean reverse travel. Partial and repeated traversals retain their travel order.
+Requests are bounded to 5,000 traversals, 200 km, and 30,000 profile intervals;
+unknown segments return 404, invalid offsets or disconnected traversals return
+400, and stale datasets return 409.
+
+The response includes dataset/terrain manifest identity, smoothing wavelength,
+sampling interval, total distance, optional turnaround distance, ascent/descent,
+coverage fraction, completeness, and intervals. Each interval has cumulative
+start/end distance, nullable absolute start/end elevations and signed grade,
+coordinates, and quality flags. Samples use bilinear interpolation on prepared
+height rasters; missing tiles/nodata produce gaps. Totals sum valid sampled
+height differences, including uncertain ground beneath structures. They are
+independent of hill preferences and their gradient-derived cost observations.
+The server reads selected segment records and height windows without a routing
+search. The browser caches at most eight profiles per dataset/controller and
+rejects superseded results. The former segment-inspection endpoint is removed.
 
 ## Identity and caching
 
@@ -107,7 +129,7 @@ Numeric exploration snapshots retain independent sparse reached-node identities
 and distances. They survive graph-cache eviction without retaining native graph
 owners. Reference snapshots retain the local graph and its distance buffers
 together. Static gradient tiles are independent of exploration snapshots; shell
-generation and start-distance inspection reuse the snapshot search.
+generation reuses the snapshot search.
 
 Encoded path tiles, compact display inputs, exploration snapshots, and numeric
 working sets have separate cache/accounting lifetimes. These cache budgets do not

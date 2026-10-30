@@ -27,6 +27,15 @@ and halo size. Contours use source elevation. Path measurements sample the
 derived gradient product; they do not contain absolute path elevation. See
 [terrain conventions](terrain-mathematics.md#gradient-and-path-conventions).
 
+Each newly prepared gradient COG has a sibling `<tile>.height.tif`, containing
+one float32 band of smoothed ground elevation in metres, with NaN nodata on the
+same native grid. It is the cropped smoothed surface used to calculate the
+gradients, with the same source digest, algorithm version, wavelength, and halo.
+Route profiles sample these height COGs using the path dataset's manifest and
+wavelength, independently of the active background terrain preset. Existing
+gradient tiles remain readable; rerunning region precompute adds missing height
+siblings without rebuilding path or numeric routing datasets.
+
 The store reuses matching ready products. Missing derivatives may be generated
 on request; there is no automatic disk eviction or inter-process acquisition
 lock. Preparation and serving commands are in
