@@ -147,6 +147,10 @@ export interface ShellResponse extends FeatureCollection<
   method_used: ShellMethod;
   subtract_straight_line: boolean;
   maximum_m: number;
+  extra_travel_percentage: boolean;
+  unit: "m" | "percent";
+  maximum: number;
+  interval: number;
   smoothing_m: number;
   smoothing_used_m: number;
   cell_m: number;

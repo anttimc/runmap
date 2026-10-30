@@ -33,9 +33,14 @@ import { element } from "./dom";
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
 const lowGradePathColor = "#a1d99b";
 
-function renderDistanceLegend(maximumKm: number, detour = false): void {
+function renderDistanceLegend(
+  maximumKm: number,
+  detour = false,
+  percentage = false,
+  percentageInterval = 1,
+): void {
   const maximumM = maximumKm * 1000;
-  const intervalM = detour ? 200 : distanceBandM;
+  const intervalM = percentage ? percentageInterval : detour ? 200 : distanceBandM;
   const bands = distanceBands(maximumM, intervalM);
   element("distance-ramp").style.background = `linear-gradient(to right, ${bands
     .map(
@@ -44,8 +49,9 @@ function renderDistanceLegend(maximumKm: number, detour = false): void {
     )
     .join(", ")})`;
   const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
-  element("distance-ticks").textContent =
-    `0–${formatter.format(maximumKm)} km${detour ? " extra travel" : ""} · each color = ${intervalM} m`;
+  element("distance-ticks").textContent = percentage
+    ? `0–${formatter.format(maximumM)}% extra travel · each color = ${intervalM} percentage point · higher values use the top color`
+    : `0–${formatter.format(maximumKm)} km${detour ? " extra travel" : ""} · each color = ${intervalM} m`;
 }
 
 function renderGradientLegend(stops: ColorStop[]): void {
@@ -613,6 +619,8 @@ export function startPaths(
   const subtractStraightLine = element<HTMLInputElement>("distance-subtract-straight-line");
   const networkDistance = element<HTMLInputElement>("distance-network");
   const smoothing = element<HTMLSelectElement>("distance-smoothing");
+  const extraPercentage = element<HTMLInputElement>("distance-extra-percentage");
+  const extraTravelEnabled = (): boolean => subtractStraightLine.checked || extraPercentage.checked;
   const shellStatus = element("distance-shell-status");
   const setStatus = (message: string, state: string) => {
     status.textContent = message;
@@ -643,6 +651,7 @@ export function startPaths(
   shellMethod.disabled = distanceLayer.disabled;
   subtractStraightLine.disabled = distanceLayer.disabled;
   networkDistance.disabled = distanceLayer.disabled;
+  extraPercentage.disabled = distanceLayer.disabled;
   if (!config.shell_methods?.length)
     shellStatus.textContent = "Shell display is unavailable for this dataset.";
   renderGradientLegend(stops);
@@ -693,6 +702,7 @@ export function startPaths(
   let pendingView = "";
   let installedShell = "";
   let shellMaximumM = 1;
+  let shellInterval = 1;
   let tileFailed = false;
   let inspectionSequence = 0;
   let selected: string | undefined;
@@ -853,7 +863,7 @@ export function startPaths(
     // Shell methods and visibility never invalidate the distance search.
     params.delete("hide_building_access");
     const key = outing ? params.toString() : "";
-    const viewKey = `${key}|${distanceEnabled() ? `${shellMethod.value}|${subtractStraightLine.checked}|${smoothing.value}` : variant()}`;
+    const viewKey = `${key}|${distanceEnabled() ? `${shellMethod.value}|${extraTravelEnabled()}|${extraPercentage.checked}|${smoothing.value}` : variant()}`;
     if (outing && key === snapshotKey && preparing && pendingView === viewKey) return;
     pendingView = viewKey;
     viewportAbort?.abort();
@@ -917,22 +927,30 @@ export function startPaths(
           result.snapshot_id,
           method,
           viewportAbort.signal,
-          subtractStraightLine.checked,
+          extraTravelEnabled(),
           Number(smoothing.value),
+          extraPercentage.checked,
         );
         if (sequence !== viewportSequence) return;
         if (
           shells.dataset_id !== config.dataset_id ||
           shells.snapshot_id !== result.snapshot_id ||
           shells.method !== method ||
-          shells.subtract_straight_line !== subtractStraightLine.checked ||
+          shells.subtract_straight_line !== extraTravelEnabled() ||
+          shells.extra_travel_percentage !== extraPercentage.checked ||
           shells.smoothing_m !== Number(smoothing.value)
         )
           throw new Error("Distance shell response changed — try again.");
-        shellMaximumM = shells.maximum_m;
+        shellMaximumM = shells.maximum;
+        shellInterval = shells.interval;
         setShellData(map, shells);
         showShellLayers(map, true, shellMaximumM, shells.interval_m);
-        renderDistanceLegend(shellMaximumM / 1000, subtractStraightLine.checked);
+        renderDistanceLegend(
+          shellMaximumM / 1000,
+          extraTravelEnabled(),
+          extraPercentage.checked,
+          shellInterval,
+        );
         installedShell = viewKey;
         const label = shells.method_used === "grid" ? "Grid" : "Filtered triangulation";
         shellStatus.textContent = `${label} · ${shells.features.length} bands · ${(shells.generation_ms / 1000).toFixed(2)} s${shells.method_used !== method ? " · sparse network fallback" : ""}`;
@@ -1010,6 +1028,7 @@ export function startPaths(
   shellMethod.addEventListener("change", refresh);
   subtractStraightLine.addEventListener("change", refresh);
   networkDistance.addEventListener("change", refresh);
+  extraPercentage.addEventListener("change", refresh);
   smoothing.addEventListener("change", refresh);
   function updateMetric(): void {
     updateLodLegend();
@@ -1022,8 +1041,8 @@ export function startPaths(
     showShellLayers(
       map,
       distance,
-      subtractStraightLine.checked ? shellMaximumM : Number(budget.value) * 1000,
-      subtractStraightLine.checked ? 200 : distanceBandM,
+      extraTravelEnabled() ? shellMaximumM : Number(budget.value) * 1000,
+      extraPercentage.checked ? shellInterval : subtractStraightLine.checked ? 200 : distanceBandM,
     );
     if (!distance) setShellData(map);
     const threshold = Number(flatThreshold.value);
@@ -1031,8 +1050,10 @@ export function startPaths(
     element("path-flat-threshold-value").textContent = `${threshold}%`;
     element("flat-legend-value").textContent = `≤${threshold}% · at least 50 m`;
     renderDistanceLegend(
-      subtractStraightLine.checked ? shellMaximumM / 1000 : Number(budget.value),
-      subtractStraightLine.checked,
+      extraTravelEnabled() ? shellMaximumM / 1000 : Number(budget.value),
+      extraTravelEnabled(),
+      extraPercentage.checked,
+      shellInterval,
     );
     applyPathEmphasis(map, highlightFlat(), threshold);
     updateLegendVisibility();
@@ -1045,9 +1066,11 @@ export function startPaths(
       shellMethod.value === "grid"
         ? "Softens Grid contours. Does not change path distances."
         : "Smoothing applies only if triangulation falls back to Grid.";
-    const extraTravel = subtractStraightLine.checked;
+    const extraTravel = extraTravelEnabled();
     element("distance-legend-heading").textContent = extraTravel
-      ? "Extra travel"
+      ? extraPercentage.checked
+        ? "Extra travel (%)"
+        : "Extra travel (distance)"
       : "Distance from start";
     element("distance-legend").setAttribute(
       "aria-label",
@@ -1065,7 +1088,7 @@ export function startPaths(
         ? "Background colors show terrain slope. A path following a hillside contour can be flat. Terrain colors are softened while distance shading is on."
         : "",
       distanceEnabled()
-        ? `Filled colors show ${subtractStraightLine.checked ? "200 m" : "500 m"} bands of ${subtractStraightLine.checked ? "extra travel beyond straight-line distance" : "shortest legal network distance"}. Areas between paths are approximate and do not imply off-path access. Return distance is not included.`
+        ? `Filled colors show ${extraPercentage.checked ? `${shellInterval} percentage point` : subtractStraightLine.checked ? "200 m" : "500 m"} bands of ${extraTravelEnabled() ? "extra travel beyond straight-line distance" : "shortest legal network distance"}. Areas between paths are approximate and do not imply off-path access. Return distance is not included.`
         : "",
       highlightFlat()
         ? `Green outlines mark paths containing stretches of at least 50 m with grades up to ${Number(flatThreshold.value)}%.`

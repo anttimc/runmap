@@ -444,9 +444,13 @@
                       ?</button
                     ><span role="tooltip" class="help-content" id="distance-mode-description"
                       >Distance from start: shortest distance along paths, in 500 m bands. Extra
-                      travel: distance beyond a straight line, in 200 m bands. Highlights detours
-                      around water, railways and other obstacles, with colors scaled to the largest
-                      extra distance in the explored area.</span
+                      travel (distance): distance beyond a straight line, in 200 m bands. Extra
+                      travel (%): extra distance divided by straight-line distance, with a 500 m
+                      minimum denominator to stabilize values near the start. For example, 1.5 km
+                      along paths versus 1 km directly is 50% extra travel. Highlights detours
+                      around water, railways and other obstacles. Distance colors scale to the
+                      largest extra distance in the explored area. Percentage colors are capped at
+                      the 99th percentile; higher percentages use the top color.</span
                     ></span
                   >
                 </legend>
@@ -461,7 +465,16 @@
                     name="distance-mode"
                     disabled
                   />
-                  <span><strong>Extra travel</strong></span>
+                  <span><strong>Extra travel (distance)</strong></span>
+                </label>
+                <label class="distance-mode">
+                  <input
+                    id="distance-extra-percentage"
+                    type="radio"
+                    name="distance-mode"
+                    disabled
+                  />
+                  <span><strong>Extra travel (%)</strong></span>
                 </label>
               </fieldset>
               <div class="heading-row outing-actions">

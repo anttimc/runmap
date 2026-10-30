@@ -57,6 +57,9 @@ class PathShellTests(unittest.IsolatedAsyncioTestCase):
             status, detour = await get(prefix + "&subtract_straight_line=true")
             self.assertEqual(status, 200)
             self.assertTrue(detour["subtract_straight_line"])
+            status, percentage = await get(prefix + "&extra_travel_percentage=true")
+            self.assertEqual(status, 200)
+            self.assertEqual(percentage["unit"], "percent")
             self.assertEqual((await get(prefix + "&method=unknown"))[0], 422)
             self.assertEqual((await get(prefix + "&cell_m=1"))[0], 400)
             self.assertEqual((await get(prefix + "&smoothing_m=75"))[0], 400)
@@ -140,6 +143,62 @@ class PathShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(json.loads(normal)["subtract_straight_line"])
         self.assertEqual(json.loads(normal)["interval_m"], 500)
         self.assertTrue(self.shells.render(self.snapshot, "grid", subtract_straight_line=True)[1])
+
+    def test_percentage_samples_use_direct_distance_as_denominator(self) -> None:
+        samples = DistanceSamples(np.array([[0., 0.], [300., 400.], [600., 800.], [1., 0.]]),
+                                  np.array([0., 750., 1000., 2000.]))
+        result = path_shells.detour_samples(samples, (0., 0.), 1500, percentage=True)
+        np.testing.assert_array_equal(result.distances, [0., 50., 0.])
+        np.testing.assert_array_equal(samples.distances, [0., 750., 1000., 2000.])
+        self.assertTrue(np.isfinite(result.distances).all())
+        self.assertFalse(result.distances.flags.writeable)
+
+    def test_percentage_regularizes_small_distances_only(self) -> None:
+        samples = DistanceSamples(np.array([[0., 0.], [0.001, 0.], [3., 4.],
+                                           [30., 40.], [60., 80.], [300., 400.], [600., 800.]]),
+                                  np.array([0., 10.001, 15., 75., 150., 750., 1500.]))
+        result = path_shells.detour_samples(samples, (0., 0.), 2000, percentage=True)
+        np.testing.assert_allclose(result.distances, [0., 2., 2., 5., 10., 50., 50.])
+        distance = path_shells.detour_samples(samples, (0., 0.), 2000)
+        np.testing.assert_allclose(distance.distances, [0., 10., 10., 25., 50., 250., 500.])
+
+    def test_percentage_cache_and_scale_for_both_methods(self) -> None:
+        with patch.object(path_shells, "load_shell_samples", wraps=path_shells.load_shell_samples) as reader:
+            for method in ("grid", "triangulation"):
+                self.shells.render(self.snapshot, method, subtract_straight_line=True)
+                encoded, hit, _ = self.shells.render(self.snapshot, method, extra_travel_percentage=True)
+                result = json.loads(encoded)
+                self.assertFalse(hit)
+                self.assertTrue(result["extra_travel_percentage"])
+                self.assertTrue(result["subtract_straight_line"])
+                self.assertEqual(result["unit"], "percent")
+                self.assertGreaterEqual(result["maximum"], 1)
+                self.assertGreaterEqual(result["interval"], 1)
+                self.assertLessEqual(result["maximum"] / result["interval"], 20)
+                self.assertTrue(self.shells.render(self.snapshot, method, extra_travel_percentage=True)[1])
+            self.assertEqual(reader.call_count, 1)
+
+    def test_percentage_scale_saturates_without_discarding_high_values(self) -> None:
+        points = np.array([[float(x), float(y)] for y in range(0, 250, 50)
+                           for x in range(0, 250, 50)])
+        values = np.full(len(points), 400.)
+        samples = DistanceSamples(points, values)
+        for method in ("grid", "triangulation"):
+            bands, used, maximum, interval = path_shells.percentage_bands(
+                samples, ShellSettings(smoothing_m=50), method, monotonic() + 5)
+            self.assertTrue(bands)
+            self.assertEqual(maximum, bands[-1].upper_m)
+            self.assertAlmostEqual(maximum, 400)
+            self.assertEqual(interval, 27)
+            self.assertTrue(bands[-1].polygons)
+            np.testing.assert_array_equal(samples.distances, values)
+
+    def test_percentage_scale_caps_at_99th_percentile(self) -> None:
+        values = np.r_[np.arange(100, dtype=np.float64), 10000., np.nan]
+        maximum, interval = path_shells.percentage_scale(values)
+        self.assertEqual(maximum, 99)
+        self.assertEqual(interval, 7)
+        self.assertEqual(path_shells.percentage_scale(np.zeros(10)), (1., 1.))
 
     def test_smoothing_cache_and_validation(self) -> None:
         with patch.object(path_shells, "load_shell_samples", wraps=path_shells.load_shell_samples) as reader:

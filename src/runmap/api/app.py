@@ -249,7 +249,8 @@ def static_path_tile(request: Request, version: str, dataset_id: str, policy: st
 @app.get("/api/paths/snapshots/{snapshot_id}/shells")
 def distance_shells(request: Request, snapshot_id: str, dataset_id: str,
                     method: Literal["grid", "triangulation"] = "grid", cell_m: int = 50,
-                    subtract_straight_line: bool = False, smoothing_m: int = 25) -> Response:
+                    subtract_straight_line: bool = False, smoothing_m: int = 25,
+                    extra_travel_percentage: bool = False) -> Response:
     paths = _tile_service(request, dataset_id)
     service = getattr(request.app.state, "path_shells", None)
     if service is None or service.paths is not paths:
@@ -257,7 +258,7 @@ def distance_shells(request: Request, snapshot_id: str, dataset_id: str,
         request.app.state.path_shells = service
     try:
         snapshot = paths.snapshot(snapshot_id)
-        encoded, hit, elapsed = service.render(snapshot, method, cell_m, subtract_straight_line, smoothing_m)
+        encoded, hit, elapsed = service.render(snapshot, method, cell_m, subtract_straight_line, smoothing_m, extra_travel_percentage)
     except KeyError as exc:
         raise HTTPException(410, "Exploration snapshot expired; prepare it again") from exc
     except ValueError as exc:

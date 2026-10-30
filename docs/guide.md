@@ -150,7 +150,7 @@ they show terrain shape but have no elevation labels to resolve uphill sign.
 Path tiles appear from zoom 10 through 16 and overzoom thereafter; coarse colors
 summarize intervals, while inspection retains original measurements.
 
-Distance exploration offers visible **Distance from start** and **Extra travel**
+Distance exploration offers visible **Distance from start**, **Extra travel (distance)**, and **Extra travel (%)**
 choices. Extra travel highlights detours around obstacles within the distance budget; see
 [distance shells](distance-shells.md).
 

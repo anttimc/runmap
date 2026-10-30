@@ -1,6 +1,7 @@
 """Turn exploration snapshots into cached geographic distance-band responses."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from math import ceil
 import json
 from threading import BoundedSemaphore
 from time import monotonic
@@ -19,13 +20,14 @@ from runmap.paths.numeric_database import iter_numeric_payloads
 from runmap.paths.numeric_format import decode_numeric_chunk
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.distance_mesh import (MeshUnavailableError, build_distance_mesh, triangulated_bands)
-from runmap.routing.distance_shells import (DistanceBand, DistanceSamples, ShellSettings, build_distance_grid,
+from runmap.routing.distance_shells import (DistanceBand, DistanceSamples, FloatArray, ShellSettings, build_distance_grid,
     distance_bands, merge_distance_samples, sample_numeric_chunk, smooth_distance_grid)
 from runmap.routing.numeric_exploration import NumericDistanceData
 from runmap.routing.profiles import exploration_profile
 
 
 ShellMethod = Literal["grid", "triangulation"]
+PERCENTAGE_DISTANCE_FLOOR_M = 500.0
 
 
 @dataclass(frozen=True)
@@ -105,12 +107,17 @@ def load_shell_samples(data: SQLitePathData, snapshot: Snapshot, settings: Shell
     return result
 
 
-def detour_samples(samples: DistanceSamples, start_xy: tuple[float, float], maximum_m: float) -> DistanceSamples:
+def detour_samples(samples: DistanceSamples, start_xy: tuple[float, float], maximum_m: float,
+                   percentage: bool = False) -> DistanceSamples:
     """Measure extra travel within the original budget without altering cached samples."""
     reached = samples.distances <= maximum_m
     xy = samples.xy[reached]
     direct = np.linalg.norm(xy - np.asarray(start_xy), axis=1)
     distances = np.maximum(0, samples.distances[reached] - direct)
+    if percentage:
+        # Suppress unstable ratios near the origin.
+        denominator = np.maximum(direct, PERCENTAGE_DISTANCE_FLOOR_M)
+        distances = np.divide(100 * distances, denominator, out=np.zeros_like(distances), where=direct > 1e-6)
     xy.setflags(write=False)
     distances.setflags(write=False)
     return DistanceSamples(xy, distances)
@@ -130,6 +137,35 @@ def generate_bands(samples: DistanceSamples, maximum_m: float, settings: ShellSe
     return distance_bands(grid, maximum_m, settings), "grid"
 
 
+def percentage_scale(values: FloatArray) -> tuple[float, float]:
+    """Limit outlier influence while keeping a usable scale for zero-detour areas."""
+    finite = values[np.isfinite(values)]
+    maximum = max(1.0, float(np.percentile(finite, 99))) if len(finite) else 1.0
+    return maximum, float(max(1, ceil(maximum / 15)))
+
+
+def percentage_bands(samples: DistanceSamples, settings: ShellSettings, method: ShellMethod,
+                     deadline: float) -> tuple[tuple[DistanceBand, ...], ShellMethod, float, float]:
+    """Saturate percentage shading above the surface's 99th percentile."""
+    if method == "triangulation":
+        try:
+            mesh = build_distance_mesh(samples, max(1.0, float(np.max(samples.distances))),
+                                       settings, deadline=deadline)
+            maximum, interval = percentage_scale(mesh.values[np.unique(mesh.triangles)])
+            settings = replace(settings, interval_m=interval)
+            mesh = replace(mesh, values=np.minimum(mesh.values, maximum))
+            bands = triangulated_bands(mesh, maximum, settings, deadline=deadline)
+            return bands, method, maximum, settings.interval_m
+        except MeshUnavailableError:
+            pass
+    grid = smooth_distance_grid(build_distance_grid(samples, settings, deadline=deadline),
+                                settings, deadline=deadline)
+    maximum, interval = percentage_scale(grid.values)
+    settings = replace(settings, interval_m=interval)
+    grid = replace(grid, values=np.minimum(grid.values, maximum))
+    return distance_bands(grid, maximum, settings), "grid", maximum, settings.interval_m
+
+
 class PathShellService:
     """Bound and coalesce geometry sampling and encoded shell work per snapshot."""
 
@@ -141,29 +177,31 @@ class PathShellService:
         self.coverage = projected_coverage(paths.data) if isinstance(paths.data, SQLitePathData) else None
 
     def render(self, snapshot: Snapshot, method: ShellMethod, cell_m: float = 50,
-               subtract_straight_line: bool = False, smoothing_m: float = 25) -> tuple[bytes, bool, float]:
+               subtract_straight_line: bool = False, smoothing_m: float = 25,
+               extra_travel_percentage: bool = False) -> tuple[bytes, bool, float]:
         if method not in {"grid", "triangulation"} or cell_m not in {25, 50, 100} or smoothing_m not in {0, 25, 50}:
             raise ValueError("Unknown shell method, resolution, or smoothing")
+        subtract_straight_line = subtract_straight_line or extra_travel_percentage
         started = monotonic()
         deadline = started + 20
         settings = ShellSettings(cell_m=cell_m, interval_m=200 if subtract_straight_line else 500,
                                  smoothing_m=smoothing_m)
-        key = repr((snapshot.id, method, settings, subtract_straight_line))
-        result, hit = self.responses.compute(key, lambda: self._generate(snapshot, settings, method, deadline, subtract_straight_line),
+        key = repr((snapshot.id, method, settings, subtract_straight_line, extra_travel_percentage))
+        result, hit = self.responses.compute(key, lambda: self._generate(snapshot, settings, method, deadline, subtract_straight_line, extra_travel_percentage),
             lambda result: len(result.encoded) + 256, deadline=deadline, allow_oversized=True)
         return result.encoded, hit, (monotonic() - started) * 1000
 
     def _generate(self, snapshot: Snapshot, settings: ShellSettings, method: ShellMethod,
-                   deadline: float, subtract_straight_line: bool) -> ShellPayload:
+                   deadline: float, subtract_straight_line: bool, extra_travel_percentage: bool) -> ShellPayload:
         if not self.workers.acquire(timeout=max(0, deadline - monotonic())):
             raise TimeoutError("Distance shell generation is busy; try again")
         try:
-            return self._encode(snapshot, settings, method, deadline, subtract_straight_line)
+            return self._encode(snapshot, settings, method, deadline, subtract_straight_line, extra_travel_percentage)
         finally:
             self.workers.release()
 
     def _encode(self, snapshot: Snapshot, settings: ShellSettings, method: ShellMethod,
-                 deadline: float, subtract_straight_line: bool) -> ShellPayload:
+                 deadline: float, subtract_straight_line: bool, extra_travel_percentage: bool) -> ShellPayload:
         started = monotonic()
         data = self.paths.data
         if not isinstance(data, SQLitePathData) or self.coverage is None:
@@ -174,18 +212,23 @@ class PathShellService:
         if subtract_straight_line:
             snap = snapshot.distances.snap
             x, y = transform("EPSG:4326", "EPSG:3067", [snap.longitude], [snap.latitude])
-            samples = detour_samples(samples, (x[0], y[0]), snapshot.budget_km * 1000)
+            samples = detour_samples(samples, (x[0], y[0]), snapshot.budget_km * 1000, extra_travel_percentage)
         sampled = monotonic()
         maximum_m = (max(1.0, float(np.max(samples.distances))) if subtract_straight_line
                      else snapshot.budget_km * 1000)
-        bands, used = generate_bands(samples, maximum_m, settings, method, deadline)
+        if extra_travel_percentage:
+            bands, used, maximum_m, interval = percentage_bands(samples, settings, method, deadline)
+            settings = replace(settings, interval_m=interval)
+        else:
+            bands, used = generate_bands(samples, maximum_m, settings, method, deadline)
         contoured = monotonic()
         features, vertices = shell_features(bands, self.coverage)
         check_deadline(deadline)
         result: dict[str, object] = {"type": "FeatureCollection", "features": features,
             "dataset_id": data.dataset_id, "snapshot_id": snapshot.id, "method": method, "method_used": used,
             "smoothing_m": settings.smoothing_m, "smoothing_used_m": settings.smoothing_m if used == "grid" else 0,
-            "maximum_m": maximum_m, "subtract_straight_line": subtract_straight_line, "cell_m": settings.cell_m, "interval_m": settings.interval_m, "vertices": vertices,
+            "extra_travel_percentage": extra_travel_percentage, "unit": "percent" if extra_travel_percentage else "m",
+            "maximum": maximum_m, "interval": settings.interval_m, "maximum_m": maximum_m, "subtract_straight_line": subtract_straight_line, "cell_m": settings.cell_m, "interval_m": settings.interval_m, "vertices": vertices,
             "sample_cache_hit": sample_hit, "generation_ms": (monotonic() - started) * 1000,
             "sampling_ms": (sampled - started) * 1000, "surface_ms": (contoured - sampled) * 1000}
         return ShellPayload(json.dumps(result, separators=(",", ":"), allow_nan=False).encode())
