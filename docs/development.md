@@ -606,6 +606,71 @@ preserves measured results and interpretation.
 The [Pasila repetition](archive/history/56-pasila-loop-length.md) uses the same
 grid and validation settings at a second start, with locally refitted models.
 
+### Loop-length MAP mixtures
+
+Fit a Bayesian MAP mixture of polynomial experts from a completed baseline
+analysis, reusing its independently computed network features and actual labels:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.fit_loop_length_mixture \
+  artifacts/loop-length-fit/leppavaara-north-2026-10-28-final \
+  artifacts/loop-length-mixture/leppavaara-north-v1 \
+  --components 1 2 3 4 --restarts 4
+```
+
+Use a fresh output directory. The input must contain `report.json` and the
+baseline `predictions.csv`; only `network_affine` rows are read, and original
+length labels are used rather than baseline predictions. No planner calls or
+network searches are needed. NumPy and SciPy supply the fitting operations;
+no new dependencies are required. See the
+[mathematical reference](reference/loop-length-mixture.md) for basis definitions,
+priors, MAP updates, and the distinction between mixture spread and posterior
+parameter uncertainty.
+
+The defaults compare K=1–4 with four seeded restarts, at most 300 EM iterations,
+relative objective tolerance 1e-6, and seed 0. `--block-size 5 --buffer 1` retains
+the baseline spatial grouping of all widths and sides at each position.
+Scalers are fitted separately in each training fold. Priors are configurable
+through `--coefficient-sd-m`, `--intercept-sd-m`, `--gate-sd`, `--variance-shape`,
+and `--variance-scale-m2`; their initial values are documented in the reference.
+
+`report.json` saves input identity and hash, priors, training scalers, parameters,
+objective histories, convergence, effective component counts, full-data and
+fold-specific fits, held-out soft/hard error metrics, conditional log density,
+per-width/side soft errors, and the refitted global baseline comparison.
+`predictions.csv` saves each held-out observation's mean, hard prediction,
+mixture variance, component weights, log density, and fold. Comparisons are
+exploratory; inspect nonconverged fits and poorly occupied experts. Parameter
+uncertainty, interval calibration, and adaptive target-length sampling remain
+outstanding validation and implementation work.
+The [2026-10-29 comparison](archive/history/57-loop-length-mixture.md) preserves
+the first one- through four-expert results with three seeded restarts.
+
+To compare a nonlinear gate while keeping the expert basis fixed:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.fit_loop_length_mixture \
+  artifacts/loop-length-fit/leppavaara-north-2026-10-28-final \
+  artifacts/loop-length-mixture/leppavaara-rbf \
+  --components 4 --restarts 3 --gate rbf \
+  --rbf-count 16 --rbf-length-scale 0.8 --plot-widths 0.12 0.36
+```
+
+`--gate linear` remains the default. The RBF gate adds radial features over
+training-standardized forward/lateral coordinates and width; scaling and
+farthest-point center selection are fitted independently in each training fold.
+The report includes the fitted centers and length scale. Both gate options now
+write PNG/SVG category and maximum-gate-probability maps at `--plot-widths`
+(default 0.12 and 0.36, which must exist in the input). Matplotlib from the
+experiments extra supplies plotting. Maps show the same full-data model across
+both side assignments and selected widths; component labels are arbitrary
+across fits. Missing successful observations remain grey. The probability maps
+show input-only gate probabilities, not length-conditioned responsibilities or
+posterior parameter uncertainty. Report schema version 2 records these contracts.
+The [2026-10-30 RBF comparison](archive/history/58-rbf-loop-length-gate.md)
+preserves held-out results and category maps for two length scales and the
+linear comparison.
+
 ### Other experiments
 
 The CLI anchor baseline remains a separate experiment, with its own distance,

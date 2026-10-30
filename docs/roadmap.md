@@ -321,6 +321,12 @@ samples turnaround position and width using the existing planner. Remaining work
 - Compare coarse-to-fine sampling and model-guided search under equal routing-call
   and wall-clock budgets. Choose direction semantics, target tolerance, and route
   quality criteria before adding automatic turnaround selection to the app.
+- Validate the [MAP polynomial mixture](reference/loop-length-mixture.md) across
+  starts and prior choices, including linear versus RBF gates with nested tuning,
+  component occupancy, convergence, and
+  predictive interval calibration. Add posterior coefficient/gate uncertainty
+  and evaluate adaptive target-length sampling under equal routing-call budgets;
+  the implemented plug-in mixture spread alone does not measure information gain.
 
 ## Optional / later
 

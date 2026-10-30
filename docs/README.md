@@ -18,6 +18,7 @@ exists, and [roadmap](roadmap.md) for outstanding work.
 | [Distance shells](distance-shells.md) | Delivered distance visualization, approximation semantics, methods, and limits |
 | [Terrain mathematics](reference/terrain-mathematics.md) | Terrain calculations |
 | [Routing mathematics](reference/routing-mathematics.md) | Planner calculations |
+| [Loop-length mixtures](reference/loop-length-mixture.md) | MAP polynomial mixture mathematics and implementation; proposed GP uncertainty and adaptive sampling |
 | [Archive](archive/README.md) | Dated plans, experiments, and supporting artifacts |
 
 ## Maintenance rule

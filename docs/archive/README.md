@@ -51,6 +51,10 @@ the remaining residual structure.
 The [Pasila repetition](history/56-pasila-loop-length.md) repeats the grid and
 six-model spatial validation at a second start, with comparable settings and
 side-by-side errors against Leppävaara.
+The [first MAP mixture report](history/57-loop-length-mixture.md) compares one
+through four polynomial experts on the Leppävaara spatial holdouts.
+The [RBF gate report](history/58-rbf-loop-length-gate.md) compares two nonlinear
+gate scales with the linear gate and plots categories at two widths.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.
