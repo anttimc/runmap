@@ -16,6 +16,8 @@ remains outstanding:
   Record dataset/settings identities and explain any reference/native differences.
 - Check keyboard-only use, endpoint and circle dragging, Fit run, shared-start
   edits from distance controls, and all layer combinations on desktop and mobile.
+  Check the floating result card with long settings, a collapsed settings panel,
+  and the elevation plot open, including short viewports.
   Automated browser checks use controlled route responses; real route quality and
   local runner acceptance remain separate.
 - Measure representative one-way and round-trip backend and visible interaction
@@ -301,6 +303,13 @@ explicit scope before implementation. Route terrain inspection has outstanding
   state explicit where DOM values or status text currently carry it.
 
 ## Loop recommendation experiments
+
+- Validate the delivered [turnaround shading](distance-shells.md#estimated-turnaround-region)
+  in the browser and with a local runner at contrasting starts, widths, distances,
+  and access policies. Measure cold and warm interactive latency and compare the
+  ellipse heuristic with actual route lengths; calibrate or replace its allowance
+  before treating the band as reliable distance guidance. Check responsive layout,
+  overlap with distance shells, and stale-request behavior during dragging.
 
 The [loop-length grid experiment](development.md#loop-length-parameter-grid)
 samples turnaround position and width using the existing planner. Remaining work:

@@ -147,3 +147,28 @@ export async function snapEndpoint(
 export function requestRun(body: RunRequest, signal: AbortSignal): Promise<RunResponse> {
   return postJson("/api/paths/run", body, signal);
 }
+
+export interface TurnaroundRegion extends GeoJSON.FeatureCollection {
+  dataset_id: string;
+  snapshot_id: string;
+  target_m: number;
+  width: number;
+}
+
+export function loadTurnaroundRegion(
+  datasetId: string,
+  snapshotId: string,
+  targetM: number,
+  width: number,
+  signal: AbortSignal,
+): Promise<TurnaroundRegion> {
+  const parameters = new URLSearchParams({
+    dataset_id: datasetId,
+    target_m: String(targetM),
+    width: String(width),
+  });
+  return requestJson(
+    `/api/paths/snapshots/${encodeURIComponent(snapshotId)}/turnaround?${parameters}`,
+    { signal },
+  );
+}

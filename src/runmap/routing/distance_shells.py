@@ -71,14 +71,15 @@ def _node_values(nodes: IntArray, distances: NumericDistances) -> FloatArray:
     return result
 
 
-def _segment_anchors(chunk: NumericChunk, distances: NumericDistances, profile: int
+def _segment_anchors(chunk: NumericChunk, distances: NumericDistances, profile: int,
+                     *, reverse_search: bool = False
                      ) -> tuple[FloatArray, FloatArray, FloatArray, NDArray[np.bool_]]:
     a = chunk.arrays
     segments = cast(IntArray, a["arc_segments"])
     nodes = cast(IntArray, a["arc_nodes"])
     permitted = a["arc_allowed"][:, profile] != 0
-    backwards = a["arc_reverse"] != 0
-    bases = _node_values(cast(IntArray, a["node_ids"]), distances)[nodes[:, 0]]
+    backwards = (a["arc_reverse"] != 0) ^ reverse_search
+    bases = _node_values(cast(IntArray, a["node_ids"]), distances)[nodes[:, int(reverse_search)]]
     forward, backward = np.full(chunk.counts.segments, np.inf), np.full(chunk.counts.segments, np.inf)
     lengths = np.zeros(chunk.counts.segments)
     directions = np.zeros((chunk.counts.segments, 2), dtype=np.bool_)

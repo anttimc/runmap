@@ -56,20 +56,38 @@ display and route elevation, with the distance control disabled.
 
 ## Plan run
 
+For round trips, choose the start, then choose a turnaround directly on the map.
+**Choose on map** is the default. Select **Estimate** to focus **Loop length (km)**:
+enter a distance and wait
+for the region, then select a turnaround directly on the map. Choose on map
+starts selection immediately. Dark teal means an estimated distance within
+±5% of the target; the lighter fringe extends to ±15%. Adjust Loop width to update
+the region, then choose a turnaround and generate the run normally. This estimate
+uses network access restrictions and an idealized shape allowance; hill detours
+are not estimated. Actual run lengths may differ. See
+[turnaround shading](distance-shells.md#estimated-turnaround-region) for limits.
+
 Choose **Off / One way / Round trip / loop** in the Plan run heading. Off is the
 initial selection. Either planning choice reveals endpoint controls, supported
 hill preferences, and Generate run in the panel footer.
 
-1. Choose a Start if the shared start is not already selected. Second-point
-   selection starts automatically. Choose a distinct **Destination** for One way
-   or **Turnaround** for Round trip / loop. Drag either marker to adjust it.
+1. Choose a Start if the shared start is not already selected. For One way,
+   destination selection starts automatically. For round trips, choose the
+   turnaround method described above. Choose a distinct second point.
+   Drag either marker to adjust it.
 2. For round trips, choose Orientation and adjust Loop width with the slider or
    by dragging the midpoint circle edge or handle. The centre stays at the
    endpoint midpoint. One-way planning hides these controls.
 3. Adjust Avoid hills where supported, then select Generate run. Generate again
    after moving endpoints or changing routing settings.
-4. Your run shows the selected route's distance and direction arrows. Use Fit run
-   to frame it. Details help shows the destination distance for one-way routes;
+4. The floating **Your run** card at the lower right shows the selected route's
+   distance, Fit run, Show elevation, and direction key independently of the
+   settings panel. Show elevation expands the same card with the plot above
+   the distance and actions; the button becomes Hide elevation to collapse it.
+   On phones, the card sits above the settings sheet
+   and replaces the map legend while visible.
+   Use Fit run to frame the route with space for the card.
+   Details help shows the destination distance for one-way routes;
    round-trip details include outbound/return distances, repetition, and shape
    diagnostics. Click the route or select **Show elevation** to open its profile.
    Cancel stops waiting in the browser; server work has its own deadline.

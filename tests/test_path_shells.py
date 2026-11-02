@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from rasterio.warp import transform, transform_bounds
+import numpy as np
 from shapely.geometry import GeometryCollection, LineString, Polygon, shape
 from starlette.requests import Request
 
@@ -26,6 +27,40 @@ import numpy as np
 
 
 class PathShellTests(unittest.IsolatedAsyncioTestCase):
+    def test_turnaround_band_geometry_and_feasibility_mask(self) -> None:
+        from runmap.api.turnaround import region_features
+
+        snap = self.snapshot.distances.snap
+        x, y = transform("EPSG:4326", "EPSG:3067", [snap.longitude], [snap.latitude])
+        xx, yy = np.meshgrid(np.arange(-400, 401, 25), np.arange(-400, 401, 25))
+        xy = np.column_stack((xx.ravel() + x[0], yy.ravel() + y[0]))
+        samples = DistanceSamples(xy, 2 * np.hypot(xx, yy).ravel())
+        features = region_features(self.shells, self.snapshot, samples, 500, 0, monotonic() + 20)
+        self.assertTrue(any(feature["properties"]["core"] for feature in features))
+        self.assertTrue(all(shape(feature["geometry"]).is_valid for feature in features))
+        impossible = DistanceSamples(xy, np.full(len(xy), 526.0))
+        self.assertEqual(region_features(self.shells, self.snapshot, impossible, 500, 0,
+                                        monotonic() + 20), [])
+
+    async def test_turnaround_endpoint_and_cache(self) -> None:
+        snapshot_id = self.paths.prepare(24.801, 60.2, 1, "all", True, 50, None)["snapshot_id"]
+        with patch.object(app.state, "paths", self.data, create=True), \
+                patch.object(app.state, "path_tiles", self.paths, create=True), \
+                patch.object(app.state, "path_shells", self.shells, create=True):
+            prefix = f"/api/paths/snapshots/{snapshot_id}/turnaround?dataset_id={self.data.dataset_id}"
+            status, result = await get(prefix + "&target_m=500&width=0.18")
+            self.assertEqual(status, 200, result)
+            self.assertEqual(result["target_m"], 500)
+            self.assertEqual(result["model"], "ellipse-extra-v1")
+            self.assertEqual(result["snapshot_id"], snapshot_id)
+            again = await get(prefix + "&target_m=500&width=0.18")
+            self.assertEqual(again[1], result)
+            self.assertEqual((await get(prefix + "&target_m=nan"))[0], 400)
+            self.assertEqual((await get(prefix + "&target_m=500&width=0.7"))[0], 400)
+            self.assertEqual((await get(prefix + "&target_m=2000"))[0], 400)
+            self.assertEqual((await get(prefix.replace(self.data.dataset_id, "stale") + "&target_m=500"))[0], 409)
+            self.assertEqual((await get(prefix.replace(snapshot_id, "expired") + "&target_m=500"))[0], 410)
+
     def setUp(self) -> None:
         temporary = TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

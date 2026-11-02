@@ -50,7 +50,71 @@
                 <div><strong>Start</strong><span id="run-home-value">Choose on map</span></div>
                 <button id="run-home" type="button" aria-label="Set start on map">Set</button>
               </div>
-              <div class="endpoint-row">
+              <div
+                id="run-turnaround-method"
+                role="group"
+                aria-label="Choose turnaround method"
+                hidden
+              >
+                <div class="control-label">
+                  <span>Turnaround</span>
+                  <span class="help-tip">
+                    <button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="About the estimated turnaround region"
+                      aria-expanded="false"
+                    >
+                      ?
+                    </button>
+                    <span role="tooltip" class="help-content" id="run-target-help">
+                      Approximate guidance from network distances and loop width. Darker shading
+                      shows estimates within ±5% of the target; lighter shading extends to ±15%.
+                      Choose a turnaround on the map, then generate a run to see its actual length.
+                      Actual runs may differ. Hill detours are not estimated, and shaded ground does
+                      not imply path access.
+                    </span>
+                  </span>
+                </div>
+                <div class="turnaround-choices">
+                  <label
+                    ><input
+                      id="run-target-enabled"
+                      type="radio"
+                      name="turnaround-method"
+                      aria-label="Estimate turnaround"
+                    /><span>Estimate</span></label
+                  >
+                  <label
+                    ><input
+                      id="run-target-manual"
+                      type="radio"
+                      checked
+                      name="turnaround-method"
+                      aria-label="Choose turnaround on map"
+                    /><span>Choose on map</span></label
+                  >
+                </div>
+              </div>
+              <div id="run-target-controls" hidden>
+                <div class="turnaround-distance">
+                  <label for="run-target-distance">Loop length (km)</label>
+                  <div class="turnaround-distance-input">
+                    <input
+                      id="run-target-distance"
+                      type="number"
+                      min="0.5"
+                      max="40"
+                      step="0.5"
+                      placeholder="10"
+                      required
+                      aria-describedby="run-target-help"
+                    />
+                  </div>
+                </div>
+                <p id="run-target-status" role="status"></p>
+              </div>
+              <div id="run-turnaround-row" class="endpoint-row" hidden>
                 <div>
                   <strong id="run-endpoint-label">Turnaround</strong
                   ><span id="run-turnaround-value">Choose on map</span>
@@ -131,33 +195,6 @@
                 />
                 <div id="run-hills-labels" class="range-notes" aria-hidden="true">
                   <span>Off</span><span>Low</span><span>High</span>
-                </div>
-              </div>
-              <div id="run-results" hidden>
-                <div class="heading-row section-heading">
-                  <h2 class="section-title">Your run</h2>
-                  <button id="run-fit" type="button" disabled>Fit run</button>
-                </div>
-                <div class="route-key" aria-label="Selected run direction">
-                  <span
-                    ><i class="run-key"></i
-                    ><span id="run-direction-label">Arrows show travel direction</span></span
-                  >
-                </div>
-                <div id="run-candidates" class="run-candidates"></div>
-                <button id="run-elevation" type="button" disabled>Show elevation</button>
-
-                <div id="run-details">
-                  <span class="help-tip"
-                    ><button
-                      type="button"
-                      class="help-trigger"
-                      aria-label="More information"
-                      aria-expanded="false"
-                    >
-                      ?</button
-                    ><span role="tooltip" class="help-content" id="run-detail-content"></span
-                  ></span>
                 </div>
               </div>
             </div>
@@ -646,38 +683,74 @@
           </span></span
         >
       </div>
-      <section
-        id="route-inspection"
-        class="inspection-panel"
-        aria-label="Route elevation profile"
-        hidden
-      >
-        <div class="heading-row">
-          <div class="control-label">
-            <h2>Route elevation</h2>
-            <span class="help-tip">
+      <div id="run-result-dock">
+        <section id="run-results" aria-labelledby="run-results-title" hidden>
+          <section
+            id="route-inspection"
+            class="inspection-panel"
+            aria-label="Route elevation profile"
+            hidden
+          >
+            <div class="heading-row">
+              <div class="control-label">
+                <h2>Route elevation</h2>
+                <span class="help-tip">
+                  <button
+                    type="button"
+                    class="help-trigger"
+                    aria-label="About route elevation"
+                    aria-expanded="false"
+                  >
+                    ?
+                  </button>
+                  <span
+                    id="route-profile-help"
+                    role="tooltip"
+                    class="help-content"
+                    popover="manual"
+                  ></span>
+                </span>
+              </div>
+            </div>
+            <div id="route-profile-content" aria-live="polite"></div>
+          </section>
+          <div class="run-result-summary">
+            <div class="heading-row">
+              <h2 id="run-results-title" class="section-title">Your run</h2>
+              <span id="run-details" class="help-tip">
+                <button
+                  type="button"
+                  class="help-trigger"
+                  aria-label="Run details"
+                  aria-expanded="false"
+                >
+                  ?
+                </button>
+                <span role="tooltip" class="help-content" id="run-detail-content"></span>
+              </span>
+            </div>
+            <div class="run-result-actions">
+              <div id="run-candidates" class="run-candidates"></div>
+              <button id="run-fit" type="button" disabled>Fit run</button>
               <button
+                id="run-elevation"
                 type="button"
-                class="help-trigger"
-                aria-label="About route elevation"
+                aria-controls="route-inspection"
                 aria-expanded="false"
+                disabled
               >
-                ?
+                Show elevation
               </button>
+            </div>
+            <div class="route-key" aria-label="Selected run direction">
               <span
-                id="route-profile-help"
-                role="tooltip"
-                class="help-content"
-                popover="manual"
-              ></span>
-            </span>
+                ><i class="run-key"></i
+                ><span id="run-direction-label">Arrows show travel direction</span></span
+              >
+            </div>
           </div>
-          <button id="route-profile-close" type="button" aria-label="Close route elevation">
-            Close
-          </button>
-        </div>
-        <div id="route-profile-content" aria-live="polite"></div>
-      </section>
+        </section>
+      </div>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

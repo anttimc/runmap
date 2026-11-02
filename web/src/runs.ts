@@ -22,6 +22,7 @@ import type {
 import type { SharedState } from "./state";
 import { element } from "./dom";
 import { candidateName, candidateDetails, runCoordinates } from "./run-results";
+import { startTurnaroundRegion } from "./turnaround";
 
 const hillPresets: { level: PreferenceLevel; label: string; description: string }[] = [
   { level: "off", label: "Off", description: "No preference for flatter paths." },
@@ -45,6 +46,7 @@ export interface RunControls {
 }
 interface Options {
   datasetId: string;
+  turnaroundRegion?: boolean;
   runPlanner?: RunPlannerConfiguration;
   state: Readonly<SharedState>;
   setHome: (location: Location | undefined) => void;
@@ -192,6 +194,19 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     hills.setAttribute("aria-valuetext", preset.label);
   }
   updateHillPreset();
+  let regionSelectionReady = false;
+  const refreshRegion = startTurnaroundRegion(map, {
+    datasetId: options.datasetId,
+    supported: options.turnaroundRegion ?? false,
+    state: options.state,
+    width: () => Number(avoidance.value),
+    hills: () => hillPreset().level !== "off",
+    selectionChanged: (ready) => {
+      regionSelectionReady = ready;
+      if (choosing === "home") return;
+      pick(ready ? "turnaround" : undefined);
+    },
+  });
   element("run-preferences").hidden = hills.disabled;
   const inputsKey = (): string =>
     JSON.stringify([
@@ -235,6 +250,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   let displayFeatures: Feature<LineString>[] = [];
 
   function draw(): void {
+    refreshRegion();
     const home = options.state.home;
     const a: Location | undefined = homeSnap ? [homeSnap.longitude, homeSnap.latitude] : home;
     const b: Location | undefined = turnaroundSnap
@@ -290,7 +306,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     generateButton.setAttribute("aria-busy", String(generating));
     element<HTMLButtonElement>("run-fit").disabled = !candidate;
     element<HTMLButtonElement>("run-elevation").disabled = !candidate;
-    element("run-results").hidden = !candidate;
+    element("run-results").hidden = !candidate || !active();
   }
   function pick(value?: "home" | "turnaround"): void {
     if (value) document.dispatchEvent(new Event("plannerpick"));
@@ -336,7 +352,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     element("run-cancel").hidden = true;
     status.textContent = response?.candidates.length
       ? "Displayed run uses previous settings. Generate again to update."
-      : "Choose endpoints, then generate a run.";
+      : "";
     draw();
   }
   async function snapEndpoints(): Promise<void> {
@@ -588,9 +604,13 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       active()
         ? !options.state.home
           ? "home"
-          : !turnaround
-            ? "turnaround"
-            : undefined
+          : roundTrip()
+            ? regionSelectionReady
+              ? "turnaround"
+              : undefined
+            : !turnaround
+              ? "turnaround"
+              : undefined
         : undefined,
     );
     candidates();
@@ -659,7 +679,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   });
   element("run-elevation").addEventListener("click", () => {
     const candidate = response?.candidates[selected];
-    if (candidate) void profile.open(candidate);
+    if (candidate) void profile.toggle(candidate);
   });
   return {
     modeChanged,
@@ -680,7 +700,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       pick();
       if (endpoint === "home") {
         options.setHome(location);
-        pick("turnaround");
+        if (!roundTrip()) pick("turnaround");
       } else {
         turnaround = location;
         invalidate();

@@ -17,6 +17,7 @@ See [architecture](../architecture.md) for the service boundaries and
 | `GET /api/paths/snap` | Eligible endpoint snap and nearby alternatives |
 | `POST /api/paths/snapshots` | Prepare a forward-distance exploration snapshot |
 | `GET /api/paths/snapshots/{snapshot_id}/shells` | Distance shells as GeoJSON |
+| `GET /api/paths/snapshots/{snapshot_id}/turnaround` | Estimated target-distance turnaround region as GeoJSON |
 | `GET /api/paths/tiles/v{version}/{dataset_id}/static/{policy}/{variant}/{z}/{x}/{y}.mvt` | Static path-gradient tiles |
 | `POST /api/paths/run` | One-way or round-trip planning with resolved costs and search metadata |
 
@@ -165,3 +166,21 @@ API processes; use the current single-worker deployment described in
 Run deadline/area outcomes are returned in the run response rather than being
 reported as an unreachable destination. Missing source connections remain a
 coverage limitation, independently of query-area exhaustion.
+
+## Turnaround shading
+
+`GET /api/paths/snapshots/{snapshot_id}/turnaround` takes `dataset_id`, `target_m`
+(500–40000, finite), and `width` (0–0.6, default 0.18). It requires a numeric
+snapshot with a distance budget at least 115% of the target. It returns a GeoJSON
+FeatureCollection with `dataset_id`, `snapshot_id`, `target_m`, `width`,
+`tolerance=0.05`, and `model="ellipse-extra-v1"`. Features have `core` (boolean)
+and `lower_m`/`upper_m` compatibility properties holding **relative target error**,
+not metres. An empty collection is a valid result when no estimated region exists.
+
+Dataset mismatches return 409, expired snapshots 410, invalid inputs or insufficient
+budget 400, and deadlines 504. Responses use private revalidation; the server
+caches encoded results and round-trip samples within the shell service's bounded
+caches. Snapshot expiry is checked even on cache hits. This endpoint uses
+surface/stair eligibility but does not model hill preferences or orientation.
+See [distance shells](../distance-shells.md#estimated-turnaround-region) for UI
+behavior and approximation limits.

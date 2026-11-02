@@ -1,18 +1,31 @@
 /** Manage responsive panel layout, settings dialogs, and contextual help. */
 import type { PaddingOptions } from "maplibre-gl";
 
-import { element } from "./dom";
+import { element } from "./dom.ts";
 
 /** Frame routes beside the visible tool panel or above the mobile sheet. */
 export function mapPadding(): PaddingOptions {
   const panel = document.querySelector<HTMLElement>(".controls")!.getBoundingClientRect();
   const legend = document.querySelector<HTMLElement>(".map-legend")!.getBoundingClientRect();
+  const results = element("run-result-dock").getBoundingClientRect();
   const narrow = window.matchMedia("(max-width: 600px)").matches;
+  const top = narrow
+    ? Math.max(
+        40,
+        results.height ? results.bottom + 16 : 0,
+        legend.height ? Math.min(legend.bottom + 16, panel.top / 2) : 0,
+      )
+    : 40;
+  const bottom = narrow
+    ? window.innerHeight - panel.top + 24
+    : Math.max(48, results.height ? window.innerHeight - results.top + 16 : 0);
+  // Leave a usable map area even when both panels fill a short viewport.
+  const scale = Math.min(1, Math.max(0, window.innerHeight - 80) / (top + bottom));
   return {
     left: narrow ? 24 : panel.right + 24,
     right: narrow ? 24 : window.innerWidth - legend.left + 24,
-    top: narrow && legend.height ? Math.min(legend.bottom + 16, panel.top / 2) : 40,
-    bottom: narrow ? window.innerHeight - panel.top + 24 : 48,
+    top: top * scale,
+    bottom: bottom * scale,
   };
 }
 

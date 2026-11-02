@@ -267,3 +267,33 @@ request caches, capabilities, and A* agreement with separate Dijkstra searches.
 They do not establish surveyed path grades or local runner acceptance. Dated
 [hill calibration reports](../archive/history/32-hill-routing.md) preserve earlier
 models and selected examples; their identities must match before comparisons.
+
+## Turnaround region estimate
+
+The advisory map layer uses distance-only directed searches with the selected
+surface/stair policy. For start $H$ and a sampled turnaround $T$, define
+$b(T)=d(H,T)+d(T,H)$ and projected separation $r=\|T-H\|$. The return search
+runs on reversed arcs; partial-segment distances reverse direction permissions
+as well. Distinct positions without both legal legs are excluded.
+
+For width ratio $a$, an ideal ellipse through $H,T$ has semiaxes $r/2$ and $ar$.
+Let $p(a)$ be its perimeter divided by $r$, using Ramanujan's approximation:
+
+$$
+h=\left(\frac{1/2-a}{1/2+a}\right)^2,\qquad
+p(a)=\pi(1/2+a)\left(1+\frac{3h}{10+\sqrt{4-3h}}\right).
+$$
+
+The estimate is $\widehat L(T,a)=b(T)+r\max(0,p(a)-2)$, with an explicit
+zero-width limit $\widehat L(T,0)=b(T)$. At $a=0.5$, a straight, undetoured
+baseline gives $\widehat L=\pi r$. The ellipse is a heuristic interpretation of
+the width slider, not a geometric constraint enforced by the planner. No fitted
+experimental coefficients or hill-detour estimates are used.
+
+The implementation samples network geometry at at most 25 m spacing and builds
+a nearest-sample baseline grid. At grid cell centres, projected separation supplies
+the width allowance. Contouring absolute relative target error gives a core at
+0–5% and a fringe at 5–15%. Baseline values above 105% of the target are masked.
+A snapshot must cover at least 115% of the target in each direction; the frontend
+rounds that budget up to whole kilometres. This conservative search extent also
+covers candidates in directed networks with unequal outward and return legs.

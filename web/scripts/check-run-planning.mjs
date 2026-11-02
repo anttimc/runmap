@@ -287,7 +287,7 @@ try {
     await evaluate(`document.querySelector('#route-profile-content .sample-readout').textContent`),
     /Elevation unavailable/,
   );
-  await evaluate(`document.getElementById('route-profile-close').click()`);
+  await evaluate(`document.getElementById('run-elevation').click()`);
   await evaluate(`const point = window.__map.project([24.805,60.2205]);
     window.__map.fire('click', {lngLat:{lng:24.805,lat:60.2205},point,originalEvent:new MouseEvent('click')}); void 0;`);
   await until(`!document.getElementById('route-inspection').hidden`);

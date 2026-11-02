@@ -156,3 +156,12 @@ Python locations below are relative to `src/runmap/`.
 | HTTP contracts and dataset services | `api/` |
 | Map rendering and interaction | `web/src/` |
 | Reproduction and performance experiments | `experiments/` |
+
+The turnaround-region controller reuses exploration snapshots and requests advisory
+GeoJSON independently of route generation. `api/turnaround.py` adds a reverse
+native distance search, caches paired network samples in the shell service, and
+contours a width-dependent estimate from `routing/turnaround.py`. It shares shell
+worker, memory, coverage, and deadline limits. Experimental fitted models are not
+runtime dependencies. The [distance-shell guide](distance-shells.md#estimated-turnaround-region)
+and [routing reference](reference/routing-mathematics.md#turnaround-region-estimate)
+define the display and estimator contracts.

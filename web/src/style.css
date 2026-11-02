@@ -96,6 +96,7 @@ output {
 }
 .controls,
 .map-legend,
+#run-results,
 .inspection-panel {
   border: 1px solid rgb(255 255 255 / 70%);
   background: rgb(250 249 245 / 97%);
@@ -323,6 +324,76 @@ h1 {
 }
 .outing-controls {
   margin-top: 16px;
+}
+.turnaround-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #c5cfca;
+  border-radius: 9px;
+  background: #edf0eb;
+}
+.turnaround-choices label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #526e65;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.turnaround-choices input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.turnaround-choices label:hover:not(:has(input:disabled)) {
+  background: #e2ece8;
+}
+.turnaround-choices label:has(input:checked) {
+  color: #193c38;
+  background: #fffdf8;
+  border-color: #a6bdb6;
+  box-shadow: 0 1px 3px rgb(25 38 43 / 8%);
+}
+.turnaround-choices label:has(input:focus-visible) {
+  outline: 2px solid #087f8c;
+  outline-offset: 2px;
+}
+.turnaround-choices label:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}
+.turnaround-distance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.turnaround-distance-input {
+  position: relative;
+  width: 76px;
+  flex-shrink: 0;
+}
+#run-target-status {
+  margin: 8px 0 0;
+  color: #63736a;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+#run-target-status:empty {
+  display: none;
 }
 .outing-actions {
   margin-top: 12px;
@@ -670,9 +741,64 @@ h1 {
   max-height: calc(100dvh - 230px);
 }
 #route-inspection {
+  position: static;
+  width: 100%;
+  max-height: none;
+  flex-shrink: 1;
+  min-height: 0;
+  padding: 0 0 12px;
+  margin-bottom: 12px;
+  border: 0;
+  border-bottom: 1px solid #dce1da;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#run-result-dock {
+  position: absolute;
+  z-index: 3;
+  right: 18px;
+  bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
   width: min(480px, calc(100vw - 310px));
+  max-height: calc(100dvh - 80px);
+  border-radius: 12px;
+}
+#run-result-dock:not(:has(> :not([hidden]))) {
+  display: none;
+}
+#run-results {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: inherit;
   padding: 12px;
   border-radius: 12px;
+}
+#run-results:has(#route-inspection:not([hidden])) {
+  width: 100%;
+}
+.run-result-summary {
+  flex-shrink: 0;
+}
+#run-results .heading-row {
+  margin-bottom: 8px;
+}
+#run-results #run-details {
+  margin: 0;
+}
+.run-result-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.run-result-actions .run-candidates {
+  margin: 0 auto 0 0;
 }
 #route-inspection .heading-row {
   margin-bottom: 6px;
@@ -682,9 +808,6 @@ h1 {
 }
 #route-inspection h2 {
   font-size: 0.95rem;
-}
-#route-profile-close {
-  padding: 5px 8px;
 }
 #route-profile-content > p {
   margin: 4px 0 6px;
@@ -770,10 +893,17 @@ h1 {
     max-height: calc(100dvh - var(--tool-height, 400px) - 30px);
     padding: 14px;
   }
-  #route-inspection {
+  #run-result-dock {
+    top: 10px;
+    right: 10px;
+    bottom: auto;
     width: calc(100vw - 20px);
+    max-height: calc(100dvh - var(--tool-height, 400px) - 30px);
   }
-  #app:has(.inspection-panel:not([hidden])) .map-legend {
+  #run-results {
+    width: 100%;
+  }
+  #app:has(.inspection-panel:not([hidden]), #run-results:not([hidden])) .map-legend {
     display: none;
   }
   .maplibregl-ctrl-bottom-right {

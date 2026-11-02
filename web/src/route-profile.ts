@@ -168,7 +168,11 @@ function profileChart(
 export function startRouteProfile(
   map: Map,
   datasetId: string,
-): { open: (candidate: Candidate) => Promise<void>; close: () => void } {
+): {
+  open: (candidate: Candidate) => Promise<void>;
+  close: () => void;
+  toggle: (candidate: Candidate) => Promise<void>;
+} {
   const panel = element("route-inspection");
   const content = element("route-profile-content");
   const marker = new Marker({ color: "#193c38", scale: 0.65 });
@@ -182,12 +186,10 @@ export function startRouteProfile(
     element("route-profile-help").hidePopover();
     panel.querySelector(".help-trigger")!.setAttribute("aria-expanded", "false");
     panel.hidden = true;
+    element("run-elevation").textContent = "Show elevation";
+    element("run-elevation").setAttribute("aria-expanded", "false");
     marker.remove();
   }
-  element("route-profile-close").addEventListener("click", () => {
-    close();
-    element("run-elevation").focus();
-  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !panel.hidden) {
       close();
@@ -197,6 +199,8 @@ export function startRouteProfile(
   async function open(candidate: Candidate): Promise<void> {
     close();
     panel.hidden = false;
+    element("run-elevation").textContent = "Hide elevation";
+    element("run-elevation").setAttribute("aria-expanded", "true");
     content.replaceChildren(paragraph("Loading route elevation…"));
     abort = new AbortController();
     const current = sequence;
@@ -225,5 +229,9 @@ export function startRouteProfile(
       content.replaceChildren(paragraph(`Route elevation failed. ${(error as Error).message}`));
     }
   }
-  return { open, close };
+  async function toggle(candidate: Candidate): Promise<void> {
+    if (panel.hidden) await open(candidate);
+    else close();
+  }
+  return { open, close, toggle };
 }

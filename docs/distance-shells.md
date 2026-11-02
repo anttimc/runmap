@@ -177,3 +177,40 @@ node scripts/check-distance-shells.mjs ../artifacts/distance-shells/browser
 The script saves screenshots and observations in that artifact directory. Earlier
 algorithm measurements and reproduction commands are retained in the
 [prototype report](archive/history/53-distance-shells.md).
+
+## Estimated turnaround region
+
+Round-trip planning starts with selecting a start, then offers **Estimate** and
+**Choose on map** for the turnaround. Choose on map is selected by default, so
+turnaround selection starts immediately after choosing the start. Estimate reveals and
+focuses the empty **Loop length (km)** field (0.5–40 km, 0.5 km steps).
+Entering a valid distance automatically prepares the region after a 300 ms input
+debounce. Turnaround selection starts automatically when calculation finishes;
+there is no separate calculate or select button to press. Changing inputs pauses
+selection until the updated region is ready. If calculation fails, change inputs
+to retry or switch to Choose on map.
+The darker teal band estimates routes within ±5% of the target; the lighter fringe
+extends to ±15%. Click to select a turnaround and generate a route manually.
+The info popup beside Turnaround explains the shading and estimate limits.
+This layer does not request or choose individual routes.
+
+The estimate combines shortest legal outward-plus-return network distance with
+an ellipse-based width allowance; see [the mathematics](reference/routing-mathematics.md#turnaround-region-estimate).
+It respects surface and stair restrictions. Hill-related detours and orientation
+are not modeled. These are heuristic distance bands, not calibrated confidence
+intervals or promises about the generated run. Actual route length can differ
+substantially, because width is a soft penalty and roads constrain the shape.
+
+The layer uses a 50 m nearest-sample grid with a 150 m support radius, without
+smoothing. Cells whose baseline round trip exceeds 105% of the target are masked
+before contouring. Filled ground and the interpolated boundary remain approximate;
+only network sample distances have exact routing semantics. Coverage clipping is
+shared with distance shells.
+
+The browser reuses its exploration snapshot while start, access policy, and the
+rounded-up exploration budget remain unchanged. Changing width reuses cached
+round-trip samples. Input changes abort browser requests and immediately clear
+old shading; sequence checks discard late responses. Expired snapshots are
+prepared again once. Server computation shares the shell service's two-worker,
+20-second deadline, bounded sample/response caches and grid limits. No extra
+dataset preparation is required; matching numeric routing data is required.

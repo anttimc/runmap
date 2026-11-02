@@ -58,6 +58,7 @@ export async function startMapTools(map: Map, stops: ColorStop[]): Promise<void>
   });
   planner = startRunPlanner(map, {
     datasetId: config.dataset_id,
+    turnaroundRegion: !!config.shell_methods?.length,
     runPlanner: config.run_planner,
     state,
     setHome,

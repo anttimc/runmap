@@ -294,6 +294,30 @@ def distance_shells(request: Request, snapshot_id: str, dataset_id: str,
     return Response(encoded, media_type="application/geo+json", headers=headers)
 
 
+@app.get("/api/paths/snapshots/{snapshot_id}/turnaround")
+def turnaround_region(request: Request, snapshot_id: str, dataset_id: str,
+                      target_m: float, width: float = 0.18) -> Response:
+    from runmap.api.turnaround import render_region
+
+    paths = _tile_service(request, dataset_id)
+    service = getattr(request.app.state, "path_shells", None)
+    if service is None or service.paths is not paths:
+        service = PathShellService(paths)
+        request.app.state.path_shells = service
+    try:
+        snapshot = paths.snapshot(snapshot_id)
+        encoded = render_region(service, snapshot, target_m, width)
+    except KeyError as exc:
+        raise HTTPException(410, "Exploration snapshot expired; prepare it again") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(504, str(exc)) from exc
+    if snapshot.expires_at <= time():
+        raise HTTPException(410, "Exploration snapshot expired; prepare it again")
+    return Response(encoded, media_type="application/geo+json", headers={"Cache-Control": "private, no-cache"})
+
+
 @app.get("/api/paths/viewport")
 def paths_viewport(
     request: Request,
