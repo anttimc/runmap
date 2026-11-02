@@ -1,0 +1,5895 @@
+{
+  "manifest": {
+    "complete": true,
+    "created_utc": "2026-11-02T08:02:25.291128+00:00",
+    "config": {
+      "starts": [
+        {
+          "name": "Lepp\u00e4vaara",
+          "longitude": 24.795,
+          "latitude": 60.216
+        },
+        {
+          "name": "Pasila",
+          "longitude": 24.934125,
+          "latitude": 60.198361
+        },
+        {
+          "name": "Keskuspuisto",
+          "longitude": 24.908,
+          "latitude": 60.233
+        },
+        {
+          "name": "Lauttasaari",
+          "longitude": 24.875,
+          "latitude": 60.16
+        },
+        {
+          "name": "Viikki",
+          "longitude": 25.016,
+          "latitude": 60.227
+        }
+      ],
+      "radii_m": [
+        1500,
+        3000
+      ],
+      "widths": [
+        0,
+        0.06,
+        0.12,
+        0.18,
+        0.24,
+        0.3,
+        0.36,
+        0.42,
+        0.5,
+        0.6
+      ],
+      "bearings": 12,
+      "timeout_s": 3
+    },
+    "source": {
+      "revision": "6ee79f60fdd3acc6d9d121ee7245ce7c9d9bb262",
+      "working_tree_status": " M docs/README.md\n M docs/architecture.md\n M docs/development.md\n M docs/goals.md\n M docs/roadmap.md\n M pyproject.toml\n M uv.lock\n?? config/environment/\n?? docs/environment-preferences.md\n?? src/runmap/experiments/loop_width_sweep.py\n?? src/runmap/sources/environment.py\n?? tests/test_environment_acquisition.py\n",
+      "python_rust_source_sha256": "315d7bf0dac12bae0e54d94f1c7cef5d647664aa793e0e087b4b2338e90d9e6e"
+    },
+    "machine": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "database": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/network.sqlite",
+    "run_area_limits": {
+      "max_area_km2": 2500,
+      "max_segments": 650000,
+      "max_retries": 5,
+      "minimum_dimension_m": 1000,
+      "boundary_margin_m": 100
+    },
+    "policy": {
+      "surface": "all",
+      "avoid_stairs": true,
+      "hills": "off",
+      "snap_radius_m": 50
+    },
+    "design": "Fixed requested projected radii; equally spaced bearings; widths adjacent for graph-cache reuse",
+    "snapped_starts": {
+      "Lepp\u00e4vaara": {
+        "segment_id": "w781521939p1",
+        "graph_offset_m": 27.673190806798456,
+        "chainage_m": 27.767376904317953,
+        "longitude": 24.795002476701672,
+        "latitude": 60.21599184462749,
+        "offset_m": 0.9187536244141955
+      },
+      "Pasila": {
+        "segment_id": "w133875783p1",
+        "graph_offset_m": 50.401464938173326,
+        "chainage_m": 50.553132484460214,
+        "longitude": 24.9339784773051,
+        "latitude": 60.19836231712753,
+        "offset_m": 8.126352644291345
+      },
+      "Keskuspuisto": {
+        "segment_id": "w50674793p1",
+        "graph_offset_m": 34.63951497682209,
+        "chainage_m": 34.70615368008799,
+        "longitude": 24.908100928089464,
+        "latitude": 60.23302287724327,
+        "offset_m": 6.144190943302845
+      },
+      "Lauttasaari": {
+        "segment_id": "w1296326549p0",
+        "graph_offset_m": 9.700330891026073,
+        "chainage_m": 9.731811596191122,
+        "longitude": 24.874988231005595,
+        "latitude": 60.1599737192963,
+        "offset_m": 2.999423471921771
+      },
+      "Viikki": {
+        "segment_id": "w4276024p0",
+        "graph_offset_m": 10.866661674616635,
+        "chainage_m": 10.886964408860877,
+        "longitude": 25.016224119660674,
+        "latitude": 60.22697672546733,
+        "offset_m": 12.684732719668443
+      }
+    },
+    "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+    "metadata": {
+      "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+      "measurement_sha256": "cbd12dcf1a757b40cff025069a19814228dc55fe87936588744a6d3d2fd4fbc4",
+      "method": {
+        "schema_version": 1,
+        "manifest_id": "leppavaara-98e1c3956d293f61",
+        "source": "spectral-thin-plate terrain gradient",
+        "wavelength_m": 40,
+        "sampling_interval_m": 10.0,
+        "method": "integrated directional derivative of the prepared 2D terrain surface",
+        "chainage_crs": "EPSG:3067",
+        "graph_chainage": "cumulative geodesic vertex lengths scaled to stored segment length",
+        "profile_kind": "estimated terrain height change from each valid run start",
+        "valid_fraction": 0.9723932517136071
+      },
+      "feature_identity": "54d3377ce4c981966caa15f603987010c8b570ab6ff6365517c71fbbee9df3f8",
+      "models": {
+        "version": "prepared-path-features-v1",
+        "flat_version": "flat-run-thresholds-v1",
+        "flat_minimum_length_m": 50.0,
+        "flat_grade_thresholds": [
+          1.0,
+          1.5,
+          2.0,
+          2.5,
+          3.0,
+          3.5,
+          4.0,
+          4.5,
+          5.0,
+          5.5,
+          6.0,
+          6.5,
+          7.0,
+          7.5,
+          8.0,
+          8.5,
+          9.0,
+          9.5,
+          10.0
+        ],
+        "coverage_version": "coverage-band-100m-v1",
+        "classifier_version": "building-access-v1",
+        "access_policy": "public:all:stairs-0",
+        "entrance_limit_m": 150.0,
+        "policy_version": "public-pedestrian-v1",
+        "boundary_version": "prepared-route-boundaries-v1",
+        "profiles": [
+          {
+            "id": "public:all:stairs-0",
+            "forbidden_access_values": [
+              "no",
+              "private",
+              "destination",
+              "customers",
+              "permit",
+              "delivery"
+            ],
+            "forbidden_highways": [],
+            "surface_preference": "all"
+          },
+          {
+            "id": "public:all:stairs-1",
+            "forbidden_access_values": [
+              "no",
+              "private",
+              "destination",
+              "customers",
+              "permit",
+              "delivery"
+            ],
+            "forbidden_highways": [
+              "steps"
+            ],
+            "surface_preference": "all"
+          },
+          {
+            "id": "public:surfaced:stairs-0",
+            "forbidden_access_values": [
+              "no",
+              "private",
+              "destination",
+              "customers",
+              "permit",
+              "delivery"
+            ],
+            "forbidden_highways": [],
+            "surface_preference": "surfaced"
+          },
+          {
+            "id": "public:surfaced:stairs-1",
+            "forbidden_access_values": [
+              "no",
+              "private",
+              "destination",
+              "customers",
+              "permit",
+              "delivery"
+            ],
+            "forbidden_highways": [
+              "steps"
+            ],
+            "surface_preference": "surfaced"
+          }
+        ],
+        "hill_model": {
+          "version": "minetti-excess-uphill-preference-v4",
+          "source_doi": "10.1152/japplphysiol.01177.2001",
+          "coefficients": [
+            155.4,
+            -30.4,
+            -43.3,
+            46.3,
+            19.5,
+            3.6
+          ],
+          "fitted_grade_limit": 0.45,
+          "outside_fit_policy": "boundary_tangent",
+          "uncertain_grade_percent": 20.0,
+          "uphill_reference_grade_percent": 5.0,
+          "uphill_grade_power": 2.0
+        }
+      },
+      "coverage": {
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                24.485592334089187,
+                60.0532142581638
+              ],
+              [
+                25.203499903548206,
+                60.06492020259771
+              ],
+              [
+                25.183728785678415,
+                60.42389879708035
+              ],
+              [
+                24.45793807072059,
+                60.412022311240314
+              ],
+              [
+                24.485592334089187,
+                60.0532142581638
+              ]
+            ]
+          ]
+        },
+        "kind": "prepared_extract"
+      },
+      "distance_scale": 0.9875466740314615,
+      "hill_valid_fraction": 0.9723932517136071,
+      "hill_trusted_fraction": 0.9660002213398512
+    },
+    "cost_model": {
+      "model_version": "distance-preferences-v1",
+      "units": "equivalent_metres",
+      "shape_settings": {
+        "avoidance_ratio": 0.0,
+        "centre_enabled": true,
+        "radius_ratio": 0.15,
+        "transition_ratio": 0.05,
+        "side_strength": 2.0,
+        "reuse_strength": 4.0
+      },
+      "shape_strengths": {
+        "centre": 0.0,
+        "side": 0.0,
+        "reuse": 0.0
+      },
+      "preferences": {
+        "settings": {
+          "hills": "off",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off"
+        },
+        "weights": {
+          "hills": 0.0,
+          "signals": 0.0,
+          "busy_roads": 0.0,
+          "greenery": 0.0
+        },
+        "weight_tables": {
+          "hills": {
+            "version": "minetti-excess-equivalent-metres-v4",
+            "off": 0.0,
+            "low": 1.0,
+            "high": 6.0
+          },
+          "signals": {
+            "version": "signals-off-v1",
+            "off": 0.0,
+            "low": null,
+            "high": null
+          },
+          "busy_roads": {
+            "version": "busy-roads-off-v1",
+            "off": 0.0,
+            "low": null,
+            "high": null
+          },
+          "greenery": {
+            "version": "greenery-off-v1",
+            "off": 0.0,
+            "low": null,
+            "high": null
+          }
+        }
+      },
+      "capabilities": {
+        "hills": {
+          "supported_levels": [
+            "off",
+            "low",
+            "high"
+          ],
+          "feature_version": "minetti-excess-uphill-preference-v4",
+          "coverage_fraction": 0.9723932517136071,
+          "unavailable_reason": null
+        },
+        "signals": {
+          "supported_levels": [
+            "off"
+          ],
+          "feature_version": null,
+          "coverage_fraction": null,
+          "unavailable_reason": "Crossing passage attribution is not prepared."
+        },
+        "busy_roads": {
+          "supported_levels": [
+            "off"
+          ],
+          "feature_version": null,
+          "coverage_fraction": null,
+          "unavailable_reason": "Buffered road context is not prepared."
+        },
+        "greenery": {
+          "supported_levels": [
+            "off"
+          ],
+          "feature_version": null,
+          "coverage_fraction": null,
+          "unavailable_reason": "Buffered green-area context is not prepared."
+        }
+      },
+      "hill_model": {
+        "version": "minetti-excess-uphill-preference-v4",
+        "source_doi": "10.1152/japplphysiol.01177.2001",
+        "coefficients": [
+          155.4,
+          -30.4,
+          -43.3,
+          46.3,
+          19.5,
+          3.6
+        ],
+        "fitted_grade_limit": 0.45,
+        "outside_fit_policy": "boundary_tangent",
+        "uncertain_grade_percent": 20.0,
+        "uphill_reference_grade_percent": 5.0,
+        "uphill_grade_power": 2.0
+      }
+    },
+    "statuses": {
+      "planner_error": 20,
+      "complete": 885,
+      "no_eligible_snap": 280,
+      "area_limited": 15
+    },
+    "evaluations": 1200,
+    "total_s": 155.27956537494902,
+    "samples_sha256": "6ee0ca10e5d54757988ef47dd5bff9400d19b8a6b4fe11f7bd62dabb6dbc1f5f"
+  },
+  "excluded_positions": {
+    "incomplete_or_failed_position": 34
+  },
+  "retained_positions": 86,
+  "retained_evaluations": 860,
+  "retained_candidate_loops": 1634,
+  "planner_errors": {
+    "ValueError: Endpoint offset is outside the selected segment": 20
+  },
+  "outcomes_by_width": {
+    "0": {
+      "planner_error": 2,
+      "complete": 89,
+      "no_eligible_snap": 28,
+      "area_limited": 1
+    },
+    "0.06": {
+      "planner_error": 2,
+      "complete": 89,
+      "no_eligible_snap": 28,
+      "area_limited": 1
+    },
+    "0.12": {
+      "planner_error": 2,
+      "complete": 89,
+      "no_eligible_snap": 28,
+      "area_limited": 1
+    },
+    "0.18": {
+      "planner_error": 2,
+      "complete": 89,
+      "no_eligible_snap": 28,
+      "area_limited": 1
+    },
+    "0.24": {
+      "planner_error": 2,
+      "complete": 89,
+      "no_eligible_snap": 28,
+      "area_limited": 1
+    },
+    "0.3": {
+      "planner_error": 2,
+      "complete": 89,
+      "no_eligible_snap": 28,
+      "area_limited": 1
+    },
+    "0.36": {
+      "planner_error": 2,
+      "complete": 89,
+      "no_eligible_snap": 28,
+      "area_limited": 1
+    },
+    "0.42": {
+      "planner_error": 2,
+      "complete": 88,
+      "no_eligible_snap": 28,
+      "area_limited": 2
+    },
+    "0.5": {
+      "planner_error": 2,
+      "complete": 88,
+      "no_eligible_snap": 28,
+      "area_limited": 2
+    },
+    "0.6": {
+      "planner_error": 2,
+      "complete": 86,
+      "no_eligible_snap": 28,
+      "area_limited": 4
+    }
+  },
+  "analysis_source_sha256": "85754ff8fbf9550ddc49fdb03c5845fb1b158b9cc4f018e6925b1035523046df",
+  "statuses_by_start": {
+    "Lepp\u00e4vaara": {
+      "planner_error": 10,
+      "complete": 190,
+      "no_eligible_snap": 40
+    },
+    "Pasila": {
+      "complete": 220,
+      "no_eligible_snap": 20
+    },
+    "Keskuspuisto": {
+      "complete": 220,
+      "planner_error": 10,
+      "no_eligible_snap": 10
+    },
+    "Lauttasaari": {
+      "no_eligible_snap": 160,
+      "complete": 75,
+      "area_limited": 5
+    },
+    "Viikki": {
+      "complete": 180,
+      "no_eligible_snap": 50,
+      "area_limited": 10
+    }
+  },
+  "statistics_contract": "Average orientations per position first; fixed all-width complete cohorts. Pooled statistics weight each retained position equally. Population SD and empirical quantiles describe across-position spread, not confidence intervals.",
+  "model": "baseline=zero-width physical length with hills off; estimate=baseline+snapped separation*ellipse_extra_ratio(width)",
+  "summary": [
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0,
+      "length_m": {
+        "n": 44,
+        "mean": 3788.0762801853048,
+        "std": 353.3887793801843,
+        "p10": 3415.6989805187977,
+        "median": 3760.874326918517,
+        "p90": 4339.664014242273,
+        "min": 3184.5300428819264,
+        "max": 4743.092325805937
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 3788.0762801853048,
+        "std": 353.3887793801843,
+        "p10": 3415.6989805187977,
+        "median": 3760.874326918517,
+        "p90": 4339.664014242273,
+        "min": 3184.5300428819264,
+        "max": 4743.092325805937
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.06,
+      "length_m": {
+        "n": 44,
+        "mean": 4135.836034231392,
+        "std": 378.0858893198344,
+        "p10": 3796.9050910139067,
+        "median": 4016.605179886992,
+        "p90": 4802.893744328595,
+        "min": 3297.9590428819265,
+        "max": 5291.3037074195345
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 3853.27836859004,
+        "std": 353.5518872363436,
+        "p10": 3480.9757299795538,
+        "median": 3826.018078961756,
+        "p90": 4405.166221289745,
+        "min": 3249.2483722363904,
+        "max": 4808.316532360476
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 7.429236417477863,
+        "std": 4.275302734549811,
+        "p10": 1.895213485416134,
+        "median": 8.006899113563392,
+        "p90": 12.760171715202114,
+        "min": -0.36152578221200216,
+        "max": 15.17465534089768
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 51.73238104051174,
+        "std": 83.55427883753308,
+        "p10": 4.547473508864641e-13,
+        "median": 0.3045000000006439,
+        "p90": 199.17330730648405,
+        "min": 0.0,
+        "max": 283.6080000000002
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.12,
+      "length_m": {
+        "n": 44,
+        "mean": 4513.47653115632,
+        "std": 442.7539744595992,
+        "p10": 4053.437919102424,
+        "median": 4446.722,
+        "p90": 5024.2656233492335,
+        "min": 3744.363,
+        "max": 5719.3719999999985
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 3991.2824861744357,
+        "std": 353.8995534805976,
+        "p10": 3619.137872151907,
+        "median": 3963.898724149972,
+        "p90": 4543.805557921187,
+        "min": 3386.2285848740353,
+        "max": 4946.367464331051
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 13.30569339679521,
+        "std": 8.552326495053125,
+        "p10": 2.959754750466801,
+        "median": 13.73258039888241,
+        "p90": 23.142659243874707,
+        "min": -2.1628953917860683,
+        "max": 36.12874809836371
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 85.38218706041481,
+        "std": 207.16447629901924,
+        "p10": 9.094947017729282e-13,
+        "median": 0.0010000000011132215,
+        "p90": 253.03758176204028,
+        "min": 0.0,
+        "max": 1050.5030000000006
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.18,
+      "length_m": {
+        "n": 44,
+        "mean": 4990.130500449725,
+        "std": 531.8854465747665,
+        "p10": 4426.022652502942,
+        "median": 4908.232250000001,
+        "p90": 5809.3153999999995,
+        "min": 4178.349381099873,
+        "max": 6435.650085096043
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 4172.487957872928,
+        "std": 354.36107089962695,
+        "p10": 3800.550837079601,
+        "median": 4144.942071165642,
+        "p90": 4725.845100146459,
+        "min": 3566.0896243766047,
+        "max": 5127.634405376099
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 19.947745122712362,
+        "std": 11.823429638186012,
+        "p10": 3.8526843157495927,
+        "median": 20.62637521518822,
+        "p90": 31.698139949276413,
+        "min": -1.4889834497195498,
+        "max": 54.25190067959205
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 118.72444857076576,
+        "std": 347.1488706229894,
+        "p10": 2.728484105318783e-13,
+        "median": 0.0009999999992942321,
+        "p90": 183.66442064126142,
+        "min": 0.0,
+        "max": 1956.4760000000006
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.24,
+      "length_m": {
+        "n": 44,
+        "mean": 5171.19023791219,
+        "std": 594.9124456089769,
+        "p10": 4524.2291,
+        "median": 5067.6391362420945,
+        "p90": 6016.956632255817,
+        "min": 4179.185381099874,
+        "max": 6908.566730464263
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 4383.683471154375,
+        "std": 354.90613056831705,
+        "p10": 4011.9881843334615,
+        "median": 4355.948627649686,
+        "p90": 4938.012725094102,
+        "min": 3775.7181979567913,
+        "max": 5338.901561362787
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 18.22004695457616,
+        "std": 12.199296027245502,
+        "p10": 1.982496083229408,
+        "median": 18.297574560573704,
+        "p90": 29.75876889752703,
+        "min": -3.8108992274573317,
+        "max": 57.660441891616365
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 53.974260385119166,
+        "std": 153.77975252774866,
+        "p10": 2.728484105318783e-13,
+        "median": 3.183231456205249e-12,
+        "p90": 103.57971998751837,
+        "min": 0.0,
+        "max": 958.8429999999998
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.3,
+      "length_m": {
+        "n": 44,
+        "mean": 5555.024997005888,
+        "std": 627.0982728711889,
+        "p10": 4868.0874894702665,
+        "median": 5479.941161674617,
+        "p90": 6440.40555956723,
+        "min": 4214.436381099873,
+        "max": 6918.863382246369
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 4617.072222978653,
+        "std": 355.5173907654804,
+        "p10": 4245.644182976071,
+        "median": 4589.128566367996,
+        "p90": 5172.475741825253,
+        "min": 4007.375350016572,
+        "max": 5572.369484383905
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 20.836372956668825,
+        "std": 15.133106956239036,
+        "p10": -0.3164694890805526,
+        "median": 21.56808552466365,
+        "p90": 38.12738773735521,
+        "min": -4.2930276998834564,
+        "max": 63.26610006243296
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 39.188218643182466,
+        "std": 106.34428371509667,
+        "p10": 0.0,
+        "median": 2.2737367544323206e-12,
+        "p90": 97.60799999999963,
+        "min": 0.0,
+        "max": 636.8014021375384
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.36,
+      "length_m": {
+        "n": 44,
+        "mean": 6125.96177345007,
+        "std": 692.0244789077639,
+        "p10": 5375.7178695040675,
+        "median": 6048.41243711632,
+        "p90": 7168.18755956723,
+        "min": 4870.352699243238,
+        "max": 8353.679730464264
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 4867.555061706721,
+        "std": 356.1837916365137,
+        "p10": 4496.413842474946,
+        "median": 4839.387297896647,
+        "p90": 5424.111527819698,
+        "min": 4255.9997614589965,
+        "max": 5822.937293042933
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 26.37743120605023,
+        "std": 15.63936818389549,
+        "p10": 5.19678795291623,
+        "median": 27.89022815620409,
+        "p90": 44.56147038636395,
+        "min": -6.460098152250183,
+        "max": 63.70232973485266
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 35.93369933005713,
+        "std": 69.49711417505534,
+        "p10": 2.728484105318783e-13,
+        "median": 3.183231456205249e-12,
+        "p90": 160.28564375382402,
+        "min": 0.0,
+        "max": 273.22999999999865
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.42,
+      "length_m": {
+        "n": 44,
+        "mean": 6802.702959318444,
+        "std": 764.1775504902938,
+        "p10": 5881.188733465508,
+        "median": 6658.406353709768,
+        "p90": 7913.73410956723,
+        "min": 5614.4659607132835,
+        "max": 9056.525730464266
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 5131.586150466628,
+        "std": 356.89779562131156,
+        "p10": 4760.747265721241,
+        "median": 5103.182157826823,
+        "p90": 5689.357925075669,
+        "min": 4518.0719033221785,
+        "max": 6087.057947632968
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 32.970059446428714,
+        "std": 15.459732479007295,
+        "p10": 16.883694574388944,
+        "median": 30.354231800615374,
+        "p90": 51.42431018624395,
+        "min": -4.162680503952021,
+        "max": 69.66391733318143
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 100.37912348855387,
+        "std": 280.3766426956726,
+        "p10": 2.728484105318783e-13,
+        "median": 0.0009999999992942321,
+        "p90": 212.3223671295201,
+        "min": 0.0,
+        "max": 1496.0409999999983
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.5,
+      "length_m": {
+        "n": 44,
+        "mean": 8155.847786311302,
+        "std": 1767.2249808671177,
+        "p10": 6870.119404493047,
+        "median": 7787.83175,
+        "p90": 9275.978894981285,
+        "min": 6349.737999999999,
+        "max": 15985.969235558516
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 5500.353958619851,
+        "std": 357.914755155412,
+        "p10": 5129.937339397808,
+        "median": 5471.620029122338,
+        "p90": 6059.823134290369,
+        "min": 4884.1036830903095,
+        "max": 6455.950850883958
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 48.237421027164004,
+        "std": 29.495958249432206,
+        "p10": 26.52201276871901,
+        "median": 43.49252174521931,
+        "p90": 66.95112808199772,
+        "min": 15.261911664751683,
+        "max": 191.02806451678495
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 150.25457360173198,
+        "std": 637.7799399771453,
+        "p10": 2.728484105318783e-13,
+        "median": 0.0010000000047512003,
+        "p90": 186.72070000000065,
+        "min": 0.0,
+        "max": 4237.760471117039
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 1500,
+      "width": 0.6,
+      "length_m": {
+        "n": 44,
+        "mean": 10543.183226795165,
+        "std": 3136.7569547615667,
+        "p10": 8576.247944924107,
+        "median": 9637.068992478904,
+        "p90": 11347.280096840905,
+        "min": 7472.296,
+        "max": 24496.616240355488
+      },
+      "estimate_m": {
+        "n": 44,
+        "mean": 5982.277048993587,
+        "std": 359.2781166506403,
+        "p10": 5612.412266188578,
+        "median": 5954.510624816241,
+        "p90": 6543.964468087378,
+        "min": 5362.451203076553,
+        "max": 6938.037421406379
+      },
+      "error_pct": {
+        "n": 44,
+        "mean": 75.68417213824635,
+        "std": 46.36719717309158,
+        "p10": 40.82449772793179,
+        "median": 61.87268877423339,
+        "p90": 100.74082153070935,
+        "min": 30.014913798917362,
+        "max": 265.00914195319905
+      },
+      "side_gap_m": {
+        "n": 44,
+        "mean": 94.26756390105332,
+        "std": 225.7255845303332,
+        "p10": 1.8189894035458565e-12,
+        "median": 3.743999999999687,
+        "p90": 400.3475864539038,
+        "min": 0.0,
+        "max": 1217.0990000000093
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0,
+      "length_m": {
+        "n": 42,
+        "mean": 7265.843951651275,
+        "std": 422.8836919263604,
+        "p10": 6812.776748520457,
+        "median": 7162.143317269702,
+        "p90": 7833.752952803639,
+        "min": 6721.443480934234,
+        "max": 8511.710556365419
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 7265.843951651275,
+        "std": 422.8836919263604,
+        "p10": 6812.776748520457,
+        "median": 7162.143317269702,
+        "p90": 7833.752952803639,
+        "min": 6721.443480934234,
+        "max": 8511.710556365419
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.06,
+      "length_m": {
+        "n": 42,
+        "mean": 7833.865410391337,
+        "std": 537.5568211470363,
+        "p10": 7211.992582529084,
+        "median": 7694.400654596601,
+        "p90": 8593.886423349233,
+        "min": 7049.389538624791,
+        "max": 9226.839
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 7396.247178713679,
+        "std": 423.1269248906853,
+        "p10": 6943.597726287048,
+        "median": 7292.179122201147,
+        "p90": 7965.7583867383355,
+        "min": 6851.527924118524,
+        "max": 8643.181899288318
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 5.92024912542845,
+        "std": 4.086894102418722,
+        "p10": 1.6062044463277327,
+        "median": 5.730952602897443,
+        "p90": 11.82421736023058,
+        "min": -0.03023929782823842,
+        "max": 17.28559105565326
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 41.68884509333386,
+        "std": 110.32917160667711,
+        "p10": 9.094947017729331e-14,
+        "median": 0.00099999999792999,
+        "p90": 94.73400000000244,
+        "min": 0.0,
+        "max": 655.7960000000012
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.12,
+      "length_m": {
+        "n": 42,
+        "mean": 8600.846368363405,
+        "std": 718.5385941880039,
+        "p10": 7863.124886520861,
+        "median": 8581.138161674618,
+        "p90": 9335.0077,
+        "min": 7229.939038624792,
+        "max": 10733.036823349234
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 7672.253403686034,
+        "std": 423.64529917365104,
+        "p10": 7220.488145596002,
+        "median": 7567.869038073969,
+        "p90": 8245.155778328328,
+        "min": 7126.859423957446,
+        "max": 8921.448855326384
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 12.144291246214605,
+        "std": 7.653058771700349,
+        "p10": 3.646442947183562,
+        "median": 10.101935064587908,
+        "p90": 21.173364472764693,
+        "min": -0.5338315614839773,
+        "max": 34.90030035544962
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 215.10801291716226,
+        "std": 784.7348714759532,
+        "p10": 1.8189894035458662e-13,
+        "median": 0.0005000000010113581,
+        "p90": 431.2119517822541,
+        "min": 0.0,
+        "max": 5064.807338217945
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.18,
+      "length_m": {
+        "n": 42,
+        "mean": 9457.553243609122,
+        "std": 1119.7557587172917,
+        "p10": 8317.752173349232,
+        "median": 9293.226570239927,
+        "p90": 10195.698049999999,
+        "min": 7302.14753862479,
+        "max": 13398.898197817532
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 8034.661707606747,
+        "std": 424.33325945673886,
+        "p10": 7584.057435541196,
+        "median": 7929.885791508329,
+        "p90": 8612.01683306049,
+        "min": 7488.381784123649,
+        "max": 9286.825598495985
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 17.72245206680724,
+        "std": 12.314369008672482,
+        "p10": 5.359493031248972,
+        "median": 16.01696944958284,
+        "p90": 29.560315173186048,
+        "min": -4.3289737630958,
+        "max": 62.792815441271735
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 18.227821898895918,
+        "std": 35.80761593304771,
+        "p10": 1.8189894035458565e-12,
+        "median": 6.366462912410498e-12,
+        "p90": 62.0524897407753,
+        "min": 0.0,
+        "max": 139.77300000000287
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.24,
+      "length_m": {
+        "n": 42,
+        "mean": 10047.836372650743,
+        "std": 1227.8469960476634,
+        "p10": 9103.4555,
+        "median": 9765.070730820364,
+        "p90": 11704.548760608806,
+        "min": 7302.25053862479,
+        "max": 13438.495323349234
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 8457.04965785224,
+        "std": 425.14550581417683,
+        "p10": 8007.7985184324925,
+        "median": 8351.817388503747,
+        "p90": 9039.594477548237,
+        "min": 7909.7371643025845,
+        "max": 9712.673273466882
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 18.876404956601238,
+        "std": 13.79621850065486,
+        "p10": 7.024703173965726,
+        "median": 15.762137532472165,
+        "p90": 37.810561576847924,
+        "min": -9.363000048429516,
+        "max": 58.20643325377053
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 168.72598474404185,
+        "std": 950.9958407194943,
+        "p10": 0.0,
+        "median": 5.4569682106375694e-12,
+        "p90": 62.052489740776025,
+        "min": 0.0,
+        "max": 6249.029999999999
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.3,
+      "length_m": {
+        "n": 42,
+        "mean": 11074.37547708788,
+        "std": 1365.733877272624,
+        "p10": 9856.990485661132,
+        "median": 10796.584797117212,
+        "p90": 12495.54574697341,
+        "min": 9631.088,
+        "max": 16028.406286470956
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 8923.823761912108,
+        "std": 426.0560869092622,
+        "p10": 8476.067947531936,
+        "median": 8818.087183955106,
+        "p90": 9512.103628923882,
+        "min": 8375.370191853483,
+        "max": 10183.270663461055
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 24.34432182517639,
+        "std": 16.315455211199577,
+        "p10": 9.744214352972685,
+        "median": 19.748392473929165,
+        "p90": 40.36415388849786,
+        "min": 1.7723516634639003,
+        "max": 85.7696953463211
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 33.162158869250646,
+        "std": 91.95949266251715,
+        "p10": 0.0,
+        "median": 5.4569682106375694e-12,
+        "p90": 87.90028808179464,
+        "min": 0.0,
+        "max": 547.1991884688377
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.36,
+      "length_m": {
+        "n": 42,
+        "mean": 11880.25515511886,
+        "std": 1145.0533843609521,
+        "p10": 10669.29583942968,
+        "median": 11614.373730820364,
+        "p90": 13318.34049101431,
+        "min": 10299.506,
+        "max": 16136.066286470954
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 9424.78579078356,
+        "std": 427.0484279461242,
+        "p10": 8978.509878009232,
+        "median": 9318.5079671544,
+        "p90": 10018.355088247548,
+        "min": 8875.107568375843,
+        "max": 10688.33600710928
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 26.286433267568732,
+        "std": 13.316140298884736,
+        "p10": 12.338105009123781,
+        "median": 24.980737981474945,
+        "p90": 37.77513621600386,
+        "min": 0.5162134876816049,
+        "max": 76.70455305358573
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 23.99308540814837,
+        "std": 61.57447750844881,
+        "p10": 0.0,
+        "median": 4.547473508864641e-12,
+        "p90": 64.77298808178948,
+        "min": 0.0,
+        "max": 345.7849700463521
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.42,
+      "length_m": {
+        "n": 42,
+        "mean": 13693.770838603,
+        "std": 2532.5350120088706,
+        "p10": 11824.543899999999,
+        "median": 12856.511249999998,
+        "p90": 16910.007732305392,
+        "min": 10952.538409649393,
+        "max": 24045.172376842733
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 9952.844122372082,
+        "std": 428.1112132245734,
+        "p10": 9507.6649920778,
+        "median": 9845.995777884767,
+        "p90": 10548.65200305327,
+        "min": 9401.875007962646,
+        "max": 11220.719595763469
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 37.83540757266061,
+        "std": 26.396901884990363,
+        "p10": 15.43419352974595,
+        "median": 30.652800250623102,
+        "p90": 74.68331157710313,
+        "min": 7.695944228558327,
+        "max": 151.56595230126536
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 193.9340659198741,
+        "std": 953.2724420433265,
+        "p10": 1.8189894035458565e-12,
+        "median": 7.275957614183426e-12,
+        "p90": 55.0350730417198,
+        "min": 0.0,
+        "max": 6177.251338217948
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.5,
+      "length_m": {
+        "n": 42,
+        "mean": 15841.159995907372,
+        "std": 2522.432279669582,
+        "p10": 13592.72493132445,
+        "median": 15022.190740449427,
+        "p90": 20111.80140043366,
+        "min": 13185.135316822685,
+        "max": 24286.71054595172
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 10690.374367130586,
+        "std": 429.62415587573605,
+        "p10": 10244.297383906693,
+        "median": 10582.72918569745,
+        "p90": 11289.308839571298,
+        "min": 10137.602285440771,
+        "max": 11964.290854765017
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 48.426669293130026,
+        "std": 24.68644388108619,
+        "p10": 28.348180040449453,
+        "median": 40.24647959735,
+        "p90": 86.67057843683624,
+        "min": 15.05647079586061,
+        "max": 135.82546189870249
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 86.18513946378383,
+        "std": 286.625356241366,
+        "p10": 1.8189894035458662e-13,
+        "median": 0.0010000000074796844,
+        "p90": 137.40379999999274,
+        "min": 0.0,
+        "max": 1654.5487689722795
+      }
+    },
+    {
+      "start": "all",
+      "radius_m": 3000,
+      "width": 0.6,
+      "length_m": {
+        "n": 42,
+        "mean": 19251.39294345042,
+        "std": 2460.9452580294533,
+        "p10": 17001.88735908922,
+        "median": 18403.118688648825,
+        "p90": 22968.7805740962,
+        "min": 15719.05418367479,
+        "max": 25388.237215060697
+      },
+      "estimate_m": {
+        "n": 42,
+        "mean": 11654.21352808694,
+        "std": 431.65099652129834,
+        "p10": 11203.682459335518,
+        "median": 11545.527002710642,
+        "p90": 12257.233977475136,
+        "min": 11099.085244081218,
+        "max": 12936.024696842207
+      },
+      "error_pct": {
+        "n": 42,
+        "mean": 65.4179019458062,
+        "std": 22.221611283427,
+        "p10": 43.66577771035808,
+        "median": 56.82907311640179,
+        "p90": 98.33753985896732,
+        "min": 31.177940833010574,
+        "max": 125.34908613202246
+      },
+      "side_gap_m": {
+        "n": 42,
+        "mean": 328.9002325961164,
+        "std": 1026.9004882808451,
+        "p10": 1.0913936421275139e-11,
+        "median": 31.593809193214838,
+        "p90": 471.0644999999878,
+        "min": 3.637978807091713e-12,
+        "max": 6475.54700000001
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0,
+      "length_m": {
+        "n": 9,
+        "mean": 3878.9436288771412,
+        "std": 436.93981516310185,
+        "p10": 3384.34895709051,
+        "median": 3781.552954666763,
+        "p90": 4450.100054574287,
+        "min": 3300.575618386403,
+        "max": 4743.092325805937
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 3878.9436288771412,
+        "std": 436.93981516310185,
+        "p10": 3384.34895709051,
+        "median": 3781.552954666763,
+        "p90": 4450.100054574287,
+        "min": 3300.575618386403,
+        "max": 4743.092325805937
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.06,
+      "length_m": {
+        "n": 9,
+        "mean": 4245.597748961854,
+        "std": 524.4240955213991,
+        "p10": 3744.1061236772807,
+        "median": 3991.637073053167,
+        "p90": 4940.663788838467,
+        "min": 3743.0786183864034,
+        "max": 5291.3037074195345
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 3944.3183169430235,
+        "std": 436.88786681090846,
+        "p10": 3449.6597109573777,
+        "median": 3846.959727523042,
+        "p90": 4515.475339618089,
+        "min": 3365.684131739644,
+        "max": 4808.316532360476
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 7.550162013991951,
+        "std": 3.361592474820656,
+        "p10": 2.585252514585612,
+        "median": 9.24615627230243,
+        "p90": 10.27846515768712,
+        "min": 2.2776748638881905,
+        "max": 11.213009654940297
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 58.58707869260737,
+        "std": 79.03402460803464,
+        "p10": 7.275957614183426e-13,
+        "median": 27.234999999999673,
+        "p90": 146.78946532397387,
+        "min": 0.0,
+        "max": 249.25532661986654
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.12,
+      "length_m": {
+        "n": 9,
+        "mean": 4656.169428666735,
+        "std": 657.9960850438677,
+        "p10": 4005.937647354562,
+        "median": 4392.2783091932015,
+        "p90": 5458.202767313207,
+        "min": 3744.363,
+        "max": 5719.3719999999985
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 4082.687752027438,
+        "std": 436.7792937412086,
+        "p10": 3587.8938254878913,
+        "median": 3985.3970719842105,
+        "p90": 4653.846038241955,
+        "min": 3503.4901921340743,
+        "max": 4946.367464331051
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 14.181055838716468,
+        "std": 12.203402094763012,
+        "p10": 1.584095016391385,
+        "median": 8.901901683328294,
+        "p90": 33.07376847656253,
+        "min": -1.5069419981877052,
+        "max": 36.12874809836371
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 14.942418136355375,
+        "std": 27.660693334718587,
+        "p10": 9.094947017729282e-13,
+        "median": 1.8189894035458565e-12,
+        "p90": 35.482105290877655,
+        "min": 9.094947017729282e-13,
+        "max": 88.9729999999995
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.18,
+      "length_m": {
+        "n": 9,
+        "mean": 5343.003227645268,
+        "std": 651.29240698755,
+        "p10": 4540.97086183864,
+        "median": 5327.682707419535,
+        "p90": 6049.77138192384,
+        "min": 4399.278309193202,
+        "max": 6427.941073053167
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 4264.372901659237,
+        "std": 436.63957826641854,
+        "p10": 3769.4012932850505,
+        "median": 4167.171389612317,
+        "p90": 4835.532846956585,
+        "min": 3684.4356060374857,
+        "max": 5127.634405376099
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 26.006014415383017,
+        "std": 15.98609758875925,
+        "p10": 3.8874641457166614,
+        "median": 22.211660993883097,
+        "p90": 45.84860494558967,
+        "min": 3.8318164177693514,
+        "max": 54.25190067959205
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 138.89704240151138,
+        "std": 348.25846780458215,
+        "p10": 7.275957614183426e-13,
+        "median": 1.8189894035458565e-12,
+        "p90": 302.1462000000009,
+        "min": 0.0,
+        "max": 1120.2990000000027
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.24,
+      "length_m": {
+        "n": 9,
+        "mean": 5476.780428666735,
+        "std": 738.3881914081026,
+        "p10": 4665.641061838641,
+        "median": 5587.642707419534,
+        "p90": 6246.740343762482,
+        "min": 4426.269309193202,
+        "max": 6903.997882246369
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 4476.12748099087,
+        "std": 436.4808204819124,
+        "p10": 3980.948783912818,
+        "median": 4379.029894507413,
+        "p90": 5047.289359954168,
+        "min": 3895.3280211895008,
+        "max": 5338.901561362787
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 22.9100281963828,
+        "std": 16.71626952727243,
+        "p10": 3.944372957312323,
+        "median": 18.06761795674936,
+        "p90": 43.28928088591244,
+        "min": 1.0857357478194718,
+        "max": 57.660441891616365
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 33.10664035857766,
+        "std": 56.311796212750984,
+        "p10": 0.0,
+        "median": 2.7284841053187847e-12,
+        "p90": 111.72347632271922,
+        "min": 0.0,
+        "max": 168.18538161359902
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.3,
+      "length_m": {
+        "n": 9,
+        "mean": 5881.647783200823,
+        "std": 654.9634792114342,
+        "p10": 4998.823999999999,
+        "median": 6011.156999999999,
+        "p90": 6775.971076449274,
+        "min": 4880.540000000001,
+        "max": 6918.863382246369
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 4710.134047680686,
+        "std": 436.31049492275423,
+        "p10": 4214.726500219586,
+        "median": 4613.151307659458,
+        "p90": 5281.298063507003,
+        "min": 4128.3818241646795,
+        "max": 5572.369484383905
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 26.12644280812367,
+        "std": 19.756508421130224,
+        "p10": 2.832154009409185,
+        "median": 21.73508526739414,
+        "p90": 52.638244058996676,
+        "min": -3.4584652691684203,
+        "max": 63.26610006243296
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 44.79882017928927,
+        "std": 66.88653085048233,
+        "p10": 7.275957614183426e-13,
+        "median": 1.8189894035458565e-12,
+        "p90": 117.66967632271991,
+        "min": 0.0,
+        "max": 197.9163816135988
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.36,
+      "length_m": {
+        "n": 9,
+        "mean": 6394.971180936652,
+        "std": 737.3792696930105,
+        "p10": 5697.262565935628,
+        "median": 6350.15,
+        "p90": 7270.962767635736,
+        "min": 4961.154,
+        "max": 7396.160309193201
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 4961.27995187407,
+        "std": 436.13367602544804,
+        "p10": 4465.6267923466585,
+        "median": 4864.420470011824,
+        "p90": 5532.446261073614,
+        "min": 4378.505181392908,
+        "max": 5822.937293042933
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 30.17591597178619,
+        "std": 21.05873243623336,
+        "p10": 7.052944441509634,
+        "median": 25.036574588649295,
+        "p90": 58.62642032026291,
+        "min": 1.002113047762343,
+        "max": 62.98466495658626
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 36.409033787299755,
+        "std": 68.85722720231264,
+        "p10": 0.0,
+        "median": 9.094947017729282e-13,
+        "p90": 116.22410900951438,
+        "min": 0.0,
+        "max": 213.72238161359928
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.42,
+      "length_m": {
+        "n": 9,
+        "mean": 7059.620189783589,
+        "std": 651.3932347295429,
+        "p10": 6305.999047354561,
+        "median": 7014.585000000001,
+        "p90": 7898.4952618386405,
+        "min": 5974.485999999999,
+        "max": 7988.2123091932
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 5226.009970339565,
+        "std": 435.9540060261809,
+        "p10": 4730.097913948758,
+        "median": 5129.280413489666,
+        "p90": 5797.178696957536,
+        "min": 4642.157344824943,
+        "max": 6087.057947632968
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 36.74009985648021,
+        "std": 21.77704968397024,
+        "p10": 8.30774399342161,
+        "median": 37.48863623583978,
+        "p90": 62.6707087798481,
+        "min": 4.363140917031227,
+        "max": 69.66391733318143
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 36.30968276008884,
+        "std": 67.81907085930067,
+        "p10": 0.0,
+        "median": 1.8189894035458565e-12,
+        "p90": 110.72587632271936,
+        "min": 0.0,
+        "max": 213.2893816136002
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.5,
+      "length_m": {
+        "n": 9,
+        "mean": 7763.355737292432,
+        "std": 484.4858372371445,
+        "p10": 7122.6474,
+        "median": 7648.503707419535,
+        "p90": 8412.207305797094,
+        "min": 7024.832999999999,
+        "max": 8512.664999999997
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 5595.753961929342,
+        "std": 435.71461082061614,
+        "p10": 5099.480308617126,
+        "median": 5499.205869172375,
+        "p90": 6166.926064915222,
+        "min": 5010.395914306806,
+        "max": 6455.950850883958
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 39.83686611280017,
+        "std": 16.375909090177654,
+        "p10": 17.83010148330342,
+        "median": 38.02488942263458,
+        "p90": 55.99170458843359,
+        "min": 15.261911664751683,
+        "max": 69.90004673468474
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 11.136195914134582,
+        "std": 24.66409918348526,
+        "p10": 1.6370904631912709e-12,
+        "median": 1.8189894035458565e-12,
+        "p90": 33.3107816135982,
+        "min": 9.094947017729282e-13,
+        "max": 78.1163816135986
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 1500,
+      "width": 0.6,
+      "length_m": {
+        "n": 9,
+        "mean": 9843.201891820827,
+        "std": 890.1509492708298,
+        "p10": 8607.347135212356,
+        "median": 9847.483618386403,
+        "p90": 11089.65782896816,
+        "min": 8552.578986766373,
+        "max": 11102.159618386402
+      },
+      "estimate_m": {
+        "n": 9,
+        "mean": 6078.952774663097,
+        "std": 435.42207731082755,
+        "p10": 5582.2065695120755,
+        "median": 5982.641827704988,
+        "p90": 6650.129290045125,
+        "min": 5491.627370729835,
+        "max": 6938.037421406379
+      },
+      "error_pct": {
+        "n": 9,
+        "mean": 63.500143307963995,
+        "std": 24.602284412280202,
+        "p10": 32.62689549786279,
+        "median": 59.81342301261095,
+        "p90": 98.84112714203383,
+        "min": 30.014913798917362,
+        "max": 101.88063816391465
+      },
+      "side_gap_m": {
+        "n": 9,
+        "mean": 25.784931290401396,
+        "std": 35.850436250851864,
+        "p10": 1.4551915228366853e-12,
+        "median": 5.4569682106375694e-12,
+        "p90": 76.89650529088176,
+        "min": 0.0,
+        "max": 100.86900000000242
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0,
+      "length_m": {
+        "n": 10,
+        "mean": 7376.9818946330215,
+        "std": 318.35006799587035,
+        "p10": 6934.161727473122,
+        "median": 7359.627816370051,
+        "p90": 7788.86212251864,
+        "min": 6766.871781892165,
+        "max": 7839.364306589265
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 7376.9818946330215,
+        "std": 318.35006799587035,
+        "p10": 6934.161727473122,
+        "median": 7359.627816370051,
+        "p90": 7788.86212251864,
+        "min": 6766.871781892165,
+        "max": 7839.364306589265
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.06,
+      "length_m": {
+        "n": 10,
+        "mean": 8028.3056179895575,
+        "std": 498.2690999990688,
+        "p10": 7512.038354574782,
+        "median": 8023.775943559709,
+        "p90": 8508.769787948833,
+        "min": 7293.045618386404,
+        "max": 9014.424
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 7507.510689542114,
+        "std": 318.97487804791683,
+        "p10": 7064.299920326688,
+        "median": 7490.205994103822,
+        "p90": 7919.802109851414,
+        "min": 6895.687673628047,
+        "max": 7971.502921349201
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 6.891478517847306,
+        "std": 3.603374515321939,
+        "p10": 2.5282109745264925,
+        "median": 6.081361739427116,
+        "p90": 12.065558503679439,
+        "min": 1.9482796398641256,
+        "max": 13.083117311011193
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 75.23286183864147,
+        "std": 194.67685258629734,
+        "p10": 1.6370904631912709e-12,
+        "median": 3.637978807091713e-12,
+        "p90": 130.4233565477603,
+        "min": 0.0,
+        "max": 655.7960000000012
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.12,
+      "length_m": {
+        "n": 10,
+        "mean": 8916.19631745937,
+        "std": 535.6863949563215,
+        "p10": 8216.59093091932,
+        "median": 8818.58591376419,
+        "p90": 9412.984400000001,
+        "min": 8152.762309193202,
+        "max": 10040.468
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 7783.782686367837,
+        "std": 320.2992576184664,
+        "p10": 7339.745184553534,
+        "median": 7766.5825126298605,
+        "p90": 8196.944420021027,
+        "min": 7168.3342084983415,
+        "max": 8251.182198116741
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 14.627383794814303,
+        "std": 6.588693214260399,
+        "p10": 7.730574326771589,
+        "median": 13.484234616017687,
+        "p90": 20.70323641078385,
+        "min": 5.82591058211297,
+        "max": 29.35062153534107
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 83.48285007956929,
+        "std": 243.1681165089973,
+        "p10": 1.6370904631912709e-12,
+        "median": 4.547473508864641e-12,
+        "p90": 101.17035537044147,
+        "min": 0.0,
+        "max": 812.7191191820675
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.18,
+      "length_m": {
+        "n": 10,
+        "mean": 9616.498029377575,
+        "std": 516.9991186954286,
+        "p10": 8882.970000000001,
+        "median": 9591.770499999999,
+        "p90": 10186.071503787212,
+        "min": 8786.660999999998,
+        "max": 10464.131037872114
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 8146.539960412755,
+        "std": 322.0421649906902,
+        "p10": 7701.4169223610525,
+        "median": 8129.477028261041,
+        "p90": 8560.844453736925,
+        "min": 7526.331091655958,
+        "max": 8618.413380475937
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 18.23228238236482,
+        "std": 7.950356810709185,
+        "p10": 8.720986034123497,
+        "median": 17.725350800482097,
+        "p90": 29.62918045525999,
+        "min": 6.896652948400495,
+        "max": 29.83913151406583
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 16.104826243155912,
+        "std": 27.63390972976665,
+        "p10": 1.6370904631912709e-12,
+        "median": 5.4569682106375694e-12,
+        "p90": 64.12819273614022,
+        "min": 0.0,
+        "max": 76.14600000000428
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.24,
+      "length_m": {
+        "n": 10,
+        "mean": 10197.600910296898,
+        "std": 800.8211857366059,
+        "p10": 9245.09367827388,
+        "median": 9993.523693559708,
+        "p90": 11046.01988455125,
+        "min": 9101.925,
+        "max": 11729.293809193205
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 8569.334636370286,
+        "std": 324.0790830924583,
+        "p10": 8122.946402622809,
+        "median": 8552.431659693328,
+        "p90": 8984.971019471335,
+        "min": 7943.57751795281,
+        "max": 9046.42240980785
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 19.241725702051514,
+        "std": 11.1822516608542,
+        "p10": 6.645907769454311,
+        "median": 16.474736794321885,
+        "p90": 35.06358825820028,
+        "min": 4.10962001706161,
+        "max": 38.153933241678885
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 10.83298808179443,
+        "std": 19.511759613644706,
+        "p10": 0.0,
+        "median": 4.547473508864641e-12,
+        "p90": 27.36414462955216,
+        "min": 0.0,
+        "max": 62.79288081793493
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.3,
+      "length_m": {
+        "n": 10,
+        "mean": 10990.370629377578,
+        "std": 845.1502791083863,
+        "p10": 9783.5358,
+        "median": 11081.12669355971,
+        "p90": 12151.007734232986,
+        "min": 9658.002,
+        "max": 12381.555559591032
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 9036.558206447644,
+        "std": 326.33687410834517,
+        "p10": 8588.771825364262,
+        "median": 9019.831993983245,
+        "p90": 9453.66643943681,
+        "min": 8404.669806910626,
+        "max": 9519.408277609766
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 21.999722370541242,
+        "std": 12.674153763390219,
+        "p10": 4.6718398895211015,
+        "median": 21.035421946592294,
+        "p90": 36.208162457520466,
+        "min": 2.9211450363389346,
+        "max": 43.81726360821732
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 8.490226243155485,
+        "std": 19.263777459657753,
+        "p10": 0.0,
+        "median": 2.7284841053187847e-12,
+        "p90": 26.177731534029213,
+        "min": 0.0,
+        "max": 62.792880817942205
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.36,
+      "length_m": {
+        "n": 10,
+        "mean": 11777.498323931875,
+        "std": 446.9717094161411,
+        "p10": 11312.145948407477,
+        "median": 11761.410518936056,
+        "p90": 12304.125534232986,
+        "min": 10889.582999999999,
+        "max": 12506.699559591034
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 9538.002621565613,
+        "std": 328.7678423732243,
+        "p10": 9088.715688673627,
+        "median": 9521.466120050869,
+        "p90": 9956.690507109906,
+        "min": 8899.533867629085,
+        "max": 10027.037038290071
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 23.72357603662252,
+        "std": 8.012431426260889,
+        "p10": 13.970634661471236,
+        "median": 24.880251866393365,
+        "p90": 33.24826027652531,
+        "min": 12.13403880258035,
+        "max": 37.2893759953099
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 8.490226243155485,
+        "std": 19.263777459656744,
+        "p10": 0.0,
+        "median": 2.7284841053187847e-12,
+        "p90": 26.177731534025757,
+        "min": 0.0,
+        "max": 62.792880817940386
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.42,
+      "length_m": {
+        "n": 10,
+        "mean": 13127.455554851196,
+        "std": 1024.2376874513327,
+        "p10": 11957.0923,
+        "median": 13000.950518936059,
+        "p90": 14432.721026681356,
+        "min": 11839.338999999998,
+        "max": 15156.0
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 10066.569430966507,
+        "std": 331.3388600442792,
+        "p10": 9615.700783615444,
+        "median": 10050.232901588939,
+        "p90": 10486.922410159968,
+        "min": 9421.16440089485,
+        "max": 10562.122695450684
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 30.73695834049523,
+        "std": 13.266472384171312,
+        "p10": 15.190236490292754,
+        "median": 29.832668067491042,
+        "p90": 42.25289307128727,
+        "min": 13.331158377432907,
+        "max": 60.87183446836399
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 10.70116440451584,
+        "std": 19.430507445669846,
+        "p10": 3.2741809263825417e-12,
+        "median": 6.366462912410498e-12,
+        "p90": 26.17773153402903,
+        "min": 0.0,
+        "max": 62.792880817940386
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.5,
+      "length_m": {
+        "n": 10,
+        "mean": 15891.567475696977,
+        "std": 2135.272183398745,
+        "p10": 14394.033800000001,
+        "median": 14918.347515240177,
+        "p90": 18645.47325098869,
+        "min": 14163.641000000003,
+        "max": 21308.72
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 10804.80985818588,
+        "std": 334.944087045183,
+        "p10": 10351.732056689609,
+        "median": 10788.752626549594,
+        "p90": 11227.488445845594,
+        "min": 10149.7170471824,
+        "max": 11309.467888367639
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 47.58449436307827,
+        "std": 23.573134416761707,
+        "p10": 31.064881505164294,
+        "median": 41.18720078994582,
+        "p90": 74.07200571461654,
+        "min": 29.15520999024015,
+        "max": 109.94398071338733
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 21.943806096074148,
+        "std": 40.26924835089717,
+        "p10": 0.0,
+        "median": 5.4569682106375694e-12,
+        "p90": 80.1317626438398,
+        "min": 0.0,
+        "max": 121.83006096071404
+      }
+    },
+    {
+      "start": "Lepp\u00e4vaara",
+      "radius_m": 3000,
+      "width": 0.6,
+      "length_m": {
+        "n": 10,
+        "mean": 18872.057795439367,
+        "std": 1378.4771999983539,
+        "p10": 17594.580835783956,
+        "median": 18375.82663732246,
+        "p90": 21269.874095697814,
+        "min": 17581.213809193207,
+        "max": 21683.6133816136
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 11769.57711893485,
+        "std": 339.67993349668376,
+        "p10": 11313.6122910517,
+        "median": 11753.884886703712,
+        "p90": 12195.29492095731,
+        "min": 11101.823860836195,
+        "max": 12286.133684523164
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 60.632737926673904,
+        "std": 14.727395678959835,
+        "p10": 48.65951900556959,
+        "median": 55.47158984061802,
+        "p90": 82.06993022625086,
+        "min": 47.21428169836559,
+        "max": 95.31577561869531
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 234.49939301835803,
+        "std": 491.98889877299115,
+        "p10": 1.0186340659856796e-11,
+        "median": 22.63630919319803,
+        "p90": 478.40683117970866,
+        "min": 3.637978807091713e-12,
+        "max": 1670.761311797134
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0,
+      "length_m": {
+        "n": 11,
+        "mean": 3732.432433876162,
+        "std": 201.86696825776357,
+        "p10": 3505.649616155792,
+        "median": 3669.32571705504,
+        "p90": 4024.6021603406098,
+        "min": 3488.769581800304,
+        "max": 4124.658629119584
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 3732.432433876162,
+        "std": 201.86696825776357,
+        "p10": 3505.649616155792,
+        "median": 3669.32571705504,
+        "p90": 4024.6021603406098,
+        "min": 3488.769581800304,
+        "max": 4124.658629119584
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.06,
+      "length_m": {
+        "n": 11,
+        "mean": 4053.469328130584,
+        "std": 122.24720360558847,
+        "p10": 3934.093686279445,
+        "median": 4013.8639999999996,
+        "p90": 4224.285230464264,
+        "min": 3876.964044968378,
+        "max": 4259.2245
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 3797.491251780141,
+        "std": 201.86643051238283,
+        "p10": 3571.0619654844763,
+        "median": 3734.250625190325,
+        "p90": 4089.7371076760073,
+        "min": 3553.658411043865,
+        "max": 4190.0161880418655
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 6.8950535373299155,
+        "std": 3.3961805908120364,
+        "p10": 3.2898966179445654,
+        "median": 7.655616336492543,
+        "p90": 10.165931711737098,
+        "min": -0.36152578221200216,
+        "max": 12.950192047888809
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 87.36468310045414,
+        "std": 114.27856807706722,
+        "p10": 9.094947017729282e-13,
+        "median": 19.122999999999593,
+        "p90": 276.62900000000127,
+        "min": 4.547473508864641e-13,
+        "max": 283.6080000000002
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.12,
+      "length_m": {
+        "n": 11,
+        "mean": 4584.915122602225,
+        "std": 194.89483825334352,
+        "p10": 4393.214646432775,
+        "median": 4547.884999999999,
+        "p90": 4866.2525,
+        "min": 4234.731699243237,
+        "max": 4942.292730464263
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 3935.1921287856458,
+        "std": 201.86622164260612,
+        "p10": 3709.5111128828257,
+        "median": 3871.6680741658915,
+        "p90": 4227.599117173771,
+        "min": 3690.999496888469,
+        "max": 4328.349368269949
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 16.81589237859914,
+        "std": 7.575525411664661,
+        "p10": 10.767110022091298,
+        "median": 17.465777356954625,
+        "p90": 23.45019837628626,
+        "min": -2.1628953917860683,
+        "max": 27.713008467593415
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 10.395314093783865,
+        "std": 29.732271913525448,
+        "p10": 0.0,
+        "median": 0.0009999999983847374,
+        "p90": 10.39799999999832,
+        "min": 0.0,
+        "max": 103.94545503162044
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.18,
+      "length_m": {
+        "n": 11,
+        "mean": 4952.171304420406,
+        "std": 377.22160429091355,
+        "p10": 4547.884999999999,
+        "median": 4918.2675,
+        "p90": 5250.188000000001,
+        "min": 4423.903646432775,
+        "max": 5920.530230464264
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 4115.999432276566,
+        "std": 201.86786417523408,
+        "p10": 3891.300928286193,
+        "median": 4052.1032241967805,
+        "p90": 4408.617994708837,
+        "min": 3871.3343787722297,
+        "max": 4509.986913681977
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 20.4590836503672,
+        "std": 8.93172120308027,
+        "p10": 7.821836123095571,
+        "median": 21.888993259644973,
+        "p90": 31.90126526743564,
+        "min": 6.675860624496033,
+        "max": 34.29447136426889
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 188.4036777301478,
+        "std": 559.8919849943488,
+        "p10": 1.8189894035458565e-12,
+        "median": 0.0010000000011132215,
+        "p90": 103.94545503161953,
+        "min": 0.0,
+        "max": 1956.4760000000006
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.24,
+      "length_m": {
+        "n": 11,
+        "mean": 5247.098804420407,
+        "std": 550.3088938744289,
+        "p10": 4862.750699243237,
+        "median": 5137.7035,
+        "p90": 5274.428500000002,
+        "min": 4718.7305000000015,
+        "max": 6908.566730464263
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 4326.730879334284,
+        "std": 201.8725247372735,
+        "p10": 4103.177495884197,
+        "median": 4262.400925295979,
+        "p90": 4619.596031940852,
+        "min": 4081.5152170493493,
+        "max": 4721.68601015465
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 21.2686411132353,
+        "std": 10.68782249172028,
+        "p10": 15.612223624424315,
+        "median": 18.400569997802286,
+        "p90": 25.24523698556753,
+        "min": 2.987591482898444,
+        "max": 49.549152841438705
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 12.323768639238551,
+        "std": 29.603229092175496,
+        "p10": 1.8189894035458565e-12,
+        "median": 0.0010000000011132215,
+        "p90": 19.596999999997934,
+        "min": 9.094947017729282e-13,
+        "max": 103.94545503161953
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.3,
+      "length_m": {
+        "n": 11,
+        "mean": 5435.79264328548,
+        "std": 588.6585199776538,
+        "p10": 4862.750699243237,
+        "median": 5311.005000000001,
+        "p90": 6025.062500000002,
+        "min": 4733.927500000002,
+        "max": 6908.566730464263
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 4559.6067990674,
+        "std": 201.88111314683937,
+        "p10": 4337.3188698375925,
+        "median": 4494.797519373475,
+        "p90": 4852.744454494211,
+        "min": 4313.782667909001,
+        "max": 4955.631263632841
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 19.301683003998548,
+        "std": 12.24468520184134,
+        "p10": 9.739592010894116,
+        "median": 17.049172059851216,
+        "p90": 36.78690683027932,
+        "min": -1.874242845128793,
+        "max": 42.36411571324592
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 4.829181818182158,
+        "std": 8.044011570650406,
+        "p10": 9.094947017729282e-13,
+        "median": 0.0010000000011132215,
+        "p90": 19.596999999997934,
+        "min": 0.0,
+        "max": 21.505000000001928
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.36,
+      "length_m": {
+        "n": 11,
+        "mean": 6222.197097830935,
+        "std": 787.2540978501302,
+        "p10": 5894.976500000001,
+        "median": 6115.984,
+        "p90": 6475.159500000002,
+        "min": 4870.352699243238,
+        "max": 8353.679730464264
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 4809.539244355419,
+        "std": 201.89434606637926,
+        "p10": 4588.609454979816,
+        "median": 4744.215531768063,
+        "p90": 5102.969361520176,
+        "min": 4563.062078252055,
+        "max": 5206.711363852472
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 29.563355249631282,
+        "std": 16.032264383737285,
+        "p10": 19.279837081599815,
+        "median": 30.42413352780413,
+        "p90": 39.13395358650711,
+        "min": -6.460098152250183,
+        "max": 63.70232973485266
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 5.857545454546033,
+        "std": 7.964550450859376,
+        "p10": 3.637978807091713e-12,
+        "median": 1.02599999999984,
+        "p90": 19.596999999996115,
+        "min": 0.0,
+        "max": 21.505000000001928
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.42,
+      "length_m": {
+        "n": 11,
+        "mean": 6906.406024629236,
+        "std": 882.6357094722548,
+        "p10": 6182.576500000001,
+        "median": 6481.456999999997,
+        "p90": 8068.880199243236,
+        "min": 6084.2595,
+        "max": 9056.525730464266
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 5072.9901696998995,
+        "std": 201.9127945495511,
+        "p10": 4853.491979974855,
+        "median": 5007.124199297054,
+        "p90": 5366.728567429835,
+        "min": 4825.824646947461,
+        "max": 5471.37201910361
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 35.931542682319225,
+        "std": 14.100513520773475,
+        "p10": 24.354089543039727,
+        "median": 33.54213887118809,
+        "p90": 47.47453053951143,
+        "min": 16.91810826020752,
+        "max": 68.75319138417879
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 123.06339150813173,
+        "std": 336.5976934536303,
+        "p10": 1.8189894035458565e-12,
+        "median": 0.0009999999992942321,
+        "p90": 113.0873065894375,
+        "min": 1.8189894035458565e-12,
+        "max": 1182.337000000005
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.5,
+      "length_m": {
+        "n": 11,
+        "mean": 8036.830304103881,
+        "std": 1134.8297186167986,
+        "p10": 7097.344999999999,
+        "median": 7748.718146432773,
+        "p90": 9842.278199243237,
+        "min": 6682.286499999999,
+        "max": 10592.815730464265
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 5440.947673308751,
+        "std": 201.94628848196498,
+        "p10": 5223.448974885162,
+        "median": 5374.32434047934,
+        "p90": 5735.116641350884,
+        "min": 5192.820734331053,
+        "max": 5841.0191322513665
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 47.32136173872448,
+        "std": 16.4028347155763,
+        "p10": 34.62362501891134,
+        "median": 41.59294609858761,
+        "p90": 68.50275570745517,
+        "min": 25.985430808197307,
+        "max": 84.70096412841517
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 8.4945949971257,
+        "std": 12.11708077091723,
+        "p10": 0.0009999999974752427,
+        "median": 1.0270000000018626,
+        "p90": 26.90854496837892,
+        "min": 0.0009999999929277692,
+        "max": 36.801000000001295
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 1500,
+      "width": 0.6,
+      "length_m": {
+        "n": 11,
+        "mean": 9808.778523657886,
+        "std": 919.9991897808619,
+        "p10": 8790.444313720556,
+        "median": 9624.334955004168,
+        "p90": 10836.014199243233,
+        "min": 8398.389500000001,
+        "max": 11452.331730464262
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 5921.811819649051,
+        "std": 202.0036283394476,
+        "p10": 5706.926150361598,
+        "median": 5854.198730032107,
+        "p90": 6216.543477196312,
+        "min": 5672.428456796577,
+        "max": 6324.091339687323
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 65.47532405124345,
+        "std": 12.222706747677286,
+        "p10": 54.03115586424021,
+        "median": 66.13500680785916,
+        "p90": 78.43056968957373,
+        "min": 38.88241571616893,
+        "max": 84.22346393094502
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 12.226000000000402,
+        "std": 16.276041617275833,
+        "p10": 1.8189894035458565e-12,
+        "median": 5.458999999995285,
+        "p90": 35.93100000000413,
+        "min": 1.8189894035458565e-12,
+        "max": 49.24200000000201
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0,
+      "length_m": {
+        "n": 11,
+        "mean": 7185.836374735926,
+        "std": 449.71495573821073,
+        "p10": 6891.430216653678,
+        "median": 7049.345626088076,
+        "p90": 7402.9097795971375,
+        "min": 6791.214968078622,
+        "max": 8511.710556365419
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 7185.836374735926,
+        "std": 449.71495573821073,
+        "p10": 6891.430216653678,
+        "median": 7049.345626088076,
+        "p90": 7402.9097795971375,
+        "min": 6791.214968078622,
+        "max": 8511.710556365419
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.06,
+      "length_m": {
+        "n": 11,
+        "mean": 7763.4647420880465,
+        "std": 426.9537243937118,
+        "p10": 7300.374858034036,
+        "median": 7732.18598217748,
+        "p90": 8061.363961660922,
+        "min": 7187.3355,
+        "max": 8851.088126489072
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 7316.051705461629,
+        "std": 450.07203453287696,
+        "p10": 7022.028497283791,
+        "median": 7179.006376493503,
+        "p90": 7532.594228463331,
+        "min": 6921.330880626719,
+        "max": 8643.181899288318
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 6.247778393936429,
+        "std": 4.688700992423181,
+        "p10": 1.910312211313081,
+        "median": 6.145306863870559,
+        "p90": 14.068523464495165,
+        "min": -0.03023929782823842,
+        "max": 14.181530059785308
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 11.633314006134821,
+        "std": 21.169836528970414,
+        "p10": 0.000999999996565748,
+        "median": 0.0010000000038417056,
+        "p90": 50.110999999999876,
+        "min": 9.094947017729282e-13,
+        "max": 61.3771502792124
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.12,
+      "length_m": {
+        "n": 11,
+        "mean": 8391.59841771912,
+        "std": 455.6489404584451,
+        "p10": 7945.188999999999,
+        "median": 8204.77873083046,
+        "p90": 8911.248,
+        "min": 7923.122499999999,
+        "max": 9491.606313244534
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 7591.660236605792,
+        "std": 450.8289465356175,
+        "p10": 7298.4475647915915,
+        "median": 7453.441105239588,
+        "p90": 7807.079116418212,
+        "min": 7196.7289872552265,
+        "max": 8921.448855326384
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 10.68008632228201,
+        "std": 5.183517923692656,
+        "p10": 5.136068176091491,
+        "median": 10.093384286543937,
+        "p90": 15.417743639575487,
+        "min": 3.480929032860458,
+        "max": 21.332358765139816
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 71.31470304189084,
+        "std": 85.71601768831465,
+        "p10": 1.8189894035458565e-12,
+        "median": 11.37800000000334,
+        "p90": 204.38337351092923,
+        "min": 1.8189894035458565e-12,
+        "max": 242.47251782251988
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.18,
+      "length_m": {
+        "n": 11,
+        "mean": 9124.267653861018,
+        "std": 698.4032789588305,
+        "p10": 8080.4195,
+        "median": 9134.139,
+        "p90": 10083.174499999997,
+        "min": 8060.4535,
+        "max": 10200.200499999999
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 7953.5463510513655,
+        "std": 451.8251320943184,
+        "p10": 7661.397949105862,
+        "median": 7813.785965547618,
+        "p90": 8167.489837971898,
+        "min": 7558.338805063538,
+        "max": 9286.825598495985
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 14.924285259776129,
+        "std": 9.151770325102165,
+        "p10": 0.8085424201153213,
+        "median": 15.324828162955262,
+        "p90": 25.742460291481486,
+        "min": -1.0660599486404632,
+        "max": 29.15047869332641
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 24.551139849007335,
+        "std": 49.89052883715119,
+        "p10": 7.275957614183426e-12,
+        "median": 0.0010000000038417056,
+        "p90": 120.01653833908313,
+        "min": 0.0,
+        "max": 139.77300000000287
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.24,
+      "length_m": {
+        "n": 11,
+        "mean": 9683.811062951925,
+        "std": 433.69807626719756,
+        "p10": 9309.980499999994,
+        "median": 9612.846499999998,
+        "p90": 10219.554499999998,
+        "min": 9018.577500000001,
+        "max": 10581.1335
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 8375.325687918914,
+        "std": 452.9895015918417,
+        "p10": 8084.417695653554,
+        "median": 8233.768966158736,
+        "p90": 8587.549600059652,
+        "min": 7979.796117383057,
+        "max": 9712.673273466882
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 15.752377821148462,
+        "std": 4.481261054712973,
+        "p10": 9.531583131210919,
+        "median": 15.159568078791175,
+        "p90": 22.33351168147706,
+        "min": 8.941515915145427,
+        "max": 22.836219407401657
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 25.55013984900837,
+        "std": 49.662916449119734,
+        "p10": 7.275957614183426e-12,
+        "median": 0.001000000005660695,
+        "p90": 120.01653833908313,
+        "min": 1.8189894035458565e-12,
+        "max": 139.77300000000287
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.3,
+      "length_m": {
+        "n": 11,
+        "mean": 10466.817913552955,
+        "std": 609.2267192126342,
+        "p10": 9874.706856611336,
+        "median": 10279.612730830464,
+        "p90": 11182.535499999998,
+        "min": 9669.678999999998,
+        "max": 11628.1535
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 8841.427223161312,
+        "std": 454.28034314136977,
+        "p10": 8551.889987606175,
+        "median": 8697.88539920729,
+        "p90": 9051.750860976666,
+        "min": 8445.541788496746,
+        "max": 10183.270663461055
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 18.58090028753265,
+        "std": 7.757750609203864,
+        "p10": 9.812808375254534,
+        "median": 15.906949196953502,
+        "p90": 29.637207447481238,
+        "min": 9.736592794941368,
+        "max": 33.68943100882622
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 45.06620468743379,
+        "std": 72.64940328928773,
+        "p10": 5.4569682106375694e-12,
+        "median": 1.0269999999927677,
+        "p90": 139.77300000000105,
+        "min": 3.637978807091713e-12,
+        "max": 214.67771322267072
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.36,
+      "length_m": {
+        "n": 11,
+        "mean": 11308.24203688126,
+        "std": 452.4621808387966,
+        "p10": 10661.166230830459,
+        "median": 11358.308499999996,
+        "p90": 11839.513499999997,
+        "min": 10299.506,
+        "max": 11893.732499999998
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 9341.667422273087,
+        "std": 455.6704965915567,
+        "p10": 9053.601341729915,
+        "median": 9195.995101331562,
+        "p90": 9549.951604014987,
+        "min": 8945.400058931737,
+        "max": 10688.33600710928
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 21.260186035605276,
+        "std": 6.365136008154144,
+        "p10": 10.77040890298564,
+        "median": 23.324894685800835,
+        "p90": 26.902086166433726,
+        "min": 7.848776905527832,
+        "max": 29.336002998498877
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 25.56504893991554,
+        "std": 49.691508064753926,
+        "p10": 7.275957614183426e-12,
+        "median": 0.001000000005660695,
+        "p90": 120.18153833907854,
+        "min": 1.8189894035458565e-12,
+        "max": 139.77300000000105
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.42,
+      "length_m": {
+        "n": 11,
+        "mean": 13187.553435211443,
+        "std": 2008.7081112728388,
+        "p10": 12067.248999999994,
+        "median": 12665.9235,
+        "p90": 14070.6275,
+        "min": 11822.899999999998,
+        "max": 19259.000612462496
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 9868.96488138702,
+        "std": 457.14113574095774,
+        "p10": 9582.44952847659,
+        "median": 9721.046827995055,
+        "p90": 10075.099295862283,
+        "min": 9472.294931405915,
+        "max": 11220.719595763469
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 33.81594825141248,
+        "std": 20.511786406320947,
+        "p10": 22.97009087614017,
+        "median": 28.675815567021658,
+        "p90": 39.65745732926553,
+        "min": 9.394334251383674,
+        "max": 94.3249663907373
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 48.27790909090882,
+        "std": 150.56268666720322,
+        "p10": 0.0009999999911087798,
+        "median": 0.0010000000074796844,
+        "p90": 3.3330000000205473,
+        "min": 5.4569682106375694e-12,
+        "max": 524.389000000001
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.5,
+      "length_m": {
+        "n": 11,
+        "mean": 15265.996825588116,
+        "std": 2392.1750346530457,
+        "p10": 13405.914999999999,
+        "median": 14106.560961640724,
+        "p90": 19935.14649999999,
+        "min": 13237.667213222669,
+        "max": 20307.3151124625
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 10605.432428278933,
+        "std": 459.2041498609789,
+        "p10": 10321.082950731343,
+        "median": 10454.377797912875,
+        "p90": 10808.564298748179,
+        "min": 10208.200192267677,
+        "max": 11964.290854765017
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 44.19452898095732,
+        "std": 23.153317798983135,
+        "p10": 28.23254773398731,
+        "median": 35.204064243729725,
+        "p90": 88.37600889492782,
+        "min": 15.05647079586061,
+        "max": 90.73287894601386
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 41.3862123007895,
+        "std": 62.67796336590067,
+        "p10": 0.0010000000038417056,
+        "median": 1.0269999999964057,
+        "p90": 143.79896179774005,
+        "min": 3.637978807091713e-12,
+        "max": 157.452373510936
+      }
+    },
+    {
+      "start": "Pasila",
+      "radius_m": 3000,
+      "width": 0.6,
+      "length_m": {
+        "n": 11,
+        "mean": 19937.794120285656,
+        "std": 2703.0474092851573,
+        "p10": 16570.148000000005,
+        "median": 19924.343126489068,
+        "p90": 23036.4971124625,
+        "min": 15745.647999999994,
+        "max": 23237.83796179772
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 11567.882805755064,
+        "std": 461.9157862895962,
+        "p10": 11286.363795849029,
+        "median": 11412.729149294191,
+        "p90": 11767.09081070685,
+        "min": 11169.915747952611,
+        "max": 12936.024696842207
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 72.64423894103628,
+        "std": 24.836308897323853,
+        "p10": 45.190057375757206,
+        "median": 59.79913124429619,
+        "p90": 100.90533694795654,
+        "min": 39.23259159744696,
+        "max": 108.03950975240882
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 714.5014107111431,
+        "std": 1827.2985381472315,
+        "p10": 0.0009999999820138328,
+        "median": 182.35100000000966,
+        "p90": 423.665999999992,
+        "min": 2.1827872842550278e-11,
+        "max": 6475.54700000001
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0,
+      "length_m": {
+        "n": 11,
+        "mean": 3574.9596870991168,
+        "std": 190.63362721706693,
+        "p10": 3345.263627436446,
+        "median": 3474.0796676233876,
+        "p90": 3781.444868700607,
+        "min": 3342.6027249130866,
+        "max": 3950.729590780135
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 3574.9596870991168,
+        "std": 190.63362721706693,
+        "p10": 3345.263627436446,
+        "median": 3474.0796676233876,
+        "p90": 3781.444868700607,
+        "min": 3342.6027249130866,
+        "max": 3950.729590780135
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.06,
+      "length_m": {
+        "n": 11,
+        "mean": 3995.0368556518342,
+        "std": 175.97895665184006,
+        "p10": 3833.5479700463557,
+        "median": 3939.8708296642026,
+        "p90": 4174.255,
+        "min": 3781.201,
+        "max": 4411.692514976821
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 3640.022618019812,
+        "std": 190.6175294596316,
+        "p10": 3410.3537125651264,
+        "median": 3538.978471199504,
+        "p90": 3846.8698221886116,
+        "min": 3406.921912877849,
+        "max": 4014.7370901914073
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 9.871368891290594,
+        "std": 3.976111470657139,
+        "p10": 3.973308991971569,
+        "median": 11.643032923173212,
+        "p90": 12.89358676348511,
+        "min": 1.2915229800203099,
+        "max": 15.128362111978277
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 15.500179095123919,
+        "std": 41.659056015596235,
+        "p10": 0.0,
+        "median": 9.094947017729282e-13,
+        "p90": 25.26100000000133,
+        "min": 0.0,
+        "max": 145.24097004635587
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.12,
+      "length_m": {
+        "n": 11,
+        "mean": 4272.553257154094,
+        "std": 259.762001297658,
+        "p10": 3882.2104850231776,
+        "median": 4384.8535,
+        "p90": 4578.689,
+        "min": 3781.201,
+        "max": 4582.4800000000005
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 3777.732200471052,
+        "std": 190.5883712392636,
+        "p10": 3548.120768520722,
+        "median": 3676.3406683151807,
+        "p90": 3985.3456470435794,
+        "min": 3543.057318905387,
+        "max": 4150.2127887642
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 13.278095911636667,
+        "std": 7.504573808548214,
+        "p10": 3.7991547086231314,
+        "median": 16.125678845279758,
+        "p90": 20.32631494166406,
+        "min": 0.5858304735993913,
+        "max": 25.357471985854787
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 123.13549113792801,
+        "std": 238.0777718686167,
+        "p10": 9.094947017729282e-13,
+        "median": 1.8189894035458565e-12,
+        "p90": 310.18140251719933,
+        "min": 4.547473508864641e-13,
+        "max": 822.8540000000012
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.18,
+      "length_m": {
+        "n": 11,
+        "mean": 4771.2565255262,
+        "std": 296.2062002620838,
+        "p10": 4430.967,
+        "median": 4845.729000000001,
+        "p90": 5100.059000000001,
+        "min": 4308.5740000000005,
+        "max": 5274.076999999999
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 3958.550934594832,
+        "std": 190.56022428649138,
+        "p10": 3729.01496788169,
+        "median": 3856.703270225704,
+        "p90": 4167.170491119968,
+        "min": 3721.8090901994556,
+        "max": 4328.098335175905
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 20.841718901973938,
+        "std": 9.615947524978539,
+        "p10": 6.549480623325832,
+        "median": 24.05909146299723,
+        "p90": 30.198214969170103,
+        "min": -0.4511065522061708,
+        "max": 30.327789831789676
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 47.562045302811136,
+        "std": 83.51505908273427,
+        "p10": 9.094947017729282e-13,
+        "median": 1.8189894035458565e-12,
+        "p90": 93.32897004635743,
+        "min": 0.0,
+        "max": 287.5644025171987
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.24,
+      "length_m": {
+        "n": 11,
+        "mean": 4845.958568257686,
+        "std": 247.25293825897222,
+        "p10": 4502.75,
+        "median": 4845.729000000001,
+        "p90": 5177.357,
+        "min": 4486.763,
+        "max": 5274.076999999999
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 4169.295704088959,
+        "std": 190.54195161085536,
+        "p10": 3939.8476923329918,
+        "median": 4066.9164162760135,
+        "p90": 4379.0878847399945,
+        "min": 3930.1448084013523,
+        "max": 4535.424465715062
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 16.502778922262102,
+        "std": 8.192118038613929,
+        "p10": 2.4588480088564957,
+        "median": 20.7046335351311,
+        "p90": 23.296449271829168,
+        "min": -0.7204279546944359,
+        "max": 23.50440598131378
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 46.72704530281085,
+        "std": 106.32368816521398,
+        "p10": 0.0,
+        "median": 1.8189894035458565e-12,
+        "p90": 77.44399999999587,
+        "min": 0.0,
+        "max": 371.7083725635548
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.3,
+      "length_m": {
+        "n": 11,
+        "mean": 5461.75593189405,
+        "std": 382.98782098781214,
+        "p10": 4919.04,
+        "median": 5393.068000000001,
+        "p90": 5787.801313718222,
+        "min": 4899.926000000001,
+        "max": 6294.5779999999995
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 4402.1863462314495,
+        "std": 190.53995921014607,
+        "p10": 4172.835532078561,
+        "median": 4299.2195699341855,
+        "p90": 4613.27437487116,
+        "min": 4160.373246856662,
+        "max": 4764.537225144794
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 24.361477517264667,
+        "std": 10.687826540927892,
+        "p10": 8.240172415471703,
+        "median": 25.437357142964512,
+        "p90": 36.44490850765396,
+        "min": 3.242765615090981,
+        "max": 38.70187955467343
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 27.37686348462938,
+        "std": 67.68447319669859,
+        "p10": 0.0,
+        "median": 9.094947017729282e-13,
+        "p90": 69.04612576736145,
+        "min": 0.0,
+        "max": 232.0993725635526
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.36,
+      "length_m": {
+        "n": 11,
+        "mean": 5860.346606634004,
+        "std": 314.310118501024,
+        "p10": 5535.720000000001,
+        "median": 5860.4217987414,
+        "p90": 6179.441999999999,
+        "min": 5190.320000000001,
+        "max": 6294.5779999999995
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 4652.13459224193,
+        "std": 190.5590809162206,
+        "p10": 4422.888094733893,
+        "median": 4548.537298054997,
+        "p90": 4864.613380634311,
+        "min": 4407.464301457421,
+        "max": 5010.4308850671405
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 26.161819757612623,
+        "std": 8.128907805439756,
+        "p10": 16.666273501977848,
+        "median": 27.58453875940767,
+        "p90": 33.27481367613559,
+        "min": 8.65228411479222,
+        "max": 36.79111541226747
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 7.896218410655323,
+        "std": 24.970035079821855,
+        "p10": 0.0,
+        "median": 9.094947017729282e-13,
+        "p90": 2.7284841053187847e-12,
+        "min": 0.0,
+        "max": 86.85840251719674
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.42,
+      "length_m": {
+        "n": 11,
+        "mean": 6444.052489928133,
+        "std": 398.92574387819855,
+        "p10": 6144.343000000001,
+        "median": 6319.512000000001,
+        "p90": 7104.437000000002,
+        "min": 5712.483000000001,
+        "max": 7141.152
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 4915.6021729468175,
+        "std": 190.60305862339695,
+        "p10": 4686.4656344182295,
+        "median": 4811.340257080663,
+        "p90": 5129.546945250773,
+        "min": 4667.920149452257,
+        "max": 5269.624573058431
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 31.32281931576232,
+        "std": 10.235998547814347,
+        "p10": 22.37747898644571,
+        "median": 27.718800284823164,
+        "p90": 48.59842836627553,
+        "min": 20.94513850347568,
+        "max": 52.37820048341166
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 10.829906367851436,
+        "std": 23.042589050189697,
+        "p10": 0.0,
+        "median": 1.8189894035458565e-12,
+        "p90": 55.38897004635601,
+        "min": 0.0,
+        "max": 63.73999999999796
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.5,
+      "length_m": {
+        "n": 11,
+        "mean": 7194.016929750621,
+        "std": 486.82021322726996,
+        "p10": 6636.972874232638,
+        "median": 7054.009029953646,
+        "p90": 7810.639999999999,
+        "min": 6349.737999999999,
+        "max": 7934.642
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 5283.58293881914,
+        "std": 190.70536842258585,
+        "p10": 5054.599978159085,
+        "median": 5180.625668286904,
+        "p90": 5500.867582432603,
+        "min": 5031.694478592278,
+        "max": 5631.636064419645
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 36.52569368042295,
+        "std": 12.705644744374577,
+        "p10": 21.42602827629103,
+        "median": 33.00999648685372,
+        "p90": 53.62290851012246,
+        "min": 15.458698875140797,
+        "max": 54.0995081883052
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 41.09386602968441,
+        "std": 113.81697568650213,
+        "p10": 0.0,
+        "median": 1.8189894035458565e-12,
+        "p90": 47.60099999999875,
+        "min": 0.0,
+        "max": 398.46155628016095
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 1500,
+      "width": 0.6,
+      "length_m": {
+        "n": 11,
+        "mean": 9156.242627442307,
+        "std": 491.9076456397385,
+        "p10": 8557.051704609932,
+        "median": 9068.528529953644,
+        "p90": 9649.803029953642,
+        "min": 8516.98780879332,
+        "max": 10237.011526326518
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 5764.477485377824,
+        "std": 190.91077876135782,
+        "p10": 5535.6952274889445,
+        "median": 5663.883173653001,
+        "p90": 5989.173550633047,
+        "min": 5507.091856079604,
+        "max": 6104.729682708345
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 59.00150456010718,
+        "std": 9.61208265562125,
+        "p10": 42.34966742149793,
+        "median": 60.11150392610887,
+        "p90": 70.52377003941032,
+        "min": 40.1708535735463,
+        "max": 70.9252777496234
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 141.1374027302455,
+        "std": 230.98677201391408,
+        "p10": 1.8189894035458565e-12,
+        "median": 0.9130000000004657,
+        "p90": 481.15324513326595,
+        "min": 0.0,
+        "max": 629.7757756795654
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0,
+      "length_m": {
+        "n": 11,
+        "mean": 7175.8800679920205,
+        "std": 453.1616735737995,
+        "p10": 6780.774841484803,
+        "median": 7049.36028686904,
+        "p90": 7736.294870784094,
+        "min": 6721.443480934234,
+        "max": 8254.281548326064
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 7175.8800679920205,
+        "std": 453.1616735737995,
+        "p10": 6780.774841484803,
+        "median": 7049.36028686904,
+        "p90": 7736.294870784094,
+        "min": 6721.443480934234,
+        "max": 8254.281548326064
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.06,
+      "length_m": {
+        "n": 11,
+        "mean": 7742.128707852668,
+        "std": 651.482557524129,
+        "p10": 7205.631970046357,
+        "median": 7503.259029953644,
+        "p90": 8872.252970046356,
+        "min": 7146.650000000001,
+        "max": 9226.839
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 7306.11936271004,
+        "std": 453.15330129502547,
+        "p10": 6910.57509506941,
+        "median": 7179.466827714811,
+        "p90": 7866.9842705757155,
+        "min": 6851.527924118524,
+        "max": 8384.758155759497
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 5.90907011758554,
+        "std": 4.602245075586272,
+        "p10": 1.5724146946626938,
+        "median": 4.355729932961094,
+        "p90": 10.261112170091335,
+        "min": 0.5463983614554468,
+        "max": 17.28559105565326
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 9.094947017729282e-13,
+        "std": 6.717063532741999e-13,
+        "p10": 0.0,
+        "median": 9.094947017729282e-13,
+        "p90": 1.8189894035458565e-12,
+        "min": 0.0,
+        "max": 1.8189894035458565e-12
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.12,
+      "length_m": {
+        "n": 11,
+        "mean": 8299.530570127505,
+        "std": 538.1701188108788,
+        "p10": 7693.576,
+        "median": 8162.48051497682,
+        "p90": 9228.486,
+        "min": 7622.640316822683,
+        "max": 9260.701000000001
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 7581.778615076403,
+        "std": 453.14036031187993,
+        "p10": 7185.305090633077,
+        "median": 7454.845098575151,
+        "p90": 8143.596197235528,
+        "min": 7126.859423957446,
+        "max": 8660.919694673472
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 9.513524892446926,
+        "std": 4.32898366133005,
+        "p10": 6.553187482798006,
+        "median": 8.024605107947934,
+        "p90": 14.620894618650727,
+        "min": 2.250820989957303,
+        "max": 18.83604826110663
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 70.03972454966987,
+        "std": 150.14639211515893,
+        "p10": 0.0,
+        "median": 1.8189894035458565e-12,
+        "p90": 93.32897004635652,
+        "min": 0.0,
+        "max": 530.9720000000016
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.18,
+      "length_m": {
+        "n": 11,
+        "mean": 9184.387570127503,
+        "std": 437.5259149827044,
+        "p10": 8777.670316822681,
+        "median": 9159.711514976821,
+        "p90": 9746.725999999999,
+        "min": 8217.255029953643,
+        "max": 9793.603
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 7943.731328715928,
+        "std": 453.13322709065756,
+        "p10": 7546.037649249631,
+        "median": 7816.428871148073,
+        "p90": 8506.79981409259,
+        "min": 7488.381784123649,
+        "max": 9023.531932625614
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 15.844248646409584,
+        "std": 6.512443814214918,
+        "p10": 9.733387891297184,
+        "median": 14.575706646503118,
+        "p90": 25.431921227443155,
+        "min": 5.325576181948066,
+        "max": 29.060752789974508
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 5.0353609133079855,
+        "std": 15.923209327028536,
+        "p10": 1.8189894035458565e-12,
+        "median": 3.637978807091713e-12,
+        "p90": 7.275957614183426e-12,
+        "min": 0.0,
+        "max": 55.3889700463551
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.24,
+      "length_m": {
+        "n": 11,
+        "mean": 9540.730068765975,
+        "std": 488.6530721486421,
+        "p10": 9078.083,
+        "median": 9556.135409649392,
+        "p90": 10090.02751497682,
+        "min": 8534.414514976821,
+        "max": 10332.175999999996
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 8365.588287141032,
+        "std": 453.13903903373966,
+        "p10": 7966.472513386169,
+        "median": 8237.855827668702,
+        "p90": 8930.114703917985,
+        "min": 7909.7371643025845,
+        "max": 9446.157568587987
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 14.3160656913457,
+        "std": 7.748220001756132,
+        "p10": 7.8975740621757495,
+        "median": 12.677977267411599,
+        "p90": 24.062525583221174,
+        "min": 0.8990897176480939,
+        "max": 28.939334046028797
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 31.077812735701876,
+        "std": 82.30051808162577,
+        "p10": 0.0,
+        "median": 3.637978807091713e-12,
+        "p90": 55.388970046346,
+        "min": 0.0,
+        "max": 286.4669700463528
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.3,
+      "length_m": {
+        "n": 11,
+        "mean": 10480.249348698482,
+        "std": 767.820369209003,
+        "p10": 9855.021999999999,
+        "median": 10167.312409649394,
+        "p90": 11299.782999999994,
+        "min": 9631.088,
+        "max": 12374.756
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 8831.775600713432,
+        "std": 453.1631469627682,
+        "p10": 8431.088293521007,
+        "median": 8703.567953079153,
+        "p90": 9397.913153941494,
+        "min": 8375.370191853483,
+        "max": 9913.194335295972
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 18.911452148758766,
+        "std": 9.726736533402434,
+        "p10": 11.061615064043284,
+        "median": 14.251837527214239,
+        "p90": 31.67557304793793,
+        "min": 1.7723516634639003,
+        "max": 33.20987427204667
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 63.025287137745515,
+        "std": 155.80451357594407,
+        "p10": 0.0,
+        "median": 3.637978807091713e-12,
+        "p90": 90.69000000000051,
+        "min": 0.0,
+        "max": 547.1991884688377
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.36,
+      "length_m": {
+        "n": 11,
+        "mean": 11184.44018379592,
+        "std": 658.917390285727,
+        "p10": 10564.822999999997,
+        "median": 10965.372000000003,
+        "p90": 12374.756,
+        "min": 10468.198999999997,
+        "max": 12477.603514976821
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 9332.107860815431,
+        "std": 453.2096751015943,
+        "p10": 8929.733916398545,
+        "median": 9203.390220823749,
+        "p90": 9899.974554924096,
+        "min": 8875.107568375843,
+        "max": 10414.438265009741
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 20.128040371350775,
+        "std": 8.932593707161933,
+        "p10": 9.977581393708167,
+        "median": 20.824990635540797,
+        "p90": 28.952422281278945,
+        "min": 0.5162134876816049,
+        "max": 35.00523887295515
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 34.28288967014437,
+        "std": 98.91232718723545,
+        "p10": 0.0,
+        "median": 3.637978807091713e-12,
+        "p90": 31.32681632521053,
+        "min": 0.0,
+        "max": 345.7849700463521
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.42,
+      "length_m": {
+        "n": 11,
+        "mean": 12133.797820159556,
+        "std": 625.2176202234972,
+        "p10": 11385.398000000005,
+        "median": 12325.707999999995,
+        "p90": 12834.619999999997,
+        "min": 10952.538409649393,
+        "max": 13054.118591837394
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 9859.50236036377,
+        "std": 453.28186306970713,
+        "p10": 9455.350550984245,
+        "median": 9730.247143274713,
+        "p90": 10429.19172205175,
+        "min": 9401.875007962646,
+        "max": 10942.793745044439
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 23.31706564962925,
+        "std": 8.405434608719364,
+        "p10": 14.629717120066953,
+        "median": 21.421903707642787,
+        "p90": 33.731367300154936,
+        "min": 7.695944228558327,
+        "max": 34.77239300536388
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 7.883253306508777,
+        "std": 17.492088898151284,
+        "p10": 1.8189894035458565e-12,
+        "median": 3.637978807091713e-12,
+        "p90": 31.32681632521053,
+        "min": 0.0,
+        "max": 55.3889700463551
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.5,
+      "length_m": {
+        "n": 11,
+        "mean": 14314.44214365848,
+        "std": 598.4245304337582,
+        "p10": 13361.787970046356,
+        "median": 14415.503000000004,
+        "p90": 15005.309999999998,
+        "min": 13185.135316822685,
+        "max": 15153.20145167394
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 10596.105442008293,
+        "std": 453.4224196595687,
+        "p10": 10189.47051835407,
+        "median": 10466.099399973427,
+        "p90": 11168.340493036776,
+        "min": 10137.602285440771,
+        "max": 11680.739012070608
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 35.2427680651246,
+        "std": 6.43860861737868,
+        "p10": 26.98082937453432,
+        "median": 35.082074683933165,
+        "p90": 43.620889447676035,
+        "min": 25.979458181489857,
+        "max": 48.016361043775
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 2.149818181822411,
+        "std": 6.798322009784708,
+        "p10": 0.0,
+        "median": 3.637978807091713e-12,
+        "p90": 1.4551915228366852e-11,
+        "min": 0.0,
+        "max": 23.64799999999559
+      }
+    },
+    {
+      "start": "Keskuspuisto",
+      "radius_m": 3000,
+      "width": 0.6,
+      "length_m": {
+        "n": 11,
+        "mean": 17133.565620111858,
+        "std": 697.3551800880977,
+        "p10": 15917.518079584772,
+        "median": 17258.362029953638,
+        "p90": 17766.641223753308,
+        "min": 15719.05418367479,
+        "max": 18070.70634677633
+      },
+      "estimate_m": {
+        "n": 11,
+        "mean": 11558.732942664348,
+        "std": 453.6758411120236,
+        "p10": 11148.852968659856,
+        "median": 11427.745687328817,
+        "p90": 12134.294820077837,
+        "min": 11099.085244081218,
+        "max": 12645.120543617304
+      },
+      "error_pct": {
+        "n": 11,
+        "mean": 48.4631187082974,
+        "std": 8.443867859064477,
+        "p10": 38.138868979521035,
+        "median": 52.546112428499626,
+        "p90": 56.621193208928,
+        "min": 31.177940833010574,
+        "max": 58.13010580742346
+      },
+      "side_gap_m": {
+        "n": 11,
+        "mean": 44.89412009369715,
+        "std": 58.714646609600216,
+        "p10": 7.275957614183426e-12,
+        "median": 31.372000000021217,
+        "p90": 85.77554901941403,
+        "min": 5.4569682106375694e-12,
+        "max": 209.33199999999852
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0,
+      "length_m": {
+        "n": 3,
+        "mean": 3832.291943803133,
+        "std": 542.1125974958967,
+        "p10": 3307.828340082133,
+        "median": 3801.0215288829586,
+        "p90": 4369.263713492203,
+        "min": 3184.5300428819264,
+        "max": 4511.324259644514
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 3832.291943803133,
+        "std": 542.1125974958967,
+        "p10": 3307.828340082133,
+        "median": 3801.0215288829586,
+        "p90": 4369.263713492203,
+        "min": 3184.5300428819264,
+        "max": 4511.324259644514
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.06,
+      "length_m": {
+        "n": 3,
+        "mean": 4001.0918874334748,
+        "std": 566.80020217887,
+        "p10": 3442.236506260338,
+        "median": 4019.346359773985,
+        "p90": 4552.645479670407,
+        "min": 3297.9590428819265,
+        "max": 4685.970259644513
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 3897.130782561811,
+        "std": 542.3910881900014,
+        "p10": 3372.488296391568,
+        "median": 3865.447993012279,
+        "p90": 4434.446384551867,
+        "min": 3249.2483722363904,
+        "max": 4576.695982436764
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 2.6227150866483453,
+        "std": 1.0269178146290632,
+        "p10": 1.676833993903002,
+        "median": 2.3876236837031106,
+        "p90": 3.662632740571783,
+        "min": 1.4991365714529747,
+        "max": 3.981385004788951
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 68.58477940598277,
+        "std": 96.56392330080361,
+        "p10": 0.12160000000076253,
+        "median": 0.6080000000001746,
+        "p90": 164.23867057435783,
+        "min": 9.094947017729282e-13,
+        "max": 205.14633821794723
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.12,
+      "length_m": {
+        "n": 3,
+        "mean": 4333.6182771364665,
+        "std": 415.32356400456445,
+        "p10": 3951.1260430129014,
+        "median": 4238.356690665012,
+        "p90": 4754.215145848613,
+        "min": 3879.3183810998735,
+        "max": 4883.179759644514
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 4034.366060556964,
+        "std": 542.9810079665871,
+        "p10": 3509.3449589901425,
+        "median": 4001.8104554545707,
+        "p90": 4572.409404164741,
+        "min": 3386.2285848740353,
+        "max": 4715.059141342284
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 8.01273738043781,
+        "std": 4.728714063786369,
+        "p10": 4.034684064667728,
+        "median": 5.910980488544193,
+        "p90": 12.83149345296534,
+        "min": 3.5656099586986123,
+        "max": 14.561621694070626
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 201.18533333333457,
+        "std": 137.64509970290385,
+        "p10": 95.00200000000105,
+        "median": 119.70200000000068,
+        "p90": 339.96200000000164,
+        "min": 88.82700000000114,
+        "max": 395.02700000000186
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.18,
+      "length_m": {
+        "n": 3,
+        "mean": 4431.17784415939,
+        "std": 281.4502402858183,
+        "p10": 4200.951443012901,
+        "median": 4291.359690665012,
+        "p90": 4717.331506703628,
+        "min": 4178.349381099873,
+        "max": 4823.824460713283
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 4214.562012084117,
+        "std": 543.7565806376357,
+        "p10": 3689.0437718613616,
+        "median": 4180.860361800389,
+        "p90": 4753.560912420362,
+        "min": 3566.0896243766047,
+        "max": 4896.736050075356
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 6.10764542952061,
+        "std": 8.001351777708281,
+        "p10": -0.6625906369573276,
+        "median": 2.6429806140915613,
+        "p90": 14.263747422170168,
+        "min": -1.4889834497195498,
+        "max": 17.16893912418982
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 117.47913404584567,
+        "std": 84.44920495707305,
+        "p10": 31.520880427507294,
+        "median": 157.60440213753645,
+        "p90": 187.38728042750773,
+        "min": 0.0,
+        "max": 194.83300000000054
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.24,
+      "length_m": {
+        "n": 3,
+        "mean": 4511.042233862381,
+        "std": 304.067747852593,
+        "p10": 4231.376176834696,
+        "median": 4440.139359773986,
+        "p90": 4819.0694405254235,
+        "min": 4179.185381099874,
+        "max": 4913.801960713283
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 4424.580926619646,
+        "std": 544.6619140763107,
+        "p10": 3898.4832698228333,
+        "median": 4389.543557287001,
+        "p90": 4964.693531149516,
+        "min": 3775.7181979567913,
+        "max": 5108.4810246151455
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 2.6758613332123695,
+        "std": 6.015480111922393,
+        "p10": -2.8181906182041194,
+        "median": 1.1526438188087296,
+        "p90": 8.779200290390317,
+        "min": -3.8108992274573317,
+        "max": 10.685839408285712
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 86.37991345182915,
+        "std": 64.89320608525651,
+        "p10": 20.545267643591252,
+        "median": 102.72633821794898,
+        "p90": 145.67598935361912,
+        "min": 1.8189894035458565e-12,
+        "max": 156.41340213753665
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.3,
+      "length_m": {
+        "n": 3,
+        "mean": 4600.530733862381,
+        "std": 377.6335756664784,
+        "p10": 4266.355676834695,
+        "median": 4474.032859773986,
+        "p90": 4985.304940525423,
+        "min": 4214.436381099873,
+        "max": 5113.122960713283
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 4656.669438166841,
+        "std": 545.6641291745891,
+        "p10": 4129.931477469134,
+        "median": 4620.15598727938,
+        "p90": 5198.012779219533,
+        "min": 4007.375350016572,
+        "max": 5342.476977204571
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": -0.7629201672017011,
+        "std": 4.218399812114234,
+        "p10": -4.066968454480855,
+        "median": -3.1627314728704503,
+        "p90": 3.501052642344953,
+        "min": -4.2930276998834564,
+        "max": 5.166998671148804
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 224.61824678516282,
+        "std": 291.84979314189906,
+        "p10": 7.410667643590023,
+        "median": 37.05333821795011,
+        "p90": 516.8517893536208,
+        "min": 0.0,
+        "max": 636.8014021375384
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.36,
+      "length_m": {
+        "n": 3,
+        "mean": 5280.965787789732,
+        "std": 230.4975677483428,
+        "p10": 5046.302679961846,
+        "median": 5352.975960713282,
+        "p90": 5486.824826448197,
+        "min": 4969.634359773987,
+        "max": 5520.287042881926
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 4905.756803149551,
+        "std": 546.7417775191908,
+        "p10": 4378.331640787277,
+        "median": 4867.659158100398,
+        "p90": 5448.421023531486,
+        "min": 4255.9997614589965,
+        "max": 5593.611489889258
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 9.16632756831856,
+        "std": 14.756665440917692,
+        "p10": -3.0225858621545143,
+        "median": 2.0949536185969286,
+        "p90": 24.183790578680284,
+        "min": -4.301970732342375,
+        "max": 29.705999818701123
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 175.50302130652926,
+        "std": 86.1350954337012,
+        "p10": 88.85400985314918,
+        "median": 189.61540213753688,
+        "p90": 256.5070804275063,
+        "min": 63.66366178205226,
+        "max": 273.22999999999865
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.42,
+      "length_m": {
+        "n": 3,
+        "mean": 5764.423731420074,
+        "std": 106.04635909198531,
+        "p10": 5659.092977147012,
+        "median": 5837.601042881926,
+        "p90": 5840.4835611083945,
+        "min": 5614.4659607132835,
+        "max": 5841.204190665012
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 5168.316939032233,
+        "std": 547.879974033207,
+        "p10": 4640.167405273442,
+        "median": 5128.549413078494,
+        "p90": 5712.3734831725205,
+        "min": 4518.0719033221785,
+        "max": 5858.329500696027
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 12.97957851248645,
+        "std": 13.637933864708424,
+        "p10": -0.550977351483604,
+        "median": 13.895835258390065,
+        "p90": 26.143631678095062,
+        "min": -4.162680503952021,
+        "max": 29.20558078302131
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 191.57980071251254,
+        "std": 44.183203822669796,
+        "p10": 146.52999999999975,
+        "median": 210.0659999999998,
+        "p90": 229.2351217100304,
+        "min": 130.64599999999973,
+        "max": 234.02740213753805
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.5,
+      "length_m": {
+        "n": 3,
+        "mean": 12327.61564203615,
+        "std": 4124.5302142757855,
+        "p10": 8137.763952439949,
+        "median": 14432.896999999995,
+        "p90": 15675.354788446812,
+        "min": 6563.980690549937,
+        "max": 15985.969235558516
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 5535.030291890141,
+        "std": 549.4735289139143,
+        "p10": 5005.869040710353,
+        "median": 5492.93047119053,
+        "p90": 6081.031471349771,
+        "min": 4884.1036830903095,
+        "max": 6228.056721389581
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 119.05427467911625,
+        "std": 64.5713621029718,
+        "p10": 53.86382347515266,
+        "median": 131.73997356883064,
+        "p90": 179.1704463271941,
+        "min": 34.394785951733155,
+        "max": 191.02806451678495
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 1420.0359507389715,
+        "std": 1992.4530033630008,
+        "p10": 4.469476219977333,
+        "median": 22.34738109987211,
+        "p90": 3394.6778531136056,
+        "min": 3.637978807091713e-12,
+        "max": 4237.760471117039
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 1500,
+      "width": 0.6,
+      "length_m": {
+        "n": 3,
+        "mean": 16782.419903824175,
+        "std": 7041.169813394096,
+        "p10": 9653.506294223409,
+        "median": 18378.347471117042,
+        "p90": 23272.9624865078,
+        "min": 7472.296,
+        "max": 24496.616240355488
+      },
+      "estimate_m": {
+        "n": 3,
+        "mean": 6014.268523599257,
+        "std": 551.5627744083528,
+        "p10": 5483.78511257978,
+        "median": 5969.120750592689,
+        "p90": 6562.811043821362,
+        "min": 5362.451203076553,
+        "max": 6711.23361712853
+      },
+      "error_pct": {
+        "n": 3,
+        "mean": 170.74809560835263,
+        "std": 95.79757011173437,
+        "p10": 73.05389885931899,
+        "median": 207.89036173028012,
+        "p90": 253.58538590861525,
+        "min": 39.3447831415787,
+        "max": 265.00914195319905
+      },
+      "side_gap_m": {
+        "n": 3,
+        "mean": 522.6570000000053,
+        "std": 511.51087223310253,
+        "p10": 70.17440000000352,
+        "median": 350.872000000003,
+        "p90": 1043.853600000008,
+        "min": 3.637978807091713e-12,
+        "max": 1217.0990000000093
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0,
+      "length_m": {
+        "n": 2,
+        "mean": 7105.879215717286,
+        "std": 245.12667709249308,
+        "p10": 6909.777874043291,
+        "median": 7105.879215717286,
+        "p90": 7301.98055739128,
+        "min": 6860.752538624793,
+        "max": 7351.005892809779
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 7105.879215717286,
+        "std": 245.12667709249308,
+        "p10": 6909.777874043291,
+        "median": 7105.879215717286,
+        "p90": 7301.98055739128,
+        "min": 6860.752538624793,
+        "max": 7351.005892809779
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.06,
+      "length_m": {
+        "n": 2,
+        "mean": 7362.416715717285,
+        "std": 313.0271770924933,
+        "p10": 7111.99497404329,
+        "median": 7362.416715717285,
+        "p90": 7612.838457391279,
+        "min": 7049.389538624791,
+        "max": 7675.443892809778
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 7236.448465570931,
+        "std": 244.78576713071288,
+        "p10": 7040.6198518663605,
+        "median": 7236.448465570931,
+        "p90": 7432.277079275502,
+        "min": 6991.662698440218,
+        "max": 7481.234232701644
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 1.710805009609151,
+        "std": 0.8851524763790919,
+        "p10": 1.0026830285058774,
+        "median": 1.710805009609151,
+        "p90": 2.4189269907124245,
+        "min": 0.825652533230059,
+        "max": 2.595957485988243
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 109.93499999999904,
+        "std": 49.634999999997945,
+        "p10": 70.22700000000069,
+        "median": 109.93499999999904,
+        "p90": 149.6429999999974,
+        "min": 60.30000000000109,
+        "max": 159.56999999999698
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.12,
+      "length_m": {
+        "n": 2,
+        "mean": 8846.99018475791,
+        "std": 1617.0511461331162,
+        "p10": 7553.349267851416,
+        "median": 8846.99018475791,
+        "p90": 10140.631101664401,
+        "min": 7229.939038624792,
+        "max": 10464.041330891025
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 7512.8060877050175,
+        "std": 244.06421081860253,
+        "p10": 7317.554719050135,
+        "median": 7512.8060877050175,
+        "p90": 7708.057456359899,
+        "min": 7268.7418768864145,
+        "max": 7756.87029852362
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 17.183234396982822,
+        "std": 17.7170659584668,
+        "p10": 3.009581630209383,
+        "median": 17.183234396982822,
+        "p90": 31.356887163756262,
+        "min": -0.5338315614839773,
+        "max": 34.90030035544962
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 2578.6741691089705,
+        "std": 2486.133169108974,
+        "p10": 589.7676338217914,
+        "median": 2578.6741691089705,
+        "p90": 4567.5807043961495,
+        "min": 92.54099999999653,
+        "max": 5064.807338217945
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.18,
+      "length_m": {
+        "n": 2,
+        "mean": 10259.479269312395,
+        "std": 2957.331730687604,
+        "p10": 7893.6138847623115,
+        "median": 10259.479269312395,
+        "p90": 12625.344653862478,
+        "min": 7302.14753862479,
+        "max": 13216.810999999998
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 7875.675791543063,
+        "std": 243.11677566824892,
+        "p10": 7681.182371008464,
+        "median": 7875.675791543063,
+        "p90": 8070.1692120776615,
+        "min": 7632.559015874814,
+        "max": 8118.7925672113115
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 29.231920839087966,
+        "std": 33.560894602183765,
+        "p10": 2.383205157340953,
+        "median": 29.231920839087966,
+        "p90": 56.080636520834986,
+        "min": -4.3289737630958,
+        "max": 62.792815441271735
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 25.93800000000101,
+        "std": 25.937999999999192,
+        "p10": 5.187600000001658,
+        "median": 25.93800000000101,
+        "p90": 46.688400000000364,
+        "min": 1.8189894035458565e-12,
+        "max": 51.876000000000204
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.24,
+      "length_m": {
+        "n": 2,
+        "mean": 10259.530769312394,
+        "std": 2957.2802306876038,
+        "p10": 7893.706584762311,
+        "median": 10259.530769312394,
+        "p90": 12625.354953862477,
+        "min": 7302.25053862479,
+        "max": 13216.810999999998
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 8298.601504757058,
+        "std": 242.01253719794022,
+        "p10": 8104.991474998705,
+        "median": 8298.601504757058,
+        "p90": 8492.211534515409,
+        "min": 8056.588967559117,
+        "max": 8540.614041954997
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 22.694733903893948,
+        "std": 32.05773395232347,
+        "p10": -2.951453257964822,
+        "median": 22.694733903893948,
+        "p90": 48.340921065752724,
+        "min": -9.363000048429516,
+        "max": 54.752467856217415
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 25.93800000000101,
+        "std": 25.937999999999192,
+        "p10": 5.187600000001658,
+        "median": 25.93800000000101,
+        "p90": 46.688400000000364,
+        "min": 1.8189894035458565e-12,
+        "max": 51.876000000000204
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.3,
+      "length_m": {
+        "n": 2,
+        "mean": 13843.864938421366,
+        "std": 624.6379384213706,
+        "p10": 13344.15458768427,
+        "median": 13843.864938421366,
+        "p90": 14343.575289158462,
+        "min": 13219.226999999995,
+        "max": 14468.502876842736
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 8765.969881990844,
+        "std": 240.7922610931255,
+        "p10": 8573.336073116345,
+        "median": 8765.969881990844,
+        "p90": 8958.603690865344,
+        "min": 8525.177620897719,
+        "max": 9006.76214308397
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 58.24249860625051,
+        "std": 11.472474151339654,
+        "p10": 49.06451928517878,
+        "median": 58.24249860625051,
+        "p90": 67.42047792732222,
+        "min": 46.77002445491085,
+        "max": 69.71497275759016
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 25.937999999999192,
+        "std": 25.937999999997373,
+        "p10": 5.187600000001294,
+        "median": 25.937999999999192,
+        "p90": 46.68839999999709,
+        "min": 1.8189894035458565e-12,
+        "max": 51.875999999996566
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.36,
+      "length_m": {
+        "n": 2,
+        "mean": 14016.666938421366,
+        "std": 785.2379384213691,
+        "p10": 13388.47658768427,
+        "median": 14016.666938421366,
+        "p90": 14644.85728915846,
+        "min": 13231.428999999996,
+        "max": 14801.904876842735
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 9267.569710372423,
+        "std": 239.48260833403947,
+        "p10": 9075.983623705191,
+        "median": 9267.569710372423,
+        "p90": 9459.155797039655,
+        "min": 9028.087102038384,
+        "max": 9507.052318706463
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 51.56441383800136,
+        "std": 12.389530220654489,
+        "p10": 41.65278966147776,
+        "median": 51.56441383800136,
+        "p90": 61.476038014524946,
+        "min": 39.174883617346865,
+        "max": 63.95394405865584
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 64.40100000000166,
+        "std": 64.40099999999984,
+        "p10": 12.880200000001787,
+        "median": 64.40100000000166,
+        "p90": 115.92180000000154,
+        "min": 1.8189894035458565e-12,
+        "max": 128.8020000000015
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.42,
+      "length_m": {
+        "n": 2,
+        "mean": 20877.89952297585,
+        "std": 3167.2728538668816,
+        "p10": 18344.081239882347,
+        "median": 20877.89952297585,
+        "p90": 23411.717806069355,
+        "min": 17710.62666910897,
+        "max": 24045.172376842733
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 9796.300339112822,
+        "std": 238.10211837458974,
+        "p10": 9605.81864441315,
+        "median": 9796.300339112822,
+        "p90": 9986.782033812493,
+        "min": 9558.198220738232,
+        "max": 10034.402457487411
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 114.032509414538,
+        "std": 37.533442886727364,
+        "p10": 84.0057551051561,
+        "median": 114.032509414538,
+        "p90": 144.05926372391988,
+        "min": 76.49906652781063,
+        "max": 151.56595230126536
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 3658.3731691089733,
+        "std": 2518.8781691089744,
+        "p10": 1643.2706338217938,
+        "median": 3658.3731691089733,
+        "p90": 5673.475704396153,
+        "min": 1139.494999999999,
+        "max": 6177.251338217948
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.5,
+      "length_m": {
+        "n": 2,
+        "mean": 22209.070134327892,
+        "std": 2077.6404116238264,
+        "p10": 20546.957805028833,
+        "median": 22209.070134327892,
+        "p90": 23871.182463626952,
+        "min": 20131.429722704066,
+        "max": 24286.71054595172
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 10534.769570065295,
+        "std": 236.17401112435982,
+        "p10": 10345.830361165807,
+        "median": 10534.769570065295,
+        "p90": 10723.708778964783,
+        "min": 10298.595558940935,
+        "max": 10770.943581189655
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 111.36521991169963,
+        "std": 24.460241987002867,
+        "p10": 91.79702632209732,
+        "median": 111.36521991169963,
+        "p90": 130.9334135013019,
+        "min": 86.90497792469675,
+        "max": 135.82546189870249
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 1305.5920535951136,
+        "std": 348.9567153771659,
+        "p10": 1026.4266812933809,
+        "median": 1305.5920535951136,
+        "p90": 1584.7574258968464,
+        "min": 956.6353382179477,
+        "max": 1654.5487689722795
+      }
+    },
+    {
+      "start": "Lauttasaari",
+      "radius_m": 3000,
+      "width": 0.6,
+      "length_m": {
+        "n": 2,
+        "mean": 23254.655911125454,
+        "std": 2133.5813039352433,
+        "p10": 21547.79086797726,
+        "median": 23254.655911125454,
+        "p90": 24961.52095427365,
+        "min": 21121.07460719021,
+        "max": 25388.237215060697
+      },
+      "estimate_m": {
+        "n": 2,
+        "mean": 11499.83584227814,
+        "std": 233.65427001882017,
+        "p10": 11312.912426263085,
+        "median": 11499.83584227814,
+        "p90": 11686.759258293196,
+        "min": 11266.18157225932,
+        "max": 11733.49011229696
+      },
+      "error_pct": {
+        "n": 2,
+        "mean": 102.6779197469821,
+        "std": 22.671166385040358,
+        "p10": 84.54098663894982,
+        "median": 102.6779197469821,
+        "p90": 120.8148528550144,
+        "min": 80.00675336194175,
+        "max": 125.34908613202246
+      },
+      "side_gap_m": {
+        "n": 2,
+        "mean": 1217.2855000000054,
+        "std": 352.6615000000129,
+        "p10": 935.1562999999951,
+        "median": 1217.2855000000054,
+        "p90": 1499.4147000000157,
+        "min": 864.6239999999925,
+        "max": 1569.9470000000183
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0,
+      "length_m": {
+        "n": 10,
+        "mean": 3988.6674506121694,
+        "std": 321.0543013741974,
+        "p10": 3623.178808422363,
+        "median": 3986.481242539545,
+        "p90": 4433.730168646022,
+        "min": 3452.4149115570012,
+        "max": 4518.320085096042
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 3988.6674506121694,
+        "std": 321.0543013741974,
+        "p10": 3623.178808422363,
+        "median": 3986.481242539545,
+        "p90": 4433.730168646022,
+        "min": 3452.4149115570012,
+        "max": 4518.320085096042
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.06,
+      "length_m": {
+        "n": 10,
+        "mean": 4322.956208161754,
+        "std": 392.429075246859,
+        "p10": 3994.4951233492334,
+        "median": 4126.623756143057,
+        "p90": 4893.591208921361,
+        "min": 3969.9323233492332,
+        "max": 4973.935323349233
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 4054.1338449989626,
+        "std": 321.45429295483177,
+        "p10": 3687.382380034906,
+        "median": 4051.9043954718486,
+        "p90": 4500.074079748634,
+        "min": 3517.506948828882,
+        "max": 4583.791089398817
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 6.6636152268327775,
+        "std": 5.045315927390971,
+        "p10": 1.6414530919064285,
+        "median": 5.808214205420271,
+        "p90": 13.093358431867374,
+        "min": 0.10976199918182328,
+        "max": 15.17465534089768
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 41.16732351797432,
+        "std": 54.26158005276582,
+        "p10": 8.640199666842818e-13,
+        "median": 21.378500000002077,
+        "p90": 81.29502351797369,
+        "min": 4.547473508864641e-13,
+        "max": 185.23623517973647
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.12,
+      "length_m": {
+        "n": 10,
+        "mean": 4625.443550414851,
+        "std": 441.6907063218151,
+        "p10": 4214.009023349233,
+        "median": 4484.319756143057,
+        "p90": 5081.664449523913,
+        "min": 4045.769323349233,
+        "max": 5588.779585096041
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 4192.697381993365,
+        "std": 322.304373398635,
+        "p10": 3823.2730771419656,
+        "median": 4190.376409343047,
+        "p90": 4640.494933325906,
+        "min": 3655.27813661225,
+        "max": 4722.3643835559515
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 10.274892357663376,
+        "std": 4.916777954075213,
+        "p10": 4.329630484514615,
+        "median": 10.601494102495224,
+        "p90": 15.693406426280392,
+        "min": 2.700102518367453,
+        "max": 18.347063698792265
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 154.9939609882219,
+        "std": 313.1352194300728,
+        "p10": 9.094947017729282e-13,
+        "median": 32.59099999999944,
+        "p90": 402.549448893991,
+        "min": 9.094947017729282e-13,
+        "max": 1050.5030000000006
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.18,
+      "length_m": {
+        "n": 10,
+        "mean": 5122.747330908963,
+        "std": 555.4633351331971,
+        "p10": 4524.880002378117,
+        "median": 5031.782323349234,
+        "p90": 5619.969499523914,
+        "min": 4467.746323349233,
+        "max": 6435.650085096043
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 4374.637395963795,
+        "std": 323.4276801102308,
+        "p10": 4001.703534868437,
+        "median": 4372.196249430252,
+        "p90": 4824.873685599101,
+        "min": 3836.1777612446785,
+        "max": 4904.317209109879
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 17.101489129658223,
+        "std": 8.755227519218133,
+        "p10": 5.580494775241512,
+        "median": 16.54482034871365,
+        "p90": 27.769306207157484,
+        "min": 2.5004567777582976,
+        "max": 31.224180873571548
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 102.57420000000056,
+        "std": 234.35293307394298,
+        "p10": 8.185452315956354e-13,
+        "median": 8.846999999999753,
+        "p90": 172.12000000000018,
+        "min": 0.0,
+        "max": 798.6820000000007
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.24,
+      "length_m": {
+        "n": 10,
+        "mean": 5368.458880908963,
+        "std": 511.91391994489294,
+        "p10": 4831.720068175517,
+        "median": 5233.141823349232,
+        "p90": 6104.773678552797,
+        "min": 4710.568771612068,
+        "max": 6438.111085096043
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 4586.689020436005,
+        "std": 324.7469862622988,
+        "p10": 4209.664761156834,
+        "median": 4584.107810886082,
+        "p90": 5039.767666777124,
+        "min": 4047.016808865915,
+        "max": 5116.383765520555
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 17.197860784379753,
+        "std": 9.284664948290485,
+        "p10": 5.943365844320061,
+        "median": 17.80199002257573,
+        "p90": 28.739678137123544,
+        "min": 1.7783452579606562,
+        "max": 30.889504020468507
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 116.82090000000134,
+        "std": 282.6889270171184,
+        "p10": 1.7280399333685636e-12,
+        "median": 3.183231456205249e-12,
+        "p90": 188.13610000000006,
+        "min": 9.094947017729282e-13,
+        "max": 958.8429999999998
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.3,
+      "length_m": {
+        "n": 10,
+        "mean": 5781.164329088966,
+        "std": 559.6891198514993,
+        "p10": 5359.053268175517,
+        "median": 5621.627564249255,
+        "p90": 6536.756708921362,
+        "min": 4775.159771612069,
+        "max": 6841.439323349234
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 4821.02384691467,
+        "std": 326.21741042393376,
+        "p10": 4439.479354644976,
+        "median": 4818.28785598676,
+        "p90": 5277.24353575949,
+        "min": 4280.011636244488,
+        "max": 5350.735093043329
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 20.365641958802495,
+        "std": 13.372255442821041,
+        "p10": 4.648900455612327,
+        "median": 22.20144551400164,
+        "p90": 28.987768805074836,
+        "min": -1.8418559622969233,
+        "max": 49.334692869166986
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 29.297100000000956,
+        "std": 56.362733664097206,
+        "p10": 0.0,
+        "median": 1.8189894035458565e-12,
+        "p90": 68.12329999999925,
+        "min": 0.0,
+        "max": 186.10699999999997
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.36,
+      "length_m": {
+        "n": 10,
+        "mean": 6323.6699290889665,
+        "std": 636.5715637443192,
+        "p10": 5508.938573349234,
+        "median": 6231.944047480651,
+        "p90": 7191.792058921361,
+        "min": 5428.782323349234,
+        "max": 7281.206823349232
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 5072.5220536209545,
+        "std": 327.8099159734585,
+        "p10": 4686.126253041296,
+        "median": 5069.619944666205,
+        "p90": 5532.112844272282,
+        "min": 4530.071698327864,
+        "max": 5602.251009379313
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 24.854782153549586,
+        "std": 11.871539408898267,
+        "p10": 14.712937778287984,
+        "median": 22.50576910787665,
+        "p90": 43.63444542525719,
+        "min": 3.752988951331848,
+        "max": 45.02498286691732
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 57.56010000000133,
+        "std": 76.36240019990161,
+        "p10": 9.094947017729282e-13,
+        "median": 25.925000000002,
+        "p90": 201.65200000000132,
+        "min": 9.094947017729282e-13,
+        "max": 202.14699999999903
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.42,
+      "length_m": {
+        "n": 10,
+        "mean": 7163.403364756794,
+        "std": 697.103799144124,
+        "p10": 6200.679923349233,
+        "median": 7245.761073349233,
+        "p90": 7954.178758921362,
+        "min": 5815.359323349234,
+        "max": 8172.889323349233
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 5337.623430126491,
+        "std": 329.5044463324511,
+        "p10": 4946.113921072852,
+        "median": 5334.546218064032,
+        "p90": 5800.767660545637,
+        "min": 4793.657143073329,
+        "max": 5867.37105340249
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 34.128499941818504,
+        "std": 9.401530622255205,
+        "p10": 24.462361517237355,
+        "median": 32.80785874202563,
+        "p90": 44.58359015621968,
+        "min": 17.173011522945238,
+        "max": 51.73946058864705
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 204.23286098822183,
+        "std": 435.41865203690276,
+        "p10": 1.8189894035458565e-12,
+        "median": 47.42630494110563,
+        "p90": 345.9282999999993,
+        "min": 1.8189894035458565e-12,
+        "max": 1496.0409999999983
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.5,
+      "length_m": {
+        "n": 10,
+        "mean": 8446.493446355737,
+        "std": 521.5837996475585,
+        "p10": 7956.339173349232,
+        "median": 8292.16312829034,
+        "p90": 9062.97048650822,
+        "min": 7638.988823349232,
+        "max": 9382.483099217814
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 5707.8860912832115,
+        "std": 331.8979948031267,
+        "p10": 5309.234351084209,
+        "median": 5704.564315637217,
+        "p90": 6175.9933516271185,
+        "min": 5161.802527680921,
+        "max": 6237.659787169056
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 48.44342965320441,
+        "std": 11.93554549499217,
+        "p10": 29.364780784052083,
+        "median": 49.33880511183206,
+        "p90": 62.93905062758389,
+        "min": 27.77403734326964,
+        "max": 63.33066362259699
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 170.53945517371704,
+        "std": 217.007633299685,
+        "p10": 3.2741809263825417e-12,
+        "median": 52.787499999999,
+        "p90": 506.3714551737164,
+        "min": 0.0,
+        "max": 669.707551737165
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 1500,
+      "width": 0.6,
+      "length_m": {
+        "n": 10,
+        "mean": 11634.87525790252,
+        "std": 3238.5910348928296,
+        "p10": 9117.340447382372,
+        "median": 10432.209887016461,
+        "p90": 17182.236928522947,
+        "min": 8741.622074740735,
+        "max": 18836.01937508639
+      },
+      "estimate_m": {
+        "n": 10,
+        "mean": 6191.762725765657,
+        "std": 335.0721059851973,
+        "p10": 5783.777182480715,
+        "median": 6188.121342943107,
+        "p90": 6666.355906697201,
+        "min": 5642.912205733952,
+        "max": 6721.570494562513
+      },
+      "error_pct": {
+        "n": 10,
+        "mean": 87.71128827612492,
+        "std": 49.85563928003657,
+        "p10": 50.60531297116767,
+        "median": 63.18034480883482,
+        "p90": 166.81385849067988,
+        "min": 49.460941857120375,
+        "max": 201.46495908311573
+      },
+      "side_gap_m": {
+        "n": 10,
+        "mean": 66.07400000000125,
+        "std": 125.1642197538892,
+        "p10": 6.730260793119669e-12,
+        "median": 24.89049999999952,
+        "p90": 109.01679999999948,
+        "min": 1.8189894035458565e-12,
+        "max": 432.871000000001
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0,
+      "length_m": {
+        "n": 8,
+        "mean": 7400.623465197668,
+        "std": 420.4454124547659,
+        "p10": 6916.8301008119415,
+        "median": 7323.968986174543,
+        "p90": 7941.617555550501,
+        "min": 6812.520334274241,
+        "max": 8137.410072285827
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 7400.623465197668,
+        "std": 420.4454124547659,
+        "p10": 6916.8301008119415,
+        "median": 7323.968986174543,
+        "p90": 7941.617555550501,
+        "min": 6812.520334274241,
+        "max": 8137.410072285827
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 0.0,
+        "std": 0.0,
+        "p10": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.06,
+      "length_m": {
+        "n": 8,
+        "mean": 7931.61620946977,
+        "std": 466.08689937088366,
+        "p10": 7411.17375081194,
+        "median": 7857.29421798271,
+        "p90": 8526.861023349233,
+        "min": 7211.24783427424,
+        "max": 8605.057323349232
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 7531.311991190391,
+        "std": 420.4601287249606,
+        "p10": 7047.820377734028,
+        "median": 7454.998803190063,
+        "p90": 8072.463292513588,
+        "min": 6943.303593545312,
+        "max": 8267.959740431248
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 5.323591805445233,
+        "std": 2.4081118463089175,
+        "p10": 2.1974698545422555,
+        "median": 5.919155129276876,
+        "p90": 7.832371962175284,
+        "min": 0.9641199517915533,
+        "max": 8.104731859277914
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 81.34580268326454,
+        "std": 86.74355629954951,
+        "p10": 3.819877747446299e-12,
+        "median": 47.70000000000027,
+        "p90": 220.39659502627373,
+        "min": 0.0,
+        "max": 221.76900000000114
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.12,
+      "length_m": {
+        "n": 8,
+        "mean": 8847.148132605074,
+        "std": 793.2718284062588,
+        "p10": 8189.576273349235,
+        "median": 8678.136554910094,
+        "p90": 9544.662573349233,
+        "min": 7827.092823349234,
+        "max": 10733.036823349234
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 7807.922068402605,
+        "std": 420.49498509864884,
+        "p10": 7325.069128825497,
+        "median": 7732.331243252802,
+        "p90": 8349.406116141914,
+        "min": 7220.11417940386,
+        "max": 8544.275916709374
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 13.411275279610805,
+        "std": 9.1605152424096,
+        "p10": 2.2644026143415763,
+        "median": 11.387526387877223,
+        "p90": 25.480769696922422,
+        "min": 1.881100378857603,
+        "max": 29.847314573117178
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 185.93262500000162,
+        "std": 310.2937882072157,
+        "p10": 1.8189894035458565e-12,
+        "median": 6.762000000001535,
+        "p90": 589.8254000000023,
+        "min": 1.8189894035458565e-12,
+        "max": 910.9910000000018
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.18,
+      "length_m": {
+        "n": 8,
+        "mean": 9892.26124191361,
+        "std": 1578.484430251205,
+        "p10": 8365.358273349231,
+        "median": 9435.206810372598,
+        "p90": 11875.233485689723,
+        "min": 8309.817823349233,
+        "max": 13398.898197817532
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 8171.123256853686,
+        "std": 420.5484004551078,
+        "p10": 7689.108924149893,
+        "median": 8096.480925874625,
+        "p90": 8713.044215261627,
+        "min": 7583.5786445199765,
+        "max": 8907.091200316989
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 20.637806042004648,
+        "std": 14.30030624921868,
+        "p10": 5.116770755270159,
+        "median": 20.309271869935674,
+        "p90": 36.156355546835734,
+        "min": 3.8381649426672437,
+        "max": 50.4295610820813
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 28.39909361707487,
+        "std": 37.6750340590722,
+        "p10": 1.2732925824820997e-12,
+        "median": 6.364874468295966,
+        "p90": 69.52390000000176,
+        "min": 0.0,
+        "max": 110.76300000000083
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.24,
+      "length_m": {
+        "n": 8,
+        "mean": 11005.513070105073,
+        "std": 1687.5385027960638,
+        "p10": 9169.007823349233,
+        "median": 10839.692823349233,
+        "p90": 13067.096297534437,
+        "min": 9157.027323349233,
+        "max": 13438.495323349234
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 8594.435316364725,
+        "std": 420.6216088195719,
+        "p10": 8113.39838245243,
+        "median": 8520.898458147367,
+        "p90": 9136.865495449363,
+        "min": 8007.197553762903,
+        "max": 9329.95348659144
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 28.03117558893912,
+        "std": 18.607455144452505,
+        "p10": 7.937568091535965,
+        "median": 22.569575653278143,
+        "p90": 51.40338983260156,
+        "min": 4.208238506086781,
+        "max": 58.20643325377053
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 787.9222499999998,
+        "std": 2064.1735279235695,
+        "p10": 0.0,
+        "median": 2.7284841053187847e-12,
+        "p90": 1911.0039999999976,
+        "min": 0.0,
+        "max": 6249.029999999999
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.3,
+      "length_m": {
+        "n": 8,
+        "mean": 12139.324247788338,
+        "std": 1851.4134451773903,
+        "p10": 10156.656726626738,
+        "median": 12150.812323349233,
+        "p90": 14215.468612285751,
+        "min": 10150.341334274242,
+        "max": 16028.406286470956
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 9062.230638653538,
+        "std": 420.71621619671544,
+        "p10": 8582.273812364925,
+        "median": 8989.91542053649,
+        "p90": 9605.223549286264,
+        "min": 8475.331970736115,
+        "max": 9797.251771738409
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 34.19542736753617,
+        "std": 21.760912693992996,
+        "p10": 16.392965805239616,
+        "median": 30.621851774470212,
+        "p90": 54.23456404314605,
+        "min": 9.594677054073708,
+        "max": 85.7696953463211
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 8.378250000000207,
+        "std": 17.894607468101096,
+        "p10": 1.2732925824820997e-12,
+        "median": 5.4569682106375694e-12,
+        "p90": 23.163999999994296,
+        "min": 0.0,
+        "max": 55.013999999995576
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.36,
+      "length_m": {
+        "n": 8,
+        "mean": 13217.861871422709,
+        "std": 1241.810584567205,
+        "p10": 12155.282768375502,
+        "median": 12980.969323349233,
+        "p90": 14317.512862285748,
+        "min": 11953.784323349233,
+        "max": 16136.066286470954
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 9564.288682816843,
+        "std": 420.8337518671047,
+        "p10": 9085.49107444939,
+        "median": 9493.284581357464,
+        "p90": 10107.885541131302,
+        "min": 8977.753945887878,
+        "max": 10298.77637428009
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 38.54938983989281,
+        "std": 15.545533617473781,
+        "p10": 28.617274024732602,
+        "median": 32.278168193873256,
+        "p90": 53.95625855563827,
+        "min": 22.347265755826108,
+        "max": 76.70455305358573
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 16.959750000001804,
+        "std": 25.483194279512784,
+        "p10": 1.2732925824820997e-12,
+        "median": 3.637978807091713e-12,
+        "p90": 58.007699999999204,
+        "min": 0.0,
+        "max": 64.99299999999494
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.42,
+      "length_m": {
+        "n": 8,
+        "mean": 15446.64460222266,
+        "std": 1921.6050170997744,
+        "p10": 13284.61032334923,
+        "median": 15420.077323349236,
+        "p90": 17558.27145145431,
+        "min": 12977.982323349228,
+        "max": 18978.441169748818
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 10093.502311559761,
+        "std": 420.9755621586132,
+        "p10": 9615.926621513689,
+        "median": 10023.880243138547,
+        "p90": 10637.735784201855,
+        "min": 9507.351190113612,
+        "max": 10827.427708325045
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 53.14867036328229,
+        "std": 18.69003962336663,
+        "p10": 31.070128712229113,
+        "median": 52.51602485976434,
+        "p90": 76.72634171692108,
+        "min": 27.98512903202679,
+        "max": 79.78070757346556
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 12.962500000001683,
+        "std": 22.45170859310976,
+        "p10": 0.0,
+        "median": 3.637978807091713e-12,
+        "p90": 51.84999999999709,
+        "min": 0.0,
+        "max": 51.85000000000218
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.5,
+      "length_m": {
+        "n": 8,
+        "mean": 17076.259517596456,
+        "std": 1714.2745915842852,
+        "p10": 15170.940323349232,
+        "median": 17030.026945577476,
+        "p90": 18783.53455145431,
+        "min": 15143.381323349226,
+        "max": 20850.20466974881
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 10832.646140541972,
+        "std": 421.2043689407327,
+        "p10": 10356.777083389907,
+        "median": 10764.954334563234,
+        "p90": 11377.768761773896,
+        "min": 10247.030808428193,
+        "max": 11565.786189701876
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 57.69180741879721,
+        "std": 14.84895624577564,
+        "p10": 39.03026133371203,
+        "median": 57.59223459367495,
+        "p90": 75.79025286946309,
+        "min": 38.689057192079176,
+        "max": 84.56098304609168
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 38.78216925240258,
+        "std": 41.95556861131321,
+        "p10": 1.1991000000003624,
+        "median": 35.78149999999641,
+        "p90": 76.09520000000447,
+        "min": 1.8189894035458565e-12,
+        "max": 138.4959999999919
+      }
+    },
+    {
+      "start": "Viikki",
+      "radius_m": 3000,
+      "width": 0.6,
+      "length_m": {
+        "n": 8,
+        "mean": 20692.957087987557,
+        "std": 2118.3720161456413,
+        "p10": 18866.269175533453,
+        "median": 19871.002396339623,
+        "p90": 23637.46756582894,
+        "min": 18483.158244815335,
+        "max": 25121.547823349232
+      },
+      "estimate_m": {
+        "n": 8,
+        "mean": 11798.59400914166,
+        "std": 421.557303588861,
+        "p10": 11324.955260005177,
+        "median": 11733.424760774902,
+        "p90": 12344.878611508428,
+        "min": 11213.67887169004,
+        "max": 12530.707729168067
+      },
+      "error_pct": {
+        "n": 8,
+        "mean": 75.46096610256072,
+        "std": 17.407220538553126,
+        "p10": 57.65605082040656,
+        "median": 70.64067902813466,
+        "p90": 94.83406684565362,
+        "min": 51.87058852322388,
+        "max": 111.86864885112922
+      },
+      "side_gap_m": {
+        "n": 8,
+        "mean": 85.11175000000685,
+        "std": 153.2000675715752,
+        "p10": 2.1464074961841108e-11,
+        "median": 5.083000000005995,
+        "p90": 213.04139999999964,
+        "min": 3.637978807091713e-12,
+        "max": 476.3309999999874
+      }
+    }
+  ]
+}

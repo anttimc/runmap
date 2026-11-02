@@ -7,10 +7,39 @@ import numpy as np
 
 from test_distance_shells import distances, straight_chunk
 from runmap.routing.numeric_search import NumericEndpoint
-from runmap.routing.turnaround import ellipse_extra_ratio, round_trip_samples
+from runmap.routing.turnaround import (cubic_extra_ratio, ellipse_extra_ratio, round_trip_samples,
+    target_region_score, width_residual_interval)
 
 
 class TurnaroundTests(unittest.TestCase):
+    def test_cubic_preserves_baseline_and_moves_wide_turnarounds_closer(self) -> None:
+        self.assertEqual(cubic_extra_ratio(0), 0)
+        values = [cubic_extra_ratio(float(width)) for width in np.linspace(0, .6, 121)]
+        self.assertTrue(all(a < b for a, b in zip(values, values[1:])))
+        self.assertGreater(cubic_extra_ratio(.5), ellipse_extra_ratio(.5))
+        # The 50%-width fitted curve predicts roughly 15.5 km for r=3 km, b=7.3 km.
+        self.assertAlmostEqual(7300 + 3000 * cubic_extra_ratio(.5), 15488, delta=20)
+
+    def test_residual_interpolation_and_zero_width(self) -> None:
+        self.assertEqual(width_residual_interval(0), (0, 0))
+        a, b, middle = width_residual_interval(.42), width_residual_interval(.5), width_residual_interval(.46)
+        np.testing.assert_allclose(middle, np.mean([a, b], axis=0))
+        for width in (-.01, .61, float("nan")):
+            with self.assertRaises(ValueError):
+                cubic_extra_ratio(width)
+
+    def test_uncertainty_region_matches_target_interval_overlap(self) -> None:
+        separation = np.full(100, 1000.)
+        predicted = np.linspace(5000, 16000, 100)
+        baseline = predicted - separation * cubic_extra_ratio(.6)
+        lower, upper = width_residual_interval(.6)
+        possible = ((baseline <= 10500) & (predicted + separation * upper >= 9500)
+                    & (np.maximum(baseline, predicted + separation * lower) <= 10500))
+        score = target_region_score(baseline, separation, 10000, .6)
+        np.testing.assert_array_equal(score <= 2, possible)
+        np.testing.assert_array_equal(score <= 1, (predicted >= 9500) & (predicted <= 10500))
+        self.assertTrue(np.isnan(score[baseline > 10500]).all())
+
     def test_circle_and_zero_width_limits(self) -> None:
         self.assertEqual(ellipse_extra_ratio(0), 0)
         self.assertAlmostEqual(ellipse_extra_ratio(0.5), math.pi - 2)

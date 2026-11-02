@@ -344,9 +344,13 @@ explicit scope before implementation. Route terrain inspection has outstanding
 
 - Validate the delivered [turnaround shading](distance-shells.md#estimated-turnaround-region)
   in the browser and with a local runner at contrasting starts, widths, distances,
-  and access policies. Measure cold and warm interactive latency and compare the
-  ellipse heuristic with actual route lengths; calibrate or replace its allowance
-  before treating the band as reliable distance guidance. Check responsive layout,
+  and access policies. Measure cold and warm interactive latency; validate the
+  deployed cubic and empirical uncertainty region against
+  target-distance contour selection. The
+  [offline polynomial comparison](archive/history/60-extended-width-polynomials.md)
+  is complete; independent uncertainty coverage on new starts/preferences,
+  wider-window search acceptance, and target-length success remain outstanding.
+  Check responsive layout,
   overlap with distance shells, and stale-request behavior during dragging.
 
 The [loop-length grid experiment](development.md#loop-length-parameter-grid)

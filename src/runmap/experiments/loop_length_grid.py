@@ -120,10 +120,12 @@ def iter_samples(path: Path) -> Iterator[GridSample]:
             yield GridSample(GridPoint(**record["point"]), response, float(record["wall_s"]), record.get("error"))
 
 
-def evaluate_point(data: SQLitePathData, config: GridConfig, point: GridPoint) -> GridSample:
+def evaluate_point(data: SQLitePathData, config: GridConfig, point: GridPoint,
+                   limits: RunAreaLimits = RunAreaLimits()) -> GridSample:
     tick = perf_counter()
     try:
-        response = generate_database_run(data, grid_request(config, data.dataset_id, point), timeout_s=config.timeout_s)
+        response = generate_database_run(data, grid_request(config, data.dataset_id, point),
+                                         timeout_s=config.timeout_s, limits=limits)
     except ValueError as error:
         # Preserve a reproducible failing input without assigning a made-up length.
         return GridSample(point, None, perf_counter() - tick, f"{type(error).__name__}: {error}")

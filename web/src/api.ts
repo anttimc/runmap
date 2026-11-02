@@ -153,6 +153,14 @@ export interface TurnaroundRegion extends GeoJSON.FeatureCollection {
   snapshot_id: string;
   target_m: number;
   width: number;
+  model: "cubic-extra-v1";
+  uncertainty: {
+    method: "held-start-residual-v1";
+    nominal_mass: number;
+    residual_per_separation: [number, number];
+    sampled_separation_m: [number, number];
+    independently_calibrated: boolean;
+  };
 }
 
 export function loadTurnaroundRegion(

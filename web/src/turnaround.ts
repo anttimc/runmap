@@ -100,6 +100,11 @@ export function startTurnaroundRegion(map: Map, options: Options): () => void {
           );
           if (current !== sequence) return;
           if (
+            region.model !== "cubic-extra-v1" ||
+            region.uncertainty?.method !== "held-start-residual-v1"
+          )
+            throw new Error("Turnaround model changed; reload the map.");
+          if (
             region.dataset_id !== options.datasetId ||
             region.snapshot_id !== snapshot.value.snapshot_id ||
             region.target_m !== targetM ||

@@ -833,3 +833,133 @@ no public deployment is part of the current setup.
 Source references: [MML dataset](https://www.maanmittauslaitos.fi/en/maps-and-spatial-data/datasets-and-interfaces/product-descriptions/elevation-model-2-m),
 [OSM attribution](https://www.openstreetmap.org/copyright), and
 [OSM vector tile policy](https://operations.osmfoundation.org/policies/vector/).
+
+## Multi-start loop-width sweep
+
+Sample physical route length against width while holding requested turnaround
+radius and bearing fixed:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.loop_width_sweep \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  artifacts/loop-width-sweep/<fresh-run-name>
+```
+
+Defaults: five starts (Leppävaara, Pasila, Keskuspuisto, Lauttasaari, Viikki),
+requested projected radii 1,500 and 3,000 m, twelve equally spaced bearings,
+widths 0/0.06/0.12/0.18/0.24/0.30/0.36/0.42/0.50/0.60, and a 3 s planner
+deadline. Hills are off, all surfaces allowed, stairs avoided, and snap radius
+is 50 m. `--bearings`, `--radii`, `--widths`, and `--timeout` override sampling.
+Width lists must increase strictly from zero. Starts are explicit experimental
+coordinates in `DEFAULT_STARTS`; they are not automatically moved to nicer paths.
+The output directory must not already exist. Sampling defaults to one worker and
+shares bounded graph caches across widths, releasing them between starts.
+`--workers 2` uses the two planner admission slots with ordered output. The
+manifest records concurrency; parallel wall times are not isolated latency
+measurements. `--max-area-km2` and `--max-segments` override only the experiment's
+search limits and are recorded in the manifest; runtime defaults stay unchanged.
+
+Outputs: full `samples.jsonl.gz`, a manifest with dataset/source/configuration
+identity and raw-file digest, `matched.csv`, `report.json`, and three PNG/SVG
+figures. To repeat only analysis and plotting:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.plot_loop_width_sweep \
+  artifacts/loop-width-sweep/<completed-run-name>
+```
+
+Analysis requires a complete manifest and matching raw digest/count. It retains
+only positions with complete results at every width, both nonzero-width side
+assignments, and identical endpoint snaps across widths. Orientations are averaged
+per position before reporting means, population SD, and 10th–90th percentiles
+across positions. Pooled statistics weight retained positions equally, so starts
+with more retained bearings contribute more. Spread is not a confidence interval.
+Failed searches remain outcomes, not fabricated lengths. Sparse surviving cohorts
+and excluded difficult directions limit generalization.
+
+The zero-width physical length supplies the unpenalized round-trip baseline with
+hills off. The ellipse comparator adds the former geometric width allowance using exact
+snapped projected separation; this isolates estimator behavior from map-grid
+interpolation. No fitted replacement is installed by this command. The
+[first multi-start report](archive/history/59-multi-start-loop-width.md) preserves
+observations and figures.
+
+### Anchored empirical width polynomials
+
+Extend the directional sweep to longer turnaround distances and fit candidates:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.loop_width_sweep \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  artifacts/loop-width-sweep/<fresh-extended-run> \
+  --radii 1500 3000 5000 10000 --timeout 15 \
+  --max-area-km2 10000 --max-segments 1200000 --workers 2
+uv run --extra web --extra experiments python -m runmap.experiments.fit_loop_width \
+  artifacts/loop-width-sweep/<completed-extended-run> \
+  artifacts/loop-width-fit/<fresh-fit-run>
+```
+
+The example deliberately enlarges offline search coverage: production area limits
+can censor 10 km turnarounds at wide settings and leave no all-width matched
+cohort. It does not change the app's limits. The extension reruns all radii with
+one deadline and loaded native binary; the
+manifest records the binary SHA-256 as well as dataset/source identity. Raw
+responses retain geometry; analysis releases it while reading to bound memory.
+Four-radius overview plots use a 2 × 2 layout.
+
+The fitting command uses the sweep's all-width matched cohorts, with both route
+orientations averaged per turnaround. It compares degrees 2, 3 and 4 in three
+families, all anchored to the zero-width baseline:
+
+- Width only: `L = b + r P(q)`.
+- Network detour: `L = b + r [P(q) + (b/r - 2) Q(q)]`.
+- Detour and radius: add `r (r/10000) S(q)` to the preceding expression.
+
+Here `q = width/0.6`, `r` is snapped projected separation in metres, `b` is the
+hills-Off zero-width distance, and each polynomial has no constant term.
+Weighted least squares minimizes error in `(L-b)/r`. Each represented
+start/radius cell has equal total weight. No outlier clipping or robust loss is
+used; sparse constrained starts, including Lauttasaari, remain in the fit.
+Failed planner searches are censored rather than assigned length labels.
+
+Validation leaves out each entire start, then independently each entire requested
+radius, grouping all bearings, widths and orientations. Model selection uses
+start/radius-balanced relative RMSE at nonzero widths in whole-start holdout.
+Zero-width observations remain exact anchors but are excluded from reported error
+metrics. The comparison is exploratory model selection, not an untouched final
+test. It does not prove target-distance contour success or individual-route
+quality. Dense-width diagnostics report predictions below the shortest baseline
+or decreasing width response; constraints are not imposed on the fit.
+
+The fresh output directory contains `fit.json` (coefficients, source digest,
+full-data and grouped-validation metrics, physical diagnostics),
+`predictions.csv`, and PNG/SVG fitted-curve and validation comparisons. The
+command does not change the runtime turnaround model.
+The [extended measurement report](archive/history/60-extended-width-polynomials.md)
+records the larger-window experiment, matched cohorts, coefficients, validation
+scores, and the tradeoff between a simple cubic and the richer numerical winner.
+
+### Export runtime turnaround calibration
+
+The app ships the simple cubic's coefficients and width-dependent empirical
+residual knots as a data-only Python module, independent of experiment libraries.
+To reproduce the current calibration from the preserved raw sweep:
+
+```sh
+uv run --extra web --extra experiments python -m runmap.experiments.calibrate_turnaround \
+  artifacts/loop-width-sweep/multi-start-wide-window-2026-11-02 \
+  artifacts/loop-width-fit/<fresh-calibration-report>.json \
+  --python-output src/runmap/routing/turnaround_calibration.py
+```
+
+The report path must be fresh. `--python-output` explicitly replaces the generated
+module; omit it when only producing a comparison report. The exporter refits the
+simple cubic with the same equal-cell loss and whole-start holdout, then adds
+both individual route orientations to its residual calibration. Quantile bounds
+are in route metres per metre of snapped direct separation. The runtime
+interpolates the knots and scales them by separation; there is no online fitting
+or extra route search. Nominal 80% spread is empirical, not an independent
+coverage guarantee. Model and calibration version names must change when shipped
+coefficients or residual data change, so response caches remain distinct.
+See [routing mathematics](reference/routing-mathematics.md#turnaround-region-estimate)
+for the mean, interval, map-region semantics, and calibration domain.

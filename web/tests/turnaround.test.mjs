@@ -55,6 +55,8 @@ test("width changes reuse snapshots and discard stale regions", async (context) 
       snapshot_id: "s",
       target_m: 10000,
       width,
+      model: width === 0.4 ? "ellipse-extra-v1" : "cubic-extra-v1",
+      uncertainty: { method: "held-start-residual-v1" },
     };
     if (width === 0.18) {
       oldSignal = options.signal;
@@ -99,6 +101,12 @@ test("width changes reuse snapshots and discard stale regions", async (context) 
   completeOld();
   await flush();
   assert.equal(displayed.width, 0.3);
+  width = 0.4;
+  refresh();
+  context.mock.timers.tick(300);
+  await flush();
+  assert.match(nodes.get("run-target-status").textContent, /model changed/);
+  assert.deepEqual(displayed.features, []);
   state.plannerMode = "one_way";
   refresh();
   assert.deepEqual(displayed.features, []);

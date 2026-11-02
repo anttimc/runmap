@@ -189,17 +189,24 @@ debounce. Turnaround selection starts automatically when calculation finishes;
 there is no separate calculate or select button to press. Changing inputs pauses
 selection until the updated region is ready. If calculation fails, change inputs
 to retry or switch to Choose on map.
-The darker teal band estimates routes within ±5% of the target; the lighter fringe
-extends to ±15%. Click to select a turnaround and generate a route manually.
+The darker teal band marks cubic mean estimates within ±5% of the target. The
+lighter uncertainty region contains locations whose empirical loop-length range
+overlaps that target interval. It uses width-dependent 10th–90th percentile
+prediction errors and can be asymmetric. Click to select a turnaround and
+generate a route manually. At zero width the uncertainty collapses to the core.
 The info popup beside Turnaround explains the shading and estimate limits.
 This layer does not request or choose individual routes.
 
 The estimate combines shortest legal outward-plus-return network distance with
-an ellipse-based width allowance; see [the mathematics](reference/routing-mathematics.md#turnaround-region-estimate).
-It respects surface and stair restrictions. Hill-related detours and orientation
-are not modeled. These are heuristic distance bands, not calibrated confidence
-intervals or promises about the generated run. Actual route length can differ
-substantially, because width is a soft penalty and roads constrain the shape.
+a fitted cubic width allowance; see [the mathematics](reference/routing-mathematics.md#turnaround-region-estimate).
+The empirical error range comes from whole-start holdout predictions at five
+starts, including Lauttasaari, and includes both individual route orientations.
+The fit and uncertainty data were measured at 1.5–10 km turnaround separations,
+with hills Off, all surfaces, and stairs avoided. Baseline searches follow the
+selected access policy, but the error range is not validated for other policies,
+hill detours, or extrapolation outside the sampled separation range. It is
+empirical spread, not independently calibrated confidence or a promise about
+an individual route. Width remains a soft penalty constrained by available paths.
 
 The layer uses a 50 m nearest-sample grid with a 150 m support radius, without
 smoothing. Cells whose baseline round trip exceeds 105% of the target are masked
@@ -214,3 +221,6 @@ old shading; sequence checks discard late responses. Expired snapshots are
 prepared again once. Server computation shares the shell service's two-worker,
 20-second deadline, bounded sample/response caches and grid limits. No extra
 dataset preparation is required; matching numeric routing data is required.
+The compact coefficients and residual knots ship as Python data, so changing
+width adds no searches or runtime fitting dependencies. Model and calibration
+versions are included in response-cache keys.

@@ -89,9 +89,10 @@ For round trips, choose the start, then choose a turnaround directly on the map.
 enter a distance and wait
 for the region, then select a turnaround directly on the map. Choose on map
 starts selection immediately. Dark teal means an estimated distance within
-±5% of the target; the lighter fringe extends to ±15%. Adjust Loop width to update
+±5% of the target; the lighter fringe shows empirical prediction uncertainty.
+Adjust Loop width to update
 the region, then choose a turnaround and generate the run normally. This estimate
-uses network access restrictions and an idealized shape allowance; hill detours
+uses network access restrictions and a fitted cubic width allowance; hill detours
 are not estimated. Actual run lengths may differ. See
 [turnaround shading](distance-shells.md#estimated-turnaround-region) for limits.
 

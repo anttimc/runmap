@@ -175,9 +175,19 @@ coverage limitation, independently of query-area exhaustion.
 (500–40000, finite), and `width` (0–0.6, default 0.18). It requires a numeric
 snapshot with a distance budget at least 115% of the target. It returns a GeoJSON
 FeatureCollection with `dataset_id`, `snapshot_id`, `target_m`, `width`,
-`tolerance=0.05`, and `model="ellipse-extra-v1"`. Features have `core` (boolean)
-and `lower_m`/`upper_m` compatibility properties holding **relative target error**,
-not metres. An empty collection is a valid result when no estimated region exists.
+`tolerance=0.05`, and `model="cubic-extra-v1"`. Features have `core` (boolean)
+and `region` (`target` or `uncertainty`). The former `lower_m`/`upper_m` properties
+are no longer returned: uncertainty contours do not represent fixed relative
+target-error bands. An empty collection is a valid result.
+
+`uncertainty` contains `method="held-start-residual-v1"`, `nominal_mass=0.8`,
+`residual_per_separation=[lower,upper]` for the requested width,
+`sampled_separation_m=[1500,10000]`, and `independently_calibrated=false`.
+Residuals have units of route metres per metre of direct separation. Bounds are
+linearly interpolated across width knots. The light region marks overlap between
+the empirical predicted-length interval and the target ±5% interval; it is not a
+fixed ±15% band or a guaranteed coverage statement. At width zero only the core
+is emitted. Model/calibration versions participate in encoded-response caching.
 
 Dataset mismatches return 409, expired snapshots 410, invalid inputs or insufficient
 budget 400, and deadlines 504. Responses use private revalidation; the server

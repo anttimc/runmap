@@ -172,8 +172,10 @@ Python locations below are relative to `src/runmap/`.
 The turnaround-region controller reuses exploration snapshots and requests advisory
 GeoJSON independently of route generation. `api/turnaround.py` adds a reverse
 native distance search, caches paired network samples in the shell service, and
-contours a width-dependent estimate from `routing/turnaround.py`. It shares shell
-worker, memory, coverage, and deadline limits. Experimental fitted models are not
-runtime dependencies. The [distance-shell guide](distance-shells.md#estimated-turnaround-region)
+contours a cubic estimate and empirical uncertainty from `routing/turnaround.py`.
+The offline calibration exporter produces the compact coefficient/residual data
+in `routing/turnaround_calibration.py`; no fitting library is needed at request
+time. The layer shares shell worker, memory, coverage, and deadline limits.
+The [distance-shell guide](distance-shells.md#estimated-turnaround-region)
 and [routing reference](reference/routing-mathematics.md#turnaround-region-estimate)
 define the display and estimator contracts.

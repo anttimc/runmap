@@ -18,6 +18,13 @@ The [environment acquisition](history/2026-11-02-environment-acquisition.md) and
 [source inspection progress](history/2026-11-02-environment-inspection.md) record
 the Leppävaara pilot, browser checks, road-class findings, and remaining review.
 
+The [multi-start loop-width sweep](history/59-multi-start-loop-width.md) measures
+mean physical loop length and variation against width at five starts and audits
+the runtime ellipse allowance with matched turnaround cohorts.
+The [extended sweep and polynomial fits](history/60-extended-width-polynomials.md)
+add 5 km and 10 km turnarounds, larger offline search windows, and whole-start
+and whole-radius validation with Lauttasaari retained.
+
 All supporting JSON, PNG, and SVG artifacts are beside their reports in
 `history/`. Recorded numbers describe the identified historical dataset and
 model; they do not prove current correctness, performance, or runner acceptance.

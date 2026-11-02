@@ -69,11 +69,13 @@
                       ?
                     </button>
                     <span role="tooltip" class="help-content" id="run-target-help">
-                      Approximate guidance from network distances and loop width. Darker shading
-                      shows estimates within ±5% of the target; lighter shading extends to ±15%.
-                      Choose a turnaround on the map, then generate a run to see its actual length.
-                      Actual runs may differ. Hill detours are not estimated, and shaded ground does
-                      not imply path access.
+                      Darker shading shows fitted cubic estimates within ±5% of the target. The
+                      lighter uncertainty region allows for the width-dependent empirical 10th–90th
+                      percentile of prediction errors. Choose a turnaround on the map, then generate
+                      a run to see its actual length. These ranges come from five starts with
+                      turnaround distances of 1.5–10 km, including both route orientations, with all
+                      surfaces and stairs avoided. They are approximate, not confidence guarantees.
+                      Hill detours are not estimated, and shaded ground does not imply path access.
                     </span>
                   </span>
                 </div>

@@ -276,24 +276,46 @@ $b(T)=d(H,T)+d(T,H)$ and projected separation $r=\|T-H\|$. The return search
 runs on reversed arcs; partial-segment distances reverse direction permissions
 as well. Distinct positions without both legal legs are excluded.
 
-For width ratio $a$, an ideal ellipse through $H,T$ has semiaxes $r/2$ and $ar$.
-Let $p(a)$ be its perimeter divided by $r$, using Ramanujan's approximation:
+For width $w\in[0,0.6]$, let $q=w/0.6$. The deployed mean is the simple
+empirical cubic, anchored to the unpenalized round trip:
 
 $$
-h=\left(\frac{1/2-a}{1/2+a}\right)^2,\qquad
-p(a)=\pi(1/2+a)\left(1+\frac{3h}{10+\sqrt{4-3h}}\right).
+\widehat L=b+r(2.293494214q-1.665533791q^2+3.411922003q^3).
 $$
 
-The estimate is $\widehat L(T,a)=b(T)+r\max(0,p(a)-2)$, with an explicit
-zero-width limit $\widehat L(T,0)=b(T)$. At $a=0.5$, a straight, undetoured
-baseline gives $\widehat L=\pi r$. The ellipse is a heuristic interpretation of
-the width slider, not a geometric constraint enforced by the planner. No fitted
-experimental coefficients or hill-detour estimates are used.
+At zero width, $\widehat L=b$. The correction is nonnegative and increasing over
+the supported width range. Full-precision coefficients ship in
+`routing/turnaround_calibration.py`; the
+[fit comparison](../archive/history/60-extended-width-polynomials.md) records
+whole-start and whole-radius validation, including constrained Lauttasaari cases.
+
+For uncertainty, use whole-start held-out predictions of this same cubic.
+At each sampled width, compute $(L_{\rm actual}-\widehat L_{\rm held})/r$
+for both individual route orientations. Each start/radius cell has equal total
+weight, split equally between orientations. Weighted midpoint-CDF quantiles at
+0.1 and 0.9 give residual bounds $e_{10}(w),e_{90}(w)$, enlarged to include zero.
+Interpolate bounds linearly between the ten width knots. The predicted-length
+interval is
+
+$$
+[\max(b,\widehat L+r e_{10}),\;\max(b,\widehat L+r e_{90})].
+$$
+
+The dark core is $0.95d\le\widehat L\le1.05d$. The light fringe contains
+additional locations where this interval overlaps $[0.95d,1.05d]$. Both are
+masked wherever $b>1.05d$. At zero width both residual bounds are zero, so no
+fringe is emitted. The
+[calibration record](../archive/history/61-cubic-turnaround-calibration.json)
+preserves coefficients, width knots, weights, per-width counts/empirical coverage,
+and source hashes. Its nominal 80% spread is not an independently validated
+coverage guarantee: it is conditional on successful all-width cases at five
+starts, with hills Off, all surfaces, stairs avoided and 1.5–10 km separations.
+Other preferences and distances are unvalidated extrapolations.
 
 The implementation samples network geometry at at most 25 m spacing and builds
 a nearest-sample baseline grid. At grid cell centres, projected separation supplies
-the width allowance. Contouring absolute relative target error gives a core at
-0–5% and a fringe at 5–15%. Baseline values above 105% of the target are masked.
+the cubic correction and residual allowance. The contour score maps the core to
+0–1 and the asymmetric fringe to 1–2; it is not itself a distance or probability.
 A snapshot must cover at least 115% of the target in each direction; the frontend
 rounds that budget up to whole kilometres. This conservative search extent also
 covers candidates in directed networks with unequal outward and return legs.

@@ -1,0 +1,2605 @@
+{
+  "manifest": {
+    "complete": true,
+    "created_utc": "2026-11-02T10:35:27.915384+00:00",
+    "config": {
+      "starts": [
+        {
+          "name": "Lepp\u00e4vaara",
+          "longitude": 24.795,
+          "latitude": 60.216
+        },
+        {
+          "name": "Pasila",
+          "longitude": 24.934125,
+          "latitude": 60.198361
+        },
+        {
+          "name": "Keskuspuisto",
+          "longitude": 24.908,
+          "latitude": 60.233
+        },
+        {
+          "name": "Lauttasaari",
+          "longitude": 24.875,
+          "latitude": 60.16
+        },
+        {
+          "name": "Viikki",
+          "longitude": 25.016,
+          "latitude": 60.227
+        }
+      ],
+      "radii_m": [
+        1500.0,
+        3000.0,
+        5000.0,
+        10000.0
+      ],
+      "widths": [
+        0,
+        0.06,
+        0.12,
+        0.18,
+        0.24,
+        0.3,
+        0.36,
+        0.42,
+        0.5,
+        0.6
+      ],
+      "bearings": 12,
+      "timeout_s": 15.0,
+      "limits": {
+        "max_area_km2": 10000.0,
+        "max_segments": 1200000,
+        "max_retries": 5,
+        "minimum_dimension_m": 1000,
+        "boundary_margin_m": 100
+      },
+      "workers": 2
+    },
+    "source": {
+      "revision": "6ee79f60fdd3acc6d9d121ee7245ce7c9d9bb262",
+      "working_tree_status": " M docs/100ms-routing-architecture.md\n M docs/README.md\n M docs/architecture.md\n M docs/archive/README.md\n M docs/development.md\n M docs/goals.md\n M docs/guide.md\n M docs/reference/api.md\n M docs/roadmap.md\n M pyproject.toml\n M rust/Cargo.toml\n M rust/src/bindings.rs\n M rust/src/chunk_graph.rs\n M rust/src/chunk_search.rs\n M rust/src/endpoint_overlay.rs\n M rust/src/fields.rs\n M rust/src/lib.rs\n M rust/src/native_graph.rs\n M rust/src/routing_cost.rs\n M src/runmap/api/app.py\n M src/runmap/experiments/loop_length_grid.py\n M uv.lock\n M web/index.html\n M web/vite.config.ts\n?? config/environment/\n?? docs/archive/history/2026-11-02-environment-acquisition.md\n?? docs/archive/history/2026-11-02-native-routing-profile.md\n?? docs/archive/history/59-multi-start-loop-width.json\n?? docs/archive/history/59-multi-start-loop-width.md\n?? docs/archive/history/59-width-by-start.png\n?? docs/archive/history/59-width-estimate-bias.png\n?? docs/archive/history/59-width-mean-spread.png\n?? docs/environment-preferences.md\n?? rust/src/profiling.rs\n?? src/runmap/api/environment.py\n?? src/runmap/experiments/fit_loop_width.py\n?? src/runmap/experiments/loop_width_sweep.py\n?? src/runmap/experiments/plot_loop_width_sweep.py\n?? src/runmap/experiments/plot_native_profile.py\n?? src/runmap/experiments/profile_native.py\n?? src/runmap/sources/environment.py\n?? tests/test_environment_acquisition.py\n?? tests/test_environment_inspection.py\n?? tests/test_fit_loop_width.py\n?? tests/test_loop_width_sweep.py\n?? web/environment.html\n?? web/src/environment.css\n?? web/src/environment.ts\n",
+      "python_rust_source_sha256": "0ae67d449424dfc632e013bc281eb58bab31ef968193b6d102758f17555ac23a"
+    },
+    "machine": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "database": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/network.sqlite",
+    "run_area_limits": {
+      "max_area_km2": 10000.0,
+      "max_segments": 1200000,
+      "max_retries": 5,
+      "minimum_dimension_m": 1000,
+      "boundary_margin_m": 100
+    },
+    "policy": {
+      "surface": "all",
+      "avoid_stairs": true,
+      "hills": "off",
+      "snap_radius_m": 50
+    },
+    "design": "Fixed requested projected radii; equally spaced bearings; adjacent widths; ordered output; at most two concurrent planner calls",
+    "native_binary_sha256": "93bb8f39368cc0639f7be48f0b4da54ad0009764fa406e830c31dea28ade17b5",
+    "snapped_starts": {
+      "Lepp\u00e4vaara": {
+        "segment_id": "w781521939p1",
+        "graph_offset_m": 27.673190806798456,
+        "chainage_m": 27.767376904317953,
+        "longitude": 24.795002476701672,
+        "latitude": 60.21599184462749,
+        "offset_m": 0.9187536244141955
+      },
+      "Pasila": {
+        "segment_id": "w133875783p1",
+        "graph_offset_m": 50.401464938173326,
+        "chainage_m": 50.553132484460214,
+        "longitude": 24.9339784773051,
+        "latitude": 60.19836231712753,
+        "offset_m": 8.126352644291345
+      },
+      "Keskuspuisto": {
+        "segment_id": "w50674793p1",
+        "graph_offset_m": 34.63951497682209,
+        "chainage_m": 34.70615368008799,
+        "longitude": 24.908100928089464,
+        "latitude": 60.23302287724327,
+        "offset_m": 6.144190943302845
+      },
+      "Lauttasaari": {
+        "segment_id": "w1296326549p0",
+        "graph_offset_m": 9.700330891026073,
+        "chainage_m": 9.731811596191122,
+        "longitude": 24.874988231005595,
+        "latitude": 60.1599737192963,
+        "offset_m": 2.999423471921771
+      },
+      "Viikki": {
+        "segment_id": "w4276024p0",
+        "graph_offset_m": 10.866661674616635,
+        "chainage_m": 10.886964408860877,
+        "longitude": 25.016224119660674,
+        "latitude": 60.22697672546733,
+        "offset_m": 12.684732719668443
+      }
+    },
+    "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+    "metadata": {
+      "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+      "measurement_sha256": "cbd12dcf1a757b40cff025069a19814228dc55fe87936588744a6d3d2fd4fbc4",
+      "method": {
+        "schema_version": 1,
+        "manifest_id": "leppavaara-98e1c3956d293f61",
+        "source": "spectral-thin-plate terrain gradient",
+        "wavelength_m": 40,
+        "sampling_interval_m": 10.0,
+        "method": "integrated directional derivative of the prepared 2D terrain surface",
+        "chainage_crs": "EPSG:3067",
+        "graph_chainage": "cumulative geodesic vertex lengths scaled to stored segment length",
+        "profile_kind": "estimated terrain height change from each valid run start",
+        "valid_fraction": 0.9723932517136071
+      },
+      "feature_identity": "54d3377ce4c981966caa15f603987010c8b570ab6ff6365517c71fbbee9df3f8",
+      "models": {
+        "version": "prepared-path-features-v1",
+        "flat_version": "flat-run-thresholds-v1",
+        "flat_minimum_length_m": 50.0,
+        "flat_grade_thresholds": [
+          1.0,
+          1.5,
+          2.0,
+          2.5,
+          3.0,
+          3.5,
+          4.0,
+          4.5,
+          5.0,
+          5.5,
+          6.0,
+          6.5,
+          7.0,
+          7.5,
+          8.0,
+          8.5,
+          9.0,
+          9.5,
+          10.0
+        ],
+        "coverage_version": "coverage-band-100m-v1",
+        "classifier_version": "building-access-v1",
+        "access_policy": "public:all:stairs-0",
+        "entrance_limit_m": 150.0,
+        "policy_version": "public-pedestrian-v1",
+        "boundary_version": "prepared-route-boundaries-v1",
+        "profiles": [
+          {
+            "id": "public:all:stairs-0",
+            "forbidden_access_values": [
+              "no",
+              "private",
+              "destination",
+              "customers",
+              "permit",
+              "delivery"
+            ],
+            "forbidden_highways": [],
+            "surface_preference": "all"
+          },
+          {
+            "id": "public:all:stairs-1",
+            "forbidden_access_values": [
+              "no",
+              "private",
+              "destination",
+              "customers",
+              "permit",
+              "delivery"
+            ],
+            "forbidden_highways": [
+              "steps"
+            ],
+            "surface_preference": "all"
+          },
+          {
+            "id": "public:surfaced:stairs-0",
+            "forbidden_access_values": [
+              "no",
+              "private",
+              "destination",
+              "customers",
+              "permit",
+              "delivery"
+            ],
+            "forbidden_highways": [],
+            "surface_preference": "surfaced"
+          },
+          {
+            "id": "public:surfaced:stairs-1",
+            "forbidden_access_values": [
+              "no",
+              "private",
+              "destination",
+              "customers",
+              "permit",
+              "delivery"
+            ],
+            "forbidden_highways": [
+              "steps"
+            ],
+            "surface_preference": "surfaced"
+          }
+        ],
+        "hill_model": {
+          "version": "minetti-excess-uphill-preference-v4",
+          "source_doi": "10.1152/japplphysiol.01177.2001",
+          "coefficients": [
+            155.4,
+            -30.4,
+            -43.3,
+            46.3,
+            19.5,
+            3.6
+          ],
+          "fitted_grade_limit": 0.45,
+          "outside_fit_policy": "boundary_tangent",
+          "uncertain_grade_percent": 20.0,
+          "uphill_reference_grade_percent": 5.0,
+          "uphill_grade_power": 2.0
+        }
+      },
+      "coverage": {
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                24.485592334089187,
+                60.0532142581638
+              ],
+              [
+                25.203499903548206,
+                60.06492020259771
+              ],
+              [
+                25.183728785678415,
+                60.42389879708035
+              ],
+              [
+                24.45793807072059,
+                60.412022311240314
+              ],
+              [
+                24.485592334089187,
+                60.0532142581638
+              ]
+            ]
+          ]
+        },
+        "kind": "prepared_extract"
+      },
+      "distance_scale": 0.9875466740314615,
+      "hill_valid_fraction": 0.9723932517136071,
+      "hill_trusted_fraction": 0.9660002213398512
+    },
+    "cost_model": {
+      "model_version": "distance-preferences-v1",
+      "units": "equivalent_metres",
+      "shape_settings": {
+        "avoidance_ratio": 0.0,
+        "centre_enabled": true,
+        "radius_ratio": 0.15,
+        "transition_ratio": 0.05,
+        "side_strength": 2.0,
+        "reuse_strength": 4.0
+      },
+      "shape_strengths": {
+        "centre": 0.0,
+        "side": 0.0,
+        "reuse": 0.0
+      },
+      "preferences": {
+        "settings": {
+          "hills": "off",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off"
+        },
+        "weights": {
+          "hills": 0.0,
+          "signals": 0.0,
+          "busy_roads": 0.0,
+          "greenery": 0.0
+        },
+        "weight_tables": {
+          "hills": {
+            "version": "minetti-excess-equivalent-metres-v4",
+            "off": 0.0,
+            "low": 1.0,
+            "high": 6.0
+          },
+          "signals": {
+            "version": "signals-off-v1",
+            "off": 0.0,
+            "low": null,
+            "high": null
+          },
+          "busy_roads": {
+            "version": "busy-roads-off-v1",
+            "off": 0.0,
+            "low": null,
+            "high": null
+          },
+          "greenery": {
+            "version": "greenery-off-v1",
+            "off": 0.0,
+            "low": null,
+            "high": null
+          }
+        }
+      },
+      "capabilities": {
+        "hills": {
+          "supported_levels": [
+            "off",
+            "low",
+            "high"
+          ],
+          "feature_version": "minetti-excess-uphill-preference-v4",
+          "coverage_fraction": 0.9723932517136071,
+          "unavailable_reason": null
+        },
+        "signals": {
+          "supported_levels": [
+            "off"
+          ],
+          "feature_version": null,
+          "coverage_fraction": null,
+          "unavailable_reason": "Crossing passage attribution is not prepared."
+        },
+        "busy_roads": {
+          "supported_levels": [
+            "off"
+          ],
+          "feature_version": null,
+          "coverage_fraction": null,
+          "unavailable_reason": "Buffered road context is not prepared."
+        },
+        "greenery": {
+          "supported_levels": [
+            "off"
+          ],
+          "feature_version": null,
+          "coverage_fraction": null,
+          "unavailable_reason": "Buffered green-area context is not prepared."
+        }
+      },
+      "hill_model": {
+        "version": "minetti-excess-uphill-preference-v4",
+        "source_doi": "10.1152/japplphysiol.01177.2001",
+        "coefficients": [
+          155.4,
+          -30.4,
+          -43.3,
+          46.3,
+          19.5,
+          3.6
+        ],
+        "fitted_grade_limit": 0.45,
+        "outside_fit_policy": "boundary_tangent",
+        "uncertain_grade_percent": 20.0,
+        "uphill_reference_grade_percent": 5.0,
+        "uphill_grade_power": 2.0
+      }
+    },
+    "statuses": {
+      "planner_error": 20,
+      "complete": 1577,
+      "no_eligible_snap": 750,
+      "unreachable": 30,
+      "area_limited": 23
+    },
+    "evaluations": 2400,
+    "total_s": 489.96244354196824,
+    "samples_sha256": "8ae22ce287bccdd16f0c09656110f491756296ea278dfb3388b9249c82ea45c4"
+  },
+  "excluded_positions": {
+    "incomplete_or_failed_position": 84
+  },
+  "rows": 1560,
+  "positions": 156,
+  "selection": "Lowest start/radius-balanced relative RMSE in leave-one-start-out predictions, nonzero widths only. Exploratory model selection, not an untouched final test.",
+  "loss": "Weighted squared error of (L-baseline)/r; equal total weight per represented start/radius cell. Both orientations averaged before fitting. No outlier removal, clipping or robust loss.",
+  "equation": "L=b+r*[P(q)+(b/r-2)*Q(q)+(r/10000)*S(q)], q=width/0.6; polynomials have no constant terms; omit Q/S for simpler families",
+  "selected_index": 7,
+  "models": [
+    {
+      "family": "width",
+      "degree": 2,
+      "terms": [
+        "1*q^1",
+        "1*q^2"
+      ],
+      "coefficients": [
+        0.8143499744604924,
+        3.0874431925562043
+      ],
+      "rank": 2,
+      "condition": 7.372762403878377,
+      "train": {
+        "mae_m": 1722.0511532705023,
+        "rmse_m": 2722.6734110220946,
+        "mape_pct": 8.938167448835374,
+        "relative_rmse_pct": 12.069304512594549,
+        "bias_m": 351.4829041680537,
+        "within_5_pct": 37.743125701459036,
+        "within_10_pct": 66.3303872053872,
+        "unweighted_p90_abs_m": 3681.6429280822404
+      },
+      "held_start": {
+        "mae_m": 1758.8662176538023,
+        "rmse_m": 2757.184829694407,
+        "mape_pct": 9.124876064784868,
+        "relative_rmse_pct": 12.237352970100915,
+        "bias_m": 351.45167152565233,
+        "within_5_pct": 36.76234567901234,
+        "within_10_pct": 65.0959595959596,
+        "unweighted_p90_abs_m": 3803.230554001464
+      },
+      "held_radius": {
+        "mae_m": 1900.3784077110752,
+        "rmse_m": 3098.469306623134,
+        "mape_pct": 9.304921105052358,
+        "relative_rmse_pct": 12.510570339950167,
+        "bias_m": 498.9617245364628,
+        "within_5_pct": 37.69374298540965,
+        "within_10_pct": 63.67746913580247,
+        "unweighted_p90_abs_m": 4072.0259446015207
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1552.161011222671,
+          "rmse_m": 2447.1135009870477,
+          "mape_pct": 7.859183064982214,
+          "relative_rmse_pct": 9.719892868850176,
+          "bias_m": 764.5423440150485,
+          "within_5_pct": 37.11279461279461,
+          "within_10_pct": 67.88720538720537,
+          "unweighted_p90_abs_m": 3488.322331143934
+        },
+        "Lauttasaari": {
+          "mae_m": 2636.2527766826133,
+          "rmse_m": 3938.000544413677,
+          "mape_pct": 13.994444198950035,
+          "relative_rmse_pct": 18.718742944055975,
+          "bias_m": -133.93734189924987,
+          "within_5_pct": 27.73148148148148,
+          "within_10_pct": 50.55555555555556,
+          "unweighted_p90_abs_m": 7583.698809278787
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1507.9284770192432,
+          "rmse_m": 2301.3724855712803,
+          "mape_pct": 8.111396373768725,
+          "relative_rmse_pct": 10.199043326424121,
+          "bias_m": 306.29476424122635,
+          "within_5_pct": 38.148148148148145,
+          "within_10_pct": 67.68518518518516,
+          "unweighted_p90_abs_m": 3007.580834409029
+        },
+        "Pasila": {
+          "mae_m": 1666.4371528704182,
+          "rmse_m": 2593.194937028939,
+          "mape_pct": 8.21874853823421,
+          "relative_rmse_pct": 10.148332043673827,
+          "bias_m": 794.5619255440621,
+          "within_5_pct": 36.127946127946124,
+          "within_10_pct": 66.94444444444443,
+          "unweighted_p90_abs_m": 3870.677980463096
+        },
+        "Viikki": {
+          "mae_m": 1431.5516704740653,
+          "rmse_m": 2119.705840958206,
+          "mape_pct": 7.44060814798915,
+          "relative_rmse_pct": 9.843132415226632,
+          "bias_m": 25.796665727174634,
+          "within_5_pct": 44.69135802469136,
+          "within_10_pct": 72.40740740740739,
+          "unweighted_p90_abs_m": 3227.4476317110557
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 771.6163334061508,
+          "rmse_m": 1731.2368186619456,
+          "mape_pct": 10.062356053464654,
+          "relative_rmse_pct": 14.02634345316977,
+          "bias_m": -221.2878944324393,
+          "within_5_pct": 35.607182940516275,
+          "within_10_pct": 63.15151515151515,
+          "unweighted_p90_abs_m": 1249.2354333370952
+        },
+        "3000.0": {
+          "mae_m": 1600.178370295421,
+          "rmse_m": 2642.292454941889,
+          "mape_pct": 10.748423419862812,
+          "relative_rmse_pct": 14.648031437187953,
+          "bias_m": -632.3428746981998,
+          "within_5_pct": 35.787878787878775,
+          "within_10_pct": 60.343434343434346,
+          "unweighted_p90_abs_m": 3096.501309882702
+        },
+        "5000.0": {
+          "mae_m": 1652.2281581046295,
+          "rmse_m": 2164.777559131693,
+          "mape_pct": 8.129459572712925,
+          "relative_rmse_pct": 9.99148107579892,
+          "bias_m": 388.54964973562824,
+          "within_5_pct": 35.283950617283956,
+          "within_10_pct": 66.96296296296293,
+          "unweighted_p90_abs_m": 3396.9478724111536
+        },
+        "10000.0": {
+          "mae_m": 3011.4420088090073,
+          "rmse_m": 3967.7601389365977,
+          "mape_pct": 7.559265213099072,
+          "relative_rmse_pct": 9.37434803707318,
+          "bias_m": 1870.8878054976203,
+          "within_5_pct": 40.37037037037037,
+          "within_10_pct": 69.92592592592592,
+          "unweighted_p90_abs_m": 6777.210075600466
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 432.39459148010815,
+          "rmse_m": 656.3625568910683,
+          "mape_pct": 3.5720639781992922,
+          "relative_rmse_pct": 4.652675479829972,
+          "bias_m": -338.87855751911474,
+          "within_5_pct": 70.74873737373737,
+          "within_10_pct": 98.03535353535354,
+          "unweighted_p90_abs_m": 887.3344306048239
+        },
+        "0.12": {
+          "mae_m": 893.5606303286739,
+          "rmse_m": 1335.7864903815878,
+          "mape_pct": 6.495930673716037,
+          "relative_rmse_pct": 8.258048555709477,
+          "bias_m": -679.9394752935378,
+          "within_5_pct": 48.27525252525252,
+          "within_10_pct": 80.02777777777777,
+          "unweighted_p90_abs_m": 2006.721394022963
+        },
+        "0.18": {
+          "mae_m": 1109.5121242699147,
+          "rmse_m": 1566.0324460168415,
+          "mape_pct": 8.119944543194809,
+          "relative_rmse_pct": 10.304155891738208,
+          "bias_m": -693.5219022695276,
+          "within_5_pct": 37.63383838383838,
+          "within_10_pct": 69.06439393939394,
+          "unweighted_p90_abs_m": 2215.7964044344717
+        },
+        "0.24": {
+          "mae_m": 1055.5087132418548,
+          "rmse_m": 1476.2605673625085,
+          "mape_pct": 7.4060677899449825,
+          "relative_rmse_pct": 9.925157359066532,
+          "bias_m": -107.83354901626178,
+          "within_5_pct": 45.03409090909091,
+          "within_10_pct": 72.24494949494951,
+          "unweighted_p90_abs_m": 2441.623364845671
+        },
+        "0.3": {
+          "mae_m": 1440.9218995038568,
+          "rmse_m": 1886.8004911943012,
+          "mape_pct": 9.36949642660418,
+          "relative_rmse_pct": 11.61493179941639,
+          "bias_m": 527.9912976461034,
+          "within_5_pct": 27.714646464646464,
+          "within_10_pct": 66.20833333333334,
+          "unweighted_p90_abs_m": 2876.267761398314
+        },
+        "0.36": {
+          "mae_m": 1598.0790948157023,
+          "rmse_m": 2156.3349307800254,
+          "mape_pct": 9.464625472468773,
+          "relative_rmse_pct": 12.234839441594204,
+          "bias_m": 855.1047993999478,
+          "within_5_pct": 37.371212121212125,
+          "within_10_pct": 62.76010101010101,
+          "unweighted_p90_abs_m": 3135.953726064992
+        },
+        "0.42": {
+          "mae_m": 2535.9460411363834,
+          "rmse_m": 3517.03132460617,
+          "mape_pct": 12.351258418308639,
+          "relative_rmse_pct": 15.665486322678262,
+          "bias_m": 1138.5237970639073,
+          "within_5_pct": 22.708333333333332,
+          "within_10_pct": 46.97727272727273,
+          "unweighted_p90_abs_m": 4975.208952940964
+        },
+        "0.5": {
+          "mae_m": 3145.0929570901208,
+          "rmse_m": 4162.0358536273,
+          "mape_pct": 12.973133487072403,
+          "relative_rmse_pct": 16.155975815996054,
+          "bias_m": 1230.2718505764958,
+          "within_5_pct": 19.472222222222218,
+          "within_10_pct": 39.82449494949495,
+          "unweighted_p90_abs_m": 6875.31008398323
+        },
+        "0.6": {
+          "mae_m": 3618.779907017607,
+          "rmse_m": 4865.164459168672,
+          "mape_pct": 12.371363793554684,
+          "relative_rmse_pct": 16.193430271602274,
+          "bias_m": 1231.3467831428588,
+          "within_5_pct": 21.902777777777775,
+          "within_10_pct": 50.72095959595959,
+          "unweighted_p90_abs_m": 6899.172850471932
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 0,
+        "positions_with_decreasing_width_length": 0
+      }
+    },
+    {
+      "family": "width",
+      "degree": 3,
+      "terms": [
+        "1*q^1",
+        "1*q^2",
+        "1*q^3"
+      ],
+      "coefficients": [
+        2.2934942140436365,
+        -1.665533790764398,
+        3.4119220026035446
+      ],
+      "rank": 3,
+      "condition": 50.063194640435626,
+      "train": {
+        "mae_m": 1650.2966889616246,
+        "rmse_m": 2685.661440607202,
+        "mape_pct": 8.53245721572558,
+        "relative_rmse_pct": 11.669433611067879,
+        "bias_m": 463.56189375629157,
+        "within_5_pct": 40.53843995510662,
+        "within_10_pct": 69.46127946127946,
+        "unweighted_p90_abs_m": 3450.1398582806014
+      },
+      "held_start": {
+        "mae_m": 1685.7353924389809,
+        "rmse_m": 2721.9570022207517,
+        "mape_pct": 8.706948976033793,
+        "relative_rmse_pct": 11.850179275812367,
+        "bias_m": 463.53093752614745,
+        "within_5_pct": 39.063692480359144,
+        "within_10_pct": 67.69234006734007,
+        "unweighted_p90_abs_m": 3542.0960889419116
+      },
+      "held_radius": {
+        "mae_m": 1821.3379561974248,
+        "rmse_m": 3069.9797008078126,
+        "mape_pct": 8.919717036343364,
+        "relative_rmse_pct": 12.147807794401947,
+        "bias_m": 617.5357254151913,
+        "within_5_pct": 39.766133557800224,
+        "within_10_pct": 67.40207631874297,
+        "unweighted_p90_abs_m": 3808.2469562999786
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1419.7554670915533,
+          "rmse_m": 2370.3070364665678,
+          "mape_pct": 7.088621988485948,
+          "relative_rmse_pct": 8.940599036493978,
+          "bias_m": 875.8012576843894,
+          "within_5_pct": 44.70538720538719,
+          "within_10_pct": 72.23063973063972,
+          "unweighted_p90_abs_m": 3140.4658933018186
+        },
+        "Lauttasaari": {
+          "mae_m": 2683.5759330916662,
+          "rmse_m": 3973.0904984245108,
+          "mape_pct": 14.413524845224728,
+          "relative_rmse_pct": 18.77229582126639,
+          "bias_m": -16.59452907877953,
+          "within_5_pct": 22.962962962962962,
+          "within_10_pct": 45.18518518518518,
+          "unweighted_p90_abs_m": 7047.793974834625
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1410.1131861325996,
+          "rmse_m": 2209.9298310427475,
+          "mape_pct": 7.499592836601134,
+          "relative_rmse_pct": 9.532472240897153,
+          "bias_m": 416.5148479841139,
+          "within_5_pct": 41.94444444444444,
+          "within_10_pct": 71.23456790123454,
+          "unweighted_p90_abs_m": 2708.5204409602484
+        },
+        "Pasila": {
+          "mae_m": 1548.0852151312388,
+          "rmse_m": 2527.13561948781,
+          "mape_pct": 7.398703433730741,
+          "relative_rmse_pct": 9.398858244472299,
+          "bias_m": 901.3789241434775,
+          "within_5_pct": 39.67171717171717,
+          "within_10_pct": 73.19865319865319,
+          "unweighted_p90_abs_m": 3452.0226315268856
+        },
+        "Viikki": {
+          "mae_m": 1367.1471607478468,
+          "rmse_m": 2090.7514812818354,
+          "mape_pct": 7.134301776126417,
+          "relative_rmse_pct": 9.51807645949602,
+          "bias_m": 140.55418689753589,
+          "within_5_pct": 46.03395061728395,
+          "within_10_pct": 76.61265432098764,
+          "unweighted_p90_abs_m": 3024.159819058726
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 750.7764028956566,
+          "rmse_m": 1709.859137649127,
+          "mape_pct": 9.634268344438746,
+          "relative_rmse_pct": 13.554135897178657,
+          "bias_m": -186.8268399495133,
+          "within_5_pct": 37.37710437710437,
+          "within_10_pct": 65.03591470258137,
+          "unweighted_p90_abs_m": 1261.1778774446996
+        },
+        "3000.0": {
+          "mae_m": 1566.242872168229,
+          "rmse_m": 2649.6927699115263,
+          "mape_pct": 10.402415904860446,
+          "relative_rmse_pct": 14.464956042440742,
+          "bias_m": -563.3486059416557,
+          "within_5_pct": 36.38383838383837,
+          "within_10_pct": 62.893939393939405,
+          "unweighted_p90_abs_m": 3070.137768069574
+        },
+        "5000.0": {
+          "mae_m": 1586.079551987335,
+          "rmse_m": 2121.41761904688,
+          "mape_pct": 7.714042235765728,
+          "relative_rmse_pct": 9.509164825471158,
+          "bias_m": 503.5009590247349,
+          "within_5_pct": 37.30864197530865,
+          "within_10_pct": 68.39506172839504,
+          "unweighted_p90_abs_m": 3430.665456178828
+        },
+        "10000.0": {
+          "mae_m": 2839.842742704703,
+          "rmse_m": 3897.6014326542113,
+          "mape_pct": 7.077069419070256,
+          "relative_rmse_pct": 8.850606000080663,
+          "bias_m": 2100.7982369710235,
+          "within_5_pct": 45.185185185185176,
+          "within_10_pct": 74.44444444444444,
+          "unweighted_p90_abs_m": 7047.793974834625
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 433.83684117828807,
+          "rmse_m": 591.7463352096698,
+          "mape_pct": 3.483180646073468,
+          "relative_rmse_pct": 4.036931599617489,
+          "bias_m": 167.15353757077213,
+          "within_5_pct": 78.24621212121212,
+          "within_10_pct": 100.0,
+          "unweighted_p90_abs_m": 865.702692605164
+        },
+        "0.12": {
+          "mae_m": 760.332479620758,
+          "rmse_m": 1096.615911167001,
+          "mape_pct": 5.585320791587758,
+          "relative_rmse_pct": 6.9335067523981415,
+          "bias_m": -31.508915318192976,
+          "within_5_pct": 52.55934343434343,
+          "within_10_pct": 84.33459595959596,
+          "unweighted_p90_abs_m": 1680.3622814922019
+        },
+        "0.18": {
+          "mae_m": 1035.7847235167565,
+          "rmse_m": 1384.899881384208,
+          "mape_pct": 7.6156559831926,
+          "relative_rmse_pct": 9.597664008642765,
+          "bias_m": -166.5230976931723,
+          "within_5_pct": 37.28914141414141,
+          "within_10_pct": 71.0909090909091,
+          "unweighted_p90_abs_m": 1856.9376366014922
+        },
+        "0.24": {
+          "mae_m": 1078.1624512402536,
+          "rmse_m": 1498.8344058148211,
+          "mape_pct": 7.5596955627492,
+          "relative_rmse_pct": 10.118416807978878,
+          "bias_m": 133.70668979663674,
+          "within_5_pct": 49.11616161616161,
+          "within_10_pct": 76.08838383838385,
+          "unweighted_p90_abs_m": 2436.55285569618
+        },
+        "0.3": {
+          "mae_m": 1392.2564245194271,
+          "rmse_m": 1829.8225826978817,
+          "mape_pct": 9.14118270815569,
+          "relative_rmse_pct": 11.422445587880414,
+          "bias_m": 419.8495702510604,
+          "within_5_pct": 28.093434343434343,
+          "within_10_pct": 66.48232323232322,
+          "unweighted_p90_abs_m": 2711.2905946757
+        },
+        "0.36": {
+          "mae_m": 1385.1505633454901,
+          "rmse_m": 1932.4750964214957,
+          "mape_pct": 8.539108458811299,
+          "relative_rmse_pct": 11.404244407526201,
+          "bias_m": 432.8611152724569,
+          "within_5_pct": 39.24873737373738,
+          "within_10_pct": 66.92929292929293,
+          "unweighted_p90_abs_m": 2733.36870655434
+        },
+        "0.42": {
+          "mae_m": 2176.254490616464,
+          "rmse_m": 3194.1455091995886,
+          "mape_pct": 10.849126590239667,
+          "relative_rmse_pct": 14.624772094605476,
+          "bias_m": 537.5615755994464,
+          "within_5_pct": 25.71085858585859,
+          "within_10_pct": 57.82702020202019,
+          "unweighted_p90_abs_m": 4425.724624745417
+        },
+        "0.5": {
+          "mae_m": 2880.6530201386677,
+          "rmse_m": 3877.8885698579293,
+          "mape_pct": 12.084394666316411,
+          "relative_rmse_pct": 15.592124395060731,
+          "bias_m": 774.114397016167,
+          "within_5_pct": 23.450757575757574,
+          "within_10_pct": 49.5820707070707,
+          "unweighted_p90_abs_m": 6359.451491995454
+        },
+        "0.6": {
+          "mae_m": 4029.1875377747238,
+          "rmse_m": 5351.725972194501,
+          "mape_pct": 13.504875377178053,
+          "relative_rmse_pct": 16.954218896393574,
+          "bias_m": 1904.5635652401525,
+          "within_5_pct": 17.858585858585858,
+          "within_10_pct": 36.89646464646464,
+          "unweighted_p90_abs_m": 8028.341779875944
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 0,
+        "positions_with_decreasing_width_length": 0
+      }
+    },
+    {
+      "family": "width",
+      "degree": 4,
+      "terms": [
+        "1*q^1",
+        "1*q^2",
+        "1*q^3",
+        "1*q^4"
+      ],
+      "coefficients": [
+        2.983209119536174,
+        -5.7138000221715,
+        10.317570448327748,
+        -3.5665378815977156
+      ],
+      "rank": 4,
+      "condition": 331.89243052889805,
+      "train": {
+        "mae_m": 1657.1129725642463,
+        "rmse_m": 2687.6467146116247,
+        "mape_pct": 8.580087175524234,
+        "relative_rmse_pct": 11.681302120532228,
+        "bias_m": 479.9861620871974,
+        "within_5_pct": 39.17887205387205,
+        "within_10_pct": 68.74031986531988,
+        "unweighted_p90_abs_m": 3444.028478609777
+      },
+      "held_start": {
+        "mae_m": 1697.4787924019001,
+        "rmse_m": 2731.818979351962,
+        "mape_pct": 8.769238015128126,
+        "relative_rmse_pct": 11.905373539788917,
+        "bias_m": 479.95463415051347,
+        "within_5_pct": 38.334455667789,
+        "within_10_pct": 67.08024691358025,
+        "unweighted_p90_abs_m": 3551.6541528182806
+      },
+      "held_radius": {
+        "mae_m": 1831.846439466612,
+        "rmse_m": 3074.687597435076,
+        "mape_pct": 8.967967775216982,
+        "relative_rmse_pct": 12.162310926366636,
+        "bias_m": 636.2171730966488,
+        "within_5_pct": 38.54924242424242,
+        "within_10_pct": 66.78367003367003,
+        "unweighted_p90_abs_m": 3848.3447533356652
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1435.4692118553276,
+          "rmse_m": 2383.2815514314593,
+          "mape_pct": 7.18942386260032,
+          "relative_rmse_pct": 9.051923895191829,
+          "bias_m": 899.1999168895859,
+          "within_5_pct": 43.434343434343425,
+          "within_10_pct": 70.97643097643096,
+          "unweighted_p90_abs_m": 3350.3889389715237
+        },
+        "Lauttasaari": {
+          "mae_m": 2684.10419221166,
+          "rmse_m": 3978.1752032185796,
+          "mape_pct": 14.398564223907323,
+          "relative_rmse_pct": 18.796741806451788,
+          "bias_m": -22.433540885798486,
+          "within_5_pct": 24.12037037037037,
+          "within_10_pct": 45.41666666666666,
+          "unweighted_p90_abs_m": 6906.226089003241
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1445.1388714650716,
+          "rmse_m": 2239.7629572454575,
+          "mape_pct": 7.661351524359242,
+          "relative_rmse_pct": 9.638385179307067,
+          "bias_m": 440.49566425945505,
+          "within_5_pct": 40.46296296296297,
+          "within_10_pct": 69.47530864197529,
+          "unweighted_p90_abs_m": 2689.3775067234455
+        },
+        "Pasila": {
+          "mae_m": 1557.8527836384621,
+          "rmse_m": 2537.7255505403746,
+          "mape_pct": 7.415030856770996,
+          "relative_rmse_pct": 9.417540206811914,
+          "bias_m": 919.937696358645,
+          "within_5_pct": 40.52188552188552,
+          "within_10_pct": 72.8198653198653,
+          "unweighted_p90_abs_m": 3399.1215945376384
+        },
+        "Viikki": {
+          "mae_m": 1364.8289028389804,
+          "rmse_m": 2086.0672818312646,
+          "mape_pct": 7.1818196080027565,
+          "relative_rmse_pct": 9.583644111462403,
+          "bias_m": 162.57343413068014,
+          "within_5_pct": 43.132716049382715,
+          "within_10_pct": 76.71296296296295,
+          "unweighted_p90_abs_m": 3110.6330867479187
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 751.0899077148322,
+          "rmse_m": 1711.7428779416593,
+          "mape_pct": 9.632481749382983,
+          "relative_rmse_pct": 13.589784972579725,
+          "bias_m": -181.76804468908318,
+          "within_5_pct": 36.89225589225589,
+          "within_10_pct": 64.58698092031425,
+          "unweighted_p90_abs_m": 1301.5780885099616
+        },
+        "3000.0": {
+          "mae_m": 1575.7175503859426,
+          "rmse_m": 2652.8773845004926,
+          "mape_pct": 10.49814899997705,
+          "relative_rmse_pct": 14.508427424927312,
+          "bias_m": -553.2418281074331,
+          "within_5_pct": 36.49494949494948,
+          "within_10_pct": 62.252525252525245,
+          "unweighted_p90_abs_m": 3081.4388726935686
+        },
+        "5000.0": {
+          "mae_m": 1590.6724052133209,
+          "rmse_m": 2130.2206633513297,
+          "mape_pct": 7.760435287913816,
+          "relative_rmse_pct": 9.580903244340773,
+          "bias_m": 520.3407916703272,
+          "within_5_pct": 36.32098765432099,
+          "within_10_pct": 68.59259259259257,
+          "unweighted_p90_abs_m": 3455.6170192214627
+        },
+        "10000.0": {
+          "mae_m": 2872.435306293505,
+          "rmse_m": 3917.3559414282527,
+          "mape_pct": 7.185886023238659,
+          "relative_rmse_pct": 8.943223555568101,
+          "bias_m": 2134.487617728243,
+          "within_5_pct": 43.62962962962962,
+          "within_10_pct": 72.88888888888889,
+          "unweighted_p90_abs_m": 7059.014089933771
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 507.2004877109699,
+          "rmse_m": 702.9677493576761,
+          "mape_pct": 3.8666495917835193,
+          "relative_rmse_pct": 4.496116448472874,
+          "bias_m": 337.96458640848664,
+          "within_5_pct": 68.95202020202021,
+          "within_10_pct": 100.0,
+          "unweighted_p90_abs_m": 1112.9471929205356
+        },
+        "0.12": {
+          "mae_m": 760.8934841790511,
+          "rmse_m": 1084.5612027550671,
+          "mape_pct": 5.606819921003728,
+          "relative_rmse_pct": 6.894324974467072,
+          "bias_m": 93.05370849173966,
+          "within_5_pct": 52.436868686868685,
+          "within_10_pct": 83.9179292929293,
+          "unweighted_p90_abs_m": 1561.941052382599
+        },
+        "0.18": {
+          "mae_m": 1035.641400859452,
+          "rmse_m": 1384.649773555777,
+          "mape_pct": 7.6146865299319275,
+          "relative_rmse_pct": 9.596497331606663,
+          "bias_m": -165.86953901128825,
+          "within_5_pct": 37.28914141414141,
+          "within_10_pct": 71.0909090909091,
+          "unweighted_p90_abs_m": 1856.060386571442
+        },
+        "0.24": {
+          "mae_m": 1086.0452394157292,
+          "rmse_m": 1517.7910373604318,
+          "mape_pct": 7.599759117384952,
+          "relative_rmse_pct": 10.202827689589785,
+          "bias_m": 30.460477718927393,
+          "within_5_pct": 46.696969696969695,
+          "within_10_pct": 74.04671717171718,
+          "unweighted_p90_abs_m": 2482.704841061027
+        },
+        "0.3": {
+          "mae_m": 1347.167091673408,
+          "rmse_m": 1795.3761630561478,
+          "mape_pct": 8.993039754701677,
+          "relative_rmse_pct": 11.398450782897351,
+          "bias_m": 288.65391695442327,
+          "within_5_pct": 30.512626262626263,
+          "within_10_pct": 66.30555555555556,
+          "unweighted_p90_abs_m": 2675.826104273103
+        },
+        "0.36": {
+          "mae_m": 1358.943721359676,
+          "rmse_m": 1909.375413082516,
+          "mape_pct": 8.437808420645307,
+          "relative_rmse_pct": 11.348796124506642,
+          "bias_m": 363.8784861732601,
+          "within_5_pct": 41.137626262626256,
+          "within_10_pct": 68.76262626262626,
+          "unweighted_p90_abs_m": 2730.169153094541
+        },
+        "0.42": {
+          "mae_m": 2210.89549308031,
+          "rmse_m": 3228.4122990350506,
+          "mape_pct": 10.974770716058222,
+          "relative_rmse_pct": 14.705436263292082,
+          "bias_m": 593.4376726932524,
+          "within_5_pct": 26.165404040404038,
+          "within_10_pct": 57.87247474747475,
+          "unweighted_p90_abs_m": 4423.984161643428
+        },
+        "0.5": {
+          "mae_m": 3013.125306885142,
+          "rmse_m": 4023.6954037582295,
+          "mape_pct": 12.533738260297142,
+          "relative_rmse_pct": 15.950158009259043,
+          "bias_m": 968.2234686951806,
+          "within_5_pct": 23.051767676767675,
+          "within_10_pct": 42.80934343434343,
+          "unweighted_p90_abs_m": 6498.473806008672
+        },
+        "0.6": {
+          "mae_m": 3957.396906453365,
+          "rmse_m": 5271.837670692261,
+          "mape_pct": 13.29586982434667,
+          "relative_rmse_pct": 16.802582786183372,
+          "bias_m": 1809.7889292306397,
+          "within_5_pct": 18.767676767676768,
+          "within_10_pct": 38.916666666666664,
+          "unweighted_p90_abs_m": 7780.004348901963
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 0,
+        "positions_with_decreasing_width_length": 0
+      }
+    },
+    {
+      "family": "detour",
+      "degree": 2,
+      "terms": [
+        "1*q^1",
+        "1*q^2",
+        "detour*q^1",
+        "detour*q^2"
+      ],
+      "coefficients": [
+        2.8774641706686452,
+        0.2358300484262713,
+        -4.494551998985664,
+        6.212319017938594
+      ],
+      "rank": 4,
+      "condition": 42.18026913858363,
+      "train": {
+        "mae_m": 1700.546569048491,
+        "rmse_m": 2709.4658677681405,
+        "mape_pct": 8.859841360227684,
+        "relative_rmse_pct": 11.971194255653248,
+        "bias_m": 377.863538253283,
+        "within_5_pct": 39.169612794612796,
+        "within_10_pct": 66.7675364758698,
+        "unweighted_p90_abs_m": 3650.732304672043
+      },
+      "held_start": {
+        "mae_m": 1735.7794761968762,
+        "rmse_m": 2757.7733405703893,
+        "mape_pct": 9.030127631276553,
+        "relative_rmse_pct": 12.202450029652052,
+        "bias_m": 375.51164532336924,
+        "within_5_pct": 38.27861952861953,
+        "within_10_pct": 65.6199494949495,
+        "unweighted_p90_abs_m": 3806.759549639114
+      },
+      "held_radius": {
+        "mae_m": 1891.3855578516868,
+        "rmse_m": 3076.8699273582756,
+        "mape_pct": 9.264266966101646,
+        "relative_rmse_pct": 12.516576454468744,
+        "bias_m": 542.9296079041616,
+        "within_5_pct": 36.82056677890011,
+        "within_10_pct": 63.8594276094276,
+        "unweighted_p90_abs_m": 4152.884049862547
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1450.4684135374478,
+          "rmse_m": 2303.229051116794,
+          "mape_pct": 7.244899494052726,
+          "relative_rmse_pct": 9.18800091672524,
+          "bias_m": 828.7148954756705,
+          "within_5_pct": 43.51851851851851,
+          "within_10_pct": 72.44107744107741,
+          "unweighted_p90_abs_m": 3235.7941296897548
+        },
+        "Lauttasaari": {
+          "mae_m": 2592.5320319171637,
+          "rmse_m": 3899.312884703083,
+          "mape_pct": 13.445093463386979,
+          "relative_rmse_pct": 18.01642690403644,
+          "bias_m": -213.55913323710988,
+          "within_5_pct": 30.37037037037037,
+          "within_10_pct": 51.11111111111111,
+          "unweighted_p90_abs_m": 7556.165348360057
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1561.8077541986902,
+          "rmse_m": 2636.075781823477,
+          "mape_pct": 8.496574639266907,
+          "relative_rmse_pct": 11.292651640527946,
+          "bias_m": 308.81087533293584,
+          "within_5_pct": 40.21604938271605,
+          "within_10_pct": 65.74074074074072,
+          "unweighted_p90_abs_m": 3073.073548299806
+        },
+        "Pasila": {
+          "mae_m": 1629.9234048125777,
+          "rmse_m": 2514.5747668307345,
+          "mape_pct": 8.151401486023142,
+          "relative_rmse_pct": 10.17788288469185,
+          "bias_m": 882.9129289465307,
+          "within_5_pct": 37.45791245791246,
+          "within_10_pct": 66.23737373737373,
+          "unweighted_p90_abs_m": 4047.7444214536745
+        },
+        "Viikki": {
+          "mae_m": 1444.1657765185023,
+          "rmse_m": 2060.35971849235,
+          "mape_pct": 7.812669073653013,
+          "relative_rmse_pct": 10.216391403412613,
+          "bias_m": 70.67866009881904,
+          "within_5_pct": 39.83024691358025,
+          "within_10_pct": 72.56944444444443,
+          "unweighted_p90_abs_m": 3264.4625306995495
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 797.68114359202,
+          "rmse_m": 1761.0325158819096,
+          "mape_pct": 10.28029158618258,
+          "relative_rmse_pct": 14.467310754151002,
+          "bias_m": -243.1350007743753,
+          "within_5_pct": 36.92143658810325,
+          "within_10_pct": 60.665544332210985,
+          "unweighted_p90_abs_m": 1356.6243064036028
+        },
+        "3000.0": {
+          "mae_m": 1569.295293688423,
+          "rmse_m": 2634.289237524565,
+          "mape_pct": 10.415084084509378,
+          "relative_rmse_pct": 14.225060702979544,
+          "bias_m": -651.8280867639969,
+          "within_5_pct": 36.9090909090909,
+          "within_10_pct": 62.752525252525245,
+          "unweighted_p90_abs_m": 2872.102637419326
+        },
+        "5000.0": {
+          "mae_m": 1624.1886336926373,
+          "rmse_m": 2157.1583334989655,
+          "mape_pct": 7.933719184533226,
+          "relative_rmse_pct": 9.792080355058749,
+          "bias_m": 391.18002159489606,
+          "within_5_pct": 37.876543209876544,
+          "within_10_pct": 67.80246913580244,
+          "unweighted_p90_abs_m": 3296.631228898246
+        },
+        "10000.0": {
+          "mae_m": 2951.9528338144246,
+          "rmse_m": 3965.7543805848463,
+          "mape_pct": 7.491415669881028,
+          "relative_rmse_pct": 9.383969136994628,
+          "bias_m": 2005.829647236953,
+          "within_5_pct": 41.4074074074074,
+          "within_10_pct": 71.25925925925925,
+          "unweighted_p90_abs_m": 6285.341280180022
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 466.02014031461476,
+          "rmse_m": 680.0219171818223,
+          "mape_pct": 3.836375311115415,
+          "relative_rmse_pct": 4.974890435075059,
+          "bias_m": -262.6101944402215,
+          "within_5_pct": 74.19949494949493,
+          "within_10_pct": 93.03535353535354,
+          "unweighted_p90_abs_m": 867.6679409086205
+        },
+        "0.12": {
+          "mae_m": 845.7192765901799,
+          "rmse_m": 1261.4989555269751,
+          "mape_pct": 6.323640857728408,
+          "relative_rmse_pct": 8.276368011943427,
+          "bias_m": -552.618162587004,
+          "within_5_pct": 50.84090909090908,
+          "within_10_pct": 81.38762626262626,
+          "unweighted_p90_abs_m": 1683.8035922380805
+        },
+        "0.18": {
+          "mae_m": 1016.1109703057073,
+          "rmse_m": 1456.560754609148,
+          "mape_pct": 7.522953523394452,
+          "relative_rmse_pct": 10.160101448356297,
+          "bias_m": -540.3630533866065,
+          "within_5_pct": 46.18181818181818,
+          "within_10_pct": 74.92676767676767,
+          "unweighted_p90_abs_m": 1935.746483395409
+        },
+        "0.24": {
+          "mae_m": 1031.736354161715,
+          "rmse_m": 1473.750472987301,
+          "mape_pct": 7.220960832918186,
+          "relative_rmse_pct": 9.855429963122935,
+          "bias_m": 45.94742259179374,
+          "within_5_pct": 43.349747474747474,
+          "within_10_pct": 76.10858585858585,
+          "unweighted_p90_abs_m": 2474.497722553622
+        },
+        "0.3": {
+          "mae_m": 1477.1010386049506,
+          "rmse_m": 1951.212179399489,
+          "mape_pct": 9.189718497863026,
+          "relative_rmse_pct": 11.0743995217442,
+          "bias_m": 657.178978528041,
+          "within_5_pct": 27.796717171717173,
+          "within_10_pct": 60.36489898989898,
+          "unweighted_p90_abs_m": 3004.7414343869277
+        },
+        "0.36": {
+          "mae_m": 1634.0788761039435,
+          "rmse_m": 2147.0960946294786,
+          "mape_pct": 9.321697364469673,
+          "relative_rmse_pct": 11.4830368301218,
+          "bias_m": 934.4837761045137,
+          "within_5_pct": 31.952020202020204,
+          "within_10_pct": 62.20454545454545,
+          "unweighted_p90_abs_m": 3097.770560171535
+        },
+        "0.42": {
+          "mae_m": 2544.8697557102096,
+          "rmse_m": 3507.946980002715,
+          "mape_pct": 12.284047501144945,
+          "relative_rmse_pct": 15.225263974097839,
+          "bias_m": 1142.8786561398501,
+          "within_5_pct": 21.708333333333336,
+          "within_10_pct": 47.3560606060606,
+          "unweighted_p90_abs_m": 4939.949391771381
+        },
+        "0.5": {
+          "mae_m": 3063.2419996942217,
+          "rmse_m": 4123.627795974853,
+          "mape_pct": 12.95573703652781,
+          "relative_rmse_pct": 16.427099005430463,
+          "bias_m": 1095.3705763345458,
+          "within_5_pct": 21.704545454545453,
+          "within_10_pct": 42.291666666666664,
+          "unweighted_p90_abs_m": 6273.752570030337
+        },
+        "0.6": {
+          "mae_m": 3543.1368742863456,
+          "rmse_m": 4936.927814709171,
+          "mape_pct": 12.616017756327064,
+          "relative_rmse_pct": 17.039143540743048,
+          "bias_m": 859.3368086254103,
+          "within_5_pct": 26.773989898989903,
+          "within_10_pct": 52.9040404040404,
+          "unweighted_p90_abs_m": 7104.239236567893
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 19,
+        "positions_with_decreasing_width_length": 18
+      }
+    },
+    {
+      "family": "detour",
+      "degree": 3,
+      "terms": [
+        "1*q^1",
+        "1*q^2",
+        "1*q^3",
+        "detour*q^1",
+        "detour*q^2",
+        "detour*q^3"
+      ],
+      "coefficients": [
+        1.866312654146879,
+        3.4849924736080693,
+        -2.3324095208989304,
+        0.9306269800734089,
+        -11.220565570199712,
+        12.514186940910168
+      ],
+      "rank": 6,
+      "condition": 286.4162586820975,
+      "train": {
+        "mae_m": 1625.4368566119388,
+        "rmse_m": 2673.262419872564,
+        "mape_pct": 8.315415956897237,
+        "relative_rmse_pct": 11.39231321766288,
+        "bias_m": 477.4385532988419,
+        "within_5_pct": 41.48414702581369,
+        "within_10_pct": 70.28661616161615,
+        "unweighted_p90_abs_m": 3487.851535992454
+      },
+      "held_start": {
+        "mae_m": 1673.8300123790655,
+        "rmse_m": 2733.0814564401253,
+        "mape_pct": 8.637361476007285,
+        "relative_rmse_pct": 11.79217475100529,
+        "bias_m": 470.45224770532406,
+        "within_5_pct": 40.42031425364759,
+        "within_10_pct": 67.0223063973064,
+        "unweighted_p90_abs_m": 3678.1187569792814
+      },
+      "held_radius": {
+        "mae_m": 1822.9680142186814,
+        "rmse_m": 3050.6758482911932,
+        "mape_pct": 8.803788156682742,
+        "relative_rmse_pct": 12.00955024656126,
+        "bias_m": 642.1528956441832,
+        "within_5_pct": 38.503787878787875,
+        "within_10_pct": 67.50996071829405,
+        "unweighted_p90_abs_m": 3936.992443536265
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1360.6322121808466,
+          "rmse_m": 2230.4213629710002,
+          "mape_pct": 6.797891956016549,
+          "relative_rmse_pct": 8.659746181011233,
+          "bias_m": 906.7963733557616,
+          "within_5_pct": 45.72390572390571,
+          "within_10_pct": 76.63299663299664,
+          "unweighted_p90_abs_m": 3157.024447099697
+        },
+        "Lauttasaari": {
+          "mae_m": 2606.0898791536397,
+          "rmse_m": 3919.4089413362376,
+          "mape_pct": 13.738420358644593,
+          "relative_rmse_pct": 17.945685646538752,
+          "bias_m": -87.65485258273307,
+          "within_5_pct": 23.518518518518523,
+          "within_10_pct": 45.648148148148145,
+          "unweighted_p90_abs_m": 6876.351843712349
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1433.9767218372563,
+          "rmse_m": 2602.0600501582344,
+          "mape_pct": 7.572808886227998,
+          "relative_rmse_pct": 10.467327552539759,
+          "bias_m": 412.67458751216736,
+          "within_5_pct": 47.90123456790123,
+          "within_10_pct": 71.54320987654317,
+          "unweighted_p90_abs_m": 2773.607031049428
+        },
+        "Pasila": {
+          "mae_m": 1567.6225659593533,
+          "rmse_m": 2478.3780065111005,
+          "mape_pct": 7.5776341316888844,
+          "relative_rmse_pct": 9.634405680676265,
+          "bias_m": 949.9915696443461,
+          "within_5_pct": 40.976430976430976,
+          "within_10_pct": 69.33501683501683,
+          "unweighted_p90_abs_m": 3789.1201515945672
+        },
+        "Viikki": {
+          "mae_m": 1400.8286827642323,
+          "rmse_m": 2024.6113908780394,
+          "mape_pct": 7.500052047458403,
+          "relative_rmse_pct": 9.79037132264669,
+          "bias_m": 170.45356059707828,
+          "within_5_pct": 43.98148148148149,
+          "within_10_pct": 71.95216049382715,
+          "unweighted_p90_abs_m": 3206.117871295511
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 766.8615929596549,
+          "rmse_m": 1734.1867386984586,
+          "mape_pct": 9.664131579878843,
+          "relative_rmse_pct": 13.809942741591765,
+          "bias_m": -200.9135707766864,
+          "within_5_pct": 39.84062850729517,
+          "within_10_pct": 65.05948372615038,
+          "unweighted_p90_abs_m": 1316.12471449093
+        },
+        "3000.0": {
+          "mae_m": 1538.8287251345384,
+          "rmse_m": 2638.82415350452,
+          "mape_pct": 10.10855450904151,
+          "relative_rmse_pct": 13.980453498083442,
+          "bias_m": -587.0457542644516,
+          "within_5_pct": 37.93939393939393,
+          "within_10_pct": 63.44949494949495,
+          "unweighted_p90_abs_m": 3109.5020781978474
+        },
+        "5000.0": {
+          "mae_m": 1571.2134652350496,
+          "rmse_m": 2123.5247241203233,
+          "mape_pct": 7.638651462641846,
+          "relative_rmse_pct": 9.404600151192593,
+          "bias_m": 489.84566383986305,
+          "within_5_pct": 40.04938271604939,
+          "within_10_pct": 67.58024691358023,
+          "unweighted_p90_abs_m": 3222.8382842427764
+        },
+        "10000.0": {
+          "mae_m": 2818.4162661870196,
+          "rmse_m": 3924.128333579416,
+          "mape_pct": 7.13810835246694,
+          "relative_rmse_pct": 9.03368357266615,
+          "bias_m": 2179.922652022571,
+          "within_5_pct": 43.85185185185184,
+          "within_10_pct": 72.0,
+          "unweighted_p90_abs_m": 6034.958670022388
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 433.9342485166288,
+          "rmse_m": 591.1405380748613,
+          "mape_pct": 3.496557382685274,
+          "relative_rmse_pct": 4.045226732412553,
+          "bias_m": 166.04171993103967,
+          "within_5_pct": 79.30176767676768,
+          "within_10_pct": 100.0,
+          "unweighted_p90_abs_m": 848.9943949692197
+        },
+        "0.12": {
+          "mae_m": 748.2342576229873,
+          "rmse_m": 1086.830906992998,
+          "mape_pct": 5.503206345710407,
+          "relative_rmse_pct": 6.862700760091302,
+          "bias_m": -3.3427241963076852,
+          "within_5_pct": 53.97222222222222,
+          "within_10_pct": 85.95580808080807,
+          "unweighted_p90_abs_m": 1570.0501055480345
+        },
+        "0.18": {
+          "mae_m": 972.7809820572295,
+          "rmse_m": 1347.487446200949,
+          "mape_pct": 7.188301662663944,
+          "relative_rmse_pct": 9.417609214279315,
+          "bias_m": -93.95056563146966,
+          "within_5_pct": 44.698232323232325,
+          "within_10_pct": 75.53787878787878,
+          "unweighted_p90_abs_m": 1926.9377925261433
+        },
+        "0.24": {
+          "mae_m": 1075.7169244502447,
+          "rmse_m": 1510.2664811010493,
+          "mape_pct": 7.454482089963093,
+          "relative_rmse_pct": 9.974344895395033,
+          "bias_m": 250.5524007532057,
+          "within_5_pct": 44.89015151515151,
+          "within_10_pct": 72.57070707070707,
+          "unweighted_p90_abs_m": 2477.6960915863747
+        },
+        "0.3": {
+          "mae_m": 1428.72954557629,
+          "rmse_m": 1898.8550914150587,
+          "mape_pct": 8.94721332195271,
+          "relative_rmse_pct": 10.871908077466626,
+          "bias_m": 565.5738038343936,
+          "within_5_pct": 29.352272727272727,
+          "within_10_pct": 58.54924242424242,
+          "unweighted_p90_abs_m": 2822.5220065950234
+        },
+        "0.36": {
+          "mae_m": 1446.1599202073912,
+          "rmse_m": 1908.1444619541655,
+          "mape_pct": 8.412505509289543,
+          "relative_rmse_pct": 10.474177906224527,
+          "bias_m": 576.8077209913015,
+          "within_5_pct": 39.589646464646464,
+          "within_10_pct": 66.32575757575758,
+          "unweighted_p90_abs_m": 2792.6532017686895
+        },
+        "0.42": {
+          "mae_m": 2236.288805057174,
+          "rmse_m": 3219.1569588852576,
+          "mape_pct": 10.912130951614898,
+          "relative_rmse_pct": 14.003392804425877,
+          "bias_m": 633.8129087393993,
+          "within_5_pct": 23.607323232323232,
+          "within_10_pct": 52.43813131313131,
+          "unweighted_p90_abs_m": 4336.562818832757
+        },
+        "0.5": {
+          "mae_m": 2856.1457489784284,
+          "rmse_m": 3889.874399657075,
+          "mape_pct": 12.172160585794675,
+          "relative_rmse_pct": 15.86370570764771,
+          "bias_m": 708.9666948008542,
+          "within_5_pct": 25.117424242424242,
+          "within_10_pct": 48.24873737373737,
+          "unweighted_p90_abs_m": 5860.398753831458
+        },
+        "0.6": {
+          "mae_m": 3866.479678945216,
+          "rmse_m": 5372.110580874952,
+          "mape_pct": 13.64969543439103,
+          "relative_rmse_pct": 18.005556667591218,
+          "bias_m": 1429.6082701254995,
+          "within_5_pct": 23.25378787878788,
+          "within_10_pct": 43.57449494949495,
+          "unweighted_p90_abs_m": 7369.121067792523
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 0,
+        "positions_with_decreasing_width_length": 1
+      }
+    },
+    {
+      "family": "detour",
+      "degree": 4,
+      "terms": [
+        "1*q^1",
+        "1*q^2",
+        "1*q^3",
+        "1*q^4",
+        "detour*q^1",
+        "detour*q^2",
+        "detour*q^3",
+        "detour*q^4"
+      ],
+      "coefficients": [
+        0.4697104720875164,
+        11.682317784858235,
+        -16.31564173906627,
+        7.221874644393572,
+        5.475727127030209,
+        -37.89792935741459,
+        58.02119790376555,
+        -23.502858529932833
+      ],
+      "rank": 8,
+      "condition": 1898.7879003673581,
+      "train": {
+        "mae_m": 1632.1102101001818,
+        "rmse_m": 2671.9175453434586,
+        "mape_pct": 8.383240829323224,
+        "relative_rmse_pct": 11.426435176445752,
+        "bias_m": 490.57066714056987,
+        "within_5_pct": 40.09455667789001,
+        "within_10_pct": 69.76346801346801,
+        "unweighted_p90_abs_m": 3498.997438760482
+      },
+      "held_start": {
+        "mae_m": 1682.5677551253075,
+        "rmse_m": 2738.5262530890254,
+        "mape_pct": 8.701561634341376,
+        "relative_rmse_pct": 11.847797673690458,
+        "bias_m": 482.64015483821373,
+        "within_5_pct": 39.884118967452295,
+        "within_10_pct": 66.45300224466891,
+        "unweighted_p90_abs_m": 3632.3444426198507
+      },
+      "held_radius": {
+        "mae_m": 1828.283998816204,
+        "rmse_m": 3052.636277905121,
+        "mape_pct": 8.853583934308022,
+        "relative_rmse_pct": 12.035995885646775,
+        "bias_m": 656.543930794249,
+        "within_5_pct": 37.67480359147026,
+        "within_10_pct": 67.53998316498317,
+        "unweighted_p90_abs_m": 3900.3373484145113
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1367.49573683683,
+          "rmse_m": 2239.02590589992,
+          "mape_pct": 6.846337018728487,
+          "relative_rmse_pct": 8.710365535724824,
+          "bias_m": 922.3166176495051,
+          "within_5_pct": 43.712121212121204,
+          "within_10_pct": 75.90067340067338,
+          "unweighted_p90_abs_m": 3222.7131793453063
+        },
+        "Lauttasaari": {
+          "mae_m": 2607.8419312883043,
+          "rmse_m": 3922.3848197108646,
+          "mape_pct": 13.719718089120908,
+          "relative_rmse_pct": 17.943227854947544,
+          "bias_m": -91.14150120869968,
+          "within_5_pct": 22.824074074074076,
+          "within_10_pct": 45.879629629629626,
+          "unweighted_p90_abs_m": 6783.484966677308
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1460.3759535329896,
+          "rmse_m": 2619.0768272197956,
+          "mape_pct": 7.710515598523999,
+          "relative_rmse_pct": 10.589601880764855,
+          "bias_m": 435.1525935811376,
+          "within_5_pct": 46.419753086419746,
+          "within_10_pct": 70.92592592592591,
+          "unweighted_p90_abs_m": 2780.4566307460036
+        },
+        "Pasila": {
+          "mae_m": 1570.0890199812052,
+          "rmse_m": 2478.4732398533665,
+          "mape_pct": 7.604732397053763,
+          "relative_rmse_pct": 9.664418185691895,
+          "bias_m": 959.2822290544981,
+          "within_5_pct": 41.64983164983165,
+          "within_10_pct": 68.4090909090909,
+          "unweighted_p90_abs_m": 3983.8838927538977
+        },
+        "Viikki": {
+          "mae_m": 1407.0361339872093,
+          "rmse_m": 2024.0794168092698,
+          "mape_pct": 7.626505068279718,
+          "relative_rmse_pct": 9.923759776515464,
+          "bias_m": 187.59083511462745,
+          "within_5_pct": 44.81481481481481,
+          "within_10_pct": 71.14969135802467,
+          "unweighted_p90_abs_m": 3183.3358480672373
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 771.4984628159598,
+          "rmse_m": 1737.1981245954896,
+          "mape_pct": 9.75732689481548,
+          "relative_rmse_pct": 13.906671917688671,
+          "bias_m": -193.55038055289737,
+          "within_5_pct": 39.210998877665546,
+          "within_10_pct": 63.96408529741861,
+          "unweighted_p90_abs_m": 1322.7744065488143
+        },
+        "3000.0": {
+          "mae_m": 1547.6070915777163,
+          "rmse_m": 2636.530959994622,
+          "mape_pct": 10.19699273885492,
+          "relative_rmse_pct": 14.007653620521754,
+          "bias_m": -577.7476960153462,
+          "within_5_pct": 38.202020202020186,
+          "within_10_pct": 62.48989898989898,
+          "unweighted_p90_abs_m": 3109.2533587284215
+        },
+        "5000.0": {
+          "mae_m": 1570.6246997862277,
+          "rmse_m": 2127.9013796183935,
+          "mape_pct": 7.647883791794624,
+          "relative_rmse_pct": 9.445396495908529,
+          "bias_m": 502.7321179626319,
+          "within_5_pct": 39.382716049382715,
+          "within_10_pct": 67.80246913580244,
+          "unweighted_p90_abs_m": 3307.2485763458194
+        },
+        "10000.0": {
+          "mae_m": 2840.540766321327,
+          "rmse_m": 3937.1292900971844,
+          "mape_pct": 7.204043111900477,
+          "relative_rmse_pct": 9.091525731314416,
+          "bias_m": 2199.1265779584664,
+          "within_5_pct": 42.74074074074073,
+          "within_10_pct": 71.55555555555554,
+          "unweighted_p90_abs_m": 6134.608356945333
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 482.56684625508143,
+          "rmse_m": 661.9812444633882,
+          "mape_pct": 3.835628023759749,
+          "relative_rmse_pct": 4.479378611621104,
+          "bias_m": 292.7993706672921,
+          "within_5_pct": 67.19949494949495,
+          "within_10_pct": 99.54545454545456,
+          "unweighted_p90_abs_m": 953.2374366510194
+        },
+        "0.12": {
+          "mae_m": 760.7173875656711,
+          "rmse_m": 1084.0936326879814,
+          "mape_pct": 5.6011178510547435,
+          "relative_rmse_pct": 6.888232164061728,
+          "bias_m": 89.0943029815522,
+          "within_5_pct": 52.436868686868685,
+          "within_10_pct": 83.9179292929293,
+          "unweighted_p90_abs_m": 1552.8091002280153
+        },
+        "0.18": {
+          "mae_m": 972.7402025000825,
+          "rmse_m": 1347.3319227719971,
+          "mape_pct": 7.187973775648684,
+          "relative_rmse_pct": 9.416503574247425,
+          "bias_m": -93.46556443454959,
+          "within_5_pct": 44.698232323232325,
+          "within_10_pct": 75.53787878787878,
+          "unweighted_p90_abs_m": 1927.413398834724
+        },
+        "0.24": {
+          "mae_m": 1078.8515818226174,
+          "rmse_m": 1527.2174634388996,
+          "mape_pct": 7.487650546777378,
+          "relative_rmse_pct": 10.115160212553837,
+          "bias_m": 173.93412939757047,
+          "within_5_pct": 47.10227272727273,
+          "within_10_pct": 72.57070707070707,
+          "unweighted_p90_abs_m": 2532.252511436389
+        },
+        "0.3": {
+          "mae_m": 1395.631060138372,
+          "rmse_m": 1876.5306562171904,
+          "mape_pct": 8.852983792714172,
+          "relative_rmse_pct": 10.86033702006926,
+          "bias_m": 468.2144531843526,
+          "within_5_pct": 33.60858585858586,
+          "within_10_pct": 58.91287878787879,
+          "unweighted_p90_abs_m": 2873.182251093559
+        },
+        "0.36": {
+          "mae_m": 1421.647264082328,
+          "rmse_m": 1881.1440594656265,
+          "mape_pct": 8.311289010935353,
+          "relative_rmse_pct": 10.38660947097211,
+          "bias_m": 525.6162081136049,
+          "within_5_pct": 40.089646464646464,
+          "within_10_pct": 65.82575757575756,
+          "unweighted_p90_abs_m": 2833.417978505073
+        },
+        "0.42": {
+          "mae_m": 2260.3262679756535,
+          "rmse_m": 3247.8095055453396,
+          "mape_pct": 11.007318220008095,
+          "relative_rmse_pct": 14.109094229334948,
+          "bias_m": 675.2781584882268,
+          "within_5_pct": 23.6729797979798,
+          "within_10_pct": 49.917929292929294,
+          "unweighted_p90_abs_m": 4370.664281519206
+        },
+        "0.5": {
+          "mae_m": 2954.28971028851,
+          "rmse_m": 4002.3557649740715,
+          "mape_pct": 12.56625334167909,
+          "relative_rmse_pct": 16.222292771357598,
+          "bias_m": 853.01364071004,
+          "within_5_pct": 25.83964646464646,
+          "within_10_pct": 47.273989898989896,
+          "unweighted_p90_abs_m": 6069.495157951369
+        },
+        "0.6": {
+          "mae_m": 3816.3394754994533,
+          "rmse_m": 5301.638535075136,
+          "mape_pct": 13.463840146495116,
+          "relative_rmse_pct": 17.798182700623325,
+          "bias_m": 1359.2766944358339,
+          "within_5_pct": 24.309343434343432,
+          "within_10_pct": 44.57449494949495,
+          "unweighted_p90_abs_m": 7333.051497201521
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 1,
+        "positions_with_decreasing_width_length": 4
+      }
+    },
+    {
+      "family": "detour_radius",
+      "degree": 2,
+      "terms": [
+        "1*q^1",
+        "1*q^2",
+        "detour*q^1",
+        "detour*q^2",
+        "radius*q^1",
+        "radius*q^2"
+      ],
+      "coefficients": [
+        2.7683788551091664,
+        1.2846653645936141,
+        -4.43864575039128,
+        5.67479068408828,
+        0.17111631487982487,
+        -1.6452520057158078
+      ],
+      "rank": 6,
+      "condition": 50.66277770493801,
+      "train": {
+        "mae_m": 1468.1904649279222,
+        "rmse_m": 2222.953295972372,
+        "mape_pct": 8.616406519462117,
+        "relative_rmse_pct": 11.764698308955024,
+        "bias_m": -90.89158409581331,
+        "within_5_pct": 40.76599326599326,
+        "within_10_pct": 69.62275533108865,
+        "unweighted_p90_abs_m": 2997.027157546469
+      },
+      "held_start": {
+        "mae_m": 1517.1635427694205,
+        "rmse_m": 2331.7189303365517,
+        "mape_pct": 8.894857681082073,
+        "relative_rmse_pct": 12.150524256457114,
+        "bias_m": -96.47003987293013,
+        "within_5_pct": 39.60030864197531,
+        "within_10_pct": 68.00042087542087,
+        "unweighted_p90_abs_m": 3065.440432838145
+      },
+      "held_radius": {
+        "mae_m": 1733.5476296330323,
+        "rmse_m": 2949.152142164084,
+        "mape_pct": 9.10988698819268,
+        "relative_rmse_pct": 12.403715655224627,
+        "bias_m": -488.09356117862706,
+        "within_5_pct": 38.02006172839506,
+        "within_10_pct": 66.59399551066217,
+        "unweighted_p90_abs_m": 3328.9631625518023
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1322.0081886202042,
+          "rmse_m": 1798.3685431928488,
+          "mape_pct": 8.037757269179266,
+          "relative_rmse_pct": 10.347779434539452,
+          "bias_m": 300.7859105759723,
+          "within_5_pct": 41.329966329966325,
+          "within_10_pct": 69.30976430976428,
+          "unweighted_p90_abs_m": 2926.6501103697155
+        },
+        "Lauttasaari": {
+          "mae_m": 2217.834685762929,
+          "rmse_m": 3437.8910657288443,
+          "mape_pct": 12.868212615616418,
+          "relative_rmse_pct": 17.723495755617915,
+          "bias_m": -649.4698994039366,
+          "within_5_pct": 31.342592592592595,
+          "within_10_pct": 54.35185185185185,
+          "unweighted_p90_abs_m": 4586.9216893434495
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1457.758704946701,
+          "rmse_m": 2323.2008455265523,
+          "mape_pct": 8.407045521246467,
+          "relative_rmse_pct": 11.185648816805273,
+          "bias_m": -195.21097630121733,
+          "within_5_pct": 41.48148148148148,
+          "within_10_pct": 66.41975308641975,
+          "unweighted_p90_abs_m": 2848.0574003569454
+        },
+        "Pasila": {
+          "mae_m": 1307.6119213452039,
+          "rmse_m": 1817.3627149026845,
+          "mape_pct": 7.815284477726131,
+          "relative_rmse_pct": 9.871872632300601,
+          "bias_m": 434.8945635383966,
+          "within_5_pct": 39.781144781144775,
+          "within_10_pct": 71.54882154882152,
+          "unweighted_p90_abs_m": 2751.3085390709316
+        },
+        "Viikki": {
+          "mae_m": 1280.6042131720642,
+          "rmse_m": 1852.3693064050822,
+          "mape_pct": 7.34598852164208,
+          "relative_rmse_pct": 9.716210618714312,
+          "bias_m": -373.3497977738658,
+          "within_5_pct": 44.06635802469136,
+          "within_10_pct": 78.37191358024691,
+          "unweighted_p90_abs_m": 2753.1946280789793
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 880.9264713446837,
+          "rmse_m": 1775.650589626618,
+          "mape_pct": 11.656651851097887,
+          "relative_rmse_pct": 15.728141745430568,
+          "bias_m": -13.20772976462203,
+          "within_5_pct": 29.912457912457914,
+          "within_10_pct": 56.44444444444443,
+          "unweighted_p90_abs_m": 1493.3985219153292
+        },
+        "3000.0": {
+          "mae_m": 1635.0093150497137,
+          "rmse_m": 2602.4986714979364,
+          "mape_pct": 11.023147291111435,
+          "relative_rmse_pct": 14.454974348047609,
+          "bias_m": -389.20823113152323,
+          "within_5_pct": 32.21717171717171,
+          "within_10_pct": 57.4090909090909,
+          "unweighted_p90_abs_m": 3199.5485594555576
+        },
+        "5000.0": {
+          "mae_m": 1608.4408608065055,
+          "rmse_m": 2122.0515100296343,
+          "mape_pct": 7.8724170367006625,
+          "relative_rmse_pct": 9.673733137387421,
+          "bias_m": 377.5106526593162,
+          "within_5_pct": 37.67901234567902,
+          "within_10_pct": 67.11111111111107,
+          "unweighted_p90_abs_m": 3238.2101071375682
+        },
+        "10000.0": {
+          "mae_m": 1944.277523876778,
+          "rmse_m": 2705.2940168400182,
+          "mape_pct": 5.027214545418307,
+          "relative_rmse_pct": 6.37488194765623,
+          "bias_m": -360.9748512548916,
+          "within_5_pct": 58.592592592592574,
+          "within_10_pct": 91.03703703703705,
+          "unweighted_p90_abs_m": 4109.544938457097
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 470.5234399814192,
+          "rmse_m": 683.7104632287458,
+          "mape_pct": 3.889968182622747,
+          "relative_rmse_pct": 5.033184827187302,
+          "bias_m": -260.49118936982154,
+          "within_5_pct": 72.1161616161616,
+          "within_10_pct": 93.86868686868688,
+          "unweighted_p90_abs_m": 912.2423181485519
+        },
+        "0.12": {
+          "mae_m": 858.0554812730979,
+          "rmse_m": 1287.9807385889742,
+          "mape_pct": 6.359418283695066,
+          "relative_rmse_pct": 8.288536844952832,
+          "bias_m": -581.4157450266581,
+          "within_5_pct": 51.46212121212122,
+          "within_10_pct": 82.29671717171718,
+          "unweighted_p90_abs_m": 1742.343690185633
+        },
+        "0.18": {
+          "mae_m": 1032.7355327068753,
+          "rmse_m": 1526.7789319883207,
+          "mape_pct": 7.488005003962258,
+          "relative_rmse_pct": 10.133489487334433,
+          "bias_m": -633.1128159167677,
+          "within_5_pct": 44.5530303030303,
+          "within_10_pct": 76.33585858585859,
+          "unweighted_p90_abs_m": 2063.400498623505
+        },
+        "0.24": {
+          "mae_m": 1016.6046997938369,
+          "rmse_m": 1455.8496437481804,
+          "mape_pct": 7.251274182089512,
+          "relative_rmse_pct": 9.90855295892442,
+          "bias_m": -143.79011260932813,
+          "within_5_pct": 44.53661616161616,
+          "within_10_pct": 75.93181818181817,
+          "unweighted_p90_abs_m": 2378.157293449687
+        },
+        "0.3": {
+          "mae_m": 1265.594367219255,
+          "rmse_m": 1600.0701973655266,
+          "mape_pct": 8.798399827502028,
+          "relative_rmse_pct": 10.843508883799373,
+          "bias_m": 337.4180780755049,
+          "within_5_pct": 33.94318181818181,
+          "within_10_pct": 66.25126262626262,
+          "unweighted_p90_abs_m": 2336.083912021546
+        },
+        "0.36": {
+          "mae_m": 1341.27237151916,
+          "rmse_m": 1740.4272861159698,
+          "mape_pct": 9.071088227662962,
+          "relative_rmse_pct": 11.451386605424418,
+          "bias_m": 451.66391782010965,
+          "within_5_pct": 33.878787878787875,
+          "within_10_pct": 64.40530303030303,
+          "unweighted_p90_abs_m": 2486.5031355021547
+        },
+        "0.42": {
+          "mae_m": 2009.4868832499715,
+          "rmse_m": 2795.963729338447,
+          "mape_pct": 11.591617465369469,
+          "relative_rmse_pct": 14.816094874726044,
+          "bias_m": 463.96424744312424,
+          "within_5_pct": 27.935606060606062,
+          "within_10_pct": 51.02020202020201,
+          "unweighted_p90_abs_m": 3265.093534616766
+        },
+        "0.5": {
+          "mae_m": 2474.249402278229,
+          "rmse_m": 3225.603317275392,
+          "mape_pct": 12.680578319095476,
+          "relative_rmse_pct": 16.466839039008814,
+          "bias_m": 103.60806751846464,
+          "within_5_pct": 26.84974747474747,
+          "within_10_pct": 50.648989898989896,
+          "unweighted_p90_abs_m": 4164.6029850440955
+        },
+        "0.6": {
+          "mae_m": 3185.9497069029385,
+          "rmse_m": 4306.282659904039,
+          "mape_pct": 12.923369637739137,
+          "relative_rmse_pct": 17.158902602522115,
+          "bias_m": -606.0748067909997,
+          "within_5_pct": 21.127525252525253,
+          "within_10_pct": 51.24494949494949,
+          "unweighted_p90_abs_m": 5220.993189995016
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 20,
+        "positions_with_decreasing_width_length": 18
+      }
+    },
+    {
+      "family": "detour_radius",
+      "degree": 3,
+      "terms": [
+        "1*q^1",
+        "1*q^2",
+        "1*q^3",
+        "detour*q^1",
+        "detour*q^2",
+        "detour*q^3",
+        "radius*q^1",
+        "radius*q^2",
+        "radius*q^3"
+      ],
+      "coefficients": [
+        2.0483235738122922,
+        3.598439834409337,
+        -1.660941774035535,
+        0.8373463430828146,
+        -11.27870736795501,
+        12.170059570633743,
+        -0.2855108195021158,
+        -0.17795882253804043,
+        -1.053295632089691
+      ],
+      "rank": 9,
+      "condition": 344.014951564587,
+      "train": {
+        "mae_m": 1395.8551850935419,
+        "rmse_m": 2179.7652760856145,
+        "mape_pct": 8.049153177546355,
+        "relative_rmse_pct": 11.171592253099913,
+        "bias_m": 1.7175982179199032,
+        "within_5_pct": 44.035353535353536,
+        "within_10_pct": 72.00448933782266,
+        "unweighted_p90_abs_m": 2858.8378504236152
+      },
+      "held_start": {
+        "mae_m": 1467.4474095693085,
+        "rmse_m": 2305.111752920682,
+        "mape_pct": 8.492725744283462,
+        "relative_rmse_pct": 11.731214712671843,
+        "bias_m": -8.964139366444677,
+        "within_5_pct": 42.45847362514029,
+        "within_10_pct": 69.62542087542087,
+        "unweighted_p90_abs_m": 2974.9489873138323
+      },
+      "held_radius": {
+        "mae_m": 1688.9280932485274,
+        "rmse_m": 3009.4153533832578,
+        "mape_pct": 8.703421942535062,
+        "relative_rmse_pct": 12.03700828843457,
+        "bias_m": -467.4995721637163,
+        "within_5_pct": 40.752805836139174,
+        "within_10_pct": 69.1628787878788,
+        "unweighted_p90_abs_m": 3256.0433473041503
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1238.386160300653,
+          "rmse_m": 1711.2843483997804,
+          "mape_pct": 7.587480988261808,
+          "relative_rmse_pct": 9.869331318005138,
+          "bias_m": 372.62492477088585,
+          "within_5_pct": 42.003367003366996,
+          "within_10_pct": 71.07744107744105,
+          "unweighted_p90_abs_m": 2952.6642652129535
+        },
+        "Lauttasaari": {
+          "mae_m": 2268.317750510062,
+          "rmse_m": 3455.7773155530117,
+          "mape_pct": 13.284090574593687,
+          "relative_rmse_pct": 17.676849104821148,
+          "bias_m": -529.2183012578466,
+          "within_5_pct": 27.68518518518519,
+          "within_10_pct": 52.685185185185176,
+          "unweighted_p90_abs_m": 5452.601805547216
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1345.919956002021,
+          "rmse_m": 2290.1775588608566,
+          "mape_pct": 7.442077694695494,
+          "relative_rmse_pct": 10.347620570264402,
+          "bias_m": -100.78435824696727,
+          "within_5_pct": 49.41358024691358,
+          "within_10_pct": 72.83950617283948,
+          "unweighted_p90_abs_m": 2659.7531124636653
+        },
+        "Pasila": {
+          "mae_m": 1239.5475887862258,
+          "rmse_m": 1775.980611985611,
+          "mape_pct": 7.207255181767941,
+          "relative_rmse_pct": 9.263998219377875,
+          "bias_m": 494.9908087478035,
+          "within_5_pct": 43.37542087542087,
+          "within_10_pct": 73.67003367003365,
+          "unweighted_p90_abs_m": 2653.1378808983914
+        },
+        "Viikki": {
+          "mae_m": 1245.0655922475817,
+          "rmse_m": 1815.9817196871238,
+          "mape_pct": 6.942724282098377,
+          "relative_rmse_pct": 9.23782354021081,
+          "bias_m": -282.4337708460989,
+          "within_5_pct": 49.814814814814824,
+          "within_10_pct": 77.85493827160492,
+          "unweighted_p90_abs_m": 2651.3301200861433
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 839.1545509696477,
+          "rmse_m": 1748.566304423336,
+          "mape_pct": 10.859583395348416,
+          "relative_rmse_pct": 15.004211912631476,
+          "bias_m": 32.58075979093209,
+          "within_5_pct": 36.04264870931537,
+          "within_10_pct": 59.63187429854096,
+          "unweighted_p90_abs_m": 1361.3878264281961
+        },
+        "3000.0": {
+          "mae_m": 1602.7946789654338,
+          "rmse_m": 2608.2683877112127,
+          "mape_pct": 10.700807032629859,
+          "relative_rmse_pct": 14.197069117705698,
+          "bias_m": -320.2747079940694,
+          "within_5_pct": 32.606060606060595,
+          "within_10_pct": 60.25252525252526,
+          "unweighted_p90_abs_m": 3052.955283998529
+        },
+        "5000.0": {
+          "mae_m": 1555.6734623166715,
+          "rmse_m": 2087.1520513225205,
+          "mape_pct": 7.574252974413513,
+          "relative_rmse_pct": 9.2888883981864,
+          "bias_m": 475.97902379240895,
+          "within_5_pct": 39.77777777777778,
+          "within_10_pct": 66.91358024691355,
+          "unweighted_p90_abs_m": 3260.3044567022384
+        },
+        "10000.0": {
+          "mae_m": 1872.1669460254816,
+          "rmse_m": 2652.8115246232824,
+          "mape_pct": 4.836259574742053,
+          "relative_rmse_pct": 6.125275521411773,
+          "bias_m": -224.14163305505014,
+          "within_5_pct": 61.4074074074074,
+          "within_10_pct": 91.70370370370374,
+          "unweighted_p90_abs_m": 4011.394647281013
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 420.3122722484525,
+          "rmse_m": 566.4612097216942,
+          "mape_pct": 3.4651840637874347,
+          "relative_rmse_pct": 4.039997804367927,
+          "bias_m": 134.59343016932823,
+          "within_5_pct": 79.30176767676768,
+          "within_10_pct": 100.0,
+          "unweighted_p90_abs_m": 831.6350038950204
+        },
+        "0.12": {
+          "mae_m": 741.7020063723247,
+          "rmse_m": 1083.220896412326,
+          "mape_pct": 5.468477002771276,
+          "relative_rmse_pct": 6.812810796471725,
+          "bias_m": -75.15350677888478,
+          "within_5_pct": 54.93686868686868,
+          "within_10_pct": 88.07702020202021,
+          "unweighted_p90_abs_m": 1572.7572119284596
+        },
+        "0.18": {
+          "mae_m": 969.0390121655032,
+          "rmse_m": 1365.5515994106142,
+          "mape_pct": 7.106557979593273,
+          "relative_rmse_pct": 9.349044729075501,
+          "bias_m": -221.65843540627975,
+          "within_5_pct": 48.19065656565657,
+          "within_10_pct": 76.85227272727273,
+          "unweighted_p90_abs_m": 1780.804218958347
+        },
+        "0.24": {
+          "mae_m": 1029.8985747479105,
+          "rmse_m": 1432.6918719584548,
+          "mape_pct": 7.482458851314125,
+          "relative_rmse_pct": 10.027976652927755,
+          "bias_m": 44.792458102582685,
+          "within_5_pct": 46.22853535353536,
+          "within_10_pct": 74.85606060606061,
+          "unweighted_p90_abs_m": 2489.49808906997
+        },
+        "0.3": {
+          "mae_m": 1239.4033925759663,
+          "rmse_m": 1582.9863769388419,
+          "mape_pct": 8.589240929147376,
+          "relative_rmse_pct": 10.64213172252115,
+          "bias_m": 252.9864113121647,
+          "within_5_pct": 34.16540404040404,
+          "within_10_pct": 63.86237373737374,
+          "unweighted_p90_abs_m": 2348.330806373022
+        },
+        "0.36": {
+          "mae_m": 1262.4836979274332,
+          "rmse_m": 1678.1478014503275,
+          "mape_pct": 8.190298410770152,
+          "relative_rmse_pct": 10.431718919563119,
+          "bias_m": 121.99711028946089,
+          "within_5_pct": 37.1060606060606,
+          "within_10_pct": 68.6401515151515,
+          "unweighted_p90_abs_m": 2358.7693777007407
+        },
+        "0.42": {
+          "mae_m": 1845.3578037176503,
+          "rmse_m": 2731.5449775100815,
+          "mape_pct": 10.356608897631554,
+          "relative_rmse_pct": 13.595450182464786,
+          "bias_m": -5.23707976227125,
+          "within_5_pct": 32.213383838383834,
+          "within_10_pct": 57.34848484848485,
+          "unweighted_p90_abs_m": 2900.349860719487
+        },
+        "0.5": {
+          "mae_m": 2367.077735714699,
+          "rmse_m": 3198.6087592981025,
+          "mape_pct": 11.922128264458385,
+          "relative_rmse_pct": 15.893301381673593,
+          "bias_m": -252.53691960500174,
+          "within_5_pct": 27.967171717171713,
+          "within_10_pct": 53.659090909090914,
+          "unweighted_p90_abs_m": 4095.780438530558
+        },
+        "0.6": {
+          "mae_m": 3331.7521906538386,
+          "rmse_m": 4404.0682199075345,
+          "mape_pct": 13.853577299077575,
+          "relative_rmse_pct": 18.12133106917606,
+          "bias_m": -80.46072261910155,
+          "within_5_pct": 22.016414141414142,
+          "within_10_pct": 43.333333333333336,
+          "unweighted_p90_abs_m": 5723.823084386965
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 0,
+        "positions_with_decreasing_width_length": 1
+      }
+    },
+    {
+      "family": "detour_radius",
+      "degree": 4,
+      "terms": [
+        "1*q^1",
+        "1*q^2",
+        "1*q^3",
+        "1*q^4",
+        "detour*q^1",
+        "detour*q^2",
+        "detour*q^3",
+        "detour*q^4",
+        "radius*q^1",
+        "radius*q^2",
+        "radius*q^3",
+        "radius*q^4"
+      ],
+      "coefficients": [
+        1.1190286140675196,
+        9.052915842674231,
+        -10.9653431191078,
+        4.805414020653787,
+        5.142951434204672,
+        -36.550360274624126,
+        55.27916866575443,
+        -22.2644219204172,
+        -1.0185507285775761,
+        4.1246025496346,
+        -8.39272800979906,
+        3.790572863687088
+      ],
+      "rank": 12,
+      "condition": 2280.6366879518428,
+      "train": {
+        "mae_m": 1402.3844737461459,
+        "rmse_m": 2176.427660315192,
+        "mape_pct": 8.124739132242787,
+        "relative_rmse_pct": 11.204837699670847,
+        "bias_m": 11.33538897201063,
+        "within_5_pct": 42.06748035914702,
+        "within_10_pct": 72.39913019079685,
+        "unweighted_p90_abs_m": 2873.5290960730126
+      },
+      "held_start": {
+        "mae_m": 1476.8818306230708,
+        "rmse_m": 2310.4504533122663,
+        "mape_pct": 8.561679006763715,
+        "relative_rmse_pct": 11.799144726619373,
+        "bias_m": -0.34051707699939726,
+        "within_5_pct": 41.17522446689113,
+        "within_10_pct": 69.58571829405163,
+        "unweighted_p90_abs_m": 3007.018955323619
+      },
+      "held_radius": {
+        "mae_m": 1688.8387937478074,
+        "rmse_m": 3013.4311617384883,
+        "mape_pct": 8.726652459231692,
+        "relative_rmse_pct": 12.041591161513267,
+        "bias_m": -448.2713825092097,
+        "within_5_pct": 39.502946127946124,
+        "within_10_pct": 68.9746071829405,
+        "unweighted_p90_abs_m": 3263.0633142216248
+      },
+      "held_start_by_start": {
+        "Keskuspuisto": {
+          "mae_m": 1243.8615900616346,
+          "rmse_m": 1718.459867257428,
+          "mape_pct": 7.603779446691976,
+          "relative_rmse_pct": 9.920433385827158,
+          "bias_m": 383.4430514750055,
+          "within_5_pct": 42.66835016835016,
+          "within_10_pct": 70.87542087542083,
+          "unweighted_p90_abs_m": 2952.174046095892
+        },
+        "Lauttasaari": {
+          "mae_m": 2268.6910093105525,
+          "rmse_m": 3457.690727751251,
+          "mape_pct": 13.253626292590178,
+          "relative_rmse_pct": 17.680457542756674,
+          "bias_m": -530.6624126526226,
+          "within_5_pct": 25.37037037037037,
+          "within_10_pct": 53.37962962962962,
+          "unweighted_p90_abs_m": 5458.51549799944
+        },
+        "Lepp\u00e4vaara": {
+          "mae_m": 1372.8331850719333,
+          "rmse_m": 2299.1088245794663,
+          "mape_pct": 7.593509598373852,
+          "relative_rmse_pct": 10.469839416242777,
+          "bias_m": -82.08841943859706,
+          "within_5_pct": 47.25308641975309,
+          "within_10_pct": 72.09876543209873,
+          "unweighted_p90_abs_m": 2730.193604706481
+        },
+        "Pasila": {
+          "mae_m": 1233.4075892235637,
+          "rmse_m": 1770.767815805026,
+          "mape_pct": 7.198479257030643,
+          "relative_rmse_pct": 9.286873690482821,
+          "bias_m": 501.5302248967558,
+          "within_5_pct": 43.678451178451176,
+          "within_10_pct": 74.17508417508417,
+          "unweighted_p90_abs_m": 2708.746541037761
+        },
+        "Viikki": {
+          "mae_m": 1265.6157794476705,
+          "rmse_m": 1833.2094689786034,
+          "mape_pct": 7.159000439131921,
+          "relative_rmse_pct": 9.445736793379352,
+          "bias_m": -273.92502966553866,
+          "within_5_pct": 46.90586419753087,
+          "within_10_pct": 77.39969135802468,
+          "unweighted_p90_abs_m": 2767.085109703283
+        }
+      },
+      "held_start_by_radius": {
+        "1500.0": {
+          "mae_m": 845.9850141480291,
+          "rmse_m": 1752.7414956481728,
+          "mape_pct": 10.972356551028492,
+          "relative_rmse_pct": 15.125924081288778,
+          "bias_m": 41.778190564493514,
+          "within_5_pct": 34.15151515151515,
+          "within_10_pct": 59.45005611672277,
+          "unweighted_p90_abs_m": 1412.0834188069043
+        },
+        "3000.0": {
+          "mae_m": 1610.67959647697,
+          "rmse_m": 2606.7565291448423,
+          "mape_pct": 10.790710242837799,
+          "relative_rmse_pct": 14.239560949481284,
+          "bias_m": -308.60562777114956,
+          "within_5_pct": 31.166666666666654,
+          "within_10_pct": 59.95454545454546,
+          "unweighted_p90_abs_m": 3099.3925063482293
+        },
+        "5000.0": {
+          "mae_m": 1554.4099770384164,
+          "rmse_m": 2091.720393632714,
+          "mape_pct": 7.5794266959288175,
+          "relative_rmse_pct": 9.329786993387604,
+          "bias_m": 489.0682321308127,
+          "within_5_pct": 39.53086419753087,
+          "within_10_pct": 67.60493827160492,
+          "unweighted_p90_abs_m": 3292.312270925685
+        },
+        "10000.0": {
+          "mae_m": 1896.4527348288684,
+          "rmse_m": 2666.4861955198962,
+          "mape_pct": 4.904222537259746,
+          "relative_rmse_pct": 6.186732936692066,
+          "bias_m": -223.60286323215422,
+          "within_5_pct": 59.85185185185183,
+          "within_10_pct": 91.33333333333336,
+          "unweighted_p90_abs_m": 3979.5588336663277
+        }
+      },
+      "held_start_by_width": {
+        "0.06": {
+          "mae_m": 452.46117807068447,
+          "rmse_m": 595.0561042385427,
+          "mape_pct": 3.797338428894658,
+          "relative_rmse_pct": 4.461457346105674,
+          "bias_m": 224.28151938158203,
+          "within_5_pct": 66.62626262626262,
+          "within_10_pct": 99.04545454545455,
+          "unweighted_p90_abs_m": 837.9422174667397
+        },
+        "0.12": {
+          "mae_m": 758.1451503824596,
+          "rmse_m": 1084.6207310525413,
+          "mape_pct": 5.581614202984293,
+          "relative_rmse_pct": 6.868945474128692,
+          "bias_m": -9.749167933150858,
+          "within_5_pct": 52.34595959595959,
+          "within_10_pct": 86.58838383838383,
+          "unweighted_p90_abs_m": 1546.2294373575123
+        },
+        "0.18": {
+          "mae_m": 969.0066560734285,
+          "rmse_m": 1365.4242362931466,
+          "mape_pct": 7.1061562648346746,
+          "relative_rmse_pct": 9.347835382148945,
+          "bias_m": -221.31527007965738,
+          "within_5_pct": 48.19065656565657,
+          "within_10_pct": 76.85227272727273,
+          "unweighted_p90_abs_m": 1781.1058934712796
+        },
+        "0.24": {
+          "mae_m": 1033.184929950473,
+          "rmse_m": 1462.5936549225416,
+          "mape_pct": 7.483362613653764,
+          "relative_rmse_pct": 10.171146175098627,
+          "bias_m": -9.419231027972089,
+          "within_5_pct": 47.592171717171716,
+          "within_10_pct": 75.81060606060606,
+          "unweighted_p90_abs_m": 2464.476662007346
+        },
+        "0.3": {
+          "mae_m": 1244.8289536482312,
+          "rmse_m": 1606.4660336117918,
+          "mape_pct": 8.546264152042687,
+          "relative_rmse_pct": 10.655560763648433,
+          "bias_m": 184.0992547892333,
+          "within_5_pct": 34.786616161616166,
+          "within_10_pct": 63.3169191919192,
+          "unweighted_p90_abs_m": 2489.6037658489695
+        },
+        "0.36": {
+          "mae_m": 1240.5137125890483,
+          "rmse_m": 1669.3376623257236,
+          "mape_pct": 8.040736793257036,
+          "relative_rmse_pct": 10.321552658822071,
+          "bias_m": 85.77626723016421,
+          "within_5_pct": 39.62626262626262,
+          "within_10_pct": 69.14015151515152,
+          "unweighted_p90_abs_m": 2333.8621241312394
+        },
+        "0.42": {
+          "mae_m": 1856.2528841326548,
+          "rmse_m": 2742.6329930449992,
+          "mape_pct": 10.443967235114496,
+          "relative_rmse_pct": 13.714977605917683,
+          "bias_m": 24.101891077627315,
+          "within_5_pct": 31.380050505050505,
+          "within_10_pct": 57.84848484848484,
+          "unweighted_p90_abs_m": 2953.3127766974994
+        },
+        "0.5": {
+          "mae_m": 2451.108983811385,
+          "rmse_m": 3262.4265009615715,
+          "mape_pct": 12.429959251796415,
+          "relative_rmse_pct": 16.347685480641346,
+          "bias_m": -150.615692283246,
+          "within_5_pct": 26.957070707070706,
+          "within_10_pct": 52.37121212121212,
+          "unweighted_p90_abs_m": 4099.678662019078
+        },
+        "0.6": {
+          "mae_m": 3286.434026949273,
+          "rmse_m": 4356.224337230345,
+          "mape_pct": 13.625712118295402,
+          "relative_rmse_pct": 17.878317491064387,
+          "bias_m": -130.22422484757547,
+          "within_5_pct": 23.071969696969695,
+          "within_10_pct": 45.29797979797979,
+          "unweighted_p90_abs_m": 5628.31905648934
+        }
+      },
+      "dense_violations": {
+        "positions_below_baseline": 1,
+        "positions_with_decreasing_width_length": 4
+      }
+    }
+  ],
+  "ellipse": {
+    "mae_m": 3857.627528783144,
+    "rmse_m": 5759.115597942346,
+    "mape_pct": 18.505347476102536,
+    "relative_rmse_pct": 22.349735903647858,
+    "bias_m": -3831.5176121035533,
+    "within_5_pct": 13.784652076318743,
+    "within_10_pct": 28.019640852974188,
+    "unweighted_p90_abs_m": 8698.796392609907
+  },
+  "analysis_source_sha256": "104a6756573d1f4b038cf411295c3297dadf1ae0e1e3c27c628acd52e7dd45f5"
+}

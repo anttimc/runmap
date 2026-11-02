@@ -20,7 +20,8 @@ from runmap.routing.distance_shells import (
 )
 from runmap.routing.numeric_search import numeric_distances
 from runmap.routing.profiles import exploration_profile
-from runmap.routing.turnaround import ellipse_extra_ratio, round_trip_samples
+from runmap.routing.turnaround import TARGET_TOLERANCE, round_trip_samples, target_region_score, width_residual_interval
+from runmap.routing.turnaround_calibration import MODEL_VERSION, CALIBRATION_VERSION, NOMINAL_MASS
 
 
 def load_round_trip_samples(service: PathShellService, snapshot: Snapshot, deadline: float) -> DistanceSamples:
@@ -61,17 +62,15 @@ def region_features(service: PathShellService, snapshot: Snapshot, samples: Dist
     x, y = transform("EPSG:4326", "EPSG:3067", [snap.longitude], [snap.latitude])
     xx, yy = np.meshgrid(baseline.x, baseline.y)
     direct = np.hypot(xx - x[0], yy - y[0])
-    estimated = baseline.values + direct * ellipse_extra_ratio(width)
-    error = np.abs(estimated - target_m) / target_m
-    error[baseline.values > target_m * 1.05] = np.nan
-    grid = replace(baseline, values=error)
-    bands = distance_bands(grid, 0.15, ShellSettings(interval_m=0.05))
+    grid = replace(baseline, values=target_region_score(baseline.values, direct, target_m, width))
+    bands = distance_bands(grid, 1 if width == 0 else 2, ShellSettings(interval_m=1))
     assert service.coverage is not None
     features, _ = shell_features(bands, service.coverage)
     for feature in features:
         properties = feature["properties"]
         assert isinstance(properties, dict)
-        properties["core"] = properties["lower_m"] < 0.05
+        core = properties["lower_m"] < 1
+        feature["properties"] = {"core": core, "region": "target" if core else "uncertainty"}
     return features
 
 
@@ -87,8 +86,10 @@ def encode_region(service: PathShellService, snapshot: Snapshot, target_m: float
         check_deadline(deadline)
         return ShellPayload(json.dumps({"type": "FeatureCollection", "features": features,
             "dataset_id": service.paths.data.dataset_id, "snapshot_id": snapshot.id,
-            "target_m": target_m, "width": width, "tolerance": 0.05,
-            "model": "ellipse-extra-v1"}, allow_nan=False).encode())
+            "target_m": target_m, "width": width, "tolerance": TARGET_TOLERANCE,
+            "model": MODEL_VERSION, "uncertainty": {"method": CALIBRATION_VERSION,
+                "nominal_mass": NOMINAL_MASS, "residual_per_separation": width_residual_interval(width),
+                "sampled_separation_m": [1500, 10000], "independently_calibrated": False}}, allow_nan=False).encode())
     finally:
         service.workers.release()
 
@@ -101,7 +102,7 @@ def render_region(service: PathShellService, snapshot: Snapshot, target_m: float
     if snapshot.budget_km * 1000 < target_m * 1.15:
         raise ValueError("Snapshot budget must cover 115% of the target")
     deadline = monotonic() + 20
-    payload, _ = service.responses.compute(repr(("turnaround-v1", snapshot.id, target_m, width)),
+    payload, _ = service.responses.compute(repr((MODEL_VERSION, CALIBRATION_VERSION, snapshot.id, target_m, width)),
         lambda: encode_region(service, snapshot, target_m, width, deadline),
         lambda value: len(value.encoded) + 256, deadline=deadline, allow_oversized=True)
     return payload.encoded
