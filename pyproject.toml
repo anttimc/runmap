@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+environment = ["osmnx>=2.0,<3"]
 experiments = ["matplotlib>=3.9,<4"]
 web = [
   "contourpy>=1.3,<2",

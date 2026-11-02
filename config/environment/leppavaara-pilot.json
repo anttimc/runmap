@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "leppavaara-pilot",
+  "bounds_epsg3067": [374000, 6674000, 380000, 6680000],
+  "halo_m": 300,
+  "tags": {
+    "natural": ["wood", "water", "wetland", "coastline"],
+    "landuse": ["forest", "reservoir", "basin"],
+    "water": true,
+    "waterway": true,
+    "highway": true,
+    "leisure": ["park", "nature_reserve"],
+    "building": true
+  }
+}

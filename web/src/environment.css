@@ -1,0 +1,103 @@
+/** Keep source inspection readable alongside a full-size map on desktop and mobile. */
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: #242e2b;
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+}
+#inspection-map {
+  position: fixed;
+  inset: 0 0 0 360px;
+}
+aside {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 360px;
+  padding: 22px;
+  overflow: auto;
+  background: #fafaf6;
+}
+h1 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+h2 {
+  font-size: 17px;
+}
+p {
+  margin: 12px 0;
+}
+a {
+  color: #075e68;
+}
+fieldset {
+  border: 1px solid #cdd4cc;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+label {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 6px 0;
+  cursor: pointer;
+}
+label i {
+  width: 18px;
+  height: 5px;
+  flex-shrink: 0;
+}
+input {
+  width: 18px;
+  height: 18px;
+}
+button {
+  padding: 8px 16px;
+  border: 1px solid #a5b1a7;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+.boundary-key {
+  color: #7048a5;
+  font-size: 12px;
+}
+details {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+summary {
+  cursor: pointer;
+}
+pre {
+  white-space: pre-wrap;
+  font-size: 12px;
+  background: #ecefe8;
+  padding: 10px;
+  max-height: 320px;
+  overflow: auto;
+}
+#inspection-status {
+  font-weight: 600;
+}
+#inspection-selection {
+  padding-bottom: 24px;
+}
+@media (max-width: 700px) {
+  #inspection-map {
+    inset: 0 0 48% 0;
+  }
+  aside {
+    position: fixed;
+    inset: 52% 0 0;
+    width: auto;
+    padding: 16px;
+    border-top: 2px solid #cdd4cc;
+  }
+}

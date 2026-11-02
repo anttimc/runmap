@@ -14,6 +14,10 @@ measurements separate from historical reports, and identify their dataset/model.
 
 ## Planning and implementation history
 
+The [environment acquisition](history/2026-11-02-environment-acquisition.md) and
+[source inspection progress](history/2026-11-02-environment-inspection.md) record
+the Leppävaara pilot, browser checks, road-class findings, and remaining review.
+
 All supporting JSON, PNG, and SVG artifacts are beside their reports in
 `history/`. Recorded numbers describe the identified historical dataset and
 model; they do not prove current correctness, performance, or runner acceptance.

@@ -10,6 +10,8 @@ See [architecture](../architecture.md) for the service boundaries and
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/config` | Terrain coverage, manifest, legend, and tile templates |
+| `GET /api/environment/config` | Local environment source manifest, pilot/query boundary geometry, and checksum-bound feature URL |
+| `GET /api/environment/features.geojson?dataset={sha256}` | Published pilot source features; 404 if unavailable, 409 if the manifest identity changed |
 | `GET /api/regions/{region_id}/terrain/v{version}/{manifest_id}/w{wavelength}/{z}/{x}/{y}.png` | Versioned terrain tiles |
 | `GET /api/regions/{region_id}/contours/v{version}/{manifest_id}/{z}/{x}/{y}.mvt` | Source-elevation contour tiles |
 | `GET /api/paths/config` | Dataset, coverage, policy options, tile templates, and planner/shell capabilities |

@@ -259,6 +259,46 @@ request-specific costs and valid lower bounds. The
 [100 ms architecture](100ms-routing-architecture.md#latency-budget-and-acceptance)
 defines the backend target and outstanding acceptance matrix.
 
+## Planned: environment preferences experiment
+
+Follow the [proposed design and experiment protocol](environment-preferences.md).
+The [bounded OSMnx pilot downloader](development.md#acquire-environment-pilot-data)
+and pilot bounds/tag configuration are implemented, along with a
+[source inspection map](guide.md#environment-source-inspection).
+Context completeness, fields, models, field visualization, and routing preferences
+remain outstanding. Review source overlaps and holes on desktop/mobile before
+using the pilot to prepare fields; record source-load and interaction latency.
+Distinguish road classes with color/width and a legend, and summarize class,
+speed, and lanes prominently in source inspection. Review Leppävaarankatu
+(`secondary`, tagged 40 km/h in the pilot) against motorway surroundings; class
+alone must not be interpreted as measured traffic or pleasantness. The
+[inspection progress report](archive/history/2026-11-02-environment-inspection.md)
+records delivered behavior and the initial user review.
+Complete these stages in order; keep implementation and runner acceptance separate:
+
+1. **Freeze the pilot and evidence.** Select study bounds and spatial splits,
+   define the review rubric, acquire independent labels, and record source
+   coverage. Acceptance: reviewed positive/negative and overlapping examples,
+   explicit unknowns, and no train/test context leakage.
+2. **Prepare context and the geometric baseline.** Validate the pilot source and
+   resolve enclosing-polygon omissions and incomplete geometry; expand acquisition
+   to the frozen study areas independently of runnable eligibility. Produce
+   versioned F/W/T fields and static review panels. Acceptance: correct polygon
+   holes, deduplication, support masks, seams, and reproducible preparation costs.
+3. **Compare PyTorch models.** Evaluate MLP and spatial CNN against the baseline;
+   add a heterogeneous GNN only if motivated by observed errors. Acceptance:
+   spatial holdouts, whole-object omission tests, per-attribute metrics, recorded
+   seeds/resources, and a documented model promotion or baseline-retention decision.
+4. **Extend inspection to fields.** Add independent forest/water/road-exposure and
+   evidence/unknown field overlays, score inspection, and baseline/model comparison.
+   Acceptance: local review of overlapping cases, desktop/mobile and keyboard
+   behavior, existing-layer combinations, and measured delivery latency.
+5. **Join fields to routing.** Prepare segment intervals and native/reference
+   features, select an unknown-data policy, then calibrate each preference and
+   combinations. Acceptance: Off equivalence, partial/repeated traversals,
+   artifact identity checks, bounded loading, route-quality review, and latency
+   measurements before exposing supported controls.
+
 ## Planned: routing improvements
 
 Deliver these independently after their data and validation gates pass:
@@ -266,9 +306,7 @@ Deliver these independently after their data and validation gates pass:
 | Increment | Required work and acceptance |
 | --- | --- |
 | Traffic-light avoidance | Preserve crossing-way, modern signal, island, and railway evidence; define directed passage events and endpoint/repeated-passage semantics. Use search state when charging depends on arrival/exit. Validate multi-node, branching, avoidable, and unavoidable crossings before exposing a control. |
-| Busy-road preference | Acquire complete buffered road context independently of runnable eligibility. Define a bounded distance-decaying exposure proxy and coverage mask; review parallel paths, crossings, and grade separation. |
-| Green-surroundings preference | Acquire complete candidate ways and multipolygon geometry with coverage. Select documented inclusion rules and review parks, woods, edges, private land, and green paths beside busy roads. Missing context must stay unknown. |
-| Combined calibration | Compare each supported preference and combinations against Off; record distance, observations, uncertainty, expanded states, and latency. Expose only supported controls and require understandable local tradeoffs. |
+| Environment preferences | Forest surroundings, water proximity, and busy-road exposure follow the [environment experiment stages](#planned-environment-preferences-experiment), including combined calibration and local runner acceptance. |
 | Guided assembly | Add waypoints, retained sections, and explicit avoidance guidance. Validate complete directed walks, ordered constraints, repetition, and infeasible requests against saved familiar outings. |
 | Automatic suggestions | Build a bounded set of useful, geographically different complete runs with user guidance. The existing CLI anchor baseline is experimental evidence. Acceptance requires stated constraints, meaningful alternatives, and local runner review. |
 

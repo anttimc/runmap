@@ -45,6 +45,18 @@ semantics when a request loads only part of the network.
 
 ## Prepared storage
 
+Environment pilot acquisition is independent of network preparation.
+`sources/environment.py` uses optional OSMnx feature acquisition to retain raw
+Overpass responses, assembled GeoJSON objects, and a provenance manifest. These
+pilot artifacts feed `api/environment.py`, which serves a fixed published source
+and its provenance to a separate MapLibre inspection page. That page shares the
+neutral basemap and worker setup, but needs no terrain or path configuration.
+Its independent source layers and click inspection retain overlapping evidence;
+source data is not joined to routing. The
+[experiment design](environment-preferences.md) describes proposed field
+preparation and integration; [development](development.md#acquire-environment-pilot-data)
+owns current acquisition commands and limitations.
+
 The runtime uses three related artifact sets:
 
 | Artifact | Responsibility |

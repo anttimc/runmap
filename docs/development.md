@@ -22,6 +22,87 @@ The web extra includes the API, image, and geometry dependencies; experiments
 adds Matplotlib. The old `requirements-inspection.txt` records a historical
 inspection environment and is not the application setup procedure.
 
+## Acquire environment pilot data
+
+The optional `environment` extra adds OSMnx for acquiring spatial features,
+including assembled woodland/water polygons and road context independent of
+pedestrian eligibility. It is not required by the interactive server.
+
+```sh
+uv run --extra environment python -m runmap.sources.environment \
+  config/environment/leppavaara-pilot.json --dry-run
+uv run --extra environment python -m runmap.sources.environment \
+  config/environment/leppavaara-pilot.json
+```
+
+The configured core is a 6 × 6 km EPSG:3067 square within the existing capital-area
+coverage, with a 300 m halo. Bounds plus halo are limited to a 10 km span per
+request. Tags are a union: woodland, water, wetlands/coastlines, all highway
+features, parks/nature reserves, and buildings. Tree points/rows are not included.
+The densified projected envelope is transformed into an enclosing WGS84 box;
+the downloaded footprint can exceed the projected core and halo.
+
+Default output is `data/environment/raw/leppavaara-pilot/` (Git-ignored):
+
+- `request.json`: validated core bounds, halo, and tag selectors.
+- `raw-overpass/*.json`: OSMnx's cached Overpass responses with original OSM
+  objects, member references, and available OSM base timestamps.
+- `features.geojson`: assembled WGS84 features with `osm_type`, `osm_id`, and
+  available source tags; absent tag properties are omitted. Original response
+  tags remain in the raw cache.
+- `manifest.json`: completion marker, source/output checksums, source times,
+  provider/licence, OSMnx version/settings, geometry counts, and known limitations.
+
+An interrupted run may be retried with the same request and output directory;
+OSMnx reuses successful cached responses. A completed manifest prevents overwrite.
+For a fresh acquisition, pass `--output data/environment/raw/<new-run-name>`.
+The publication time is not the source time of cached objects. Do not run two
+acquisitions into the same directory concurrently.
+
+This is pilot source gathering, not certified complete polygon coverage. A
+bounding-box Overpass query can miss enclosing polygons without selected member
+vertices. Assembly validity, missing relation members, coastline closure, and
+real-world mapping completeness need independent review before producing fields
+or training labels. Coastlines are line evidence, not assembled ocean polygons.
+The manifest reports invalid output geometry but does not automatically repair it.
+The [environment experiment](environment-preferences.md) defines later stages.
+
+Run offline acquisition checks with:
+
+```sh
+uv run --extra environment python -m unittest discover -s tests \
+  -p 'test_environment_acquisition.py' -v
+```
+
+### Inspect environment source geometry
+
+After acquiring the pilot, run the usual API and frontend servers (see
+[server commands below](#native-integration-kernel)) and open `http://localhost:5173/environment.html`.
+The page is also included in `pnpm --dir web build` and served by FastAPI at
+`/environment.html` when `web/dist` exists. It loads independently of terrain
+and path configuration. Source-layer controls and overlap inspection are
+described in the [guide](guide.md#environment-source-inspection).
+
+`RUNMAP_ENVIRONMENT_DIRECTORY` selects one completed acquisition directory;
+the default is `data/environment/raw/leppavaara-pilot/` relative to the project
+root. The API exposes only its manifest and fixed `features.geojson`, never the
+raw Overpass cache. The configuration embeds the export checksum in the feature
+URL; a changed manifest returns 409 until the page reloads. Keep published
+acquisitions immutable and switch directories for a fresh source snapshot.
+
+The bounded pilot uses one full GeoJSON source with gzip transport, rather than
+vector tiles. MapLibre rendering uses zero configured simplification tolerance;
+rendering still clips geometry into internal tiles. Clicks list rendered objects
+and source tags, not analytical geometry intersections. Geographic completeness
+and delivery performance remain review tasks before expanding the region.
+
+Run source acquisition and inspection checks with:
+
+```sh
+uv run --extra web --extra environment python -m unittest discover -s tests \
+  -p 'test_environment_*.py' -v
+```
+
 ## Native integration kernel
 
 Install the compiler and Cargo with [Rustup](https://rust-lang.org/tools/install/)

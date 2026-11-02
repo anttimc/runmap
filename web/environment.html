@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Environment inspection · Runmap</title>
+  </head>
+  <body>
+    <div id="inspection-map" aria-label="Interactive environment source map"></div>
+    <aside aria-labelledby="title">
+      <a href="/">← Running map</a>
+      <h1 id="title">Environment inspection</h1>
+      <p id="inspection-status" role="status">Loading pilot metadata…</p>
+      <p>
+        Mapped OSM evidence. Missing objects remain unknown. Road class is not measured traffic.
+      </p>
+      <fieldset id="inspection-layers" disabled>
+        <legend>Independent source layers</legend>
+      </fieldset>
+      <button id="fit-pilot" type="button" disabled>Fit pilot</button>
+      <p class="boundary-key">Solid purple: pilot core · dashed: query envelope</p>
+      <details>
+        <summary>Source identity and limitations</summary>
+        <div id="inspection-metadata"></div>
+      </details>
+      <h2>Inspect overlaps</h2>
+      <button id="inspect-center" type="button" disabled>Inspect map center</button>
+      <p>
+        Click the map to list every visible source object at that location. Toggle layers to compare
+        evidence.
+      </p>
+      <div id="inspection-selection" aria-live="polite"></div>
+    </aside>
+    <script type="module" src="/src/environment.ts"></script>
+  </body>
+</html>

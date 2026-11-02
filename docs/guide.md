@@ -5,6 +5,34 @@ controls, and a **Settings** dialog. The planner and Distance from start share
 the home/start location and routing policies. Changing routing inputs marks an
 existing run out of date. Map appearance changes affect presentation only.
 
+## Environment source inspection
+
+Open **Environment inspection** from the map header, or visit `/environment.html`.
+This separate experimental map displays the locally acquired OSM pilot. Forest,
+water polygons, waterways/coastline, and major roads start visible. Wetlands,
+parks/nature reserves, buildings, and mapped paths can be enabled independently.
+Translucent polygons and road lines allow overlapping evidence to remain visible.
+Solid purple marks the projected pilot core; dashed purple marks the enclosing
+query envelope, which includes the acquisition halo. **Fit pilot** returns to
+the query extent.
+
+Click to list all visible source objects within four screen pixels, with source
+tags, layer memberships, and links to OpenStreetMap. The click tolerance is a
+screen-space aid, not a physical proximity score. Use **Inspect map center**
+after panning with the map's arrow-key controls to inspect without a pointer.
+Source identity and limitations include the OSM base timestamps and export
+checksum. The neutral basemap is a
+separate source and can differ from the frozen pilot.
+
+These are mapped geometries, not environment scores or model predictions. Major
+roads mean motorway through tertiary, including link roads; they do not measure
+traffic, noise, or access. All major road classes currently share one red style;
+expand source tags to see `highway`, speed, and lanes where mapped.
+Displayed paths have no runnable-access validation.
+Missing mapped evidence does not establish real-world absence. Polygon holes
+are retained; enclosing polygons absent from the acquisition cannot be recovered
+by this view. See [setup](development.md#inspect-environment-source-geometry).
+
 ## Map layers
 
 The Map layers panel has separate switches for **Background gradient**, **Path
