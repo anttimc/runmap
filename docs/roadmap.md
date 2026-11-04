@@ -261,65 +261,63 @@ defines the backend target and outstanding acceptance matrix.
 
 ## Planned: environment preferences experiment
 
-Follow the [proposed design and experiment protocol](environment-preferences.md).
-The [bounded OSMnx pilot downloader](development.md#acquire-environment-pilot-data)
-and pilot bounds/tag configuration are implemented, along with a
-[source inspection map](guide.md#environment-source-inspection).
-The [four-field raster baseline](guide.md#experimental-environment-rasters),
-with park/reserve coverage incorporated into Greenery,
-and review-candidate overlay are also delivered. Context completeness, calibrated
-meanings, models, and routing preferences remain outstanding. Review source/field
-overlaps and holes on desktop/mobile; record source-load and interaction latency.
-The road layer now uses effective motorway/trunk intensity exponent 1.5,
-point-like sparse-street exponent 2, and a logarithmic reference-car noise proxy.
-Calibrate its nominal source levels, activity factors, effective attenuation,
-source-type assumptions, and discomfort thresholds; expand retained road context
-where exterior-dominance flags remain. Validate finite-road, shielding, ground,
-and traffic-flow effects before interpreting model dB as real-world noise.
-Review Nuotiotie as a quiet-street calibration case: its `living_street` source
-is excluded, but the ideal model still predicts exposure from Turunväylä/ramps
-roughly 250 m away. Compare local experience with the source-strength, display
-threshold, and missing-shielding assumptions before accepting that score.
-Distinguish road classes with color/width and a legend, and summarize class,
-speed, and lanes prominently in source inspection. Review Leppävaarankatu
-(`secondary`, tagged 40 km/h in the pilot) against motorway surroundings; class
-alone must not be interpreted as measured traffic or pleasantness. The
-[inspection progress report](archive/history/2026-11-02-environment-inspection.md)
-records delivered behavior and the initial user review.
-Complete these stages in order; keep implementation and runner acceptance separate:
+Develop two independent tracks following the
+[environment design](environment-preferences.md#two-development-directions).
+The current [four-field raster baseline](guide.md#experimental-environment-rasters)
+is sufficient to begin integration, with focused fixes as needed. Manual OSM
+validation, hand-labeled review locations, and learning all four environment
+fields are not prerequisites or planned work. Preserve known source/support
+limitations without requiring a completeness audit.
 
-Validate the first baseline against the
-[reviewed source interpretation](environment-preferences.md#source-interpretation-after-pilot-review):
-calibrate stronger woodland versus weaker within-polygon park/reserve greenery,
-preserve wetland avoidance separately, validate all water-polygon shores plus
-coastline while excluding line streams/ditches, and calibrate road exposure for
-traffic-related noise/discomfort. V3 accepts these designations and water areas;
-candidate hatching now marks limited road context.
+### Track 1: routing application integration
 
-1. **Freeze the pilot and evidence.** Select study bounds and spatial splits,
-   define the review rubric, acquire independent labels, and record source
-   coverage. Acceptance: reviewed positive/negative and overlapping examples,
-   explicit unknowns, and no train/test context leakage.
-2. **Validate context and refine the geometric baseline.** Validate the pilot source and
-   resolve enclosing-polygon omissions and incomplete geometry; expand acquisition
-   to the frozen study areas independently of runnable eligibility. Review the
-   delivered G/W/T/H fields and add independently verified woodland evidence
-   where park/reserve tags omit cover. Acceptance: correct polygon
-   holes, deduplication, support masks, seams, and reproducible preparation costs.
-3. **Compare PyTorch models.** Evaluate MLP and spatial CNN against the baseline;
-   add a heterogeneous GNN only if motivated by observed errors. Acceptance:
-   spatial holdouts, whole-object omission tests, per-attribute metrics, recorded
-   seeds/resources, and a documented model promotion or baseline-retention decision.
-4. **Validate field inspection and extend comparisons.** Review delivered score
-   overlays, evidence candidates, and click summaries; add fuller unknown-coverage
-   reporting and baseline/model comparison when independent evidence is available.
-   Acceptance: local review of overlapping cases, desktop/mobile and keyboard
-   behavior, existing-layer combinations, and measured delivery latency.
-5. **Join fields to routing.** Prepare segment intervals and native/reference
-   features, select an unknown-data policy, then calibrate each preference and
-   combinations. Acceptance: Off equivalence, partial/repeated traversals,
-   artifact identity checks, bounded loading, route-quality review, and latency
-   measurements before exposing supported controls.
+1. **Add tiled raster layers to the routing map.** Design bounded tile delivery
+   from the existing G/W/T/H bundles: tile format, zoom/resampling, cache identity,
+   and precomputed versus on-demand generation. Add independent toggles, opacity,
+   legends, and coverage/no-data indication in the main app. Acceptance: correct
+   seams and overlap with terrain/path/route layers, desktop/mobile and keyboard
+   behavior, and measured cold/warm delivery and interaction latency.
+2. **Project fields onto physical route segments.** Prepare ordered values or
+   intervals from the analytical rasters, with graph-distance chainage, support,
+   and field/network identity. Acceptance: agreement with direct grid sampling,
+   partial endpoints, repeated traversals, artifact identity checks, bounded
+   loading, and native/reference feature equivalence.
+3. **Design costs and the weighting UI.** Decide how greenery, water proximity,
+   traffic exposure, and independent wetland avoidance combine with existing
+   distance/hill/shape costs; define unknown handling, weight ranges, defaults,
+   Off behavior, and route summaries. Acceptance: all weights Off reproduce
+   existing costs/routes, individual and combined weights have understandable
+   tradeoffs on saved routes, and routing latency meets the existing budget.
+
+See [tile, segment, and UI design](environment-preferences.md#track-1-routing-application-layers-and-segment-projection).
+This track proceeds with the current fields independently of noise-model work.
+
+### Track 2: OSM-only road-noise learning
+
+1. **Acquire municipal reference targets.** Investigate road-noise maps for
+   Espoo, Vantaa, and Helsinki, starting with the
+   [Espoo map service](https://kartat.espoo.fi/ims). Confirm usable downloads or
+   services, licensing, study years, compatible metrics/heights/methods, coverage,
+   and continuous versus banded values. Acceptance: reproducible aligned targets,
+   explicit below-threshold/no-data handling, OSM dates, and frozen spatial
+   splits; include a held-out city where compatible data permit.
+2. **Fit the current road model first.** Preserve the unchanged proxy as control,
+   then calibrate its road-class intensity weights against municipal targets,
+   initially retaining attenuation and source aggregation. Acceptance: documented
+   fitted factors and acoustic-unit alignment, held-out errors, and reproducible
+   comparison before the discomfort transform.
+3. **Compare gradient boosting and neural networks.** Use OSM-only predictor
+   features with the same targets/splits as the fitted baseline; compare an MLP
+   and, if useful, a spatial CNN. Acceptance: city/road-class/noise-range error
+   breakdowns, spatial leakage controls, recorded seeds/resources, and a model
+   promotion or baseline-retention decision. Municipal noise maps are reference
+   model outputs, not measured noise or runner-comfort labels.
+4. **Publish an improved traffic field if justified.** Version any promoted field
+   and regenerate its map tiles and segment join. Acceptance: consistent display
+   and routing artifacts, preserved coverage information, and measured preparation
+   and serving costs. This is an optional upgrade to Track 1.
+
+See [reference sources and experiment protocol](environment-preferences.md#track-2-osm-only-road-noise-prediction).
 
 ## Planned: routing improvements
 
@@ -328,7 +326,7 @@ Deliver these independently after their data and validation gates pass:
 | Increment | Required work and acceptance |
 | --- | --- |
 | Traffic-light avoidance | Preserve crossing-way, modern signal, island, and railway evidence; define directed passage events and endpoint/repeated-passage semantics. Use search state when charging depends on arrival/exit. Validate multi-node, branching, avoidable, and unavoidable crossings before exposing a control. |
-| Environment preferences | Greenery, water proximity, traffic-related noise/discomfort, and independent wetland avoidance follow the [environment experiment stages](#planned-environment-preferences-experiment), including combined calibration and local runner acceptance. |
+| Environment preferences | Greenery, water proximity, traffic-related noise/discomfort, and independent wetland avoidance follow the [routing integration track](#track-1-routing-application-integration): tiled layers, segment projection, then costs and weighting UI. Road-noise learning proceeds independently. |
 | Guided assembly | Add waypoints, retained sections, and explicit avoidance guidance. Validate complete directed walks, ordered constraints, repetition, and infeasible requests against saved familiar outings. |
 | Automatic suggestions | Build a bounded set of useful, geographically different complete runs with user guidance. The existing CLI anchor baseline is experimental evidence. Acceptance requires stated constraints, meaningful alternatives, and local runner review. |
 

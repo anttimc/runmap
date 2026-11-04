@@ -1,41 +1,41 @@
-# Environment preferences: proposed design and experiment
+# Environment preferences: routing integration and road-noise learning
 
-Status: pilot acquisition, source inspection, and first raster baseline available,
-2026-11-02.
-A bounded OSMnx feature downloader, Leppävaara pilot configuration, and
-[source inspection map](guide.md#environment-source-inspection) are implemented; see
-[acquisition commands and limitations](development.md#acquire-environment-pilot-data).
-The [four raster layers and review-candidate overlay](guide.md#experimental-environment-rasters)
-are implemented for the pilot. Complete-context validation, calibrated meanings,
-models, and routing preferences remain proposed. This document owns the proposed
-design and experiment protocol; the
-[roadmap](roadmap.md#planned-environment-preferences-experiment) owns outstanding
-work and delivery gates. Existing capabilities remain in the [guide](guide.md).
+Status: pilot acquisition, source inspection, and the four-field raster baseline
+are available. Development direction updated 2026-11-04.
 
-The [first acquisition report](archive/history/2026-11-02-environment-acquisition.md)
-records the 2026-11-02 pilot, checksums, feature counts, and remaining coverage
-limitations. It does not establish model quality or complete context coverage.
-The [inspection progress report](archive/history/2026-11-02-environment-inspection.md)
-records the source-map checks, initial user review, and Leppävaarankatu road-class
-calibration case. Class-specific road styling remains planned.
-The [first raster report](archive/history/2026-11-02-environment-rasters.md) records
-the mapped-context bundle and checks after the source-interpretation review.
-The [road-noise update](archive/history/2026-11-02-road-noise-proxy.md) records
-the replacement of linear traffic decay with the reference-car intensity model.
+The [source inspection map](guide.md#environment-source-inspection) and
+[four raster layers](guide.md#experimental-environment-rasters) are implemented
+for the Leppävaara pilot. The current greenery, water, traffic-exposure, and
+wetland layers are sufficient to start application integration, with focused
+fixes as needed. A manual OSM-validation or location-labeling campaign is not
+part of the plan and is not a prerequisite for routing integration.
 
-## Objective and first deliverable
+This document owns the proposed design for two independent development tracks;
+the [roadmap](roadmap.md#planned-environment-preferences-experiment) owns their
+outstanding work and acceptance criteria. Existing capabilities remain in the
+[guide](guide.md).
 
-Let a runner explore forest surroundings, proximity to lakes/sea, traffic-related
-noise and discomfort, and wetland presence independently, then use supported
-attributes as route preferences.
-The first deliverable is an inspectable forest visualization in one familiar
-capital-area region, with water and road context visible at the same locations.
-Routing integration follows spatial-field and local-runner validation.
+The dated [acquisition](archive/history/2026-11-02-environment-acquisition.md),
+[inspection](archive/history/2026-11-02-environment-inspection.md),
+[raster](archive/history/2026-11-02-environment-rasters.md), and
+[road-noise proxy](archive/history/2026-11-02-road-noise-proxy.md) reports preserve
+pilot evidence and limitations; they do not establish complete mapping or
+calibrated real-world noise.
 
-The learning objective is to use PyTorch to estimate surroundings from nearby
-entities and test whether learning improves a transparent geometric baseline.
-A useful baseline can ship without a learned model if the experiment does not
-demonstrate an improvement.
+## Two development directions
+
+1. **Routing application integration:** bring the existing rasters into the main
+   routing map using tiled delivery, project their values onto physical route
+   segments, then design the cost structure and preference-weighting UI.
+2. **Road-noise learning:** predict municipal road-noise maps from OSM inputs
+   only. First fit the existing road-exposure model's road-class weights to the
+   reference data, then compare gradient boosting and neural networks.
+
+Routing integration can proceed with the current baseline independently of the
+learning experiment. Greenery, water proximity, and wetlands remain geometric
+OSM-derived layers; learning missing woodland or collecting manual labels for
+all four fields is outside the current scope. A successful noise model can later
+replace the traffic field through the same versioned field/segment interfaces.
 
 ## Spatial meaning and overlapping outputs
 
@@ -43,7 +43,7 @@ Keep mapped objects, estimated surroundings, and personal preferences separate:
 
 | Quantity | Meaning | Initial representation |
 | --- | --- | --- |
-| Woodland coverage | Mapped or independently verified woodland footprint, including woodland inside parks/reserves and polygon holes | Source polygons and per-cell area fraction with evidence provenance |
+| Woodland coverage | Mapped woodland footprint, including woodland inside parks/reserves and polygon holes | Source polygons and per-cell area fraction with evidence provenance |
 | Greenery, G | Woodland surroundings plus weaker park/reserve contributions within their polygons | Continuous score in [0, 1] |
 | Park coverage, P | Mapped `leisure=park` footprint, excluding nature-reserve designation alone | Internal per-cell fraction used by Greenery |
 | Water proximity, W | Proximity to any mapped water-polygon boundary or coastline | Continuous score in [0, 1], with separate interior/distance evidence |
@@ -72,21 +72,22 @@ The user's source-map review identified these requirements before field generati
 - **Woodland inside parks and nature reserves:** retain park/reserve boundaries
   as weaker greenery evidence within the polygon, not automatic woodland
   labels. Include explicitly mapped woodland within them at higher weight. Where a wooded park
-  lacks woodland geometry, record the missing evidence and obtain independently
-  reviewed wooded subareas or an appropriate canopy/land-cover source. Do not
+  lacks woodland geometry, retain that limitation; adding further cover evidence
+  is a possible later fix rather than a required manual review task. Do not
   fill an entire park/reserve as forest or treat its unclassified interior as
   confirmed nonforest. Nearby context may help a model, but a designation alone
   cannot establish tree cover.
   The park diagnostic uses `leisure=park` only; reserves have their own
   source toggle and remain separate evidence. A reserve designation alone does
-  raises greenery at the configured weaker weight, while keeping the park
+  raise greenery at the configured weaker weight, while keeping the park
   raster and woodland diagnostic separate. V3 uses a maximum of the weighted
   components, so overlapping designations do not add together.
-- **Wetlands:** retain their own geometry, support mask, model output, and
+- **Wetlands:** retain their own geometry, support mask, raster field, and
   optional avoidance weight. A wooded wetland may have both high G and high H;
   some users may prefer forest while avoiding wetlands. H initially describes
   mapped wetland presence, not wet footing, flood risk, or path accessibility.
-  Review paths and boardwalks through wetlands before interpreting route exposure.
+  Route exposure describes mapped wetland context, including paths and boardwalks,
+  rather than their surface condition.
 - **Water:** use all mapped water-polygon boundaries for inland shoreline
   distance and coastline geometry for coastal distance. Keep water interiors
   identifiable where complete area geometry exists. Line streams/ditches remain
@@ -96,9 +97,9 @@ The user's source-map review identified these requirements before field generati
   ocean areas by closing arbitrary clipped coastline lines.
 - **Roads:** target traffic-related noise and running discomfort, with less-busy
   streets contributing less than major roads at comparable distance. Class is
-  an initial prior, refined by speed, lanes, and traffic-volume evidence if
-  available. Keep missing attributes explicit. Evaluate distance decay and
-  possible shielding/grade separation against local judgments. The initial field
+  an initial prior; the learning track first calibrates class weights against
+  municipal road-noise maps. Speed, lanes, and other OSM context are candidate
+  later features. Keep missing attributes explicit. The initial field
   is a relative exposure proxy, not measured sound levels or live traffic.
 
 Keep raw OSM tags unchanged. Version these interpretation rules separately from
@@ -111,11 +112,13 @@ flowchart LR
     OSM[OSM environment extract] --> Objects[Normalized spatial objects]
     Objects --> Features[Raster feature channels]
     Features --> Baseline[Geometric baseline]
-    Features --> Model[Offline PyTorch inference]
-    Labels[Independent reviewed labels] --> Training[PyTorch training]
+    Features --> Model[Offline road-noise inference]
+    Labels[Municipal road-noise reference maps] --> Training[Class-weight fitting / boosting / neural training]
+    Features --> Training
     Training --> Model
     Baseline --> Fields[Versioned environment fields]
-    Model --> Fields
+    Model --> Traffic[Optional replacement traffic field]
+    Traffic --> Fields
     Fields --> Tiles[Map tiles and inspection]
     Fields --> Intervals[Physical segment intervals]
     Intervals --> Numeric[Prepared numeric routing features]
@@ -127,7 +130,7 @@ Use bounded spatial reads for tiles and inspection. A missing environment
 artifact must leave existing terrain and routing services usable.
 
 Proposed ownership follows the existing [architecture](architecture.md):
-`sources/` handles acquisition, a new `environment/` package handles object
+`sources/` handles acquisition, the existing `environment/` package handles object
 normalization and field preparation, `experiments/` owns training/evaluation,
 `paths/` joins fields to physical segments, and `api/` plus `web/src/` deliver
 the visualization. Shared routing and native code consume prepared features.
@@ -141,8 +144,9 @@ The initial implementation uses OSMnx's feature API and raw response cache.
 It retains assembled geometry and source tags without replacing the existing
 routing graph. Pyosmium's area assembly over regional `.osm.pbf` files is a
 candidate for a later import path, especially if bounding-box discovery omits
-large enclosing areas. The initial query does not satisfy the complete-geometry
-gate below until independently checked; successful download alone is insufficient.
+large enclosing areas. Known clipping and enclosing-polygon limitations remain
+explicit. Fix concrete acquisition defects as needed without requiring a manual
+completeness audit.
 
 Reuse OSM acquisition and provenance conventions, with an independent environment
 query. The existing runnable-highway extract cannot establish environment
@@ -151,7 +155,7 @@ coverage: it excludes forest geometry and many major roads.
 - Include `natural=wood` and `landuse=forest`, water areas with their water-body
   types, waterways, wetlands with available subtype tags, and relevant shorelines.
   Preserve parks/reserves and other green areas as distinct candidate evidence;
-  investigate missing wooded subareas rather than using a designation as cover.
+  retain missing-cover limitations rather than using a designation as cover.
   Preserve water-body types for inspection while accepting all polygonal water. Preserve excluded line streams
   and ditches for inspection without allowing them to raise default W.
 - Acquire road context independently of pedestrian eligibility, including major
@@ -179,31 +183,23 @@ the retained-halo flag alone does not establish noise coverage.
 
 A successfully downloaded extract establishes acquisition coverage, not complete
 real-world mapping. Store these separately: acquisition/geometry validity,
-attribute missingness, independent label validity, and estimated model uncertainty.
+attribute missingness, municipal target validity, and estimated model uncertainty.
 Absence of a forest or road tag is not reliable evidence of absence on the ground.
 
 ## Grid, features, and geometric baseline
 
 The delivered baseline uses a 10 m EPSG:3067 grid with 2 m coverage samples;
 see the [artifact contract](reference/prepared-data.md#environment-raster-bundles)
-for delivered channels and approximations. Compare a 5 m grid on
-narrow paths and woodland edges before deciding the delivered resolution.
+for delivered channels and approximations. Keep this grid for initial integration;
+revisit resolution if segment projection exposes material sampling errors.
 The grid must not change pedestrian connectivity or access permissions.
-
-Candidate model inputs extend the delivered channels with woodland coverage within
-25/100/300 m, park/reserve membership, wetland fraction and subtype,
-separate lake-shore and sea-shore distances, road
-distance and density by class, available road attributes, building coverage,
-and validity/missingness masks. Use metric geometry and point-to-line/polygon
-distances, not distance to object centroids. Compare input channels through
-ablations rather than assuming all of them help.
 
 The first baseline is deliberately reproducible. The rules below distinguish
 delivered mapped context from later evidence and calibration improvements:
 
 - F remains the diagnostic mean eligible woodland union coverage in a 100 m disk. Version 1 uses
   explicit woodland polygons, including those mapped within parks/reserves;
-  independently reviewed wooded subareas remain an additional evidence step.
+  further woodland evidence is optional future work.
   Retain the footprint and provenance
   separately from F. Unresolved tree cover needs an evidence-gap indicator;
   a numeric mapped-only baseline must not imply confirmed forest absence.
@@ -224,10 +220,9 @@ delivered mapped context from later evidence and calibration improvements:
   The class factors are uncalibrated relative-intensity priors. The original
   linear 300 m baseline is retained only for comparison/reproduction. Exclude
   mapped motor-vehicle prohibitions; absent access tags remain an assumption
-  recorded in configuration. Compare Leppävaarankatu and motorway surroundings
-  at matched distances before accepting reference levels, source types, and
-  discomfort thresholds. Evaluate speed/lane, flow, shielding, and ground-effect
-  refinements separately, with an explicit policy for missing evidence.
+  recorded in configuration. Preserve this uncalibrated configuration as the
+  experiment control; first fit road-class intensity factors against municipal
+  road-noise targets. Keep discomfort scaling separate from acoustic calibration.
 
 These are initial proxy definitions, not calibrated probabilities or established
 perceptual distances. Save all radii, tag rules, and amplitudes in configuration.
@@ -237,65 +232,136 @@ evidence for review without assuming that grade separation removes exposure.
 The baseline describes mapped context and must display that limitation even
 where acquisition coverage is valid.
 
-## Labels and missing-data experiment
+## Track 1: routing application layers and segment projection
 
-Choose three nonadjacent familiar study areas within existing prepared coverage,
-spanning wooded parks/reserves, woodland interiors/edges, wooded wetlands,
-water-polygon/coastal shores, line-stream/ditch controls, and contrasting road corridors. Freeze
-their bounds and assign training, validation, and final test areas before model
-tuning. Use guard bands at least as wide as the maximum feature/model context,
-and prevent shared large source objects from leaking between splits by grouping
-them or excluding affected boundary samples.
+### Tiled map delivery
 
-Initially review 100 locations per split, including confirmed positive and
-negative examples for each attribute and overlapping cases. Keep a representative
-sample separate from deliberately selected difficult cases. Record coordinates,
-review date, evidence/source identity, and per-attribute validity. Use a fixed
-rating rubric: 0 absent, 1 low, 2 medium, 3 high. Define greenery with woodland
-and designation components recorded separately, water proximity, wetland presence, and traffic-related noise/discomfort
-separately with example locations; do not
-ask reviewers for a single overall route-quality score. Record disagreements
-and unknowns rather than forcing labels. Re-review at least 20% of locations
-with a second reviewer where possible; otherwise report the single-reviewer
-limitation. Expand the sample if an attribute lacks sufficient positive/negative
-examples or model comparisons remain inconclusive.
+The existing inspection previews are not yet environment layers in the main
+routing app. Design a bounded tile path for G/W/T/H, including the raster tile
+format, zoom range, resampling, cache keys, and preparation/serving strategy.
+Reuse existing map and tile infrastructure where suitable. The initial candidate
+is Web Mercator XYZ raster tiles generated from the metric field bundle; choose
+precomputed versus on-demand generation based on coverage, storage, and latency.
+Keep analytical field values separate from colored display tiles.
 
-OSM polygons can provide weak woodland labels, but cannot independently validate
-predictions made from those same polygons. Use field review or independently
-verified imagery/land-cover evidence, with dates and resolution recorded. Finer
-output grids do not create finer evidence from a coarse source.
+Expose independent toggles, opacity, legends, and coverage/no-data indication in
+the routing map. Preserve overlapping layers and combinations with terrain,
+paths, and route overlays. Check tile seams, zoom changes, rapid panning,
+cancellation, stale responses, keyboard/mobile use, and cold/warm delivery costs.
+This increment changes visualization before environment weights affect routes.
 
-For missing-data recovery, remove whole objects or contiguous mapped patches
-from model inputs while retaining independent evaluation labels. Test both
-artificial omissions and naturally incomplete mapping. Removing isolated raster
-pixels is insufficient. Keep this task separate from reproducing known OSM
-geometry: nearby tags alone cannot recover arbitrary missing forests.
+### Project fields onto route segments
 
-## PyTorch model comparisons
+Next prepare ordered samples or intervals for all four fields on physical
+network segments, with distance chainage, coverage/support, and field/network
+identity. Use the analytical grid rather than sampling colored tiles. Preserve
+partial-endpoint and repeated-traversal semantics and compare segment summaries
+with direct raster sampling. The following cost/UI work consumes this prepared
+join; it must not require raster processing during each route request.
 
-Run comparisons in order, with identical splits, targets, and feature support:
+### Cost structure and weighting UI
 
-1. Geometric baseline, including its support masks.
-2. Small per-cell MLP using prepared multiscale summaries, to test whether learned
-   feature combinations help without learned spatial aggregation.
-3. Small CNN or U-Net over raster patches, to learn spatial arrangement. Record
-   the effective receptive field and avoid patch/tile padding artifacts.
-4. Optional heterogeneous GNN if raster errors motivate entity-based aggregation.
-   Use query cells, woodland polygons, water entities, and road segments as node
-   types; relations carry distance, containment/overlap, and structural evidence.
-   Query cells must cover the area, not only existing routing edges.
+After segment projection, decide how environment costs combine with the existing
+distance, hill, and shape objectives. Design individual and combined preference
+weights, defaults, ranges, an explicit Off state, and route exposure/coverage
+summaries together. The formula under [routing integration](#later-routing-integration)
+is a starting proposal, not an accepted cost contract or UI scale. Choose an
+unknown-data policy before enabling weights, and check route behavior and
+latency using saved route requests. These are integration checks, not a manual
+OSM-labeling exercise.
 
-Use separate output heads for each attribute. Continuous rubric ratings can be
-normalized to [0, 1] and trained with a masked regression loss. For explicitly
-binary labels, use independent logits and masked `BCEWithLogitsLoss`, not a
-softmax. Normalize losses per observed attribute before combining them; unknown
-targets contribute no supervised loss. Skip batches with no valid targets.
+## Track 2: OSM-only road-noise prediction
 
-For binary predictions evaluate calibration separately; a sigmoid value is not
-an uncertainty estimate. Report per-attribute label counts, model disagreement
-if using multiple seeds, and performance by evidence completeness. Preserve
-coverage masks regardless of predicted confidence. Add imagery only as a
-separately evaluated input experiment with acquisition/licensing defined first.
+### Municipal reference data
+
+Use road-noise maps from Espoo, Vantaa, and Helsinki as supervised reference
+targets. They are municipal acoustic-model outputs, not field measurements of
+noise or labels for running discomfort. Candidate sources include:
+
+- [Espoo map service](https://kartat.espoo.fi/ims) and the city's
+  [2022 road-noise study announcement](https://www.espoo.fi/fi/uutiset/2022/10/neljasosa-espoolaisista-altistuu-tieliikenteen-melulle).
+- [Vantaa noise studies and map appendices](https://www.vantaa.fi/fi/asuminen-ja-ymparisto/ymparisto-ja-luonto/melu),
+  which distinguish road traffic, rail traffic, and combined noise as well as
+  different time-period metrics.
+- [Helsinki open WFS layer catalog](https://kartta.hel.fi/avoindata/dokumentit/Aineistolista_wfs_avoindata.html),
+  which lists 2022 street-and-highway noise layers, including national daytime
+  and nighttime metrics.
+
+Data discovery is outstanding: confirm downloadable numeric rasters or vector
+noise bands, service access, licensing, coverage, study year, resolution,
+receiver height, calculation method, and noise metric for each city. A visible
+web map alone does not establish usable training data. Select one compatible
+road-only target, such as daytime LAeq or Lden, after checking availability;
+do not pool different metrics, receiver heights, or rail/aircraft/combined
+noise targets. Keep each incompatible target as a separate experiment.
+
+Transform reference geometry to the metric analysis grid with documented
+sampling and alignment rules. Preserve band intervals if only noise-zone
+polygons are available; do not treat band midpoints as precise measurements.
+Unmapped areas may be below a reporting threshold or outside modeled coverage:
+identify which applies rather than assigning zero dB. Record OSM snapshot dates
+and reference-study dates to expose temporal mismatch.
+
+### Inputs, splits, and model sequence
+
+All prediction inputs must come from OSM. Municipal maps supply training and
+evaluation targets only; municipal traffic counts, reference acoustic inputs,
+and noise-zone membership cannot become predictor features. Candidate OSM
+features include road-class distances and local density, speed/lanes and their
+missingness, bridge/tunnel tags, buildings, and other mapped context. Derive
+features offline with enough surrounding road context, including roads that
+are not runnable. No manual OSM validation or hand-rated location labels are
+required.
+
+Freeze spatial training, validation, and test blocks before tuning, with guard
+bands for feature/receptive-field context. Avoid random neighboring-cell splits;
+keep shared road corridors and overlapping patches from leaking across splits.
+Include a held-out-city evaluation where compatible reference data allow it,
+and report results separately by city and road class.
+
+Compare these models on identical targets, splits, and support:
+
+1. **Current model, unchanged:** preserve existing class factors, dominant-source
+   aggregation, attenuation, and display mapping as the reproducible control.
+2. **Calibrated current model:** fit the road-class intensity weights against
+   municipal noise targets while initially holding geometry, aggregation, and
+   attenuation fixed. Fit acoustic levels before the 0–1 discomfort transform;
+   state any conversion/offset needed between proxy dB and the municipal metric.
+   Fit factors for retained road classes, explicitly recording classes fixed to
+   zero or allowed to become active. Keep fitted strengths nonnegative.
+3. **Gradient boosting:** use OSM-derived distance, road, and context summaries
+   to test nonlinear feature combinations against the calibrated baseline.
+4. **Neural networks:** start with an MLP on the same summaries, then compare a
+   spatial CNN if spatial arrangement is a plausible source of improvement.
+   Keep neural-training dependencies optional and inference offline.
+
+Only extend attenuation, source aggregation, or other acoustic assumptions in
+separately recorded comparisons after the class-weight fit. This distinguishes
+what calibration achieves from what a more flexible model adds. Keep the
+acoustic target separate from the later choice of traffic-discomfort thresholds
+and user preference weights.
+
+### Evidence and model decision
+
+Save source/target manifests, licensing, target definitions and masks,
+OSM/feature/grid versions, splits, fitted parameters, code/dependency identity,
+seeds/checkpoints, runtime, and peak memory under
+`artifacts/environment-preferences/`. Write dated experiment reports only after
+runs; no model quality is claimed by this plan.
+
+Report MAE/RMSE and bias in dB where continuous targets exist. For banded targets,
+report band-aware error/agreement and any midpoint approximation separately.
+Break down results by city, road class, noise range, distance, and available OSM
+context. Use spatial blocks for uncertainty estimates; neighboring cells are
+not independent evidence. Select models on validation data and reserve test
+areas for the final comparison. Record every trained seed and preparation cost.
+
+Promote a model only if it improves held-out reference-map prediction over the
+calibrated baseline at acceptable preparation cost. Otherwise retain the fitted
+baseline or current proxy. Agreement with municipal models does not establish
+measured noise or perceived running comfort. Routing development does not wait
+for this decision; a promoted model supplies a versioned replacement traffic
+field through the same tile and segment-join interfaces.
 
 ## Visualization and inspection
 
@@ -306,10 +372,10 @@ halo support, and nearby contributing evidence; see the guide above. These are
 mapped-context scores, not learned predictions. Full unknown-coverage mapping,
 additional source evidence, and baseline/model comparison remain proposed.
 
-For subsequent field experiments, export matched review panels and compare
-layer combinations. Use a forest heatmap, water contours, and traffic hatching or outlines
-so overlaps remain visible. Include legends and baseline/model comparison with
-matched scales. Inferred values must be distinguishable from source geometry.
+For the road-noise experiment, export matched prediction/reference panels with
+shared acoustic scales and explicit target coverage. In the routing map, keep
+overlapping environment layers readable with independent styling and legends.
+Inferred values must be distinguishable from source geometry.
 
 Click inspection should show all attribute scores, mapped source objects,
 distances/coverage summaries, validity, model/source versions, and whether the
@@ -318,40 +384,10 @@ training details in developer inspection rather than ordinary preference control
 Check source holes, tile seams, zoom changes, keyboard/mobile use, rapid panning,
 cancellation, stale responses, and combinations with existing terrain/path layers.
 
-## Experiment evidence and decision criteria
-
-Save configuration, source and label manifests, split assignments, feature/grid
-versions, code revision and dirty-state identity, dependency versions, training
-seeds/checkpoints, machine, runtime, and peak memory. Store generated outputs in
-a dedicated `artifacts/environment-preferences/` run directory. Write dated
-reports under `docs/archive/history/` when experiments actually run; no result
-is claimed by this plan.
-
-Report per-attribute MAE against normalized ratings, thresholded precision/recall
-and IoU where binary labels are valid, and calibration where probabilities are
-claimed. Evaluate forest boundaries, mixed environments, and missing-context
-cases separately. Report representative-area and challenge-set results separately.
-Show baseline/model differences and source evidence at saved review locations.
-Use spatial-block uncertainty estimates where sample size permits; do not count
-neighboring cells as independent evidence of improvement.
-
-Choose architectures and thresholds using validation data only. Before opening
-the final test results, freeze the practical improvement margin and acceptable
-regression limits from reviewer disagreement and validation observations. Promote
-a learned model only if it improves the intended target over the baseline across
-spatial holdouts, preserves useful overlaps, and has acceptable preparation cost.
-Otherwise retain the baseline and document failures. Report every trained seed,
-not only the best run.
-
-Measure preparation time, artifact size, offline inference memory/time, cold/warm
-tile and inspection p50/p95 latency, and browser interaction on recorded hardware.
-Set numerical delivery budgets from the first baseline measurements before
-expanding coverage. Field generation and tile delivery need separate budgets.
-
 ## Later routing integration
 
-After field review, sample G/W/T/H into ordered physical-segment intervals with
-validity/support and artifact identity. Handle woodland boundaries and partial
+After tiled-layer integration, sample the current G/W/T/H into ordered physical
+segment intervals with validity/support and artifact identity. Handle woodland boundaries and partial
 segments explicitly; refine sampling or intersect geometry where coarse cells
 miss narrow features. Follow the existing projected/geodesic chainage contract
 in [prepared data](reference/prepared-data.md#published-graph-and-measurements).
@@ -374,9 +410,9 @@ cost integration and admissible heuristics before enabling controls. Prove that
 all environment weights Off reproduce existing routes and costs.
 
 Do not substitute zero for unknown fields. Before enabling each preference,
-choose and document either a validated imputation policy with separate unknown
-reporting or a supported-coverage restriction. Until that decision passes review,
-keep the affected control unavailable. Show route coverage and environment
+choose and document explicit handling for unknowns, such as imputation with
+separate unknown reporting or a supported-coverage restriction. Until that policy
+is implemented, keep the affected control unavailable. Show route coverage and environment
 summaries separately from preference strength; lack of evidence must not become
 an apparent quiet or forest-free area.
 
@@ -385,7 +421,8 @@ Version its segment join by network identity and sampling rules. Extend network
 and numeric artifacts together, preserving segment order, bounded loading,
 partial-endpoint semantics, and native/reference equivalence. Calibrate individual
 preferences and combinations against Off using saved familiar routes; report
-length, exposure, unknown fraction, expanded states, latency, and runner judgments.
+length, exposure, unknown fraction, expanded states, latency, and route tradeoffs.
+These checks do not require manually validating the underlying OSM objects.
 
 ## Documentation transition
 
@@ -402,7 +439,3 @@ explicitly. Keep this proposal clearly marked or archive it once superseded.
   for the candidate regional-file path.
 - [OSM forest tagging](https://wiki.openstreetmap.org/wiki/Tag:landuse=forest)
   and [multipolygon geometry](https://wiki.openstreetmap.org/wiki/Relation:multipolygon).
-- [PyTorch BCEWithLogitsLoss](https://docs.pytorch.org/docs/2.9/generated/torch.nn.BCEWithLogitsLoss.html)
-  for independent binary targets.
-- [PyTorch Geometric heterogeneous learning](https://pytorch-geometric.readthedocs.io/en/latest/notes/heterogeneous.html)
-  for the optional entity-based model.

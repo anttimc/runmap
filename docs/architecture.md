@@ -59,8 +59,9 @@ and a source-bound manifest. `api/environment_rasters.py` serves those previews
 and samples cells with nearby source evidence. The inspection frontend can load
 source geometry without a prepared raster bundle; neither path invokes model
 inference or network acquisition during map interaction. The
-[experiment design](environment-preferences.md) describes proposed field
-preparation and integration; [development](development.md#acquire-environment-pilot-data)
+[environment design](environment-preferences.md) describes proposed tiled map
+delivery, segment projection, costs/UI, and the independent OSM-only road-noise
+experiment; [development](development.md#acquire-environment-pilot-data)
 owns current acquisition commands and limitations.
 
 The runtime uses three related artifact sets:

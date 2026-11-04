@@ -17,7 +17,9 @@ understandable implementations.
   traffic-exposure, and wetland attributes, then express supported preferences,
   including independent wetland avoidance. Preserve
   missing-data uncertainty and explain tradeoffs; the
-  [environment experiment](environment-preferences.md) is planned work.
+  [routing integration and road-noise learning tracks](environment-preferences.md#two-development-directions)
+  build on the existing pilot rasters. Study road-noise prediction from OSM using
+  municipal reference maps independently of application integration.
 - **Adjust routes interactively:** move the start or turnaround, or change the
   centre-cost width, and see the revised route without a perceptible wait.
   Measure backend response and visible browser latency separately; a fast cached
