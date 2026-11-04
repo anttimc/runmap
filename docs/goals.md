@@ -13,8 +13,9 @@ understandable implementations.
 - **Explore interactively:** navigate an intended viewport of roughly 20 × 20 km
   without processing or transferring the entire source raster on each movement.
   Coverage may be larger; performance promises require representative measurements.
-- **Understand running surroundings:** explore overlapping forest, waterside, and
-  road-exposure attributes, then express supported route preferences. Preserve
+- **Understand running surroundings:** explore overlapping greenery (including parks/reserves), water,
+  traffic-exposure, and wetland attributes, then express supported preferences,
+  including independent wetland avoidance. Preserve
   missing-data uncertainty and explain tradeoffs; the
   [environment experiment](environment-preferences.md) is planned work.
 - **Adjust routes interactively:** move the start or turnaround, or change the

@@ -9,7 +9,7 @@ exists, and [roadmap](roadmap.md) for outstanding work.
 | [Goals](goals.md) | Intended outcomes, scope, and non-goals |
 | [Guide](guide.md) | Existing features, usage, and limitations |
 | [Roadmap](roadmap.md) | Outstanding work, priorities, and acceptance criteria |
-| [Environment preferences experiment](environment-preferences.md) | Proposed overlapping environment fields, pilot acquisition/source inspection status, data and label design, model comparisons, and experiment protocol |
+| [Environment preferences experiment](environment-preferences.md) | Overlapping field design, pilot acquisition/inspection and first baseline status, data and label design, proposed model comparisons, and experiment protocol |
 | [Architecture](architecture.md) | High-level components, dependencies, data flow, and ownership boundaries |
 | [Development](development.md) | Setup, preparation, commands, and configuration |
 | [Prepared data](reference/prepared-data.md) | Artifact identity, publication, network schema, and spatial-selection contracts |

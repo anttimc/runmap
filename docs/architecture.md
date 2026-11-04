@@ -53,6 +53,12 @@ and its provenance to a separate MapLibre inspection page. That page shares the
 neutral basemap and worker setup, but needs no terrain or path configuration.
 Its independent source layers and click inspection retain overlapping evidence;
 source data is not joined to routing. The
+offline `environment/` package normalizes independent evidence memberships and
+prepares metric raster channels, an evidence index, Web Mercator image previews,
+and a source-bound manifest. `api/environment_rasters.py` serves those previews
+and samples cells with nearby source evidence. The inspection frontend can load
+source geometry without a prepared raster bundle; neither path invokes model
+inference or network acquisition during map interaction. The
 [experiment design](environment-preferences.md) describes proposed field
 preparation and integration; [development](development.md#acquire-environment-pilot-data)
 owns current acquisition commands and limitations.

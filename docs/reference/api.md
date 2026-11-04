@@ -12,6 +12,9 @@ See [architecture](../architecture.md) for the service boundaries and
 | `GET /api/config` | Terrain coverage, manifest, legend, and tile templates |
 | `GET /api/environment/config` | Local environment source manifest, pilot/query boundary geometry, and checksum-bound feature URL |
 | `GET /api/environment/features.geojson?dataset={sha256}` | Published pilot source features; 404 if unavailable, 409 if the manifest identity changed |
+| `GET /api/environment/rasters/config?source={source_sha256}` | Prepared raster manifest, image template and sample URL; 404 if absent, 409 for source mismatch |
+| `GET /api/environment/rasters/{dataset}/{layer}.png` | Fixed baseline preview: forest, park, water, traffic, wetland, or evidence_gap; rejects unknown layers and stale identities |
+| `GET /api/environment/rasters/sample?dataset={dataset}&longitude={lon}&latitude={lat}` | One metric raster cell, support/gap channels and nearby source evidence; scores unavailable outside the core |
 | `GET /api/regions/{region_id}/terrain/v{version}/{manifest_id}/w{wavelength}/{z}/{x}/{y}.png` | Versioned terrain tiles |
 | `GET /api/regions/{region_id}/contours/v{version}/{manifest_id}/{z}/{x}/{y}.mvt` | Source-elevation contour tiles |
 | `GET /api/paths/config` | Dataset, coverage, policy options, tile templates, and planner/shell capabilities |

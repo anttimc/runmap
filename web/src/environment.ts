@@ -12,6 +12,7 @@ import type { FeatureCollection } from "geojson";
 import { openStreetMapStyle, FIRST_LABEL_LAYER_ID } from "./map-style";
 import { element } from "./dom";
 import "./environment.css";
+import { startRasterLayers, type RasterControls } from "./environment-rasters";
 
 interface InspectionConfig {
   manifest: {
@@ -78,11 +79,19 @@ const layers: SourceLayer[] = [
   },
   {
     id: "parks",
-    label: "Parks / nature reserves",
+    label: "Parks",
     color: "#9b9c34",
     visible: false,
     geometry: "Polygon",
-    filter: ["in", ["get", "leisure"], ["literal", ["park", "nature_reserve"]]],
+    filter: ["==", ["get", "leisure"], "park"],
+  },
+  {
+    id: "nature-reserves",
+    label: "Nature reserves (designation)",
+    color: "#267f73",
+    visible: false,
+    geometry: "Polygon",
+    filter: ["==", ["get", "leisure"], "nature_reserve"],
   },
   {
     id: "buildings",
@@ -264,6 +273,7 @@ async function start(): Promise<void> {
     fitBoundsOptions: { padding: 25 },
   });
   map.addControl(new NavigationControl());
+  let rasterControls: RasterControls | undefined;
   map.on("error", (event) => {
     if ("sourceId" in event && event.sourceId === "environment") {
       element("inspection-status").textContent = "Source geometry failed to load. Reload to retry.";
@@ -292,10 +302,17 @@ async function start(): Promise<void> {
         },
       });
     }
-    map.on("click", (event) => inspectLocation(map, event.lngLat));
-    element("inspect-center").addEventListener("click", () =>
-      inspectLocation(map, map.getCenter()),
-    );
+    void startRasterLayers(map, manifest.features.sha256).then((controls) => {
+      rasterControls = controls;
+    });
+    map.on("click", (event) => {
+      inspectLocation(map, event.lngLat);
+      rasterControls?.inspect(event.lngLat);
+    });
+    element("inspect-center").addEventListener("click", () => {
+      inspectLocation(map, map.getCenter());
+      rasterControls?.inspect(map.getCenter());
+    });
     element<HTMLButtonElement>("inspect-center").disabled = false;
     element<HTMLFieldSetElement>("inspection-layers").disabled = false;
     element<HTMLButtonElement>("fit-pilot").disabled = false;

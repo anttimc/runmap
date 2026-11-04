@@ -1,0 +1,40 @@
+{
+  "schema_version": 3,
+  "resolution_m": 10,
+  "coverage_resolution_m": 2,
+  "forest_radius_m": 100,
+  "water_radius_m": 100,
+  "road_radius_m": 300,
+  "road_weights": {
+    "motorway": 1.0,
+    "trunk": 1.0,
+    "primary": 0.8,
+    "secondary": 0.6,
+    "tertiary": 0.1,
+    "residential": 0.0,
+    "unclassified": 0.0,
+    "living_street": 0.0,
+    "service": 0.0
+  },
+  "road_noise": {
+    "reference_distance_m": 10,
+    "car_intensity_w_m2": 1e-05,
+    "intensity_reference_w_m2": 1e-12,
+    "discomfort_floor_db": 45,
+    "discomfort_full_db": 75,
+    "spreading_exponents": {
+      "motorway": 1.5,
+      "trunk": 1.5,
+      "primary": 2,
+      "secondary": 2,
+      "tertiary": 2,
+      "residential": 2,
+      "unclassified": 2,
+      "living_street": 2,
+      "service": 2
+    }
+  },
+  "park_greenery_weight": 0.5,
+  "reserve_greenery_weight": 0.5,
+  "include_all_water_polygons": true
+}

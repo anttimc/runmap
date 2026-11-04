@@ -265,9 +265,21 @@ Follow the [proposed design and experiment protocol](environment-preferences.md)
 The [bounded OSMnx pilot downloader](development.md#acquire-environment-pilot-data)
 and pilot bounds/tag configuration are implemented, along with a
 [source inspection map](guide.md#environment-source-inspection).
-Context completeness, fields, models, field visualization, and routing preferences
-remain outstanding. Review source overlaps and holes on desktop/mobile before
-using the pilot to prepare fields; record source-load and interaction latency.
+The [four-field raster baseline](guide.md#experimental-environment-rasters),
+with park/reserve coverage incorporated into Greenery,
+and review-candidate overlay are also delivered. Context completeness, calibrated
+meanings, models, and routing preferences remain outstanding. Review source/field
+overlaps and holes on desktop/mobile; record source-load and interaction latency.
+The road layer now uses effective motorway/trunk intensity exponent 1.5,
+point-like sparse-street exponent 2, and a logarithmic reference-car noise proxy.
+Calibrate its nominal source levels, activity factors, effective attenuation,
+source-type assumptions, and discomfort thresholds; expand retained road context
+where exterior-dominance flags remain. Validate finite-road, shielding, ground,
+and traffic-flow effects before interpreting model dB as real-world noise.
+Review Nuotiotie as a quiet-street calibration case: its `living_street` source
+is excluded, but the ideal model still predicts exposure from Turunväylä/ramps
+roughly 250 m away. Compare local experience with the source-strength, display
+threshold, and missing-shielding assumptions before accepting that score.
 Distinguish road classes with color/width and a legend, and summarize class,
 speed, and lanes prominently in source inspection. Review Leppävaarankatu
 (`secondary`, tagged 40 km/h in the pilot) against motorway surroundings; class
@@ -276,21 +288,31 @@ alone must not be interpreted as measured traffic or pleasantness. The
 records delivered behavior and the initial user review.
 Complete these stages in order; keep implementation and runner acceptance separate:
 
+Validate the first baseline against the
+[reviewed source interpretation](environment-preferences.md#source-interpretation-after-pilot-review):
+calibrate stronger woodland versus weaker within-polygon park/reserve greenery,
+preserve wetland avoidance separately, validate all water-polygon shores plus
+coastline while excluding line streams/ditches, and calibrate road exposure for
+traffic-related noise/discomfort. V3 accepts these designations and water areas;
+candidate hatching now marks limited road context.
+
 1. **Freeze the pilot and evidence.** Select study bounds and spatial splits,
    define the review rubric, acquire independent labels, and record source
    coverage. Acceptance: reviewed positive/negative and overlapping examples,
    explicit unknowns, and no train/test context leakage.
-2. **Prepare context and the geometric baseline.** Validate the pilot source and
+2. **Validate context and refine the geometric baseline.** Validate the pilot source and
    resolve enclosing-polygon omissions and incomplete geometry; expand acquisition
-   to the frozen study areas independently of runnable eligibility. Produce
-   versioned F/W/T fields and static review panels. Acceptance: correct polygon
+   to the frozen study areas independently of runnable eligibility. Review the
+   delivered G/W/T/H fields and add independently verified woodland evidence
+   where park/reserve tags omit cover. Acceptance: correct polygon
    holes, deduplication, support masks, seams, and reproducible preparation costs.
 3. **Compare PyTorch models.** Evaluate MLP and spatial CNN against the baseline;
    add a heterogeneous GNN only if motivated by observed errors. Acceptance:
    spatial holdouts, whole-object omission tests, per-attribute metrics, recorded
    seeds/resources, and a documented model promotion or baseline-retention decision.
-4. **Extend inspection to fields.** Add independent forest/water/road-exposure and
-   evidence/unknown field overlays, score inspection, and baseline/model comparison.
+4. **Validate field inspection and extend comparisons.** Review delivered score
+   overlays, evidence candidates, and click summaries; add fuller unknown-coverage
+   reporting and baseline/model comparison when independent evidence is available.
    Acceptance: local review of overlapping cases, desktop/mobile and keyboard
    behavior, existing-layer combinations, and measured delivery latency.
 5. **Join fields to routing.** Prepare segment intervals and native/reference
@@ -306,7 +328,7 @@ Deliver these independently after their data and validation gates pass:
 | Increment | Required work and acceptance |
 | --- | --- |
 | Traffic-light avoidance | Preserve crossing-way, modern signal, island, and railway evidence; define directed passage events and endpoint/repeated-passage semantics. Use search state when charging depends on arrival/exit. Validate multi-node, branching, avoidable, and unavoidable crossings before exposing a control. |
-| Environment preferences | Forest surroundings, water proximity, and busy-road exposure follow the [environment experiment stages](#planned-environment-preferences-experiment), including combined calibration and local runner acceptance. |
+| Environment preferences | Greenery, water proximity, traffic-related noise/discomfort, and independent wetland avoidance follow the [environment experiment stages](#planned-environment-preferences-experiment), including combined calibration and local runner acceptance. |
 | Guided assembly | Add waypoints, retained sections, and explicit avoidance guidance. Validate complete directed walks, ordered constraints, repetition, and infeasible requests against saved familiar outings. |
 | Automatic suggestions | Build a bounded set of useful, geographically different complete runs with user guidance. The existing CLI anchor baseline is experimental evidence. Acceptance requires stated constraints, meaningful alternatives, and local runner review. |
 

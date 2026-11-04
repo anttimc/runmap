@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "resolution_m": 10,
+  "coverage_resolution_m": 2,
+  "forest_radius_m": 100,
+  "water_radius_m": 100,
+  "road_radius_m": 300,
+  "road_weights": {
+    "motorway": 1.0, "trunk": 1.0, "primary": 0.8,
+    "secondary": 0.6, "tertiary": 0.4,
+    "residential": 0.2, "unclassified": 0.2,
+    "living_street": 0.2, "service": 0.2
+  }
+}

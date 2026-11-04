@@ -14,6 +14,10 @@
       <p>
         Mapped OSM evidence. Missing objects remain unknown. Road class is not measured traffic.
       </p>
+      <fieldset id="raster-layers" disabled>
+        <legend>Experimental raster layers</legend>
+      </fieldset>
+      <p id="raster-status" role="status">Checking prepared rasters…</p>
       <fieldset id="inspection-layers" disabled>
         <legend>Independent source layers</legend>
       </fieldset>
@@ -29,6 +33,11 @@
         Click the map to list every visible source object at that location. Toggle layers to compare
         evidence.
       </p>
+      <h3>Raster cell</h3>
+      <div id="raster-selection" aria-live="polite">
+        Click the map to inspect all environment scores.
+      </div>
+      <h3>Source objects</h3>
       <div id="inspection-selection" aria-live="polite"></div>
     </aside>
     <script type="module" src="/src/environment.ts"></script>

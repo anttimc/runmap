@@ -103,6 +103,64 @@ uv run --extra web --extra environment python -m unittest discover -s tests \
   -p 'test_environment_*.py' -v
 ```
 
+### Prepare environment rasters
+
+Generate the first mapped-context baseline from a completed acquisition:
+
+```sh
+uv run --extra web --extra environment python -m runmap.environment.prepare \
+  data/environment/raw/leppavaara-pilot
+```
+
+Defaults: [baseline configuration](../config/environment/baseline-v3.json) and
+`data/environment/prepared/leppavaara-baseline-v3/`. `--config` and `--output`
+select alternatives. Output directories must not already exist; use a fresh
+directory for each preparation attempt. The source export checksum must match
+its acquisition manifest. The retained halo must cover all configured radii.
+All versions fix the analysis grid at 10 m, coverage samples at 2 m, aligned metric
+bounds, and at most one million context cells.
+
+Schemas 2 and 3 use the reference-car intensity and line/point spreading in `road_noise`.
+`road_weights` are relative intensity factors in this version; the dB floor and
+full-scale values control discomfort normalization. Each road class must specify
+finite attenuation exponent in [1, 2]: 1 for ideal line spreading, 2 for point
+spreading, and the current motorway/trunk default 1.5 for intermediate attenuation.
+Positive finite reference values and increasing display
+levels are validated. `road_radius_m` retains a minimum processing-context/halo
+requirement; it does not truncate the acoustic curve. Full acoustic context may
+extend beyond that halo and has its own support flag.
+
+For historical linear preparation, explicitly pass
+`--config config/environment/baseline-v1.json --output <fresh-directory>`.
+Schema 3 adds greenery from woodland plus within-polygon park/reserve coverage.
+`park_greenery_weight` and `reserve_greenery_weight` default to 0.5 in the current
+configuration and must be in [0, 1), below woodland's fixed weight 1.
+`include_all_water_polygons: true` expands water proximity to all mapped water
+areas. Park/reserve and non-lake-water review hatching is removed for v3;
+limited road context remains hatched. Older woodland and distance bands remain
+available as diagnostics. V1/v2 configurations and bundles are preserved; pass
+their config and a fresh output path to reproduce those rules. The API defaults
+to v3, with v1/v2 still selectable via `RUNMAP_ENVIRONMENT_RASTER_DIRECTORY`.
+
+The bundle contains a multiband `fields.tif`, projected `evidence.json`, six
+georeferenced PNG previews, and a completion manifest with source/configuration,
+implementation/dependency identity, source dates, artifact checksums, and runtime.
+See the [field contract](reference/prepared-data.md#environment-raster-bundles).
+Preparation requires the web extra for PNG export and the environment extra
+for source geometry dependencies; no PyTorch installation is needed.
+
+Restart the API after code changes and reload `/environment.html`.
+`RUNMAP_ENVIRONMENT_RASTER_DIRECTORY` selects the prepared bundle; the default
+is the path above relative to the project root. It must match the source selected
+by `RUNMAP_ENVIRONMENT_DIRECTORY`. Source-only operation remains available when
+rasters are absent or mismatched. The API uses bounded raster-cell reads and
+caches evidence from at most two immutable pilot bundles.
+
+The pilot uses whole-image previews warped offline into Web Mercator, preserving
+the EPSG:3067 analysis grid in the TIFF. It does not yet use raster tiles; measure
+delivery and interaction before expanding beyond the pilot. Tests are included
+in the environment wildcard command above and `pnpm --dir web test`.
+
 ## Native integration kernel
 
 Install the compiler and Cargo with [Rustup](https://rust-lang.org/tools/install/)

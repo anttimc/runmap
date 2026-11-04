@@ -1,11 +1,14 @@
 # Environment preferences: proposed design and experiment
 
-Status: pilot acquisition and source inspection available, 2026-11-02.
+Status: pilot acquisition, source inspection, and first raster baseline available,
+2026-11-02.
 A bounded OSMnx feature downloader, Leppävaara pilot configuration, and
 [source inspection map](guide.md#environment-source-inspection) are implemented; see
 [acquisition commands and limitations](development.md#acquire-environment-pilot-data).
-Complete-context validation, fields, models, field overlays, and routing preferences
-remain proposed. This document owns the proposed design and experiment protocol; the
+The [four raster layers and review-candidate overlay](guide.md#experimental-environment-rasters)
+are implemented for the pilot. Complete-context validation, calibrated meanings,
+models, and routing preferences remain proposed. This document owns the proposed
+design and experiment protocol; the
 [roadmap](roadmap.md#planned-environment-preferences-experiment) owns outstanding
 work and delivery gates. Existing capabilities remain in the [guide](guide.md).
 
@@ -15,11 +18,16 @@ limitations. It does not establish model quality or complete context coverage.
 The [inspection progress report](archive/history/2026-11-02-environment-inspection.md)
 records the source-map checks, initial user review, and Leppävaarankatu road-class
 calibration case. Class-specific road styling remains planned.
+The [first raster report](archive/history/2026-11-02-environment-rasters.md) records
+the mapped-context bundle and checks after the source-interpretation review.
+The [road-noise update](archive/history/2026-11-02-road-noise-proxy.md) records
+the replacement of linear traffic decay with the reference-car intensity model.
 
 ## Objective and first deliverable
 
-Let a runner explore forest surroundings, proximity to water, and traffic
-exposure independently, then use supported attributes as route preferences.
+Let a runner explore forest surroundings, proximity to lakes/sea, traffic-related
+noise and discomfort, and wetland presence independently, then use supported
+attributes as route preferences.
 The first deliverable is an inspectable forest visualization in one familiar
 capital-area region, with water and road context visible at the same locations.
 Routing integration follows spatial-field and local-runner validation.
@@ -35,16 +43,20 @@ Keep mapped objects, estimated surroundings, and personal preferences separate:
 
 | Quantity | Meaning | Initial representation |
 | --- | --- | --- |
-| Woodland coverage | Mapped woodland footprint, including holes | Source polygons and per-cell area fraction |
-| Forest surroundings, F | Degree of wooded surroundings at a location | Continuous score in [0, 1] |
-| Water proximity, W | Degree of proximity to a mapped shoreline or waterway | Continuous score in [0, 1] |
-| Traffic exposure, T | Exposure proxy derived from nearby roads | Continuous score in [0, 1] |
+| Woodland coverage | Mapped or independently verified woodland footprint, including woodland inside parks/reserves and polygon holes | Source polygons and per-cell area fraction with evidence provenance |
+| Greenery, G | Woodland surroundings plus weaker park/reserve contributions within their polygons | Continuous score in [0, 1] |
+| Park coverage, P | Mapped `leisure=park` footprint, excluding nature-reserve designation alone | Internal per-cell fraction used by Greenery |
+| Water proximity, W | Proximity to any mapped water-polygon boundary or coastline | Continuous score in [0, 1], with separate interior/distance evidence |
+| Traffic exposure, T | Proxy for traffic-related noise and running discomfort from nearby roads | Continuous score in [0, 1] |
+| Wetland presence, H | Mapped wetland footprint, independent of woodland or open water | Per-cell area fraction in [0, 1] with separate validity |
 | User preferences | Tradeoffs between route length and environment attributes | Separate nonnegative routing weights |
 
-F, W, and T do not sum to one. A wooded lakeside location beside a major road
-can score highly on all three. Do not subtract traffic from forest surroundings
+G, W, T, and H do not sum to one. A wooded lakeside wetland beside a major road
+can score highly on all four. Do not subtract traffic or wetlands from greenery
 or assign one winning class per cell. Retain continuous fields; thresholded
 contours are display products, not the underlying data model.
+Park coverage is an internal Greenery input and can overlap woodland, water
+context, and wetlands. It is not exposed as a separate preference class.
 
 Land cover and surroundings have different targets. A path just outside a
 woodland polygon may have wooded surroundings. Water proximity does not imply
@@ -52,6 +64,45 @@ a view of water or access to its shore. Road-derived exposure does not measure
 current traffic, noise, air quality, or safety. The initial feature offers
 traffic avoidance as a soft preference; a guarantee of no nearby traffic is
 outside this experiment.
+
+### Source interpretation after pilot review
+
+The user's source-map review identified these requirements before field generation:
+
+- **Woodland inside parks and nature reserves:** retain park/reserve boundaries
+  as weaker greenery evidence within the polygon, not automatic woodland
+  labels. Include explicitly mapped woodland within them at higher weight. Where a wooded park
+  lacks woodland geometry, record the missing evidence and obtain independently
+  reviewed wooded subareas or an appropriate canopy/land-cover source. Do not
+  fill an entire park/reserve as forest or treat its unclassified interior as
+  confirmed nonforest. Nearby context may help a model, but a designation alone
+  cannot establish tree cover.
+  The park diagnostic uses `leisure=park` only; reserves have their own
+  source toggle and remain separate evidence. A reserve designation alone does
+  raises greenery at the configured weaker weight, while keeping the park
+  raster and woodland diagnostic separate. V3 uses a maximum of the weighted
+  components, so overlapping designations do not add together.
+- **Wetlands:** retain their own geometry, support mask, model output, and
+  optional avoidance weight. A wooded wetland may have both high G and high H;
+  some users may prefer forest while avoiding wetlands. H initially describes
+  mapped wetland presence, not wet footing, flood risk, or path accessibility.
+  Review paths and boardwalks through wetlands before interpreting route exposure.
+- **Water:** use all mapped water-polygon boundaries for inland shoreline
+  distance and coastline geometry for coastal distance. Keep water interiors
+  identifiable where complete area geometry exists. Line streams/ditches remain
+  inspectable context and are excluded from default W, while polygonal water
+  bodies contribute regardless of lake classification. Reservoirs, basins, ponds,
+  and unclassified water polygons are accepted inputs, not review candidates. Do not infer
+  ocean areas by closing arbitrary clipped coastline lines.
+- **Roads:** target traffic-related noise and running discomfort, with less-busy
+  streets contributing less than major roads at comparable distance. Class is
+  an initial prior, refined by speed, lanes, and traffic-volume evidence if
+  available. Keep missing attributes explicit. Evaluate distance decay and
+  possible shielding/grade separation against local judgments. The initial field
+  is a relative exposure proxy, not measured sound levels or live traffic.
+
+Keep raw OSM tags unchanged. Version these interpretation rules separately from
+acquisition, and show which source and rule contributed to each derived field.
 
 ## Proposed preparation and delivery boundaries
 
@@ -97,9 +148,12 @@ Reuse OSM acquisition and provenance conventions, with an independent environmen
 query. The existing runnable-highway extract cannot establish environment
 coverage: it excludes forest geometry and many major roads.
 
-- Include `natural=wood` and `landuse=forest`, water areas, waterways, and
-  relevant shorelines. Preserve parks and other green areas as distinct evidence;
-  a park tag alone is not a forest label.
+- Include `natural=wood` and `landuse=forest`, water areas with their water-body
+  types, waterways, wetlands with available subtype tags, and relevant shorelines.
+  Preserve parks/reserves and other green areas as distinct candidate evidence;
+  investigate missing wooded subareas rather than using a designation as cover.
+  Preserve water-body types for inspection while accepting all polygonal water. Preserve excluded line streams
+  and ditches for inspection without allowing them to raise default W.
 - Acquire road context independently of pedestrian eligibility, including major
   roads. Preserve road class, speed/lanes where available, and bridge, tunnel,
   layer, access, and service attributes. Missing attributes get explicit masks.
@@ -113,11 +167,15 @@ coverage: it excludes forest geometry and many major roads.
   attribution, and licensing. Deduplicate shared objects and avoid double-counting
   overlapping woodland polygons when calculating union coverage.
 
-The initial spatial support is 300 m. Acquire at least that halo around the
+The initial acquisition halo is 300 m. Acquire at least that halo around the
 display core; enlarge it if feature computation or the model receptive field
 requires more context. Track valid support explicitly at boundaries. Every
 derived tile must use the same grid origin and full required context before
 cropping its core.
+Road-noise v2 has no finite 300 m propagation cutoff. It uses retained sources
+and separately flags where an exterior source could dominate under configured
+strength limits. Expand acoustic context before treating such cells as supported;
+the retained-halo flag alone does not establish noise coverage.
 
 A successfully downloaded extract establishes acquisition coverage, not complete
 real-world mapping. Store these separately: acquisition/geometry validity,
@@ -126,31 +184,54 @@ Absence of a forest or road tag is not reliable evidence of absence on the groun
 
 ## Grid, features, and geometric baseline
 
-Start with a 10 m EPSG:3067 grid aligned across tiles. Compare a 5 m grid on
+The delivered baseline uses a 10 m EPSG:3067 grid with 2 m coverage samples;
+see the [artifact contract](reference/prepared-data.md#environment-raster-bundles)
+for delivered channels and approximations. Compare a 5 m grid on
 narrow paths and woodland edges before deciding the delivered resolution.
 The grid must not change pedestrian connectivity or access permissions.
 
-Prepare separate channels for woodland union fraction, woodland coverage within
-25/100/300 m, distance to woodland, distance to shorelines/waterways, road
+Candidate model inputs extend the delivered channels with woodland coverage within
+25/100/300 m, park/reserve membership, wetland fraction and subtype,
+separate lake-shore and sea-shore distances, road
 distance and density by class, available road attributes, building coverage,
 and validity/missingness masks. Use metric geometry and point-to-line/polygon
 distances, not distance to object centroids. Compare input channels through
 ablations rather than assuming all of them help.
 
-The first baseline is deliberately reproducible:
+The first baseline is deliberately reproducible. The rules below distinguish
+delivered mapped context from later evidence and calibration improvements:
 
-- F is mean mapped woodland union coverage in a 100 m disk.
-- W is `max(0, 1 - d / 100 m)`, with d the distance to mapped shoreline or
-  waterway; keep water-body interiors identifiable in inspection.
-- T is the maximum nearby-road influence
-  `a(class) * max(0, 1 - d / 300 m)`. Start with amplitudes 1.0 for
-  motorway/trunk, 0.8 for primary, 0.6 for secondary, 0.4 for tertiary, and
-  0.2 for other motor-vehicle roads. Exclude mapped motor-vehicle prohibitions;
-  absent access tags remain an assumption recorded in the configuration.
+- F remains the diagnostic mean eligible woodland union coverage in a 100 m disk. Version 1 uses
+  explicit woodland polygons, including those mapped within parks/reserves;
+  independently reviewed wooded subareas remain an additional evidence step.
+  Retain the footprint and provenance
+  separately from F. Unresolved tree cover needs an evidence-gap indicator;
+  a numeric mapped-only baseline must not imply confirmed forest absence.
+- G is `max(F, 0.5 P, 0.5 R)` by default in v3. P/R are park/reserve cell
+  coverage with no spatial blur. Keep designation weights configurable below
+  woodland's fixed weight 1; forests can contribute more strongly than a
+  designation alone. Park and reserve coverage remain diagnostic inputs only.
+- W is `max(0, 1 - d / 100 m)`, with d the minimum distance to any mapped
+  water-polygon boundary or coastline. Water interiors and distances remain
+  separately inspectable. V1/v2 selected explicitly tagged lakes only; v3 accepts
+  all mapped water areas. Line streams/ditches remain excluded; missing mapping
+  must not silently become evidence of absence.
+- H is the union fraction of mapped wetland within the grid cell, with separate
+  evidence validity. It can overlap greenery and is not subtracted from G.
+- T now uses the [v2 reference-car noise proxy](reference/prepared-data.md#road-noise-proxy-version-2):
+  reference intensity at 10 m, effective motorway/trunk intensity attenuation
+  `1/r^1.5` or sparse-street `1/r²`, logarithmic dB, and a configurable discomfort scale.
+  The class factors are uncalibrated relative-intensity priors. The original
+  linear 300 m baseline is retained only for comparison/reproduction. Exclude
+  mapped motor-vehicle prohibitions; absent access tags remain an assumption
+  recorded in configuration. Compare Leppävaarankatu and motorway surroundings
+  at matched distances before accepting reference levels, source types, and
+  discomfort thresholds. Evaluate speed/lane, flow, shielding, and ground-effect
+  refinements separately, with an explicit policy for missing evidence.
 
 These are initial proxy definitions, not calibrated probabilities or established
 perceptual distances. Save all radii, tag rules, and amplitudes in configuration.
-The maximum-road baseline avoids treating duplicated road geometry as increased
+The dominant-source road baseline avoids treating duplicated road geometry as increased
 exposure; a road-density model is a later comparison. Preserve bridge/tunnel
 evidence for review without assuming that grade separation removes exposure.
 The baseline describes mapped context and must display that limitation even
@@ -159,7 +240,8 @@ where acquisition coverage is valid.
 ## Labels and missing-data experiment
 
 Choose three nonadjacent familiar study areas within existing prepared coverage,
-spanning woodland interiors/edges, waterfront, and major-road corridors. Freeze
+spanning wooded parks/reserves, woodland interiors/edges, wooded wetlands,
+water-polygon/coastal shores, line-stream/ditch controls, and contrasting road corridors. Freeze
 their bounds and assign training, validation, and final test areas before model
 tuning. Use guard bands at least as wide as the maximum feature/model context,
 and prevent shared large source objects from leaking between splits by grouping
@@ -169,8 +251,9 @@ Initially review 100 locations per split, including confirmed positive and
 negative examples for each attribute and overlapping cases. Keep a representative
 sample separate from deliberately selected difficult cases. Record coordinates,
 review date, evidence/source identity, and per-attribute validity. Use a fixed
-rating rubric: 0 absent, 1 low, 2 medium, 3 high. Define wooded surroundings,
-water proximity, and road exposure separately with example locations; do not
+rating rubric: 0 absent, 1 low, 2 medium, 3 high. Define greenery with woodland
+and designation components recorded separately, water proximity, wetland presence, and traffic-related noise/discomfort
+separately with example locations; do not
 ask reviewers for a single overall route-quality score. Record disagreements
 and unknowns rather than forcing labels. Re-review at least 20% of locations
 with a second reviewer where possible; otherwise report the single-reviewer
@@ -216,11 +299,15 @@ separately evaluated input experiment with acquisition/licensing defined first.
 
 ## Visualization and inspection
 
-The existing application now includes a separate source inspection page with
-independent source layers and overlap/tag inspection; see the guide above.
-For the next field experiment, export static baseline panels and georeferenced fields for review; then
-add independently toggleable forest, water, traffic, source-outline, and unknown
-layers. Use a forest heatmap, water contours, and traffic hatching or outlines
+The existing application includes independent source geometry and first-version
+greenery, water proximity, traffic-exposure, wetland, and review-candidate
+raster overlays. Click inspection shows all four scores, numeric channels,
+halo support, and nearby contributing evidence; see the guide above. These are
+mapped-context scores, not learned predictions. Full unknown-coverage mapping,
+additional source evidence, and baseline/model comparison remain proposed.
+
+For subsequent field experiments, export matched review panels and compare
+layer combinations. Use a forest heatmap, water contours, and traffic hatching or outlines
 so overlaps remain visible. Include legends and baseline/model comparison with
 matched scales. Inferred values must be distinguishable from source geometry.
 
@@ -263,7 +350,7 @@ expanding coverage. Field generation and tile delivery need separate budgets.
 
 ## Later routing integration
 
-After field review, sample F/W/T into ordered physical-segment intervals with
+After field review, sample G/W/T/H into ordered physical-segment intervals with
 validity/support and artifact identity. Handle woodland boundaries and partial
 segments explicitly; refine sampling or intersect geometry where coarse cells
 miss narrow features. Follow the existing projected/geodesic chainage contract
@@ -274,11 +361,13 @@ separate policy. Repeated traversals incur repeated exposure costs.
 An initial length-equivalent cost is:
 
 \[
-C(e)=\int_e [1+w_f(1-F(s))+w_w(1-W(s))+w_tT(s)]\,ds,
-\qquad w_f,w_w,w_t\geq0.
+C(e)=\int_e [1+w_g(1-G(s))+w_w(1-W(s))+w_tT(s)+w_hH(s)]\,ds,
+\qquad w_g,w_w,w_t,w_h\geq0.
 \]
 
 Here ds is graph-distance chainage in metres and the weights are dimensionless.
+Wetland avoidance has its own weight, initially Off, so it does not cancel
+woodland evidence or affect users who have no wetland preference.
 This adds nonnegative penalties and preserves distance as a lower bound; it
 does not define the full existing hill/shape objective. Review native/reference
 cost integration and admissible heuristics before enabling controls. Prove that

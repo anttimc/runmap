@@ -17,6 +17,14 @@ measurements separate from historical reports, and identify their dataset/model.
 The [environment acquisition](history/2026-11-02-environment-acquisition.md) and
 [source inspection progress](history/2026-11-02-environment-inspection.md) record
 the Leppävaara pilot, browser checks, road-class findings, and remaining review.
+The [first environment raster baseline](history/2026-11-02-environment-rasters.md)
+records the four fields, revised source rules, artifact identities, and checks.
+The [reference-car noise update](history/2026-11-02-road-noise-proxy.md) records
+inverse-distance spreading, dB normalization, and outside-context support.
+The [separate park layer](history/2026-11-04-park-layer.md) records park coverage,
+the nature-reserve distinction, and overlap/inspection checks.
+The [greenery and water update](history/2026-11-04-greenery-and-water.md) records
+weaker within-polygon park/reserve greenery and inclusion of all water polygons.
 
 The [2026-11-02 native routing profile](history/2026-11-02-native-routing-profile.md)
 separates Rust phase timings and allocation traffic, with reproduction commands

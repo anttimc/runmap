@@ -10,7 +10,7 @@ existing run out of date. Map appearance changes affect presentation only.
 Open **Environment inspection** from the map header, or visit `/environment.html`.
 This separate experimental map displays the locally acquired OSM pilot. Forest,
 water polygons, waterways/coastline, and major roads start visible. Wetlands,
-parks/nature reserves, buildings, and mapped paths can be enabled independently.
+parks, nature-reserve designations, buildings, and mapped paths can be enabled independently.
 Translucent polygons and road lines allow overlapping evidence to remain visible.
 Solid purple marks the projected pilot core; dashed purple marks the enclosing
 query envelope, which includes the acquisition halo. **Fit pilot** returns to
@@ -32,6 +32,75 @@ Displayed paths have no runnable-access validation.
 Missing mapped evidence does not establish real-world absence. Polygon holes
 are retained; enclosing polygons absent from the acquisition cannot be recovered
 by this view. See [setup](development.md#inspect-environment-source-geometry).
+
+### Experimental environment rasters
+
+The inspection page also supports a prepared 10 m mapped-context baseline.
+All raster layers start off and can overlap independently:
+
+| Layer | Current meaning |
+| --- | --- |
+| Greenery | Strongest of woodland surroundings (weight 1), park coverage (0.5), and nature-reserve coverage (0.5) |
+| Water proximity | Linear decay over 100 m from any mapped water-polygon boundary or sea coastline; line streams and ditches do not contribute |
+| Road exposure proxy | Dominant modeled road-noise level converted to a 0–1 discomfort score; effective `1/r^1.5` intensity for motorway/trunk and `1/r²` for sparse-traffic street assumptions |
+| Wetland presence | Mapped wetland fraction in the cell, independent of forest |
+| Review candidates | Amber hatching where a road outside retained context could dominate the modeled exposure |
+
+Color intensity increases from transparent at zero to strong at one. These are
+configurable baseline scores. Woodland keeps its 100 m surroundings average.
+Park and reserve contributions use only each cell's polygon fraction and do
+not spread beyond the footprint. The maximum prevents overlapping designations
+from adding together; dense woodland can reach 1, while a park/reserve alone
+contributes at most 0.5. Raw woodland context and reserve coverage remain
+available under **All raster channels and identity**. All water polygons are
+accepted, including ponds, basins, reservoirs and unclassified water areas;
+their interior coverage is retained separately from shoreline proximity.
+These are
+uncalibrated scores, not probabilities. A zero means no qualifying mapped
+evidence, not confirmed real-world absence. Candidate hatching does not discover
+all missing data. The basemap remains a separate source.
+
+The current road model assumes a reference-car intensity of `10⁻⁵ W/m²` at 10 m
+(70 dB relative to `10⁻¹² W/m²`). Class factors scale intensity: motorway/trunk 1,
+primary 0.8, secondary 0.6, and tertiary 0.1. Residential, living-street,
+unclassified, and service roads have factor zero and do not contribute to this
+exposure model. These factors are
+uncalibrated activity/source-strength priors, not measured vehicle counts.
+The display maps 45–75 modeled dB linearly to 0–1. All reference values and
+thresholds are configurable assumptions; the result is not measured noise or dBA.
+Traffic zero can mean below the display floor, even when roads are present.
+The raster panel shows the modeled dominant-road dB level alongside discomfort.
+Motorway/trunk attenuation uses exponent 1.5, about 4.5 dB loss per distance
+doubling: faster than ideal line spreading, slower than a point source. This is
+a uniform effective-attenuation assumption, not a ground/barrier analysis.
+Road influence does not abruptly stop at 300 m; with the current reference and
+floor, motorway/trunk scores reach zero at about 464 m. Amber context hatching identifies potential underestimation from outside
+the retained extent under the configured source-strength limits.
+
+Click anywhere in the pilot, or use **Inspect map center**, to see all four
+scores regardless of enabled layers. The raster panel includes retained-halo
+support, evidence-gap indicators, nearby contributing objects/candidates, and
+all numeric channels. Nearby evidence uses exact source geometry distances at
+the clicked position; grid scores use occupied 10 m cells and can differ by
+roughly a cell diagonal. Outside the pilot, the panel reports unavailable scores.
+Source-object inspection still lists only enabled source layers under the click.
+
+Parks and nature reserves have separate source toggles. A nature reserve denotes
+protection for ecological or other special interest; it does not establish tree
+cover. Greenery now accepts both designations as weaker positive evidence,
+without claiming that they are forest. Park and reserve coverage are diagnostic
+inputs to Greenery rather than separate environment classes. They remain visible
+under **All raster channels and identity**, and their source polygons can be
+toggled for inspection. Nature reserves are excluded from the park-coverage
+diagnostic unless separately mapped as parks.
+See the [OSM nature-reserve definition](https://wiki.openstreetmap.org/wiki/Tag:leisure=nature_reserve).
+
+The raster baseline does not infer missing forests inside parks, measure noise,
+model speed/lanes, actual shielding/ground/weather conditions or finite-road acoustics,
+establish sea interiors, or determine whether a
+wetland path is wet. No routing preferences change. See
+[preparation](development.md#prepare-environment-rasters) to generate or select
+the local bundle. Missing rasters leave source inspection available.
 
 ## Map layers
 

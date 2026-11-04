@@ -87,7 +87,16 @@ pre {
   font-weight: 600;
 }
 #inspection-selection {
-  padding-bottom: 24px;
+  padding-bottom: 12px;
+}
+dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px;
+}
+dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 700px) {
   #inspection-map {
