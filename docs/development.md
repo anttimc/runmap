@@ -150,6 +150,21 @@ uv run --no-sync python -c 'from runmap.routing.fields import integrate_fields; 
 Compiled extensions and `rust/target/` are ignored by Git. Restart the backend
 after rebuilding; an already running process retains its loaded native library.
 
+Native routing profiling is available through the optional Cargo `profiling`
+feature. It adds thread-local exclusive phase timers and Rust allocation-request
+counters; normal builds compile those spans away. Use separate normal, timing,
+and allocation passes rather than treating instrumented timings as production
+latency. The [dated native profile](archive/history/2026-11-02-native-routing-profile.md#reproduction)
+contains build/run commands and visual-report generation. Restore the normal
+extension after profiling. This measures fixed-area routing primitives; use
+`benchmark_run_latency` for complete request handling.
+
+For sampling experiments, the optional Cargo `integration-experiment` feature
+builds a standalone Rust example that varies quadrature spacing and minimum
+sample counts without changing routing defaults or rebuilding the Python
+extension. The [dated integration comparison](archive/history/2026-11-02-integration-comparison.md#reproduction)
+contains commands, numerical-error definitions, and visual results.
+
 For the application routing path, start with
 [`routing/numeric_planner.py`](../src/runmap/routing/numeric_planner.py) and
 [`routing/numeric_search.py`](../src/runmap/routing/numeric_search.py), then read

@@ -51,6 +51,7 @@ fn deadline(timeout: Option<f64>) -> PyResult<Option<Instant>> {
 }
 
 fn views<'a>(py: Python<'a>, owners: &'a [Py<PyBytes>]) -> PyResult<Vec<Chunk<'a>>> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Views);
     owners
         .iter()
         .map(|owner| numeric::parse_chunk(owner.bind(py).as_bytes()).map_err(routing_error))
@@ -123,11 +124,13 @@ fn shape_settings(value: Option<ShapeArguments>) -> Option<ShapeSettings> {
 }
 
 fn ints(py: Python<'_>, values: impl Iterator<Item = i64>) -> Py<PyBytes> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Serialize);
     let bytes: Vec<u8> = values.flat_map(i64::to_le_bytes).collect();
     PyBytes::new(py, &bytes).unbind()
 }
 
 fn floats(py: Python<'_>, values: impl Iterator<Item = f64>) -> Py<PyBytes> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Serialize);
     let bytes: Vec<u8> = values.flat_map(f64::to_le_bytes).collect();
     PyBytes::new(py, &bytes).unbind()
 }

@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 use crate::fields::{self, FieldSettings, Integrals, IntegrationError, Point};
 
 #[pyfunction]
-#[pyo3(signature = (points, home, destination, radius, transition_width, spacing_m=5.0, timeout_seconds=None))]
+#[pyo3(signature = (points, home, destination, radius, transition_width, spacing_m=10.0, timeout_seconds=None))]
 fn integrate_fields(
     points: Vec<Point>,
     home: Point,
@@ -39,6 +39,34 @@ fn integrate_fields(
 
 #[pymodule]
 fn _routing_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    #[cfg(feature = "profiling")]
+    {
+        module.add_function(wrap_pyfunction!(profile_begin, module)?)?;
+        module.add_function(wrap_pyfunction!(profile_finish, module)?)?;
+        module.add_function(wrap_pyfunction!(profile_layout, module)?)?;
+    }
     module.add_function(wrap_pyfunction!(integrate_fields, module)?)?;
     module.add_class::<crate::native_graph::NumericGraph>()
+}
+
+#[cfg(feature = "profiling")]
+#[pyfunction]
+fn profile_begin(detailed: bool, timing: bool, allocations: bool) {
+    crate::profiling::begin(detailed, timing, allocations);
+}
+
+#[cfg(feature = "profiling")]
+#[pyfunction]
+fn profile_finish() -> Vec<(&'static str, u64, u64, u64, u64)> {
+    crate::profiling::finish()
+}
+
+#[cfg(feature = "profiling")]
+#[pyfunction]
+fn profile_layout() -> (usize, usize) {
+    use crate::endpoint_overlay::Edge;
+    (
+        std::mem::size_of::<Edge>(),
+        std::mem::size_of::<Option<Edge>>(),
+    )
 }

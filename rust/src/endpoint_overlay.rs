@@ -50,6 +50,7 @@ struct Cut {
 }
 
 pub fn segment_points(chunk: &Chunk<'_>, segment: usize) -> Vec<(f64, f64)> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::DecodeGeometry);
     let lo = chunk.columns[GEOMETRY_OFFSETS].integer(segment) as usize;
     let hi = chunk.columns[GEOMETRY_OFFSETS].integer(segment + 1) as usize;
     (lo..hi)
@@ -239,6 +240,7 @@ pub fn prepare_overlay(
     destination: Option<Endpoint>,
     profile: usize,
 ) -> Result<Overlay, RoutingError> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Overlay);
     if profile >= graph.profiles {
         return Err(RoutingError::Invalid(
             "Profile index outside the loaded graph",

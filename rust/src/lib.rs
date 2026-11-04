@@ -5,6 +5,7 @@ pub mod chunk_search;
 pub mod endpoint_overlay;
 pub mod fields;
 pub mod numeric;
+mod profiling;
 pub mod routing_cost;
 
 #[cfg(feature = "python")]

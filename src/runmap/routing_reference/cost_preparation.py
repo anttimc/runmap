@@ -53,7 +53,7 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
     return RequestCostData(
         graph, index, home_point, destination, separation * settings.radius_ratio,
         separation * settings.transition_ratio,
-        min(5.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4),
+        min(10.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4),
         strengths, settings.avoidance_ratio == 0, parts if parts is not None else {},
         resolved, hills if resolved.weights.hills else None,
     )

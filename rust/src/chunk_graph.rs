@@ -220,6 +220,7 @@ pub fn build_graph(
     chunks: &[Chunk<'_>],
     bounds: Option<Bounds>,
 ) -> Result<GraphIndex, RoutingError> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Index);
     if let Some((w, s, e, n)) = bounds {
         if ![w, s, e, n].iter().all(|v| v.is_finite()) || w > e || s > n {
             return Err(RoutingError::Invalid(

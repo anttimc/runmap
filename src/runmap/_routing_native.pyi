@@ -8,6 +8,6 @@ def integrate_fields(
     destination: tuple[float, float],
     radius: float,
     transition_width: float,
-    spacing_m: float = 5.0,
+    spacing_m: float = 10.0,
     timeout_seconds: float | None = None,
 ) -> tuple[float, float, float]: ...

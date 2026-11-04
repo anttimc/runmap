@@ -28,9 +28,10 @@ struct FieldFrame {
     radius_denominator: f64,
     transition_width: f64,
     spacing: f64,
+    minimum_samples: usize,
 }
 
-fn prepare_frame(settings: FieldSettings) -> FieldFrame {
+fn prepare_frame(settings: FieldSettings, minimum_samples: usize) -> FieldFrame {
     let direction = (
         settings.destination.0 - settings.home.0,
         settings.destination.1 - settings.home.1,
@@ -46,6 +47,7 @@ fn prepare_frame(settings: FieldSettings) -> FieldFrame {
         radius_denominator: 2.0 * settings.radius.powi(2),
         transition_width: settings.transition_width,
         spacing: settings.spacing,
+        minimum_samples: minimum_samples.max(1),
     }
 }
 
@@ -88,7 +90,9 @@ fn integrate_segment(
     budget: Option<Duration>,
 ) -> Result<Integrals, IntegrationError> {
     let distance = (second.0 - first.0).hypot(second.1 - first.1);
-    let samples = (distance / frame.spacing).ceil().max(4.0);
+    let samples = (distance / frame.spacing)
+        .ceil()
+        .max(frame.minimum_samples as f64);
     if !samples.is_finite() || samples >= usize::MAX as f64 {
         return Err(IntegrationError::InvalidInput(
             "Sample count exceeds supported range",
@@ -128,10 +132,30 @@ pub fn integrate_fields(
     settings: FieldSettings,
     budget: Option<Duration>,
 ) -> Result<Integrals, IntegrationError> {
+    integrate_with_minimum(points, settings, budget, 2)
+}
+
+/// Experiment entry point; normal routing uses two samples per piece minimum.
+#[cfg(feature = "integration-experiment")]
+pub fn experiment_integrate(
+    points: &[Point],
+    settings: FieldSettings,
+    minimum_samples: usize,
+) -> Result<Integrals, IntegrationError> {
+    integrate_with_minimum(points, settings, None, minimum_samples)
+}
+
+fn integrate_with_minimum(
+    points: &[Point],
+    settings: FieldSettings,
+    budget: Option<Duration>,
+    minimum_samples: usize,
+) -> Result<Integrals, IntegrationError> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Integration);
     let started = Instant::now();
     check_timeout(started, budget)?;
     validate(points, settings)?;
-    let frame = prepare_frame(settings);
+    let frame = prepare_frame(settings, minimum_samples);
     let mut totals = (0.0, 0.0, 0.0);
     for pair in points.windows(2) {
         let (radial, right, length) = integrate_segment(pair[0], pair[1], &frame, started, budget)?;
@@ -163,6 +187,43 @@ mod tests {
             integrate_fields(&[(0.0, 0.0), (100.0, 0.0)], settings(), None).unwrap();
         assert_eq!(length, 100.0);
         assert!((right - length / 2.0).abs() < 1e-12);
+    }
+
+    #[cfg(feature = "integration-experiment")]
+    #[test]
+    fn experiment_preserves_baseline_and_converges_to_fine_reference() {
+        let points = [(0.0, 3.0), (23.0, -2.0), (100.0, 7.0)];
+        let baseline = integrate_fields(&points, settings(), None).unwrap();
+        assert_eq!(
+            experiment_integrate(&points, settings(), 2).unwrap(),
+            baseline
+        );
+        let coarse = experiment_integrate(&points, settings(), 1).unwrap();
+        let fine = experiment_integrate(
+            &points,
+            FieldSettings {
+                spacing: 0.1,
+                ..settings()
+            },
+            1,
+        )
+        .unwrap();
+        let reference = experiment_integrate(
+            &points,
+            FieldSettings {
+                spacing: 0.05,
+                ..settings()
+            },
+            4,
+        )
+        .unwrap();
+        let error = |value: Integrals| {
+            (value.0 - reference.0)
+                .abs()
+                .max((value.1 - reference.1).abs())
+        };
+        assert!(error(fine) < error(coarse));
+        assert!(error(fine) / reference.2 < 1e-6);
     }
 
     #[test]

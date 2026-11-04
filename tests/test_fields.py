@@ -16,7 +16,7 @@ def reference_fields(points: list[Point], spacing: float) -> tuple[float, float,
     radial = right = length = 0.0
     for first, second in zip(points, points[1:]):
         distance = math.dist(first, second)
-        count = max(4, math.ceil(distance / spacing))
+        count = max(2, math.ceil(distance / spacing))
         for sample in range(count):
             fraction = (sample + 0.5) / count
             point = (first[0] + fraction * (second[0] - first[0]),
@@ -30,15 +30,23 @@ def reference_fields(points: list[Point], spacing: float) -> tuple[float, float,
 
 class FieldTests(unittest.TestCase):
     def test_integration_matches_scalar_midpoints(self) -> None:
-        for points in ([], [(0, 0)], [(1, 2), (1, 2)],
+        for points in ([], [(0, 0)], [(1, 2), (1, 2)], [(2, -5), (8, 0)],
                        [(2, -5), (40, 30), (40, 30), (95, -10)]):
-            for spacing in (5.0, 1.0, 0.03):
+            for spacing in (10.0, 5.0, 1.0, 0.03):
                 for ordered in (points, list(reversed(points))):
                     with self.subTest(points=ordered, spacing=spacing):
                         actual = integrate_fields(ordered, (3, 7), (93, 27), 15, 5, spacing)
                         expected = reference_fields(ordered, spacing)
                         for value, reference in zip(actual, expected):
                             self.assertAlmostEqual(value, reference, places=10)
+
+    def test_default_spacing_matches_ten_metre_midpoints(self) -> None:
+        points = [(2, -5), (8, 0), (25, 5)]
+        expected = reference_fields(points, 10.0)
+        for integrator in (integrate_fields, integrate_fields_python, _routing_native.integrate_fields):
+            actual = integrator(points, (3, 7), (93, 27), 15, 5)
+            for value, reference in zip(actual, expected):
+                self.assertAlmostEqual(value, reference, places=10)
 
     def test_expired_deadline(self) -> None:
         for distance in (10, 10000):

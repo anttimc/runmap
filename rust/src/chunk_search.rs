@@ -208,6 +208,7 @@ fn initialize_search_state(
     overlay: &Overlay,
     settings: &SearchSettings,
 ) -> SearchState {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Initialize);
     let count = graph.node_ids.len() + overlay.points.len();
     let scale = compute_safe_heuristic_scale(graph, overlay, settings.heuristic_distance_scale);
     let mut best_costs = vec![f64::INFINITY; count];
@@ -279,6 +280,7 @@ fn expand_search_frontier(
     settings: &SearchSettings,
     state: &mut SearchState,
 ) -> Result<(), RoutingError> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Traversal);
     while let Some(entry) = state.open_queue.pop() {
         check_deadline(settings.deadline)?;
         let node = entry.node;
@@ -314,6 +316,7 @@ fn build_search_result(
     settings: &SearchSettings,
     mut state: SearchState,
 ) -> Result<SearchResult, RoutingError> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Result);
     let path = reconstruct_path(overlay, &state.predecessor_edges, settings.reverse);
     let cost = overlay.destination.and_then(|n| {
         state.best_costs[n]

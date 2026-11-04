@@ -7,6 +7,11 @@ a bounded LRU cache. Exploration snapshots retain sparse distance buffers.
 Chunk reuse between different working areas remains outstanding. See the
 [numeric format and benchmark commands](numeric-routing-format.md).
 
+For Rust phase timing, allocation traffic, and visual results on a fixed working
+area, see the [2026-11-02 native profile](archive/history/2026-11-02-native-routing-profile.md).
+It separates normal-build timings from instrumentation overhead and does not
+include the complete API request.
+
 The representative Leppävaara API request, including all three window attempts,
 route rendering, and JSON serialization, measured 48 ms median with hills off
 and 62 ms with hills high across ten repeated requests. Corresponding p95 values

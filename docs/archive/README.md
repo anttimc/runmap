@@ -18,6 +18,14 @@ The [environment acquisition](history/2026-11-02-environment-acquisition.md) and
 [source inspection progress](history/2026-11-02-environment-inspection.md) record
 the Leppävaara pilot, browser checks, road-class findings, and remaining review.
 
+The [2026-11-02 native routing profile](history/2026-11-02-native-routing-profile.md)
+separates Rust phase timings and allocation traffic, with reproduction commands
+and links to generated visual reports in `artifacts/`.
+
+The [2026-11-02 integration comparison](history/2026-11-02-integration-comparison.md)
+compares spacing caps and minimum sample counts against a fine reference on real
+geometry, with integration timings and visual speed–accuracy results.
+
 The [multi-start loop-width sweep](history/59-multi-start-loop-width.md) measures
 mean physical loop length and variation against width at five starts and audits
 the runtime ellipse allowance with matched turnaround cohorts.

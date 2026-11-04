@@ -32,7 +32,7 @@ def smooth_fields(point: Point, home: Point, destination: Point,
 
 def integrate_fields_python(points: Sequence[Point], home: Point, destination: Point,
                             radius: float, transition_width: float,
-                            spacing_m: float = 5.0,
+                            spacing_m: float = 10.0,
                             deadline: float | None = None) -> tuple[float, float, float]:
     """Integrate over the polyline, independent of routing junction placement."""
     radial = right = length = 0.0
@@ -41,7 +41,7 @@ def integrate_fields_python(points: Sequence[Point], home: Point, destination: P
     separation = math.hypot(dx, dy)
     for first, second in zip(points, points[1:]):
         distance = math.dist(first, second)
-        count = max(4, math.ceil(distance / spacing_m))
+        count = max(2, math.ceil(distance / spacing_m))
         for start in range(0, count, 256):
             if deadline is not None and monotonic() >= deadline:
                 raise TimeoutError("Field integration exceeded its deadline")

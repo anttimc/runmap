@@ -69,6 +69,7 @@ fn matching_chainage(a: f64, b: f64) -> bool {
 }
 
 pub fn parse_hill_intervals(payload: &[u8]) -> Result<Vec<[f64; 16]>, RoutingError> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::HillDecode);
     if payload.is_empty() || payload.len() % 128 != 0 {
         return Err(RoutingError::Invalid("Invalid hill interval byte count"));
     }
@@ -177,6 +178,7 @@ pub fn hill_features(
 }
 
 fn clipped_geometry(chunk: &Chunk<'_>, edge: Edge) -> Vec<(f64, f64)> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Geometry);
     let points = segment_points(chunk, edge.segment);
     let total = projected_length(&points);
     let lo = edge.geometry_low.unwrap_or(0.0);
@@ -250,6 +252,7 @@ pub fn evaluate_cost(
     cache: &mut CostCache,
     deadline: Option<Instant>,
 ) -> Result<([f64; 5], [f64; 7]), RoutingError> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Cost);
     let chunk = &chunks[edge.chunk];
     let mut costs = [edge.length, 0.0, 0.0, 0.0, 0.0];
     if let Some(shape) = settings.shape {

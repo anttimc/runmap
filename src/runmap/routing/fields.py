@@ -9,7 +9,7 @@ from runmap.routing.types import Point
 
 def integrate_fields(points: Sequence[Point], home: Point, destination: Point,
                      radius: float, transition_width: float,
-                     spacing_m: float = 5.0,
+                     spacing_m: float = 10.0,
                      deadline: float | None = None) -> tuple[float, float, float]:
     """Evaluate one geometry in Rust, retaining the request's Python deadline."""
     remaining = None if deadline is None else deadline - monotonic()

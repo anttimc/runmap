@@ -132,7 +132,7 @@ def _shape_arguments(shape: NumericShapeCosts | None) -> ShapeArguments | None:
     if shape.settings.avoidance_ratio == 0:
         return None
     settings = shape.settings
-    spacing = min(5.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4)
+    spacing = min(10.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4)
     return (shape.home, shape.turnaround, separation * settings.radius_ratio,
             separation * settings.transition_ratio, spacing,
             strengths.centre, strengths.side, strengths.reuse, shape.penalize_right)

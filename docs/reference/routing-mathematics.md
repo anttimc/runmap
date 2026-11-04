@@ -240,8 +240,13 @@ At zero width there is one candidate. Its legs are searched independently when
 hills are active; with hills Off, legal retracing can supply the return path.
 
 Each completed leg is optimized using A*. All penalties are nonnegative, so
-cost is at least graph distance. Spatial integrals use midpoint sampling;
-hill integrals sum the measured intervals. Traffic lights, busy roads and
+cost is at least graph distance. Spatial integrals use midpoint sampling. The
+spacing limit is $h=\min(10\,\mathrm{m},R/4,B/4)$. Each straight piece of projected
+geometry of length $\ell$ uses $n=\max(2,\lceil\ell/h\rceil)$ equally spaced
+midpoint samples, so the actual step is $\ell/n$. The Python reference uses the
+same rule. The [dated sampling comparison](../archive/history/2026-11-02-integration-comparison.md)
+records the speed and numerical-error measurements behind this choice.
+Hill integrals sum the measured intervals. Traffic lights, busy roads and
 greenery currently add zero.
 
 ## 6. Observations and validation
