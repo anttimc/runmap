@@ -14,6 +14,10 @@ measurements separate from historical reports, and identify their dataset/model.
 
 ## Planning and implementation history
 
+The [2026-11-04 route-mode UI review](history/2026-11-04-route-mode-ui.md)
+records basic browser checks, user acceptance of current routing, and deferred
+UI review.
+
 The [environment acquisition](history/2026-11-02-environment-acquisition.md) and
 [source inspection progress](history/2026-11-02-environment-inspection.md) record
 the Leppävaara pilot, browser checks, road-class findings, and remaining review.

@@ -32,7 +32,10 @@ calibrated real-world noise.
    reference data, then compare gradient boosting and neural networks.
 
 Routing integration can proceed with the current baseline independently of the
-learning experiment. Greenery, water proximity, and wetlands remain geometric
+learning experiment. Main-map exploration, segment projection, and routing costs
+are the next priority; road-noise learning follows later. Existing-feature
+validation is deferred in the roadmap and does not block this integration.
+Greenery, water proximity, and wetlands remain geometric
 OSM-derived layers; learning missing woodland or collecting manual labels for
 all four fields is outside the current scope. A successful noise model can later
 replace the traffic field through the same versioned field/segment interfaces.
