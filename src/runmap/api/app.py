@@ -39,6 +39,7 @@ from runmap.elevation.store import ElevationStore
 from runmap.regions import find_region
 from runmap.api.environment import router as environment_router
 from runmap.api.environment_rasters import router as environment_raster_router
+from runmap.api.environment_tiles import router as environment_tile_router
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -115,6 +116,7 @@ async def lifespan(application):
 app = FastAPI(title="Runmap", version="0.1.0", lifespan=lifespan)
 app.include_router(environment_router)
 app.include_router(environment_raster_router)
+app.include_router(environment_tile_router)
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 
 

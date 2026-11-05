@@ -1,6 +1,6 @@
 # Roadmap
 
-Outstanding work, reviewed 2026-11-04. See the [guide](guide.md) for delivered
+Outstanding work, reviewed 2026-11-05. See the [guide](guide.md) for delivered
 features and [architecture](architecture.md) for implementation details.
 Implementation, automated checks, and local runner acceptance are separate.
 Record reproducible inputs, dataset/model/settings identities, and machine/toolchain
@@ -25,10 +25,13 @@ prerequisites. Preserve known source/support limitations.
 
 ### Track 1: routing application integration
 
-1. **Map layers:** deliver bounded greenery, water, traffic-exposure, and wetland
-   tiles in the main app, with toggles, opacity, legends, and coverage/no-data
-   indication. Verify seams, overlap, accessibility, desktop/mobile behavior,
-   and cold/warm interaction latency.
+1. **Map-layer acceptance:** the capital-area source and regional raster are
+   prepared from one [dated Finland OSM snapshot](archive/history/2026-11-05-shared-osm-snapshot.md).
+   Bounded tiles, toggles, opacity, legends, and coverage indication are implemented;
+   automated block-seam and tile checks pass. Verify real-data seams, overlap,
+   accessibility, desktop/mobile behavior, and cold/warm interaction latency.
+   [Pilot smoke checks and API observations](archive/history/2026-11-05-environment-tiles.md)
+   do not establish full-area acceptance.
 2. **Segment features:** project fields onto route segments with chainage,
    support, and artifact identities. Verify direct-grid agreement, partial and
    repeated traversals, bounded loading, and native/reference equivalence.

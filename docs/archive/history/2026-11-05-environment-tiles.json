@@ -1,0 +1,226 @@
+{
+  "scope": "Local API tile requests against existing 6 km pilot; cold means first request for this XYZ in this run, not a cleared OS cache. Not full-region or browser interaction acceptance.",
+  "dataset_id": "dec59449bad597c8e13c6a212f090d58678ff43fc3112e56dd7c2f6869ae258f",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "samples": [
+    {
+      "layer": "greenery",
+      "z": 11,
+      "cold_ms": 77.28050003061071,
+      "warm_ms": 0.6622499786317348,
+      "bytes": 12209
+    },
+    {
+      "layer": "water",
+      "z": 11,
+      "cold_ms": 70.31020801514387,
+      "warm_ms": 0.7255829987116158,
+      "bytes": 4206
+    },
+    {
+      "layer": "traffic",
+      "z": 11,
+      "cold_ms": 70.41133299935609,
+      "warm_ms": 0.7149999728426337,
+      "bytes": 9131
+    },
+    {
+      "layer": "wetland",
+      "z": 11,
+      "cold_ms": 69.7632500086911,
+      "warm_ms": 0.6759579991921782,
+      "bytes": 1783
+    },
+    {
+      "layer": "support",
+      "z": 11,
+      "cold_ms": 69.7587089962326,
+      "warm_ms": 0.6177090108394623,
+      "bytes": 1584
+    },
+    {
+      "layer": "greenery",
+      "z": 12,
+      "cold_ms": 64.69091703183949,
+      "warm_ms": 0.6914999685250223,
+      "bytes": 25939
+    },
+    {
+      "layer": "water",
+      "z": 12,
+      "cold_ms": 62.550999980885535,
+      "warm_ms": 0.7487499970011413,
+      "bytes": 5869
+    },
+    {
+      "layer": "traffic",
+      "z": 12,
+      "cold_ms": 63.32887499593198,
+      "warm_ms": 0.7227080059237778,
+      "bytes": 17586
+    },
+    {
+      "layer": "wetland",
+      "z": 12,
+      "cold_ms": 62.16141703771427,
+      "warm_ms": 0.6563329952768981,
+      "bytes": 2309
+    },
+    {
+      "layer": "support",
+      "z": 12,
+      "cold_ms": 62.477917002979666,
+      "warm_ms": 0.6758329691365361,
+      "bytes": 1765
+    },
+    {
+      "layer": "greenery",
+      "z": 13,
+      "cold_ms": 42.13591699954122,
+      "warm_ms": 0.6079169688746333,
+      "bytes": 27337
+    },
+    {
+      "layer": "water",
+      "z": 13,
+      "cold_ms": 39.81558297527954,
+      "warm_ms": 0.662375008687377,
+      "bytes": 3124
+    },
+    {
+      "layer": "traffic",
+      "z": 13,
+      "cold_ms": 41.01812496082857,
+      "warm_ms": 0.6394580123014748,
+      "bytes": 14391
+    },
+    {
+      "layer": "wetland",
+      "z": 13,
+      "cold_ms": 39.433708996511996,
+      "warm_ms": 0.6041249725967646,
+      "bytes": 1214
+    },
+    {
+      "layer": "support",
+      "z": 13,
+      "cold_ms": 40.160832984838635,
+      "warm_ms": 0.5911249900236726,
+      "bytes": 1417
+    },
+    {
+      "layer": "greenery",
+      "z": 14,
+      "cold_ms": 40.14912497950718,
+      "warm_ms": 0.5843329709023237,
+      "bytes": 11394
+    },
+    {
+      "layer": "water",
+      "z": 14,
+      "cold_ms": 42.11879102513194,
+      "warm_ms": 0.8744170190766454,
+      "bytes": 2085
+    },
+    {
+      "layer": "traffic",
+      "z": 14,
+      "cold_ms": 42.37612499855459,
+      "warm_ms": 0.6584160146303475,
+      "bytes": 12266
+    },
+    {
+      "layer": "wetland",
+      "z": 14,
+      "cold_ms": 40.36591696785763,
+      "warm_ms": 0.6617080071009696,
+      "bytes": 857
+    },
+    {
+      "layer": "support",
+      "z": 14,
+      "cold_ms": 39.55137502634898,
+      "warm_ms": 0.6662500090897083,
+      "bytes": 857
+    },
+    {
+      "layer": "greenery",
+      "z": 15,
+      "cold_ms": 39.263791986741126,
+      "warm_ms": 0.5820420337840915,
+      "bytes": 2084
+    },
+    {
+      "layer": "water",
+      "z": 15,
+      "cold_ms": 39.92508299415931,
+      "warm_ms": 0.6975829601287842,
+      "bytes": 1640
+    },
+    {
+      "layer": "traffic",
+      "z": 15,
+      "cold_ms": 39.62912503629923,
+      "warm_ms": 0.6003750022500753,
+      "bytes": 5690
+    },
+    {
+      "layer": "wetland",
+      "z": 15,
+      "cold_ms": 38.8133330270648,
+      "warm_ms": 0.667041982524097,
+      "bytes": 857
+    },
+    {
+      "layer": "support",
+      "z": 15,
+      "cold_ms": 39.166832983028144,
+      "warm_ms": 0.6268330034799874,
+      "bytes": 857
+    },
+    {
+      "layer": "greenery",
+      "z": 16,
+      "cold_ms": 28.236082987859845,
+      "warm_ms": 0.5719579639844596,
+      "bytes": 1151
+    },
+    {
+      "layer": "water",
+      "z": 16,
+      "cold_ms": 28.512875025626272,
+      "warm_ms": 0.6577079766429961,
+      "bytes": 1370
+    },
+    {
+      "layer": "traffic",
+      "z": 16,
+      "cold_ms": 0.47912501031532884,
+      "warm_ms": 0.4436669987626374,
+      "bytes": 2988
+    },
+    {
+      "layer": "wetland",
+      "z": 16,
+      "cold_ms": 0.4330839728936553,
+      "warm_ms": 0.4135830095037818,
+      "bytes": 857
+    },
+    {
+      "layer": "support",
+      "z": 16,
+      "cold_ms": 0.48220896860584617,
+      "warm_ms": 0.44412503484636545,
+      "bytes": 857
+    }
+  ],
+  "cold": {
+    "p50_ms": 40.26337497634813,
+    "p95_ms": 70.41133299935609
+  },
+  "warm": {
+    "p50_ms": 0.6580619956366718,
+    "p95_ms": 0.7487499970011413
+  }
+}

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 
@@ -27,9 +28,10 @@ class EnvironmentRequest:
 
 
 def load_request(path: Path) -> EnvironmentRequest:
-    """Validate a bounded pilot before creating files or contacting a provider."""
+    """Validate bounded acquisition before creating files or contacting a provider."""
     document = json.loads(path.read_text())
-    if document.get("schema_version") != 1:
+    schema = document.get("schema_version")
+    if schema not in (1, 2):
         raise ValueError("Unsupported environment request schema")
     identifier = document.get("id")
     if not isinstance(identifier, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", identifier):
@@ -43,8 +45,9 @@ def load_request(path: Path) -> EnvironmentRequest:
     halo = document.get("halo_m")
     if isinstance(halo, bool) or not isinstance(halo, (int, float)) or not math.isfinite(halo) or halo < 300:
         raise ValueError("Environment halo must be finite and at least 300 m")
-    if east <= west or north <= south or max(east - west, north - south) + 2 * halo > 10000:
-        raise ValueError("Pilot bounds plus halo must have positive area and span at most 10 km")
+    limit = 10000 if schema == 1 else 50000
+    if east <= west or north <= south or max(east - west, north - south) + 2 * halo > limit:
+        raise ValueError(f"Bounds plus halo must have positive area and span at most {limit} m")
     tags = document.get("tags")
     if not isinstance(tags, dict) or not tags:
         raise ValueError("Expected nonempty OSM tag selectors")
@@ -55,7 +58,7 @@ def load_request(path: Path) -> EnvironmentRequest:
             isinstance(value, list) and value and all(isinstance(v, str) and v for v in value)
         ):
             raise ValueError("OSM selectors must be true or nonempty lists of strings")
-    return EnvironmentRequest(1, identifier, (west, south, east, north), float(halo), tags)
+    return EnvironmentRequest(schema, identifier, (west, south, east, north), float(halo), tags)
 
 
 def query_bounds(request: EnvironmentRequest) -> Bounds:
@@ -69,8 +72,13 @@ def query_bounds(request: EnvironmentRequest) -> Bounds:
 
 
 def file_identity(path: Path) -> dict[str, str | int]:
-    payload = path.read_bytes()
-    return {"name": path.name, "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+    digest = hashlib.sha256()
+    size = 0
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            size += len(chunk)
+            digest.update(chunk)
+    return {"name": path.name, "bytes": size, "sha256": digest.hexdigest()}
 
 
 def _write_json(path: Path, document: object) -> None:
@@ -99,7 +107,7 @@ def acquire_environment(request: EnvironmentRequest, destination: Path) -> Path:
     import osmnx as ox
 
     _prepare_directory(request, destination)
-    setting_names = ("cache_folder", "use_cache", "log_console", "requests_timeout")
+    setting_names = ("cache_folder", "use_cache", "log_console", "requests_timeout", "max_query_area_size", "overpass_url")
     previous = {name: getattr(ox.settings, name) for name in setting_names}
     started = datetime.now(timezone.utc).isoformat()
     bounds = query_bounds(request)
@@ -108,7 +116,11 @@ def acquire_environment(request: EnvironmentRequest, destination: Path) -> Path:
         ox.settings.use_cache = True
         ox.settings.log_console = False
         ox.settings.requests_timeout = 180
+        ox.settings.overpass_url = os.environ.get("RUNMAP_OVERPASS_URL", ox.settings.overpass_url)
+        if request.schema_version == 2:
+            ox.settings.max_query_area_size = 64_000_000
         features = ox.features.features_from_bbox(bounds, request.tags)
+        provider_url = ox.settings.overpass_url
     finally:
         for name, value in previous.items():
             setattr(ox.settings, name, value)
@@ -134,14 +146,14 @@ def acquire_environment(request: EnvironmentRequest, destination: Path) -> Path:
     temporary.replace(output)
     manifest = {
         "schema_version": 1,
-        "status": "pilot-source-acquisition",
+        "status": "pilot-source-acquisition" if request.schema_version == 1 else "regional-source-acquisition",
         "request": asdict(request),
         "query_bbox_wgs84_left_bottom_right_top": bounds,
         "acquisition_started_at": started,
         "published_at": datetime.now(timezone.utc).isoformat(),
         "osm_base_timestamps": sorted(source_times),
         "provider": "OpenStreetMap contributors via Overpass / OSMnx",
-        "overpass_url": ox.settings.overpass_url,
+        "overpass_url": provider_url,
         "overpass_settings": ox.settings.overpass_settings,
         "osmnx_version": ox.__version__,
         "licence": "ODbL 1.0",

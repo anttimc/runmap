@@ -9,10 +9,10 @@ exists, and [roadmap](roadmap.md) for outstanding work.
 | [Goals](goals.md) | Intended outcomes, scope, and non-goals |
 | [Guide](guide.md) | Existing features, usage, and limitations |
 | [Roadmap](roadmap.md) | Outstanding work, priorities, and acceptance criteria |
-| [Environment preferences design](environment-preferences.md) | Existing field meanings, proposed tiled routing-map delivery and segment/cost/UI integration, and OSM-only road-noise learning from municipal reference maps |
+| [Environment preferences design](environment-preferences.md) | Existing field meanings and tiled map delivery, proposed segment/cost integration, and OSM-only road-noise learning from municipal reference maps |
 | [Architecture](architecture.md) | High-level components, dependencies, data flow, and ownership boundaries |
 | [Development](development.md) | Setup, preparation, commands, and configuration |
-| [Prepared data](reference/prepared-data.md) | Artifact identity, publication, network schema, and spatial-selection contracts |
+| [Prepared data](reference/prepared-data.md) | OSM snapshots, artifact identity, publication, network schema, and spatial-selection contracts |
 | [API reference](reference/api.md) | Endpoint roles, result contracts, search limits, and request/cache lifetimes |
 | [Numeric routing format](numeric-routing-format.md) | Numeric artifact versions, identity, binary layout, and native working-set boundaries |
 | [100 ms routing architecture](100ms-routing-architecture.md) | Routing latency target, dated observations, and outstanding performance acceptance |

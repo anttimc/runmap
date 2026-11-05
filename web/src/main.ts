@@ -9,6 +9,7 @@ import {
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { startLayout } from "./layout";
+import { startEnvironmentLayers } from "./environment-layers";
 import "./style.css";
 import { startMapTools } from "./app";
 import { loadMapConfig } from "./api";
@@ -212,6 +213,7 @@ async function start(): Promise<void> {
     updateBackground();
     setStatus("Loading overlay…", "busy");
     void startMapTools(map, config.slope_legend);
+    void startEnvironmentLayers(map);
   });
 
   element<HTMLInputElement>("contours-visible").addEventListener("change", (event) => {

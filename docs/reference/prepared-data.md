@@ -286,3 +286,70 @@ validation, endpoint interval storage, and native buffer ownership. Historical
 packing/export measurements remain in the [archive](../archive/README.md); they
 are evidence for those dated implementations rather than current performance
 guarantees.
+
+## Regional environment bundles
+
+`environment/regional.py` publishes schema 2 bundles with method
+`mapped-context-regional-v3`. They contain `fields.tif` and a completion
+`manifest.json`, without whole-region PNG previews or an in-memory evidence
+export. The TIFF uses the same aligned 10 m EPSG:3067 grid, 2 m polygon coverage
+samples, and baseline v3 band names as the pilot. No network identity or routing
+join is implied. Default coverage is the existing 40 × 40 km capital-area square.
+
+Offline processing uses 4 km cores and a spatial index over retained full source
+geometries. Each core receives a halo covering all field radii and the greatest
+configured road display-floor distance, plus three analysis cells for raster
+uncertainty. Acquisition must supply at least that halo beyond the entire region.
+Greenery, water, traffic and wetland scores agree across cores under the finite
+display influences; no per-block normalization is used. Source geometry and index
+memory scale with extract size; numerical coverage work scales with block size.
+
+Regional diagnostic water distances beyond `water_radius_m` and road dB below
+the discomfort floor use nodata. This bounds processing without implying precise
+far-distance measurements. A missing dB diagnostic does not make the traffic
+score unknown: retained sources below the floor give a valid zero display score.
+`traffic_outside_bound_db` describes the processing block's retained context,
+rather than an unlimited acoustic estimate. Mapping completeness remains
+unverified even where context support is sufficient. Nodata is -9999 in the TIFF.
+Nearest-neighbor internal overviews at factors 2–64 reduce zoomed-out display
+reads; analytical sampling uses the full-resolution bands.
+
+The manifest records source feature/acquisition identities and dates, configuration,
+implementation/dependency identities, grid, bands, processing core/halo, category
+counts, skipped geometries, output checksum, and elapsed preparation time. It is
+written last; output directories cannot be overwritten. Failed partial outputs
+have no completion manifest and cannot be served. This regional bundle is
+independent of the source-inspection pilot.
+
+## Shared OSM snapshot and regional source bundles
+
+`sources/geofabrik.py` publishes an unfiltered Finland `finland.osm.pbf` plus a
+manifest binding its resolved dated provider URL, provider MD5, SHA-256, byte
+count, retrieval time, and licence. `download.json` pins the URL/checksum for
+interrupted transfers; `.part` files are not published snapshots. Provider
+metadata privacy omissions remain those of the downloaded Geofabrik extract.
+
+`sources/pbf.py` imports both environment and highway evidence from that same
+source. Its completion manifest binds source identity, PBF header timestamp and
+coverage envelope, configuration, implementation/dependencies, output checksums,
+geometry diagnostics, and processing time. The requested core plus halo must fit
+inside the PBF header envelope. This check establishes bounding-box containment,
+not completeness of all relations or real-world mapping.
+
+Geometry is assembled before spatial selection. Environment objects intersect
+the metric core plus halo and retain complete geometry; highway ways intersect
+the metric core and retain complete references. The second node pass preserves
+all referenced coordinates and node tags, including outside-core vertices. The
+highway export is deliberately broader than runnable eligibility; the existing
+graph preparation applies its access/direction/surface rules. Multipolygon
+relations preserve holes; non-area relation semantics remain excluded. Missing
+way locations and invalid geometry are counted; tagged unassembled area-relation
+counts refer to the entire source. They do not certify local support.
+
+`environment/manifest.json` uses the existing regional acquisition contract, so
+raster preparation can consume either PBF-derived or Overpass-derived sources.
+`network.json` uses the existing elements/node/way input format. Its `.json`
+sidecar binds the source PBF and export checksum; explicit path preparation
+verifies it and propagates source identities into graph provenance. Existing
+Overpass JSON inputs without PBF sidecars retain their explicit-input behavior.
+See [commands](../development.md#shared-finland-osm-snapshot-pipeline).

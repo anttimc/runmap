@@ -117,7 +117,7 @@ Defaults: [baseline configuration](../config/environment/baseline-v3.json) and
 select alternatives. Output directories must not already exist; use a fresh
 directory for each preparation attempt. The source export checksum must match
 its acquisition manifest. The retained halo must cover all configured radii.
-All versions fix the analysis grid at 10 m, coverage samples at 2 m, aligned metric
+All pilot versions fix the analysis grid at 10 m, coverage samples at 2 m, aligned metric
 bounds, and at most one million context cells.
 
 Schemas 2 and 3 use the reference-car intensity and line/point spreading in `road_noise`.
@@ -157,8 +157,8 @@ rasters are absent or mismatched. The API uses bounded raster-cell reads and
 caches evidence from at most two immutable pilot bundles.
 
 The pilot uses whole-image previews warped offline into Web Mercator, preserving
-the EPSG:3067 analysis grid in the TIFF. It does not yet use raster tiles; measure
-delivery and interaction before expanding beyond the pilot. Tests are included
+the EPSG:3067 analysis grid in the TIFF. The main map instead uses
+[regional environment tiles](#capital-area-environment-layers). Tests are included
 in the environment wildcard command above and `pnpm --dir web test`.
 
 ## Native integration kernel
@@ -1036,3 +1036,124 @@ coverage guarantee. Model and calibration version names must change when shipped
 coefficients or residual data change, so response caches remain distinct.
 See [routing mathematics](reference/routing-mathematics.md#turnaround-region-estimate)
 for the mean, interval, map-region semantics, and calibration domain.
+
+## Capital-area environment layers
+
+The main map uses an independent regional bundle. Its default footprint matches
+`helsinki-capital-area` routing and terrain: EPSG:3067
+`[360000, 6660000, 400000, 6700000]`, with a 1000 m source halo.
+The default bundle was prepared from the
+[shared Finland PBF](#shared-finland-osm-snapshot-pipeline). An Overpass-based
+regional acquisition remains available as an alternative:
+
+```sh
+uv run --extra environment python -m runmap.sources.environment \
+  config/environment/helsinki-capital-area.json --dry-run
+uv run --extra environment python -m runmap.sources.environment \
+  config/environment/helsinki-capital-area.json
+uv run --extra web --extra environment python -m runmap.environment.regional \
+  data/environment/raw/helsinki-capital-area
+```
+
+Schema 2 acquisition permits a bounded 50 km span including halo and subdivides
+Overpass queries to at most 64 km² before OSMnx's projection/subdivision handling.
+It retains the same raw-cache/resume and completed-directory protection as the
+pilot. `RUNMAP_OVERPASS_URL` can select an alternative service; the manifest
+records the endpoint used. Public-provider capacity can prevent acquisition;
+a failed download is not prepared coverage. Repeating acquisition reuses retained
+responses. Buildings are omitted from this score-only extract; source selectors
+are recorded in the configuration.
+
+Regional preparation writes a tiled multiband TIFF in 4 km windows, with context
+derived from the configured field radii and road display-floor distance. It never
+allocates a region-sized 2 m coverage-sampling array. Source objects and their
+spatial index remain resident during offline preparation. A fresh output directory
+is required; only a final manifest publishes a complete bundle. Defaults are
+baseline v3 and `data/environment/prepared/helsinki-capital-area-v3`.
+
+`RUNMAP_ENVIRONMENT_TILE_DIRECTORY` selects the main-map bundle independently of
+the pilot inspection paths. Missing bundles disable only environment layers.
+Restart the API after selecting another bundle. Interactive requests never
+acquire OSM data or prepare analytical fields. See the
+[regional artifact contract](reference/prepared-data.md#regional-environment-bundles)
+for diagnostic limits and the [tile API](reference/api.md#environment-map-tiles).
+
+## Shared Finland OSM snapshot pipeline
+
+For repeatable offline processing, download the complete Finland PBF once from
+Geofabrik. This acquisition path does not use Overpass. Install the optional
+`osm` extra for Pyosmium, retaining other extras needed by the application:
+
+```sh
+uv sync --extra web --extra environment --extra experiments --extra osm
+uv run --extra osm python -m runmap.sources.geofabrik \
+  --output data/osm/raw/finland-2026-11-05
+uv run --extra osm python -m runmap.sources.pbf \
+  data/osm/raw/finland-2026-11-05/finland.osm.pbf \
+  config/environment/helsinki-capital-area.json \
+  --output data/osm/extracted/helsinki-capital-area-2026-11-05
+```
+
+Choose fresh output names for subsequent snapshots. The download resolves
+`finland-latest.osm.pbf` to a dated provider URL before transferring data, saves
+that URL and provider MD5, streams into a `.part` file, checks the MD5, and records
+SHA-256 before publishing `manifest.json`. An interrupted transfer reuses its
+pinned URL and requests a byte-range resume; if the server ignores the range,
+the partial file is restarted. Completed snapshots cannot be overwritten.
+A checksum failure leaves an unpublished partial file; investigate or choose a
+fresh directory rather than treating it as usable source data.
+
+The PBF remains the complete, unfiltered provider Finland extract. Local
+processing assembles full ways and multipolygons before spatial selection,
+including enclosing polygons without vertices in the requested region. Polygon
+holes are retained. The node-location index lives in a temporary disk file under
+the extraction directory and is removed after processing. Allow several GB of
+working disk space. The importer streams the national source, while retained
+features and routing references scale with the selected region. Tagged but
+unassembled multipolygon and invalid-geometry diagnostics describe the entire
+source, not an independently confirmed regional completeness mask.
+
+The resulting directory contains:
+
+- `environment/`: `request.json`, WGS84 `features.geojson`, and the acquisition
+  manifest required by regional raster preparation. Selection includes the halo.
+- `network.json` and `network.json.json`: highway ways intersecting the core,
+  with every referenced node and its tags, including vertices outside the core.
+  The format is compatible with existing path preparation. All highway classes
+  are retained here; existing graph rules decide pedestrian eligibility.
+- `manifest.json`: shared PBF identity, source timestamp, dependency/implementation
+  identities, output identities, diagnostics, and import time.
+
+Continue with the existing processing pipelines:
+
+```sh
+uv run --extra web --extra osm python -m runmap.environment.regional \
+  data/osm/extracted/helsinki-capital-area-2026-11-05/environment
+uv run --extra web python -m runmap.cli paths \
+  --data-root data/paths/geofabrik-2026-11-05 prepare helsinki-capital-area \
+  --input data/osm/extracted/helsinki-capital-area-2026-11-05/network.json
+uv run --extra web python -m runmap.cli paths export-sqlite \
+  data/paths/geofabrik-2026-11-05/prepared/helsinki-capital-area/graph.json \
+  data/paths/geofabrik-2026-11-05/prepared/helsinki-capital-area/network.sqlite
+uv run python -m runmap.cli paths export-numeric \
+  data/paths/geofabrik-2026-11-05/prepared/helsinki-capital-area/network.sqlite \
+  data/paths/geofabrik-2026-11-05/prepared/helsinki-capital-area/network.numeric.sqlite
+```
+
+The separate path data root preserves the existing prepared routing dataset.
+Path preparation verifies the PBF-export sidecar checksum and experiment bounds,
+and carries the PBF checksum, timestamp, provider URL, and importer identity into
+graph provenance. Existing explicit Overpass JSON inputs remain supported.
+Select the newly prepared database through the existing API configuration only
+when ready to review it. The raster default is already the capital-area bundle;
+its API needs no raw source file after successful preparation.
+
+Validate snapshot download/resume, multipolygon selection, complete highway
+references, and downstream provenance with:
+
+```sh
+uv run --extra web --extra osm python -m unittest discover -s tests -p 'test_osm_pbf.py' -v
+```
+
+PBF-specific tests skip when the optional `osm` extra is unavailable; the downloader
+checks do not need Pyosmium.

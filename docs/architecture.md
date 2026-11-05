@@ -29,6 +29,14 @@ used for routing. SQLite is embedded file storage, with no database server.
 
 ## Data preparation
 
+**Shared OSM acquisition** can freeze a complete Geofabrik Finland PBF through
+`sources/geofabrik.py`. `sources/pbf.py` streams that snapshot with a temporary
+disk-backed location index, assembles complete area geometry, and publishes
+regional environment features and reference-complete highway JSON. Both outputs
+retain the same national snapshot identity. Existing environment and network
+preparation consume those outputs independently; interactive servers do not read
+the national PBF. Overpass remains an alternative source-acquisition path.
+
 **Elevation processing** validates source rasters and records their provenance
 in an elevation catalog. Coverage manifests pin the source versions for a region.
 Smoothing and differentiation produce terrain tiles used by both map rendering
@@ -45,6 +53,16 @@ semantics when a request loads only part of the network.
 
 ## Prepared storage
 
+Regional environment preparation is independent of terrain and network topology.
+`environment/regional.py` normalizes retained OSM objects, selects full geometries
+through a spatial index, and writes haloed analytical blocks to one tiled TIFF.
+`api/environment_tiles.py` reads bounded raster windows and caches rendered XYZ
+PNGs. `web/src/environment-layers.ts` owns the main-map controls and legends;
+these layers sit below roads and routes. This display path requires neither raw
+source loading at request time nor a segment-feature join. Missing regional data
+leaves terrain and routing available. Artifact and diagnostic contracts belong to
+[prepared data](reference/prepared-data.md#regional-environment-bundles).
+
 Environment pilot acquisition is independent of network preparation.
 `sources/environment.py` uses optional OSMnx feature acquisition to retain raw
 Overpass responses, assembled GeoJSON objects, and a provenance manifest. These
@@ -59,8 +77,8 @@ and a source-bound manifest. `api/environment_rasters.py` serves those previews
 and samples cells with nearby source evidence. The inspection frontend can load
 source geometry without a prepared raster bundle; neither path invokes model
 inference or network acquisition during map interaction. The
-[environment design](environment-preferences.md) describes proposed tiled map
-delivery, segment projection, costs/UI, and the independent OSM-only road-noise
+[environment design](environment-preferences.md) describes tiled map delivery,
+proposed segment projection, costs/UI, and the independent OSM-only road-noise
 experiment; [development](development.md#acquire-environment-pilot-data)
 owns current acquisition commands and limitations.
 

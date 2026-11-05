@@ -199,3 +199,26 @@ caches. Snapshot expiry is checked even on cache hits. This endpoint uses
 surface/stair eligibility but does not model hill preferences or orientation.
 See [distance shells](../distance-shells.md#estimated-turnaround-region) for UI
 behavior and approximation limits.
+
+## Environment map tiles
+
+`GET /api/environment/tiles/config` returns the independent completed regional
+bundle identity, bounds, layers, colors, limitations, and versioned XYZ template.
+An absent bundle returns 404 without disabling terrain or routing.
+
+`GET /api/environment/tiles/v1/{dataset}/{layer}/{z}/{x}/{y}.png` serves 256 px
+Web Mercator tiles for `greenery`, `water`, `traffic`, `wetland`, and `support`.
+Zooms 8–16 are supported, with browser overzoom above 16. Invalid coordinates return
+422; unknown layers/render versions return 404; stale dataset identities return
+409. Successful tiles have a one-day immutable browser cache policy. Server reuse
+holds at most 128 PNGs, keyed by bundle path, dataset, file modification time,
+layer, and XYZ. Requests read only relevant TIFF blocks through a fixed-size
+warped window; analytical fields are never recalculated on a request.
+
+Display uses nearest-neighbor resampling to retain analytical cell values and
+support masks. Score alpha runs from transparent at zero to 210/255 at one;
+independent browser opacity applies afterwards. Unsupported or missing cells and
+areas beyond the prepared footprint are transparent. The `support` layer adds a
+subtle gray tint to prepared cells and amber hatching where field/road context is
+limited. Hatching uses global tile-pixel coordinates to avoid pattern seams.
+These tiles are colored displays, not numerical inputs for routing or sampling.

@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "id": "helsinki-capital-area",
+  "bounds_epsg3067": [
+    360000,
+    6660000,
+    400000,
+    6700000
+  ],
+  "halo_m": 1000,
+  "tags": {
+    "natural": [
+      "wood",
+      "water",
+      "wetland",
+      "coastline"
+    ],
+    "landuse": [
+      "forest",
+      "reservoir",
+      "basin"
+    ],
+    "water": true,
+    "waterway": true,
+    "highway": [
+      "motorway",
+      "motorway_link",
+      "trunk",
+      "trunk_link",
+      "primary",
+      "primary_link",
+      "secondary",
+      "secondary_link",
+      "tertiary",
+      "tertiary_link",
+      "residential",
+      "unclassified",
+      "living_street",
+      "service"
+    ],
+    "leisure": [
+      "park",
+      "nature_reserve"
+    ]
+  }
+}

@@ -23,6 +23,7 @@ from runmap.routing.graph import build_graph_index
 from runmap.routing.types import Bounds as CoordinateBounds, GraphDocument, OsmSource
 from runmap.sources.mml import Bounds, coverage_url, download_elevation
 from runmap.sources.osm import download_highways, highway_query
+from runmap.sources.environment import file_identity
 
 if TYPE_CHECKING:
     from runmap.routing_reference.loop_types import LoopResult
@@ -162,7 +163,7 @@ def _paths_command_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     prepare = subparsers.add_parser("prepare", help="Acquire OSM and build a directed graph")
     prepare.add_argument("experiment_id")
-    prepare.add_argument("--input", type=Path, help="Use an existing Overpass JSON response")
+    prepare.add_argument("--input", type=Path, help="Use Overpass JSON or a locally extracted PBF network.json")
     prepare.add_argument("--dry-run", action="store_true")
     prepare.add_argument(
         "--without-terrain", action="store_true",
@@ -198,11 +199,28 @@ def _parse_path_options(args: argparse.Namespace) -> PathOptions:
 
 
 def _input_provenance(raw_path: Path, bounds_wgs84: CoordinateBounds) -> OsmSource:
-    payload = raw_path.read_bytes()
-    return {
-        "source_path": str(raw_path), "sha256": hashlib.sha256(payload).hexdigest(),
-        "bytes": len(payload), "bounds_wgs84": list(bounds_wgs84),
+    identity = file_identity(raw_path)
+    result: OsmSource = {
+        "source_path": str(raw_path), "sha256": str(identity["sha256"]),
+        "bytes": int(identity["bytes"]), "bounds_wgs84": list(bounds_wgs84),
     }
+    sidecar = raw_path.with_suffix(raw_path.suffix + ".json")
+    if not sidecar.exists():
+        return result
+    record = json.loads(sidecar.read_text())
+    if record.get("provider") != "OpenStreetMap PBF / local Pyosmium import":
+        return result
+    if record["sha256"] != result["sha256"] or record["bytes"] != result["bytes"]:
+        raise ValueError("PBF-derived network does not match its source sidecar")
+    if _wgs84_bounds(tuple(record["bounds_epsg3067"])) != bounds_wgs84:
+        raise ValueError("PBF-derived network bounds differ from the routing experiment")
+    result.update(provider=record["provider"], licence=record["licence"], licence_url=record["licence_url"],
+                  pbf_sha256=record["pbf"]["sha256"], pbf_source_path=record["source_path"],
+                  pbf_snapshot_url=record["snapshot"].get("resolved_url", ""),
+                  osm_base_timestamp=record["osm_base_timestamp"],
+                  import_implementation_sha256=record["implementation_sha256"],
+                  source_manifest_sha256=str(file_identity(sidecar)["sha256"]))
+    return result
 
 
 def _cached_osm_provenance(
@@ -235,7 +253,10 @@ def _load_osm_source(
         / f"osm-network-boundaries-{boundary_key}.json"
     )
     if options.input:
-        osm_provenance = _input_provenance(raw_path, bounds_wgs84)
+        try:
+            osm_provenance = _input_provenance(raw_path, bounds_wgs84)
+        except (ValueError, OSError) as exc:
+            parser.exit(1, f"OSM input validation failed: {exc}\n")
     else:
         try:
             osm_provenance = (

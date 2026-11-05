@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+osm = ["osmium>=4.3,<5", "shapely>=2.0,<3"]
 environment = ["osmnx>=2.0,<3"]
 experiments = ["matplotlib>=3.9,<4"]
 web = [

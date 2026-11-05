@@ -340,6 +340,44 @@
           <section class="layer-section">
             <div class="layer-row">
               <button
+                id="environment-section"
+                class="section-toggle"
+                type="button"
+                data-section="environment-controls"
+                aria-expanded="false"
+                aria-controls="environment-controls"
+              >
+                Environment
+              </button>
+              <label class="layer-switch"
+                ><input
+                  id="layer-environment"
+                  type="checkbox"
+                  role="switch"
+                  aria-label="Environment"
+                  disabled /><span aria-hidden="true"></span
+              ></label>
+            </div>
+            <div id="environment-controls" class="section-options" hidden>
+              <p id="environment-layer-status" role="status">Loading environment coverage…</p>
+              <div id="environment-layer-controls"></div>
+              <p class="environment-score-legend">
+                Scores: 0 clear → 1 strong. Coverage: gray = prepared, amber = limited context.
+              </p>
+              <details>
+                <summary>How to read environment scores</summary>
+                <p>
+                  All layers start Off. Score layers are transparent where the score is zero or data
+                  is unavailable; use Coverage to distinguish them. Mapping completeness is
+                  unverified: zero does not establish real-world absence. Traffic is an uncalibrated
+                  exposure proxy. Wetland presence does not establish path wetness.
+                </p>
+              </details>
+            </div>
+          </section>
+          <section class="layer-section">
+            <div class="layer-row">
+              <button
                 id="background-section"
                 class="section-toggle"
                 type="button"

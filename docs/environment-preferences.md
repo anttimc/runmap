@@ -1,7 +1,10 @@
 # Environment preferences: routing integration and road-noise learning
 
 Status: pilot acquisition, source inspection, and the four-field raster baseline
-are available. Development direction updated 2026-11-04.
+are available. Regional tile preparation/delivery and main-map controls are
+implemented and the capital-area source and raster are prepared from a dated
+Finland PBF. Real-data visual and performance acceptance remain outstanding.
+Updated 2026-11-05.
 
 The [source inspection map](guide.md#environment-source-inspection) and
 [four raster layers](guide.md#experimental-environment-rasters) are implemented
@@ -143,13 +146,12 @@ dependency group rather than an interactive-server requirement.
 
 ## Source acquisition and geometry
 
-The initial implementation uses OSMnx's feature API and raw response cache.
-It retains assembled geometry and source tags without replacing the existing
-routing graph. Pyosmium's area assembly over regional `.osm.pbf` files is a
-candidate for a later import path, especially if bounding-box discovery omits
-large enclosing areas. Known clipping and enclosing-polygon limitations remain
-explicit. Fix concrete acquisition defects as needed without requiring a manual
-completeness audit.
+The initial pilot uses OSMnx's feature API and raw response cache. The
+capital-area bundle now uses a dated Geofabrik Finland PBF and Pyosmium area
+assembly before spatial selection, so large enclosing polygons can be included
+without vertices in the requested rectangle. Source tags and complete selected
+geometry are retained. Unassembled relations and real-world mapping completeness
+remain explicit limitations. See the [shared snapshot contract](reference/prepared-data.md#shared-osm-snapshot-and-regional-source-bundles).
 
 Reuse OSM acquisition and provenance conventions, with an independent environment
 query. The existing runnable-highway extract cannot establish environment
@@ -239,13 +241,15 @@ where acquisition coverage is valid.
 
 ### Tiled map delivery
 
-The existing inspection previews are not yet environment layers in the main
-routing app. Design a bounded tile path for G/W/T/H, including the raster tile
-format, zoom range, resampling, cache keys, and preparation/serving strategy.
-Reuse existing map and tile infrastructure where suitable. The initial candidate
-is Web Mercator XYZ raster tiles generated from the metric field bundle; choose
-precomputed versus on-demand generation based on coverage, storage, and latency.
-Keep analytical field values separate from colored display tiles.
+The main routing map now has a bounded G/W/T/H tile path and independent controls.
+See [usage](guide.md#environment-layers-in-the-routing-map),
+[regional preparation](development.md#capital-area-environment-layers), and the
+[tile API](reference/api.md#environment-map-tiles). It uses on-demand Web Mercator
+XYZ PNGs from an offline analytical TIFF, with nearest-neighbor resampling,
+versioned cache keys, and bounded source reads. Analytical values remain separate
+from colored display tiles. Regional source acquisition is complete through a
+[shared Finland snapshot](development.md#shared-finland-osm-snapshot-pipeline).
+Browser and latency acceptance remain to be completed and recorded.
 
 Expose independent toggles, opacity, legends, and coverage/no-data indication in
 the routing map. Preserve overlapping layers and combinations with terrain,
@@ -439,6 +443,6 @@ explicitly. Keep this proposal clearly marked or archive it once superseded.
 
 - [OSMnx feature API](https://osmnx.readthedocs.io/en/stable/user-reference.html#module-osmnx.features)
   for pilot acquisition and [Pyosmium area processing](https://docs.osmcode.org/pyosmium/latest/reference/File-Processing/)
-  for the candidate regional-file path.
+  for the regional-file import.
 - [OSM forest tagging](https://wiki.openstreetmap.org/wiki/Tag:landuse=forest)
   and [multipolygon geometry](https://wiki.openstreetmap.org/wiki/Relation:multipolygon).

@@ -58,6 +58,15 @@ class OsmSource(TypedDict, total=False):
     source_path: str
     sha256: str
     bytes: int
+    provider: str
+    licence: str
+    licence_url: str
+    pbf_sha256: str
+    pbf_source_path: str
+    pbf_snapshot_url: str
+    osm_base_timestamp: str
+    import_implementation_sha256: str
+    source_manifest_sha256: str
 
 
 class GraphSource(TypedDict, total=False):

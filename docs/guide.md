@@ -286,3 +286,26 @@ choices. Extra travel highlights detours around obstacles within the distance bu
 
 Grid distance contours use Light smoothing by default. Advanced options offers
 Off, Light, or Strong contour smoothing; network distances stay unchanged.
+
+### Environment layers in the routing map
+
+Use the **Environment** switch under **Map layers** to show greenery. Expand its
+row to choose water proximity, traffic exposure, wetlands, or coverage and adjust
+each layer's opacity. The switch starts Off; greenery is the first layer shown
+when you turn it on. The four scores share a 0–1 legend and start at 50% opacity.
+They render below roads, paths, labels, and route overlays and
+can be combined with terrain and distance layers. Enabling them does not alter
+route costs. Traffic is an uncalibrated dominant-road proxy; wetland presence
+does not establish path wetness.
+
+Enable **Coverage and limited context** to distinguish prepared cells (gray)
+from areas without data (transparent). Amber stripes mark limited computational
+or road context. Zero-score cells are also transparent in score layers; no
+mapped evidence does not establish real-world absence. Mapping completeness is
+unverified throughout. A loading error is reported in the Environment panel.
+
+The main map reads the prepared regional bundle over the existing
+40 × 40 km Helsinki capital-area footprint. It does not require downloading the
+pilot's entire source geometry or preview images. If no completed regional bundle
+exists, the panel reports that layers are unavailable. See
+[regional setup](development.md#capital-area-environment-layers).
