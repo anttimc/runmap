@@ -353,3 +353,10 @@ the cubic correction and residual allowance. The contour score maps the core to
 A snapshot must cover at least 115% of the target in each direction; the frontend
 rounds that budget up to whole kilometres. This conservative search extent also
 covers candidates in directed networks with unequal outward and return legs.
+
+Environment routing controls: `environment_greenery`, `environment_water`,
+`environment_traffic`, and `environment_wetland` accept Off/Low/High. The initial
+`environment-levels-v1` table uses 0/0.25/1.0 dimensionless weights. Controls are
+capability gated on the configured native environment join and default to Off.
+Route details show equivalent metre contributions and unknown metres per field.
+Regional calibration and latency acceptance remain outstanding.

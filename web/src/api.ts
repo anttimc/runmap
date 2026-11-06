@@ -33,7 +33,13 @@ interface RunRequest extends PathPolicy {
   home: { longitude: number; latitude: number };
   turnaround: { longitude: number; latitude: number };
   settings: { avoidance_ratio: number; centre_enabled: boolean };
-  preferences: { hills: PreferenceLevel };
+  preferences: {
+    hills: PreferenceLevel;
+    environment_greenery?: PreferenceLevel;
+    environment_water?: PreferenceLevel;
+    environment_traffic?: PreferenceLevel;
+    environment_wetland?: PreferenceLevel;
+  };
 }
 
 async function errorMessage(response: Response): Promise<string> {

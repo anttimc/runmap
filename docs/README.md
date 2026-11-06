@@ -9,7 +9,7 @@ exists, and [roadmap](roadmap.md) for outstanding work.
 | [Goals](goals.md) | Intended outcomes, scope, and non-goals |
 | [Guide](guide.md) | Existing features, usage, and limitations |
 | [Roadmap](roadmap.md) | Outstanding work, priorities, and acceptance criteria |
-| [Environment preferences design](environment-preferences.md) | Existing field meanings, tiled map delivery, segment costs, planned controls/route acceptance, and OSM-only road-noise learning from municipal reference maps |
+| [Environment preferences design](environment-preferences.md) | Existing field meanings, tiled map delivery, segment costs, accepted preference controls, and OSM-only road-noise learning from municipal reference maps |
 | [Architecture](architecture.md) | High-level components, dependencies, data flow, and ownership boundaries |
 | [Development](development.md) | Setup, preparation, commands, and configuration |
 | [Prepared data](reference/prepared-data.md) | OSM snapshots, artifact identity, publication, network schema, and spatial-selection contracts |

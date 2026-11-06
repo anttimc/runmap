@@ -6,7 +6,9 @@ implemented and the capital-area source and raster are prepared from a dated
 Finland PBF. The local runner accepted the map-layer visuals, ordinary UI use,
 and rendering latency on 2026-11-05. Segment projection, pure cost functions,
 and optional native/reference routing consumption are implemented. Public
-preference controls and regional route acceptance remain planned.
+preference controls are implemented, and the local runner accepted environment
+route planning and the preference UI on 2026-11-06. Recorded regional calibration
+and performance benchmarks remain follow-up validation.
 Updated 2026-11-06.
 
 The [source inspection map](guide.md#environment-source-inspection) and
@@ -269,7 +271,7 @@ on every physical network segment, with graph chainage, projected length,
 coverage/support, and raster/network/model identities. It does not sample
 colored tiles. The bounded reader and partial-span integration are available;
 both routing backends can consume it through bounded reads and score arcs with
-explicit weights. Public requests still pass all weights Off. Compare representative full and
+explicit weights. Public requests expose four independent environment preferences when the native router has a validated join. All default to Off. Compare representative full and
 partial segment summaries with direct raster sampling before enabling costs.
 Repeated traversals must count each passage when route summaries are added.
 The following cost/UI work consumes this prepared join without raster
@@ -279,7 +281,7 @@ processing during each route request.
 
 The pure environment cost function and both routing backends now supply four
 nonnegative penalty terms with an explicit conservative policy for NoData and
-unsupported context. Public controls are not connected. Design individual and combined preference
+unsupported context. Public controls use initial versioned Low=0.25 and High=1.0 weights (Off=0); regional calibration remains outstanding. Design individual and combined preference
 weights, defaults, ranges, an explicit Off state, and route exposure/coverage
 summaries together. Check route behavior and latency using saved route requests
 before enabling controls. These are integration checks, not a manual
@@ -429,7 +431,7 @@ all environment weights Off reproduce existing routes and costs.
 The pure function assigns maximum unit penalty to NoData and unsupported
 context for enabled fields and reports unknown graph metres separately. This
 is a conservative routing choice, not a measured exposure value. The affected
-controls remain unavailable pending weight selection and regional route acceptance.
+controls are available with a validated join; regional route acceptance remains outstanding.
 Show route coverage and environment summaries separately from preference
 strength; lack of evidence must not become an apparent quiet or forest-free area.
 
@@ -456,3 +458,11 @@ explicitly. Keep this proposal clearly marked or archive it once superseded.
   for the regional-file import.
 - [OSM forest tagging](https://wiki.openstreetmap.org/wiki/Tag:landuse=forest)
   and [multipolygon geometry](https://wiki.openstreetmap.org/wiki/Relation:multipolygon).
+
+Environment routing controls: `environment_greenery`, `environment_water`,
+`environment_traffic`, and `environment_wetland` accept Off/Low/High. The initial
+`environment-levels-v1` table uses 0/0.25/1.0 dimensionless weights. Controls are
+capability gated on the configured native environment join and default to Off.
+Route details show equivalent metre contributions and unknown metres per field.
+Local runner acceptance was recorded on 2026-11-06; reproducible regional
+calibration and latency benchmarks remain follow-up validation.

@@ -13,6 +13,10 @@ class PreferenceSettings:
     signals: PreferenceLevel = "off"
     busy_roads: PreferenceLevel = "off"
     greenery: PreferenceLevel = "off"
+    environment_greenery: PreferenceLevel = "off"
+    environment_water: PreferenceLevel = "off"
+    environment_traffic: PreferenceLevel = "off"
+    environment_wetland: PreferenceLevel = "off"
 
 
 @dataclass(frozen=True)
@@ -21,6 +25,10 @@ class PreferenceWeights:
     signals: float = 0.0
     busy_roads: float = 0.0
     greenery: float = 0.0
+    environment_greenery: float = 0.0
+    environment_water: float = 0.0
+    environment_traffic: float = 0.0
+    environment_wetland: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -37,6 +45,10 @@ class PreferenceWeightTables:
     signals: PreferenceWeightTable = PreferenceWeightTable("signals-off-v1")
     busy_roads: PreferenceWeightTable = PreferenceWeightTable("busy-roads-off-v1")
     greenery: PreferenceWeightTable = PreferenceWeightTable("greenery-off-v1")
+    environment_greenery: PreferenceWeightTable = PreferenceWeightTable("environment-levels-v1", low=0.25, high=1.0)
+    environment_water: PreferenceWeightTable = PreferenceWeightTable("environment-levels-v1", low=0.25, high=1.0)
+    environment_traffic: PreferenceWeightTable = PreferenceWeightTable("environment-levels-v1", low=0.25, high=1.0)
+    environment_wetland: PreferenceWeightTable = PreferenceWeightTable("environment-levels-v1", low=0.25, high=1.0)
 
 
 @dataclass(frozen=True)
@@ -53,6 +65,10 @@ class PreferenceCapabilities:
     signals: PreferenceCapability
     busy_roads: PreferenceCapability
     greenery: PreferenceCapability
+    environment_greenery: PreferenceCapability = PreferenceCapability(("off",), None, None, "Prepared environment data is unavailable.")
+    environment_water: PreferenceCapability = PreferenceCapability(("off",), None, None, "Prepared environment data is unavailable.")
+    environment_traffic: PreferenceCapability = PreferenceCapability(("off",), None, None, "Prepared environment data is unavailable.")
+    environment_wetland: PreferenceCapability = PreferenceCapability(("off",), None, None, "Prepared environment data is unavailable.")
 
 
 @dataclass(frozen=True)

@@ -1,7 +1,12 @@
 /** Verify route presentation for one-way and round-trip candidates. */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { candidateDetails, candidateName, runCoordinates } from "../src/run-results.ts";
+import {
+  candidateDetails,
+  candidateName,
+  environmentDetails,
+  runCoordinates,
+} from "../src/run-results.ts";
 
 const outbound = {
   coordinates: [
@@ -47,5 +52,26 @@ test("round-trip rendering joins both legs and retains out-and-back details", ()
   assert.equal(
     candidateName({ ...candidate, legs: [outbound, detour], outbound_left: false }),
     "Counter-clockwise",
+  );
+});
+
+test("environment details use route settings and omit Off fields and zero missing coverage", () => {
+  const candidate = {
+    legs: [
+      {
+        cost_breakdown: { environment_greenery: 25 },
+        observations: { environment_unknown_greenery_m: 0 },
+      },
+    ],
+  };
+  assert.equal(environmentDetails(candidate), "");
+  assert.equal(environmentDetails(candidate, { environment_greenery: "off" }), "");
+  const text = environmentDetails(candidate, { environment_greenery: "high" });
+  assert.match(text, /Greenery · High   \+0.03 eq km/);
+  assert.doesNotMatch(text, /unknown|lacks|Traffic/);
+  candidate.legs[0].observations.environment_unknown_greenery_m = 12;
+  assert.match(
+    environmentDetails(candidate, { environment_greenery: "high" }),
+    /12 m of the route lacks mapped context/,
   );
 });

@@ -18,13 +18,16 @@ def preference_capabilities(hills: HillData | None = None) -> PreferenceCapabili
     return prepared_preference_capabilities(hills.model if hills else None, hills.valid_fraction if hills else None)
 
 
-def prepared_preference_capabilities(model: HillModel | None, valid_fraction: float | None) -> PreferenceCapabilities:
+def prepared_preference_capabilities(model: HillModel | None, valid_fraction: float | None, *, environment: bool = False) -> PreferenceCapabilities:
     return PreferenceCapabilities(
         (PreferenceCapability(("off", "low", "high"), model.version, valid_fraction, None)
          if model is not None else PreferenceCapability(("off",), None, None, "Prepared hill measurements are unavailable.")),
         PreferenceCapability(("off",), None, None, "Crossing passage attribution is not prepared."),
         PreferenceCapability(("off",), None, None, "Buffered road context is not prepared."),
         PreferenceCapability(("off",), None, None, "Buffered green-area context is not prepared."),
+        **({f"environment_{field}": PreferenceCapability(("off", "low", "high"),
+            "mapped-context-environment-cost-v1", None, None) for field in
+            ("greenery", "water", "traffic", "wetland")} if environment else {}),
     )
 
 
@@ -66,5 +69,8 @@ def resolve_prepared_preferences(settings: PreferenceSettings, capabilities: Pre
         _resolve_weight("signals", settings.signals, capabilities.signals, tables.signals),
         _resolve_weight("busy_roads", settings.busy_roads, capabilities.busy_roads, tables.busy_roads),
         _resolve_weight("greenery", settings.greenery, capabilities.greenery, tables.greenery),
+        **{f"environment_{field}": _resolve_weight(f"environment_{field}",
+            getattr(settings, f"environment_{field}"), getattr(capabilities, f"environment_{field}"),
+            getattr(tables, f"environment_{field}")) for field in ("greenery", "water", "traffic", "wetland")},
     )
     return ResolvedPreferences(settings, weights, tables)

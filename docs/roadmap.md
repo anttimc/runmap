@@ -6,38 +6,25 @@ Implementation, automated checks, and local runner acceptance are separate.
 Record reproducible inputs, dataset/model/settings identities, and machine/toolchain
 details for reviews and benchmarks. Preserve dated reports as evidence.
 
-Environment exploration and costs are next. Validation of existing features is
-deferred to the end of this backlog; it does not block environment work.
+Environment exploration, costs, routing integration, and preference controls are
+implemented. The local runner accepted environment route planning and the UI on
+2026-11-06. Main-map visuals and rendering were accepted on 2026-11-05.
 
 <a id="planned-environment-preferences-experiment"></a>
 
-## Next: environment exploration and costs
+## Environment follow-up validation
 
-Priority: integrate environment segment features, routing costs, and weight
-controls. The main-map layers are delivered and locally accepted. Noise learning
-is a separate later track and does not block this work. Checks for new
-environment behavior stay with the implementation steps below.
+The [four-field raster baseline](guide.md#experimental-environment-rasters) and
+[environment routing controls](environment-preferences.md) are delivered.
+Remaining reproducible validation work:
 
-The [four-field raster baseline](guide.md#experimental-environment-rasters) exists.
-Two independent tracks follow the [environment design](environment-preferences.md#two-development-directions).
-Manual OSM audits, hand-labeled locations, and learning all four fields are not
-prerequisites. Preserve known source/support limitations.
+- Record saved regional requests with dataset/model/settings identities and
+  compare route tradeoffs, lengths, and missing context across preferences.
+- Measure bounded join loading, expanded states, and routing latency with
+  environment preferences enabled. User acceptance does not replace a recorded
+  performance benchmark.
 
-### Track 1: routing application integration
-
-1. **Regional route acceptance:** compare representative segment summaries with
-   direct raster sampling and verify bounded loading cost and route tradeoffs on
-   saved regional requests. Native and reference routing already read bounded
-   intervals and score full and partial traversals with explicit weights;
-   automated checks cover parity with hill and shape costs.
-2. **Controls and acceptance:** choose UI weight levels and defaults,
-   and add exposure/coverage summaries. All weights Off must reproduce existing
-   routes; saved routes must show understandable individual and combined tradeoffs
-   within the routing latency budget. Review the conservative unknown policy
-   against those routes before exposing controls.
-
-See [delivery, projection, and UI design](environment-preferences.md#track-1-routing-application-layers-and-segment-projection).
-This track proceeds independently of noise learning.
+Noise learning remains an independent later track.
 
 ## Later: OSM-only road-noise learning (Track 2)
 

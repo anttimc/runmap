@@ -300,7 +300,7 @@ does not establish path wetness.
 
 An optional prepared segment join records these fields along physical paths.
 Both routers can score its intervals with explicit programmatic weights,
-but the public route controls still pass all environment weights Off.
+and the public controls expose environment preferences when a validated join is configured.
 
 Enable **Coverage and limited context** to distinguish prepared cells (gray)
 from areas without data (transparent). Amber stripes mark limited computational
@@ -313,3 +313,22 @@ The main map reads the prepared regional bundle over the existing
 pilot's entire source geometry or preview images. If no completed regional bundle
 exists, the panel reports that layers are unavailable. See
 [regional setup](development.md#capital-area-environment-layers).
+
+Environment routing controls: `environment_greenery`, `environment_water`,
+`environment_traffic`, and `environment_wetland` accept Off/Low/High. The initial
+`environment-levels-v1` table uses 0/0.25/1.0 dimensionless weights. Controls are
+capability gated on the configured native environment join and default to Off.
+The run headline shows running distance. Details show routing penalties for enabled
+preferences using the settings saved with the result. Missing mapped context is
+reported only when present; penalties do not add to running distance.
+Regional calibration and latency acceptance remain outstanding.
+
+Environment routing penalties appear in the run details tooltip on separate rows in equivalent
+kilometres (`eq km`), with the preference strength beside each field. These
+values express routing costs and do not increase the displayed running distance.
+
+Environment preferences use compact Off/Low/High sliders alongside Avoid hills.
+
+The local runner accepted environment route planning and the preference UI on
+2026-11-06. Recorded calibration and performance benchmarks remain separate
+follow-up validation in the [roadmap](roadmap.md).

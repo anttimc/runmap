@@ -107,9 +107,28 @@ export interface ShellResponse extends FeatureCollection<
 }
 
 export interface RunPlannerConfiguration {
-  preference_defaults: { hills: PreferenceLevel };
+  preference_defaults: {
+    hills: PreferenceLevel;
+    environment_greenery?: PreferenceLevel;
+    environment_water?: PreferenceLevel;
+    environment_traffic?: PreferenceLevel;
+    environment_wetland?: PreferenceLevel;
+  };
   preference_capabilities: {
     hills: { supported_levels: PreferenceLevel[]; unavailable_reason: string | null };
+    environment_greenery?: {
+      supported_levels: PreferenceLevel[];
+      unavailable_reason: string | null;
+    };
+    environment_water?: { supported_levels: PreferenceLevel[]; unavailable_reason: string | null };
+    environment_traffic?: {
+      supported_levels: PreferenceLevel[];
+      unavailable_reason: string | null;
+    };
+    environment_wetland?: {
+      supported_levels: PreferenceLevel[];
+      unavailable_reason: string | null;
+    };
   };
 }
 export interface TerrainObservations {
@@ -118,12 +137,14 @@ export interface TerrainObservations {
   terrain_valid_fraction: number | null;
   terrain_trusted_fraction: number | null;
   terrain_fallback_distance_m: number | null;
+  [key: `environment_unknown_${string}_m`]: number | null;
 }
 export interface Leg {
   coordinates: Location[];
   distance_m: number;
   observations: TerrainObservations;
   traversals: Traversal[];
+  cost_breakdown?: Record<string, number>;
 }
 export interface Traversal {
   segment_id: string;
@@ -143,7 +164,10 @@ export interface Candidate {
 }
 export interface RunResponse {
   mode: RunMode;
-  cost_model: { shape_settings: { avoidance_ratio: number } };
+  cost_model: {
+    shape_settings: { avoidance_ratio: number };
+    preferences?: { settings: Record<string, string> };
+  };
   dataset_id: string;
   status: string;
   home: Snap | null;

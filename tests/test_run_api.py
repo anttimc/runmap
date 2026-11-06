@@ -124,12 +124,38 @@ class RunApiTests(unittest.TestCase):
 
     def test_preference_capabilities_do_not_advertise_unimplemented_levels(self) -> None:
         config = PlannerConfiguration(deadline_s=15).model_dump(mode="json")
-        self.assertEqual(config["preference_defaults"], {name: "off" for name in ("hills", "signals", "busy_roads", "greenery")})
+        self.assertEqual(config["preference_defaults"], {name: "off" for name in ("hills", "signals", "busy_roads", "greenery", "environment_greenery", "environment_water", "environment_traffic", "environment_wetland")})
         for capability in config["preference_capabilities"].values():
             self.assertEqual(capability["supported_levels"], ["off"])
             self.assertIsNone(capability["coverage_fraction"])
             self.assertIsNone(capability["feature_version"])
             self.assertTrue(capability["unavailable_reason"])
+
+    def test_environment_join_discovery_and_override(self) -> None:
+        from pathlib import Path
+        from runmap.api.app import environment_join_path
+
+        with TemporaryDirectory() as directory, patch.dict("os.environ", {}, clear=True):
+            database = Path(directory) / "network.sqlite"
+            self.assertIsNone(environment_join_path(database))
+            sibling = database.with_name("environment-join.sqlite")
+            sibling.touch()
+            self.assertEqual(environment_join_path(database), sibling)
+            with patch.dict("os.environ", {"RUNMAP_ENVIRONMENT_JOIN_DATABASE": "explicit.sqlite"}):
+                self.assertEqual(environment_join_path(database), Path("explicit.sqlite"))
+
+    def test_environment_capabilities_and_initial_weights(self) -> None:
+        from runmap.routing.cost_settings import prepared_preference_capabilities, resolve_prepared_preferences
+        from runmap.routing.cost_types import PreferenceSettings
+
+        capabilities = prepared_preference_capabilities(None, None, environment=True)
+        settings = PreferenceSettings(environment_greenery="low", environment_traffic="high")
+        resolved = resolve_prepared_preferences(settings, capabilities)
+        self.assertEqual(resolved.weights.environment_greenery, 0.25)
+        self.assertEqual(resolved.weights.environment_traffic, 1.0)
+        self.assertEqual(resolved.weights.environment_water, 0.0)
+        with self.assertRaisesRegex(ValueError, "Unsupported environment_greenery"):
+            resolve_prepared_preferences(settings, prepared_preference_capabilities(None, None))
 
     def test_unsupported_preferences_fail_even_when_no_endpoint_would_snap(self) -> None:
         options = self.options.model_copy(update={"preferences": PreferencesRequest(signals="high"),

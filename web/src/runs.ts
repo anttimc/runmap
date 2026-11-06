@@ -21,7 +21,7 @@ import type {
 } from "./api-types";
 import type { SharedState } from "./state";
 import { element } from "./dom";
-import { candidateName, candidateDetails, runCoordinates } from "./run-results";
+import { candidateName, candidateDetails, environmentDetails, runCoordinates } from "./run-results";
 import { startTurnaroundRegion } from "./turnaround";
 
 const hillPresets: { level: PreferenceLevel; label: string; description: string }[] = [
@@ -207,7 +207,53 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       pick(ready ? "turnaround" : undefined);
     },
   });
-  element("run-preferences").hidden = hills.disabled;
+  const environmentFields = ["greenery", "water", "traffic", "wetland"] as const;
+  const environmentControls = environmentFields.map((field) => {
+    const key = `environment_${field}` as const;
+    const capability = options.runPlanner?.preference_capabilities[key];
+    const label = document.createElement("label");
+    label.textContent = {
+      greenery: "Prefer greenery",
+      water: "Prefer water",
+      traffic: "Avoid traffic",
+      wetland: "Avoid wetlands",
+    }[field];
+    const levels = capability?.supported_levels.length ? capability.supported_levels : ["off"];
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.id = `run-${key}`;
+    slider.min = "0";
+    slider.max = String(levels.length - 1);
+    slider.step = "1";
+    slider.value = String(
+      Math.max(0, levels.indexOf(options.runPlanner?.preference_defaults[key] ?? "off")),
+    );
+    slider.disabled = levels.length <= 1;
+    label.htmlFor = slider.id;
+    const output = document.createElement("output");
+    output.htmlFor = slider.id;
+    const update = () => {
+      const level = levels[Number(slider.value)];
+      output.textContent = level[0].toUpperCase() + level.slice(1);
+      slider.setAttribute("aria-valuetext", output.textContent);
+    };
+    update();
+    const row = document.createElement("div");
+    row.className = "environment-preference";
+    row.title = capability?.unavailable_reason ?? "Off / Low / High mapped surroundings preference";
+    row.append(label, slider, output);
+    element("run-preferences").append(row);
+    slider.addEventListener("input", () => {
+      update();
+      invalidate();
+    });
+    return { key, slider, levels };
+  });
+  const environmentPreferences = () =>
+    Object.fromEntries(
+      environmentControls.map(({ key, slider, levels }) => [key, levels[Number(slider.value)]]),
+    );
+  element("run-preferences").hidden = false;
   const inputsKey = (): string =>
     JSON.stringify([
       routeMode,
@@ -216,6 +262,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       options.state.policy,
       roundTrip() ? avoidance.value : "0",
       hills.value,
+      environmentPreferences(),
     ]);
   let observedInputs = inputsKey();
   const markers = [
@@ -403,8 +450,13 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     summary.className = "run-summary";
     summary.textContent = `${(candidate.distance_m / 1000).toFixed(2)} km`;
     container.append(summary);
-    element("run-detail-content").textContent =
-      `${candidateDetails(candidate)} ${response?.coverage_note ?? ""}`;
+    element("run-detail-content").textContent = [
+      candidateDetails(candidate),
+      environmentDetails(candidate, response?.cost_model.preferences?.settings),
+      response?.coverage_note,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
   }
   async function generate(): Promise<void> {
     const home = options.state.home;
@@ -432,7 +484,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
             avoidance_ratio: roundTrip() ? Number(avoidance.value) : 0,
             centre_enabled: true,
           },
-          preferences: { hills: hillPreset().level },
+          preferences: { hills: hillPreset().level, ...environmentPreferences() },
         },
         abort.signal,
       );

@@ -47,6 +47,15 @@ DEFAULT_REGION_DIRECTORY = PROJECT_ROOT / "config/regions"
 DEFAULT_DATA_ROOT = PROJECT_ROOT / "data/elevation"
 
 
+def environment_join_path(database: Path) -> Path | None:
+    """Discover the optional sibling join while preserving explicit overrides."""
+    override = os.environ.get("RUNMAP_ENVIRONMENT_JOIN_DATABASE")
+    if override:
+        return Path(override)
+    sibling = database.with_name("environment-join.sqlite")
+    return sibling if sibling.is_file() else None
+
+
 @asynccontextmanager
 async def lifespan(application):
     source_override = os.environ.get("RUNMAP_ELEVATION_PATH")
@@ -67,6 +76,7 @@ async def lifespan(application):
     application.state.path_status = "unavailable"
     database_path = os.environ.get("RUNMAP_PATH_DATABASE", str(graph_path.with_name("network.sqlite")))
     path_backend = os.environ.get("RUNMAP_PATH_BACKEND", "sqlite")
+    environment_path = environment_join_path(Path(database_path))
     try:
         if path_backend not in {"sqlite", "json"}:
             raise ValueError("RUNMAP_PATH_BACKEND must be sqlite or json")
@@ -76,8 +86,7 @@ async def lifespan(application):
             cache_kib=int(os.environ.get("RUNMAP_PATH_DATABASE_CACHE_KIB", "16384")),
             numeric_path=Path(os.environ["RUNMAP_NUMERIC_DATABASE"]) if os.environ.get("RUNMAP_NUMERIC_DATABASE") else None,
             numeric_cache_bytes=int(os.environ.get("RUNMAP_NUMERIC_CACHE_BYTES", 128 * 1024**2)),
-            environment_path=Path(os.environ["RUNMAP_ENVIRONMENT_JOIN_DATABASE"])
-                if os.environ.get("RUNMAP_ENVIRONMENT_JOIN_DATABASE") else None,
+            environment_path=environment_path,
             environment_raster_bundle=Path(os.environ.get("RUNMAP_ENVIRONMENT_JOIN_RASTER_DIRECTORY",
                 str(PROJECT_ROOT / "data/environment/prepared/helsinki-capital-area-v3"))))
             if path_backend == "sqlite" else load_path_data(graph_path))
@@ -148,7 +157,7 @@ def paths_config(request: Request):
                 "message": "Path analysis is unavailable. Prepare graph measurements locally."}
     sqlite = isinstance(data, SQLitePathData)
     model = data.metadata.models.hill_model if sqlite else data.hills.model if data.hills else None
-    capabilities = (prepared_preference_capabilities(model, data.metadata.hill_valid_fraction)
+    capabilities = (prepared_preference_capabilities(model, data.metadata.hill_valid_fraction, environment=data.numeric is not None and data.numeric.environment_connection is not None)
                     if sqlite else preference_capabilities(data.hills))
     return {**(database_path_config(data) if sqlite else path_config(data)), "tile_template": tile_template(data),
             "tile_min_zoom": 13, "tile_max_zoom": 16,

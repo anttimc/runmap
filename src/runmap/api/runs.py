@@ -49,6 +49,10 @@ class PreferencesRequest(BaseModel):
     signals: PreferenceLevel = "off"
     busy_roads: PreferenceLevel = "off"
     greenery: PreferenceLevel = "off"
+    environment_greenery: PreferenceLevel = "off"
+    environment_water: PreferenceLevel = "off"
+    environment_traffic: PreferenceLevel = "off"
+    environment_wetland: PreferenceLevel = "off"
 
 
 class CostConfigurationResponse(BaseModel):

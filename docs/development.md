@@ -1190,3 +1190,16 @@ uv run --extra web --extra osm python -m unittest discover -s tests -p 'test_osm
 
 PBF-specific tests skip when the optional `osm` extra is unavailable; the downloader
 checks do not need Pyosmium.
+
+The API also discovers `environment-join.sqlite` beside the selected network
+database. Prepare it against that exact network and the configured raster bundle:
+
+```sh
+uv run python -m runmap.paths.environment_join \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  data/environment/prepared/helsinki-capital-area-v3 \
+  data/paths/prepared/helsinki-capital-area/environment-join.sqlite
+```
+
+Restart the API after publishing the join. Explicit
+`RUNMAP_ENVIRONMENT_JOIN_DATABASE` overrides sibling discovery.

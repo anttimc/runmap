@@ -44,8 +44,12 @@ def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaroun
     settings = effective_run_settings(settings, mode)
     if not all(math.isfinite(v) for v in (*home_point, *turnaround_point)) or math.dist(home_point, turnaround_point) < .01:
         raise ValueError("Home and turnaround must be finite and spatially distinct")
-    capabilities = prepared_preference_capabilities(graph.metadata.models.hill_model, graph.metadata.hill_valid_fraction)
+    capabilities = prepared_preference_capabilities(graph.metadata.models.hill_model, graph.metadata.hill_valid_fraction, environment=graph.native.environment_prepared)
     resolved = resolve_prepared_preferences(preferences, capabilities)
+    if any(getattr(preferences, f"environment_{field}") != "off"
+           for field in ("greenery", "water", "traffic", "wetland")):
+        environment_weights = EnvironmentWeights(**{field: getattr(resolved.weights, f"environment_{field}")
+            for field in ("greenery", "water", "traffic", "wetland")})
     candidates: list[NumericRunCandidate] = []
     outcomes: list[Literal["complete", "unreachable", "deadline"]] = []
     frontiers: list[NDArray[np.int64]] = []
