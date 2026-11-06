@@ -13,10 +13,10 @@ deferred to the end of this backlog; it does not block environment work.
 
 ## Next: environment exploration and costs
 
-Priority: explore the environment fields in the main map, then integrate segment
-features, routing costs, and weight controls. Noise learning is a separate later
-track and does not block this work. Checks for new environment behavior stay with
-the implementation steps below.
+Priority: integrate environment segment features, routing costs, and weight
+controls. The main-map layers are delivered and locally accepted. Noise learning
+is a separate later track and does not block this work. Checks for new
+environment behavior stay with the implementation steps below.
 
 The [four-field raster baseline](guide.md#experimental-environment-rasters) exists.
 Two independent tracks follow the [environment design](environment-preferences.md#two-development-directions).
@@ -25,17 +25,11 @@ prerequisites. Preserve known source/support limitations.
 
 ### Track 1: routing application integration
 
-1. **Map-layer acceptance:** the capital-area source and regional raster are
-   prepared from one [dated Finland OSM snapshot](archive/history/2026-11-05-shared-osm-snapshot.md).
-   Bounded tiles, toggles, opacity, legends, and coverage indication are implemented;
-   automated block-seam and tile checks pass. Verify real-data seams, overlap,
-   accessibility, desktop/mobile behavior, and cold/warm interaction latency.
-   [Pilot smoke checks and API observations](archive/history/2026-11-05-environment-tiles.md)
-   do not establish full-area acceptance.
-2. **Segment features:** project fields onto route segments with chainage,
-   support, and artifact identities. Verify direct-grid agreement, partial and
-   repeated traversals, bounded loading, and native/reference equivalence.
-3. **Costs and controls:** define weights, defaults, unknown handling, Off behavior,
+1. **Segment join validation and consumption:** compare representative segment
+   summaries with direct raster sampling, then load the published interval
+   artifact through bounded numeric/reference routing paths. Verify partial and
+   repeated traversals, bounded loading cost, and native/reference equivalence.
+2. **Costs and controls:** define weights, defaults, unknown handling, Off behavior,
    and summaries alongside distance/hill/shape costs. All weights Off must
    reproduce existing routes; saved routes must show understandable individual
    and combined tradeoffs within the routing latency budget.
@@ -185,6 +179,11 @@ are deferred, rather than blocking this feature:
 <a id="next-correctness-and-local-acceptance"></a>
 
 ### Map and terrain
+
+- If needed, complete keyboard-only and screen-reader review of the Environment
+  layer controls. The local runner accepted their visuals, ordinary UI use, and
+  rendering latency on 2026-11-05; see the
+  [dated record](archive/history/2026-11-05-shared-osm-snapshot.md).
 
 - Review contour smoothing Off/Light/Strong in forward-distance and extra-travel
   views around shorelines, crossings, narrow corridors, and disconnected paths.

@@ -14,6 +14,8 @@ flowchart LR
     Prepare --> Terrain["Elevation catalog and raster products"]
     Prepare --> Network["Prepared network.sqlite"]
     Network -->|offline export| Numeric["Numeric routing artifact"]
+    Network -->|physical segment projection| EnvJoin["Environment join SQLite"]
+    EnvRaster["Regional analytical raster"] --> EnvJoin
     Terrain --> API["Python / FastAPI"]
     Network --> API
     Numeric --> API
@@ -89,6 +91,7 @@ The runtime uses three related artifact sets:
 | Elevation catalog, coverage manifests, and raster files | Identify source coverage and retain source/derived terrain products |
 | Prepared network SQLite database | Serve geometry, measurements, policy evidence, inspection, and spatial queries |
 | Numeric routing SQLite artifact | Supply compact graph buffers and prepared costs to native routing |
+| Environment join SQLite artifact | Bind analytical raster cells to physical segment chainage for future routing costs |
 
 The network and numeric artifacts must describe the same dataset and prepared
 models. Opening validates their identities. SQLite delivery reads selected data

@@ -3,8 +3,10 @@
 Status: pilot acquisition, source inspection, and the four-field raster baseline
 are available. Regional tile preparation/delivery and main-map controls are
 implemented and the capital-area source and raster are prepared from a dated
-Finland PBF. Real-data visual and performance acceptance remain outstanding.
-Updated 2026-11-05.
+Finland PBF. The local runner accepted the map-layer visuals, ordinary UI use,
+and rendering latency on 2026-11-05. Segment projection is implemented as a
+separate artifact; routing consumption and costs remain planned.
+Updated 2026-11-06.
 
 The [source inspection map](guide.md#environment-source-inspection) and
 [four raster layers](guide.md#experimental-environment-rasters) are implemented
@@ -27,9 +29,10 @@ calibrated real-world noise.
 
 ## Two development directions
 
-1. **Routing application integration:** bring the existing rasters into the main
-   routing map using tiled delivery, project their values onto physical route
-   segments, then design the cost structure and preference-weighting UI.
+1. **Routing application integration:** the main routing map displays the
+   rasters through tiled delivery, and an offline join projects their values
+   onto physical route segments. Next connect that join to routing and design
+   the cost structure and preference-weighting UI.
 2. **Road-noise learning:** predict municipal road-noise maps from OSM inputs
    only. First fit the existing road-exposure model's road-class weights to the
    reference data, then compare gradient boosting and neural networks.
@@ -249,7 +252,8 @@ XYZ PNGs from an offline analytical TIFF, with nearest-neighbor resampling,
 versioned cache keys, and bounded source reads. Analytical values remain separate
 from colored display tiles. Regional source acquisition is complete through a
 [shared Finland snapshot](development.md#shared-finland-osm-snapshot-pipeline).
-Browser and latency acceptance remain to be completed and recorded.
+The local runner accepted visuals, ordinary UI use, and rendering latency on
+2026-11-05. Broader keyboard and screen-reader review remains deferred.
 
 Expose independent toggles, opacity, legends, and coverage/no-data indication in
 the routing map. Preserve overlapping layers and combinations with terrain,
@@ -259,12 +263,15 @@ This increment changes visualization before environment weights affect routes.
 
 ### Project fields onto route segments
 
-Next prepare ordered samples or intervals for all four fields on physical
-network segments, with distance chainage, coverage/support, and field/network
-identity. Use the analytical grid rather than sampling colored tiles. Preserve
-partial-endpoint and repeated-traversal semantics and compare segment summaries
-with direct raster sampling. The following cost/UI work consumes this prepared
-join; it must not require raster processing during each route request.
+A separate SQLite join now stores analytical-grid intervals for all four fields
+on every physical network segment, with graph chainage, projected length,
+coverage/support, and raster/network/model identities. It does not sample
+colored tiles. The bounded reader and partial-span integration are available;
+the planner does not consume the join yet. Compare representative full and
+partial segment summaries with direct raster sampling before enabling costs.
+Repeated traversals must count each passage when route summaries are added.
+The following cost/UI work consumes this prepared join without raster
+processing during each route request.
 
 ### Cost structure and weighting UI
 

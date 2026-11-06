@@ -1078,6 +1078,24 @@ acquire OSM data or prepare analytical fields. See the
 [regional artifact contract](reference/prepared-data.md#regional-environment-bundles)
 for diagnostic limits and the [tile API](reference/api.md#environment-map-tiles).
 
+Project the four analytical score bands and two context-support bands onto the
+prepared network's physical segments with a fresh output path:
+
+```sh
+uv run python -m runmap.paths.environment_join \
+  data/paths/geofabrik-2026-11-05/prepared/helsinki-capital-area/network.sqlite \
+  data/environment/prepared/helsinki-capital-area-v3 \
+  data/environment/joins/helsinki-capital-area-v3/geofabrik-2026-11-05.sqlite
+```
+
+The command verifies the raster against its completion manifest and publishes
+the join database only after every segment is projected. The join stores network
+and raster identities; use a new destination when either source changes. SQL
+readers can select segment numbers in bounded batches and integrate partial
+traversals by graph chainage. Routing costs and controls are the next step; this
+command alone does not change planned routes. See the
+[join contract](reference/prepared-data.md#segment-projection-artifact).
+
 ## Shared Finland OSM snapshot pipeline
 
 For repeatable offline processing, download the complete Finland PBF once from

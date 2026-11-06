@@ -321,6 +321,33 @@ written last; output directories cannot be overwritten. Failed partial outputs
 have no completion manifest and cannot be served. This regional bundle is
 independent of the source-inspection pilot.
 
+### Segment projection artifact
+
+`runmap.paths.environment_join` publishes an independent SQLite artifact for one
+prepared network and one regional analytical raster. Schema version 1 stores
+ordered intervals per physical segment, keyed by the network's numeric segment
+number. Each interval has graph-chainage start/end, projected length, four score
+values (`greenery`, `water`, `traffic`, `wetland`), and the raster's general and
+traffic-context support values. SQL `NULL` means the cell is outside the raster
+or NoData, distinct from a known zero. The artifact records network dataset and
+feature identities, raster dataset and file digest, and projection model version.
+Opening checks those identities; a new network or raster requires a new join.
+
+Projection splits every projected polyline edge at analytical pixel boundaries
+and samples the midpoint of each resulting span. It uses the same per-vertex
+geodesic-to-graph-chainage scaling as terrain preparation. Partial traversals
+clip interval overlap in graph chainage and weight values by projected overlap;
+unknown lengths remain explicit. Repeated traversals consume the same intervals
+on each pass. Scores are direction-independent, unlike hill penalties. The reader
+loads only requested segment numbers in bounded batches, so a future spatial
+database can implement the same segment-feature contract.
+
+This artifact is a prepared data source for routing costs; the current planner
+does not read it or apply environment weights. It is separate from the immutable
+network and numeric routing databases, so publishing new raster fields does not
+require re-exporting graph topology. The corresponding CLI and required inputs
+are in [development](../development.md#capital-area-environment-layers).
+
 ## Shared OSM snapshot and regional source bundles
 
 `sources/geofabrik.py` publishes an unfiltered Finland `finland.osm.pbf` plus a

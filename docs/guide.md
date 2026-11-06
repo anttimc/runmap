@@ -298,6 +298,9 @@ can be combined with terrain and distance layers. Enabling them does not alter
 route costs. Traffic is an uncalibrated dominant-road proxy; wetland presence
 does not establish path wetness.
 
+An optional prepared segment join records these fields along physical paths
+for future route preferences. The planner does not use that artifact yet.
+
 Enable **Coverage and limited context** to distinguish prepared cells (gray)
 from areas without data (transparent). Amber stripes mark limited computational
 or road context. Zero-score cells are also transparent in score layers; no

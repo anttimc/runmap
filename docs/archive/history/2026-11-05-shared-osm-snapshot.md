@@ -47,3 +47,8 @@ unassembled relations need regional relevance assessment before treating
 specific candidate areas as complete. Real-data browser seams, overlap,
 accessibility, and cold/warm interaction latency remain in the
 [roadmap](../../roadmap.md#planned-environment-preferences-experiment).
+
+Later on 2026-11-05, the local runner accepted the full-area map-layer visuals,
+ordinary UI use, and rendering latency. That acceptance is qualitative; the
+pilot timing observations remain the only recorded tile latency numbers.
+Keyboard-only and screen-reader review remains deferred in the roadmap.
