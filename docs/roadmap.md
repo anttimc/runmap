@@ -29,10 +29,12 @@ prerequisites. Preserve known source/support limitations.
    summaries with direct raster sampling, then load the published interval
    artifact through bounded numeric/reference routing paths. Verify partial and
    repeated traversals, bounded loading cost, and native/reference equivalence.
-2. **Costs and controls:** define weights, defaults, unknown handling, Off behavior,
-   and summaries alongside distance/hill/shape costs. All weights Off must
-   reproduce existing routes; saved routes must show understandable individual
-   and combined tradeoffs within the routing latency budget.
+2. **Cost integration and controls:** connect the prepared environment cost
+   function to distance/hill/shape scoring, choose UI weight levels and defaults,
+   and add exposure/coverage summaries. All weights Off must reproduce existing
+   routes; saved routes must show understandable individual and combined tradeoffs
+   within the routing latency budget. Review the conservative unknown policy
+   against those routes before exposing controls.
 
 See [delivery, projection, and UI design](environment-preferences.md#track-1-routing-application-layers-and-segment-projection).
 This track proceeds independently of noise learning.

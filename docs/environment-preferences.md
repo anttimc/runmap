@@ -4,8 +4,8 @@ Status: pilot acquisition, source inspection, and the four-field raster baseline
 are available. Regional tile preparation/delivery and main-map controls are
 implemented and the capital-area source and raster are prepared from a dated
 Finland PBF. The local runner accepted the map-layer visuals, ordinary UI use,
-and rendering latency on 2026-11-05. Segment projection is implemented as a
-separate artifact; routing consumption and costs remain planned.
+and rendering latency on 2026-11-05. Segment projection and pure cost functions
+are implemented; routing consumption and preference controls remain planned.
 Updated 2026-11-06.
 
 The [source inspection map](guide.md#environment-source-inspection) and
@@ -275,14 +275,14 @@ processing during each route request.
 
 ### Cost structure and weighting UI
 
-After segment projection, decide how environment costs combine with the existing
-distance, hill, and shape objectives. Design individual and combined preference
+The pure environment cost function now supplies four nonnegative penalty terms
+with an explicit conservative policy for NoData and unsupported context. It is
+not connected to route search. Design individual and combined preference
 weights, defaults, ranges, an explicit Off state, and route exposure/coverage
-summaries together. The formula under [routing integration](#later-routing-integration)
-is a starting proposal, not an accepted cost contract or UI scale. Choose an
-unknown-data policy before enabling weights, and check route behavior and
-latency using saved route requests. These are integration checks, not a manual
-OSM-labeling exercise.
+summaries together. Check route behavior and latency using saved route requests
+before enabling controls. These are integration checks, not a manual
+OSM-labeling exercise. See the
+[cost contract](reference/routing-mathematics.md#prepared-environment-cost-function).
 
 ## Track 2: OSM-only road-noise prediction
 
@@ -400,15 +400,16 @@ cancellation, stale responses, and combinations with existing terrain/path layer
 
 ## Later routing integration
 
-After tiled-layer integration, sample the current G/W/T/H into ordered physical
-segment intervals with validity/support and artifact identity. Handle woodland boundaries and partial
-segments explicitly; refine sampling or intersect geometry where coarse cells
-miss narrow features. Follow the existing projected/geodesic chainage contract
-in [prepared data](reference/prepared-data.md#published-graph-and-measurements).
-Both directed arcs share environmental context initially; access remains a
-separate policy. Repeated traversals incur repeated exposure costs.
+The separate prepared join samples G/W/T/H into ordered physical-segment
+intervals with validity/support and artifact identity. It follows the existing
+projected/geodesic chainage contract in
+[prepared data](reference/prepared-data.md#published-graph-and-measurements).
+Refine sampling or intersect geometry where coarse cells miss narrow features
+if comparison with direct raster sampling supports that change. Both directed
+arcs share environmental context initially; access remains a separate policy.
+Repeated traversals incur repeated exposure costs.
 
-An initial length-equivalent cost is:
+The implemented pure length-equivalent cost is:
 
 \[
 C(e)=\int_e [1+w_g(1-G(s))+w_w(1-W(s))+w_tT(s)+w_hH(s)]\,ds,
@@ -423,17 +424,17 @@ does not define the full existing hill/shape objective. Review native/reference
 cost integration and admissible heuristics before enabling controls. Prove that
 all environment weights Off reproduce existing routes and costs.
 
-Do not substitute zero for unknown fields. Before enabling each preference,
-choose and document explicit handling for unknowns, such as imputation with
-separate unknown reporting or a supported-coverage restriction. Until that policy
-is implemented, keep the affected control unavailable. Show route coverage and environment
-summaries separately from preference strength; lack of evidence must not become
-an apparent quiet or forest-free area.
+The pure function assigns maximum unit penalty to NoData and unsupported
+context for enabled fields and reports unknown graph metres separately. This
+is a conservative routing choice, not a measured exposure value. The affected
+controls remain unavailable until the cost function is connected and tested.
+Show route coverage and environment summaries separately from preference
+strength; lack of evidence must not become an apparent quiet or forest-free area.
 
 Version the field artifact by source, feature rules, grid, and model/checkpoint.
-Version its segment join by network identity and sampling rules. Extend network
-and numeric artifacts together, preserving segment order, bounded loading,
-partial-endpoint semantics, and native/reference equivalence. Calibrate individual
+Version its segment join by network identity and sampling rules. Connect the
+separate join to bounded numeric and reference loading, preserving segment
+order, partial-endpoint semantics, and native/reference equivalence. Calibrate individual
 preferences and combinations against Off using saved familiar routes; report
 length, exposure, unknown fraction, expanded states, latency, and route tradeoffs.
 These checks do not require manually validating the underlying OSM objects.

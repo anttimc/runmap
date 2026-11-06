@@ -14,6 +14,32 @@ See the [API reference](api.md#work-and-result-lifetimes) for request/cache
 lifetimes and the [guide](../guide.md) for controls and result interpretation. This model is
 separate from the CLI anchor-baseline experiment.
 
+## Prepared environment cost function
+
+`routing/environment_costs.py` defines the versioned
+`mapped-context-environment-cost-v1` calculation for the prepared G/W/T/H
+segment join. It is available to routing integration but is not yet called by
+the native or reference planner; current route choices and API costs are
+unchanged. Each weight is a finite nonnegative, dimensionless multiplier and
+defaults to zero (Off). UI levels and nonzero defaults have not been selected.
+
+For a traversal span measured in stored graph chainage, the four penalty
+densities are $w_g(1-G)$, $w_w(1-W)$, $w_tT$, and $w_hH$. Integrating each density
+over graph metres produces equivalent penalty metres; their sum can be added to
+the existing route objective without lowering its distance bound. The same
+physical-segment intervals apply in either direction. A partial traversal clips
+each interval by chainage; repeated passages add the same cost again.
+
+A field is supported only when its cell value and general context-support flag
+are present and the flag equals one. Traffic also requires its separate
+traffic-context support flag to equal one. Unsupported or NoData metres receive
+the maximum unit penalty of one for every enabled field. The result separately
+reports unknown graph metres per field, including fields whose weight is Off;
+zero score and unknown are therefore distinguishable. This is a conservative
+cost policy for the prototype, not a claim that unknown areas have maximum
+real-world exposure. Invalid weights, values outside [0, 1], noncontiguous
+intervals, and out-of-range traversal spans are rejected.
+
 The planner supports a directed one-way route from start to destination and a
 round trip from start through a turnaround and back. Round trips minimize route
 distance plus penalties for loop shape, repeated paths and hills:
