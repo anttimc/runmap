@@ -18,10 +18,13 @@ separate from the CLI anchor-baseline experiment.
 
 `routing/environment_costs.py` defines the versioned
 `mapped-context-environment-cost-v1` calculation for the prepared G/W/T/H
-segment join. It is available to routing integration but is not yet called by
-the native or reference planner; current route choices and API costs are
-unchanged. Each weight is a finite nonnegative, dimensionless multiplier and
-defaults to zero (Off). UI levels and nonzero defaults have not been selected.
+segment join. Native numeric search now uses the same calculation when a
+validated join is configured and nonzero weights are passed to the numeric
+planner. The public API still passes all weights as zero, so current UI routes
+are unchanged. The Python reference planner accepts the same bounded intervals
+and weights, caches each arc's cost, and reports the same component breakdown.
+Each weight is a finite nonnegative, dimensionless multiplier and defaults to
+zero (Off). UI levels and nonzero defaults have not been selected.
 
 For a traversal span measured in stored graph chainage, the four penalty
 densities are $w_g(1-G)$, $w_w(1-W)$, $w_tT$, and $w_hH$. Integrating each density

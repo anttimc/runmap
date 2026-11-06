@@ -1,6 +1,7 @@
 """Manage numeric artifact access and reuse bounded native routing working sets."""
 
 from collections import OrderedDict
+import json
 from pathlib import Path
 from threading import Lock
 from time import monotonic
@@ -10,6 +11,7 @@ from runmap.paths.database import NetworkMetadata, network_metadata
 from runmap.paths.exploration import Snap
 from runmap.paths.numeric_database import open_numeric_database
 from runmap.paths.numeric_hills import read_hill_intervals
+from runmap.paths.environment_join import open_environment_join
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points
 from runmap.routing.numeric_search import LoadedNumericGraph, NumericEndpoint, load_numeric_graph
@@ -17,13 +19,28 @@ from runmap.routing.types import Bounds
 
 
 class NumericRoutingData:
-    def __init__(self, path: Path, metadata: NetworkMetadata, cache_bytes: int = 128 * 1024**2) -> None:
+    def __init__(self, path: Path, metadata: NetworkMetadata, cache_bytes: int = 128 * 1024**2, *,
+                 environment_path: Path | None = None, raster_bundle: Path | None = None) -> None:
         if cache_bytes < 0:
             raise ValueError("Numeric routing cache bytes must be nonnegative")
         self.connection = open_numeric_database(path, check_same_thread=False)
         try:
             if network_metadata(self.connection) != metadata:
                 raise ValueError("Numeric routing artifact does not match the path database; re-export it")
+        except BaseException:
+            self.connection.close()
+            raise
+        self.environment_connection: sqlite3.Connection | None = None
+        try:
+            if environment_path is not None:
+                if raster_bundle is None:
+                    raise ValueError("Environment routing requires a raster bundle")
+                manifest = json.loads((raster_bundle / "manifest.json").read_text())
+                self.environment_connection = open_environment_join(
+                    environment_path, network_dataset_id=metadata.dataset_id,
+                    network_feature_identity=metadata.feature_identity,
+                    raster_dataset_id=manifest["dataset_id"],
+                    raster_sha256=manifest["artifacts"][0]["sha256"])
         except BaseException:
             self.connection.close()
             raise
@@ -55,14 +72,16 @@ class NumericRoutingData:
                 return cached[0], endpoints
             self.connection.set_progress_handler(lambda: int(monotonic() >= deadline), 1000)
             try:
-                graph = load_numeric_graph(self.connection, bounds, deadline=deadline)
+                graph = load_numeric_graph(self.connection, bounds, deadline=deadline,
+                                           environment_connection=self.environment_connection)
             except sqlite3.OperationalError:
                 check_deadline(deadline)
                 raise
             finally:
                 self.connection.set_progress_handler(None, 0)
             # Include an allowance for native CSR/index storage, beyond retained buffers.
-            size = graph.buffer_bytes + graph.native.node_count * 256 + graph.native.segment_count * 256
+            size = (graph.buffer_bytes + graph.environment_bytes + graph.native.node_count * 256
+                    + graph.native.segment_count * 256)
             while self.graphs and self.resident_bytes + size > self.cache_bytes:
                 _, (_, removed) = self.graphs.popitem(last=False)
                 self.resident_bytes -= removed
@@ -87,3 +106,5 @@ class NumericRoutingData:
             self.graphs.clear()
             self.resident_bytes = 0
             self.connection.close()
+            if self.environment_connection is not None:
+                self.environment_connection.close()

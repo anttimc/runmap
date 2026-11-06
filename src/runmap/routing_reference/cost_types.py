@@ -11,6 +11,8 @@ from runmap.routing.cost_types import (
     ShapeStrengths,
 )
 from runmap.routing.graph import GraphData
+from runmap.paths.environment_join import EnvironmentInterval
+from runmap.routing.environment_costs import EnvironmentCost, EnvironmentWeights
 from runmap.routing.hill_types import HillData, HillFeatures
 from runmap.routing.integer_graph import IntegerGraph
 from runmap.routing.types import Point
@@ -53,12 +55,15 @@ class RequestCostData:
     preferences: ResolvedPreferences = ResolvedPreferences(
         PreferenceSettings(), PreferenceWeights(), PreferenceWeightTables())
     hills: HillData | None = None
+    environment: Mapping[int, tuple[EnvironmentInterval, ...]] | None = None
+    environment_weights: EnvironmentWeights = EnvironmentWeights()
 
 
 @dataclass
 class RequestCostCache:
     shape_fields: dict[int, ShapeFeatures] = field(default_factory=dict)
     hill_features: dict[int, HillFeatures] = field(default_factory=dict)
+    environment_costs: dict[int, EnvironmentCost] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

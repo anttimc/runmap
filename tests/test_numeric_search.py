@@ -5,6 +5,7 @@ from contextlib import closing
 from dataclasses import replace
 import json
 import math
+import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import monotonic
@@ -17,6 +18,7 @@ from rasterio.warp import transform
 
 from runmap import _routing_native
 from runmap.paths.database import export_network_database, open_network_database
+from runmap.paths.environment_join import EnvironmentInterval
 from runmap.paths.exploration import Snap
 from runmap.routing_reference.exploration import split_start_graph
 from runmap.paths.local_network import load_local_network
@@ -29,9 +31,10 @@ from runmap.paths.graph_chunks import TopologyChunk
 from runmap.routing_reference.cost_preparation import build_request_cost_data
 from runmap.routing_reference.cost_types import LegCostContext, RequestCostCache
 from runmap.routing.cost_types import PreferenceSettings
+from runmap.routing.environment_costs import EnvironmentWeights, evaluate_environment_cost
 from runmap.routing_reference.costs import indexed_arc_cost, path_cost_breakdown
 from runmap.routing.geometry import projected_points
-from runmap.routing.numeric_search import (LoadedNumericGraph, NumericEndpoint, NumericShapeCosts,
+from runmap.routing.numeric_search import (NumericEndpoint, NumericShapeCosts,
                                           load_numeric_graph, numeric_distances, numeric_shortest_path)
 from runmap.routing.profiles import exploration_profile
 from runmap.routing_reference.run_planner import endpoint_overlay, plan_run
@@ -65,6 +68,104 @@ class NumericSearchTests(unittest.TestCase):
 
     def _endpoint(self, key: str) -> NumericEndpoint:
         return NumericEndpoint(node_id=self.nodes[key])
+
+    def test_native_environment_partial_cost_matches_pure_function(self) -> None:
+        selected = set(np.frombuffer(self.graph.native.selected_segment_ids(), dtype="<i8").tolist())
+        with closing(open_network_database(self.reference)) as connection:
+            lengths = {number: json.loads(payload)["length_m"] for number, payload
+                       in connection.execute("SELECT number, payload FROM segments") if number in selected}
+        self.assertEqual(set(lengths), selected)
+        target = self.segments["sb"]
+        intervals = [EnvironmentInterval("sb", 0, 50, 50, (1, 0, 0, 0), (1, 1)),
+                     EnvironmentInterval("sb", 50, 100, 50, (0, 0, None, 0), (1, 0))]
+        prepared = [(number, [(0, length, 1, 0, 0, 0, 1, 1)]) for number, length in lengths.items()
+                    if number != target]
+        prepared.append((target, [(0, 50, 1, 0, 0, 0, 1, 1),
+                                  (50, 100, 0, 0, math.nan, 0, 1, 0)]))
+        with self.assertRaisesRegex(ValueError, "lacks a selected segment"):
+            self.graph.native.set_environment_intervals([])
+        with self.assertRaisesRegex(ValueError, "Invalid prepared environment"):
+            self.graph.native.set_environment_intervals([(target, [(0, 100, 2, 0, 0, 0, 1, 1)])])
+        shortened = prepared[:-1] + [(target, [(0, 90, 1, 0, 0, 0, 1, 1)])]
+        with self.assertRaisesRegex(ValueError, "chainage does not match"):
+            self.graph.native.set_environment_intervals(shortened)
+        self.graph.native.set_environment_intervals(prepared)
+        start, end = self._segment_endpoint("sb", 25), self._segment_endpoint("sb", 75)
+        weights = EnvironmentWeights(greenery=0.5, traffic=0.25)
+        expected = evaluate_environment_cost(intervals, 25, 75, weights)
+        for first, last in ((start, end), (end, start)):
+            path = numeric_shortest_path(self.graph, first, last, environment_weights=weights)
+            self.assertEqual(path.segment_ids.tolist(), [target])
+            self.assertAlmostEqual(path.cost, 50 + expected.greenery_m + expected.traffic_m)
+            np.testing.assert_allclose(path.environment_costs[0], [expected.greenery_m, 0,
+                                                                   expected.traffic_m, 0])
+            np.testing.assert_allclose(path.environment_unknown_m[0], expected.unknown_graph_m)
+        off = numeric_shortest_path(self.graph, start, end)
+        self.assertEqual(off.cost, 50)
+        np.testing.assert_array_equal(off.environment_costs, np.zeros((1, 4)))
+        keys = {number: key for key, number in self.segments.items()}
+        environment = {
+            keys[number]: tuple(EnvironmentInterval(keys[number], row[0], row[1], row[1] - row[0],
+                tuple(None if math.isnan(value) else value for value in row[2:6]), tuple(row[6:8]))
+                for row in rows)
+            for number, rows in prepared
+        }
+        with closing(open_network_database(self.reference)) as connection:
+            local = load_local_network(connection, BOUNDS)
+        home, turnaround = self._snap("sb", 25, 375025), self._snap("sb", 75, 375075)
+        points = projected_points([[snap.longitude, snap.latitude] for snap in (home, turnaround)])
+        for mode in ("one_way", "round_trip"):
+            baseline = plan_run(local.routing, home, turnaround, RunSettings(avoidance_ratio=0), mode=mode)
+            disabled = plan_run(local.routing, home, turnaround, RunSettings(avoidance_ratio=0),
+                                mode=mode, environment=environment)
+            for a, b in zip(baseline.candidates[0].legs, disabled.candidates[0].legs):
+                self.assertEqual(a.path, b.path)
+            reference = plan_run(local.routing, home, turnaround, RunSettings(avoidance_ratio=0),
+                                 mode=mode, environment=environment, environment_weights=weights)
+            native = numeric_plan_run(self.graph, start, end, *points, RunSettings(avoidance_ratio=0),
+                                      mode=mode, environment_weights=weights)
+            self.assertEqual(reference.outcomes, native.outcomes)
+            for a, b in zip(reference.candidates[0].legs, native.candidates[0].legs):
+                self.assertAlmostEqual(a.path.cost, b.cost)
+                self.assertAlmostEqual(a.costs.environment_greenery, b.environment_costs[:, 0].sum())
+                self.assertAlmostEqual(a.costs.environment_traffic, b.environment_costs[:, 2].sum())
+                self.assertTrue(b.environment_prepared)
+                self.assertAlmostEqual(a.observations.environment_unknown_traffic_m,
+                                       b.environment_unknown_m[:, 2].sum())
+
+    def test_environment_weight_requires_prepared_graph(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Environment weights require"):
+            numeric_shortest_path(self.graph, self._endpoint("s"), self._endpoint("c"),
+                                  environment_weights=EnvironmentWeights(greenery=1))
+
+    def test_bounded_environment_join_is_loaded_with_numeric_graph(self) -> None:
+        selected = set(np.frombuffer(self.graph.native.selected_segment_ids(), dtype="<i8").tolist())
+        join_path = self.root / "environment.sqlite"
+        with closing(open_network_database(self.reference)) as source, closing(sqlite3.connect(join_path)) as join:
+            join.execute("""CREATE TABLE intervals (
+                segment_number INTEGER, segment_id TEXT, ordinal INTEGER,
+                graph_start_m REAL, graph_end_m REAL, projected_length_m REAL,
+                greenery REAL, water REAL, traffic REAL, wetland REAL,
+                context_support REAL, traffic_context_support REAL)""")
+            for number, payload in source.execute("SELECT number, payload FROM segments"):
+                segment = json.loads(payload)
+                join.execute("INSERT INTO intervals VALUES (?, ?, 0, 0, ?, ?, 0, 0, 0, 0, 1, 1)",
+                             (number, segment["id"], segment["length_m"], segment["length_m"]))
+            join.commit()
+            with closing(open_numeric_database(self.numeric)) as numeric:
+                graph = load_numeric_graph(numeric, BOUNDS, environment_connection=join)
+            local = load_local_network(source, BOUNDS, environment_connection=join)
+        self.assertEqual(set(np.frombuffer(graph.native.selected_segment_ids(), dtype="<i8").tolist()), selected)
+        self.assertGreater(graph.environment_bytes, 0)
+        path = numeric_shortest_path(graph, self._segment_endpoint("sb", 25),
+                                     self._segment_endpoint("sb", 75),
+                                     environment_weights=EnvironmentWeights(greenery=0.5))
+        self.assertEqual(path.cost, 75)
+        self.assertEqual(path.environment_costs[:, 0].tolist(), [25])
+        reference = plan_run(local.routing, self._snap("sb", 25, 375025), self._snap("sb", 75, 375075),
+                             RunSettings(avoidance_ratio=0), mode="one_way", environment=local.environment,
+                             environment_weights=EnvironmentWeights(greenery=.5))
+        self.assertEqual(reference.candidates[0].legs[0].path.cost, path.cost)
 
     def _segment_endpoint(self, key: str, offset: float) -> NumericEndpoint:
         return NumericEndpoint(segment_id=self.segments[key], graph_offset_m=offset,
@@ -340,6 +441,8 @@ class NumericSearchTests(unittest.TestCase):
         with closing(open_numeric_database(numeric)) as connection:
             loaded = load_numeric_graph(connection, BOUNDS)
             ids = dict(connection.execute("SELECT external_id, number FROM identities WHERE kind='node'"))
+            segment_ids = dict(connection.execute(
+                "SELECT external_id, number FROM identities WHERE kind='segment'"))
         with closing(open_network_database(reference)) as connection:
             local = load_local_network(connection, BOUNDS)
         home, turnaround = Snap("ab", 0, 0, lon[0], lat[0], 0), Snap("ab", 100, 100, lon[1], lat[1], 0)
@@ -357,3 +460,36 @@ class NumericSearchTests(unittest.TestCase):
                             self.assertAlmostEqual(a.legs[1].cost, b.legs[1].path.cost, delta=1e-3)
                         if (width == 0 or mode == "one_way") and level == "high":
                             self.assertGreater(len(a.legs[0].arc_ids), 1)
+        with closing(open_network_database(reference)) as connection:
+            lengths = {number: json.loads(payload)["length_m"] for number, payload
+                       in connection.execute("SELECT number, payload FROM segments")}
+        loaded.native.set_environment_intervals([
+            (number, [(0, length, 0 if number == segment_ids["ab"] else 1,
+                       0, 0, 0, 1, 1)]) for number, length in lengths.items()
+        ])
+        start, destination = NumericEndpoint(node_id=ids["a"]), NumericEndpoint(node_id=ids["b"])
+        direct = numeric_plan_run(loaded, start, destination, xy[0], xy[1],
+                                  RunSettings(avoidance_ratio=0), mode="one_way")
+        avoided = numeric_plan_run(loaded, start, destination, xy[0], xy[1],
+                                   RunSettings(avoidance_ratio=0), mode="one_way",
+                                   environment_weights=EnvironmentWeights(greenery=2))
+        self.assertEqual(direct.candidates[0].legs[0].cost, 100)
+        self.assertEqual(avoided.candidates[0].legs[0].cost, 224)
+        self.assertNotIn(segment_ids["ab"], avoided.candidates[0].legs[0].segment_ids)
+        environment = {
+            key: (EnvironmentInterval(key, 0, lengths[number], lengths[number],
+                    (0 if key == "ab" else 1, 0, 0, 0), (1, 1)),)
+            for key, number in segment_ids.items()
+        }
+        for mode in ("one_way", "round_trip"):
+            settings, preferences = RunSettings(avoidance_ratio=.18), PreferenceSettings(hills="high")
+            expected = plan_run(local.routing, home, turnaround, settings, mode=mode,
+                                hills=local.hills, preferences=preferences,
+                                environment=environment, environment_weights=EnvironmentWeights(greenery=2))
+            actual = numeric_plan_run(loaded, start, destination, xy[0], xy[1], settings,
+                                      mode=mode, preferences=preferences,
+                                      environment_weights=EnvironmentWeights(greenery=2))
+            self.assertEqual(expected.outcomes, actual.outcomes)
+            for candidate_a, candidate_b in zip(expected.candidates, actual.candidates):
+                for leg_a, leg_b in zip(candidate_a.legs, candidate_b.legs):
+                    self.assertAlmostEqual(leg_a.path.cost, leg_b.cost, delta=1e-3)

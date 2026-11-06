@@ -4,6 +4,8 @@ import math
 from collections.abc import Mapping
 
 from runmap.paths.exploration import Snap
+from runmap.paths.environment_join import EnvironmentInterval
+from runmap.routing.environment_costs import EnvironmentCost, EnvironmentWeights, evaluate_environment_cost
 from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.cost_types import PreferenceSettings, TraversalRef
 from runmap.routing.deadlines import check_deadline
@@ -31,11 +33,34 @@ def penalty_strengths(settings: RunSettings) -> tuple[float, float, float]:
     return strengths.centre, strengths.side, strengths.reuse
 
 
+def _prepare_environment(graph: GraphData, environment: Mapping[str, tuple[EnvironmentInterval, ...]] | None,
+                         deadline: float | None
+                         ) -> dict[int, tuple[EnvironmentInterval, ...]] | None:
+    if environment is None:
+        return None
+    assert graph.integer is not None
+    prepared: dict[int, tuple[EnvironmentInterval, ...]] = {}
+    for segment, key in enumerate(graph.integer.segment_ids):
+        check_deadline(deadline)
+        intervals = environment.get(key)
+        if not intervals or any(item.segment_id != key for item in intervals):
+            raise ValueError("Environment join lacks a matching physical segment")
+        length = graph.segments[key]["length_m"]
+        if not math.isclose(intervals[-1].graph_end_m, length, rel_tol=0, abs_tol=1e-6):
+            raise ValueError("Environment chainage does not match graph")
+        evaluate_environment_cost(intervals, 0, length, EnvironmentWeights())
+        prepared[segment] = intervals
+    return prepared
+
+
 def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
                             settings: RunSettings, *,
                             parts: Mapping[int, PhysicalPart] | None = None,
                             preferences: PreferenceSettings = PreferenceSettings(),
-                            hills: HillData | None = None) -> RequestCostData:
+                            hills: HillData | None = None,
+                            environment: Mapping[str, tuple[EnvironmentInterval, ...]] | None = None,
+                            environment_weights: EnvironmentWeights = EnvironmentWeights(),
+                            deadline: float | None = None) -> RequestCostData:
     home_point, destination = projected_points([[home.longitude, home.latitude],
                                                 [turnaround.longitude, turnaround.latitude]])
     separation = math.dist(home_point, destination)
@@ -46,6 +71,13 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
     index = graph.integer
     if index is None:
         raise ValueError("Graph has no prepared integer index")
+    strengths_environment = (environment_weights.greenery, environment_weights.water,
+                             environment_weights.traffic, environment_weights.wetland)
+    if any(not math.isfinite(value) or value < 0 for value in strengths_environment):
+        raise ValueError("Environment weights must be finite and nonnegative")
+    if any(strengths_environment) and environment is None:
+        raise ValueError("Environment weights require prepared intervals")
+    prepared_environment = _prepare_environment(graph, environment, deadline)
     if resolved.weights.hills and hills is not None:
         if (hills.graph is not graph.document or graph.integer is None
                 or hills.index.segment_ids is not graph.integer.segment_ids):
@@ -55,7 +87,7 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
         separation * settings.transition_ratio,
         min(10.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4),
         strengths, settings.avoidance_ratio == 0, parts if parts is not None else {},
-        resolved, hills if resolved.weights.hills else None,
+        resolved, hills if resolved.weights.hills else None, prepared_environment, environment_weights,
     )
 
 
@@ -97,3 +129,17 @@ def ensure_hill_features(data: RequestCostData, cache: RequestCostCache,
         cache.hill_features[arc.index] = indexed_traversal_hills(
             data.hills, traversal.segment, traversal.graph_start_m, traversal.graph_end_m, traversal.reverse, deadline)
     return cache.hill_features[arc.index]
+
+
+def ensure_environment_cost(data: RequestCostData, cache: RequestCostCache,
+                            arc: IntegerArc, deadline: float | None) -> EnvironmentCost | None:
+    """Use physical chainage for overlay arcs and cache every directed passage."""
+    if data.environment is None:
+        return None
+    if arc.index not in cache.environment_costs:
+        check_deadline(deadline)
+        traversal = resolve_indexed_traversal(data, arc)
+        cache.environment_costs[arc.index] = evaluate_environment_cost(
+            data.environment[traversal.segment], traversal.graph_start_m, traversal.graph_end_m,
+            data.environment_weights)
+    return cache.environment_costs[arc.index]

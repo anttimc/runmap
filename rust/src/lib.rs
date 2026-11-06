@@ -3,6 +3,7 @@
 pub mod chunk_graph;
 pub mod chunk_search;
 pub mod endpoint_overlay;
+pub mod environment_cost;
 pub mod fields;
 pub mod numeric;
 mod profiling;

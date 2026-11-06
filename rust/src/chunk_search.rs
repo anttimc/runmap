@@ -54,6 +54,8 @@ pub struct SearchResult {
     pub cost: Option<f64>,
     pub components: Vec<[f64; 5]>,
     pub hills: Vec<[f64; 7]>,
+    pub environment: Vec<[f64; 4]>,
+    pub environment_unknown: Vec<[f64; 4]>,
 }
 
 pub fn check_deadline(deadline: Option<Instant>) -> Result<(), RoutingError> {
@@ -249,14 +251,14 @@ fn relax_edge(
     } else {
         edge.target
     };
-    let (components, _) = evaluate_cost(
+    let (components, _, environment, _) = evaluate_cost(
         chunks,
         edge,
         &settings.costs,
         &mut state.cache,
         settings.deadline,
     )?;
-    let candidate = cost_so_far + components.iter().sum::<f64>();
+    let candidate = cost_so_far + components.iter().chain(environment.iter()).sum::<f64>();
     if candidate <= settings.cost_budget && candidate < state.best_costs[next] {
         state.best_costs[next] = candidate;
         if !state.predecessor_edges.is_empty() {
@@ -325,9 +327,11 @@ fn build_search_result(
     });
     let mut components = Vec::new();
     let mut hills = Vec::new();
+    let mut environment = Vec::new();
+    let mut environment_unknown = Vec::new();
     for edge in path.iter().flatten() {
         check_deadline(settings.deadline)?;
-        let (c, h) = evaluate_cost(
+        let (c, h, e, u) = evaluate_cost(
             chunks,
             *edge,
             &settings.costs,
@@ -336,6 +340,8 @@ fn build_search_result(
         )?;
         components.push(c);
         hills.push(h);
+        environment.push(e);
+        environment_unknown.push(u);
     }
     let distances = if overlay.destination.is_none() {
         state
@@ -356,6 +362,8 @@ fn build_search_result(
         cost,
         components,
         hills,
+        environment,
+        environment_unknown,
     })
 }
 
@@ -390,6 +398,8 @@ pub fn search_routes(
             cost: None,
             components: Vec::new(),
             hills: Vec::new(),
+            environment: Vec::new(),
+            environment_unknown: Vec::new(),
         });
     }
     let mut state = initialize_search_state(graph, overlay, &settings);

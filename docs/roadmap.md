@@ -1,6 +1,6 @@
 # Roadmap
 
-Outstanding work, reviewed 2026-11-05. See the [guide](guide.md) for delivered
+Outstanding work, reviewed 2026-11-06. See the [guide](guide.md) for delivered
 features and [architecture](architecture.md) for implementation details.
 Implementation, automated checks, and local runner acceptance are separate.
 Record reproducible inputs, dataset/model/settings identities, and machine/toolchain
@@ -25,12 +25,12 @@ prerequisites. Preserve known source/support limitations.
 
 ### Track 1: routing application integration
 
-1. **Segment join validation and consumption:** compare representative segment
-   summaries with direct raster sampling, then load the published interval
-   artifact through bounded numeric/reference routing paths. Verify partial and
-   repeated traversals, bounded loading cost, and native/reference equivalence.
-2. **Cost integration and controls:** connect the prepared environment cost
-   function to distance/hill/shape scoring, choose UI weight levels and defaults,
+1. **Regional route acceptance:** compare representative segment summaries with
+   direct raster sampling and verify bounded loading cost and route tradeoffs on
+   saved regional requests. Native and reference routing already read bounded
+   intervals and score full and partial traversals with explicit weights;
+   automated checks cover parity with hill and shape costs.
+2. **Controls and acceptance:** choose UI weight levels and defaults,
    and add exposure/coverage summaries. All weights Off must reproduce existing
    routes; saved routes must show understandable individual and combined tradeoffs
    within the routing latency budget. Review the conservative unknown policy

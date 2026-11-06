@@ -342,11 +342,17 @@ on each pass. Scores are direction-independent, unlike hill penalties. The reade
 loads only requested segment numbers in bounded batches, so a future spatial
 database can implement the same segment-feature contract.
 
-This artifact is a prepared data source for routing costs; the current planner
-does not read it or apply environment weights. It is separate from the immutable
-network and numeric routing databases, so publishing new raster fields does not
-require re-exporting graph topology. The corresponding CLI and required inputs
-are in [development](../development.md#capital-area-environment-layers).
+When explicitly configured, the numeric planner checks the join identity and
+loads intervals only for segments selected into its bounded native graph. The
+native graph retains those intervals for repeated searches and integrates full
+and partial arcs during route search. The reference window loader resolves its
+external segment IDs through the network's numeric identities and reads the same
+bounded intervals for reference scoring. Environment weights remain Off in public
+requests; UI preference controls are not yet enabled.
+It is separate from the immutable network and numeric routing databases, so
+publishing new raster fields does not require re-exporting graph topology. The
+corresponding CLI and required inputs are in
+[development](../development.md#capital-area-environment-layers).
 
 ## Shared OSM snapshot and regional source bundles
 

@@ -4,8 +4,9 @@ Status: pilot acquisition, source inspection, and the four-field raster baseline
 are available. Regional tile preparation/delivery and main-map controls are
 implemented and the capital-area source and raster are prepared from a dated
 Finland PBF. The local runner accepted the map-layer visuals, ordinary UI use,
-and rendering latency on 2026-11-05. Segment projection and pure cost functions
-are implemented; routing consumption and preference controls remain planned.
+and rendering latency on 2026-11-05. Segment projection, pure cost functions,
+and optional native/reference routing consumption are implemented. Public
+preference controls and regional route acceptance remain planned.
 Updated 2026-11-06.
 
 The [source inspection map](guide.md#environment-source-inspection) and
@@ -267,7 +268,8 @@ A separate SQLite join now stores analytical-grid intervals for all four fields
 on every physical network segment, with graph chainage, projected length,
 coverage/support, and raster/network/model identities. It does not sample
 colored tiles. The bounded reader and partial-span integration are available;
-the planner does not consume the join yet. Compare representative full and
+both routing backends can consume it through bounded reads and score arcs with
+explicit weights. Public requests still pass all weights Off. Compare representative full and
 partial segment summaries with direct raster sampling before enabling costs.
 Repeated traversals must count each passage when route summaries are added.
 The following cost/UI work consumes this prepared join without raster
@@ -275,9 +277,9 @@ processing during each route request.
 
 ### Cost structure and weighting UI
 
-The pure environment cost function now supplies four nonnegative penalty terms
-with an explicit conservative policy for NoData and unsupported context. It is
-not connected to route search. Design individual and combined preference
+The pure environment cost function and both routing backends now supply four
+nonnegative penalty terms with an explicit conservative policy for NoData and
+unsupported context. Public controls are not connected. Design individual and combined preference
 weights, defaults, ranges, an explicit Off state, and route exposure/coverage
 summaries together. Check route behavior and latency using saved route requests
 before enabling controls. These are integration checks, not a manual
@@ -427,7 +429,7 @@ all environment weights Off reproduce existing routes and costs.
 The pure function assigns maximum unit penalty to NoData and unsupported
 context for enabled fields and reports unknown graph metres separately. This
 is a conservative routing choice, not a measured exposure value. The affected
-controls remain unavailable until the cost function is connected and tested.
+controls remain unavailable pending weight selection and regional route acceptance.
 Show route coverage and environment summaries separately from preference
 strength; lack of evidence must not become an apparent quiet or forest-free area.
 

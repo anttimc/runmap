@@ -75,7 +75,11 @@ async def lifespan(application):
             pool_size=int(os.environ.get("RUNMAP_PATH_DATABASE_CONNECTIONS", "2")),
             cache_kib=int(os.environ.get("RUNMAP_PATH_DATABASE_CACHE_KIB", "16384")),
             numeric_path=Path(os.environ["RUNMAP_NUMERIC_DATABASE"]) if os.environ.get("RUNMAP_NUMERIC_DATABASE") else None,
-            numeric_cache_bytes=int(os.environ.get("RUNMAP_NUMERIC_CACHE_BYTES", 128 * 1024**2)))
+            numeric_cache_bytes=int(os.environ.get("RUNMAP_NUMERIC_CACHE_BYTES", 128 * 1024**2)),
+            environment_path=Path(os.environ["RUNMAP_ENVIRONMENT_JOIN_DATABASE"])
+                if os.environ.get("RUNMAP_ENVIRONMENT_JOIN_DATABASE") else None,
+            environment_raster_bundle=Path(os.environ.get("RUNMAP_ENVIRONMENT_JOIN_RASTER_DIRECTORY",
+                str(PROJECT_ROOT / "data/environment/prepared/helsinki-capital-area-v3"))))
             if path_backend == "sqlite" else load_path_data(graph_path))
         application.state.run_limits = RunAreaLimits(
             max_area_km2=float(os.environ.get("RUNMAP_RUN_MAX_AREA_KM2", 2500)),

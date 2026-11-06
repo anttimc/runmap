@@ -1092,9 +1092,24 @@ The command verifies the raster against its completion manifest and publishes
 the join database only after every segment is projected. The join stores network
 and raster identities; use a new destination when either source changes. SQL
 readers can select segment numbers in bounded batches and integrate partial
-traversals by graph chainage. Routing costs and controls are the next step; this
-command alone does not change planned routes. See the
+traversals by graph chainage. To attach it to native numeric routing, set
+`RUNMAP_ENVIRONMENT_JOIN_DATABASE` to this SQLite path. Set
+`RUNMAP_ENVIRONMENT_JOIN_RASTER_DIRECTORY` to the matching raster bundle if it
+differs from `data/environment/prepared/helsinki-capital-area-v3`. The network,
+numeric artifact, and join must have the same network identity. Startup rejects
+a mismatched join; each bounded graph loads only its selected segment intervals.
+The public API still passes environment weights Off, so this configuration alone
+does not change route choices. See the
 [join contract](reference/prepared-data.md#segment-projection-artifact).
+
+For programmatic route comparisons, pass `EnvironmentWeights` through
+`numeric_plan_run(..., environment_weights=...)`. The numeric graph must have
+been loaded with the validated join connection. For the reference planner, pass
+that connection to `load_local_network(..., environment_connection=...)`, then
+call `plan_run(..., environment=local.environment, environment_weights=...)`.
+Both planners retain the existing distance/hill/shape terms and report the four
+environment components separately. These explicit weights are experimental;
+public Off/Low/High weight levels have not been selected.
 
 ## Shared Finland OSM snapshot pipeline
 

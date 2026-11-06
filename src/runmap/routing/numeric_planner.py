@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 from runmap.routing.cost_settings import prepared_preference_capabilities, resolve_prepared_preferences
 from runmap.routing.settings import effective_run_settings
 from runmap.routing.cost_types import PreferenceSettings
+from runmap.routing.environment_costs import EnvironmentWeights
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.numeric_search import (LoadedNumericGraph, NumericEndpoint, NumericPath, NumericShapeCosts,
                                            Point, numeric_shortest_path)
@@ -38,7 +39,8 @@ def _used_spans(path: NumericPath) -> tuple[tuple[int, float, float], ...]:
 def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaround: NumericEndpoint,
                      home_point: Point, turnaround_point: Point, settings: RunSettings = RunSettings(), *,
                      profile: EdgeProfile | None = None, preferences: PreferenceSettings = PreferenceSettings(),
-                     deadline: float | None = None, mode: RunMode = "round_trip") -> NumericRunResult:
+                     deadline: float | None = None, mode: RunMode = "round_trip",
+                     environment_weights: EnvironmentWeights = EnvironmentWeights()) -> NumericRunResult:
     settings = effective_run_settings(settings, mode)
     if not all(math.isfinite(v) for v in (*home_point, *turnaround_point)) or math.dist(home_point, turnaround_point) < .01:
         raise ValueError("Home and turnaround must be finite and spatially distinct")
@@ -52,7 +54,8 @@ def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaroun
             check_deadline(deadline)
             shape = NumericShapeCosts(home_point, turnaround_point, settings, left)
             outbound = numeric_shortest_path(graph, home, turnaround, profile=profile,
-                hill_weight=resolved.weights.hills, shape=shape, deadline=deadline)
+                hill_weight=resolved.weights.hills, shape=shape, deadline=deadline,
+                environment_weights=environment_weights)
             frontiers.append(outbound.frontier_node_ids)
             if outbound.cost is None:
                 outcomes.append("unreachable")
@@ -61,7 +64,8 @@ def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaroun
             if mode == "round_trip":
                 returning = numeric_shortest_path(graph, turnaround, home, profile=profile,
                     hill_weight=resolved.weights.hills,
-                    shape=replace(shape, penalize_right=not left, used_spans=_used_spans(outbound)), deadline=deadline)
+                    shape=replace(shape, penalize_right=not left, used_spans=_used_spans(outbound)), deadline=deadline,
+                    environment_weights=environment_weights)
                 frontiers.append(returning.frontier_node_ids)
                 if returning.cost is None:
                     outcomes.append("unreachable")

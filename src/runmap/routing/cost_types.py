@@ -76,6 +76,10 @@ class PreferenceCosts:
     signals: float = 0.0
     busy_roads: float = 0.0
     non_green: float = 0.0
+    environment_greenery: float = 0.0
+    environment_water: float = 0.0
+    environment_traffic: float = 0.0
+    environment_wetland: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -93,6 +97,10 @@ class PreferenceObservations:
     busy_road_coverage_fraction: float | None = None
     green_context_distance_m: float | None = None
     green_context_coverage_fraction: float | None = None
+    environment_unknown_greenery_m: float | None = None
+    environment_unknown_water_m: float | None = None
+    environment_unknown_traffic_m: float | None = None
+    environment_unknown_wetland_m: float | None = None
 
 
 @dataclass(frozen=True)
@@ -106,6 +114,10 @@ class CostBreakdown:
     busy_roads: float = 0.0
     non_green: float = 0.0
     total: float = 0.0
+    environment_greenery: float = 0.0
+    environment_water: float = 0.0
+    environment_traffic: float = 0.0
+    environment_wetland: float = 0.0
 
 
 @dataclass(frozen=True)

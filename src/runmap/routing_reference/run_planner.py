@@ -2,13 +2,15 @@
 
 import math
 from collections import ChainMap, Counter
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from functools import partial
 from time import monotonic
 from typing import Literal
 
 from runmap.paths.exploration import Snap, legal_directions, segment_reason
+from runmap.paths.environment_join import EnvironmentInterval
+from runmap.routing.environment_costs import EnvironmentWeights
 from runmap.routing.cost_settings import resolve_preferences
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.deadlines import check_deadline
@@ -161,7 +163,9 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
              deadline: float | None = None, *, mode: RunMode = "round_trip",
              preferences: PreferenceSettings = PreferenceSettings(),
              hills: HillData | None = None,
-             frontier_nodes: frozenset[int] = frozenset()) -> RunResult:
+             frontier_nodes: frozenset[int] = frozenset(),
+             environment: Mapping[str, tuple[EnvironmentInterval, ...]] | None = None,
+             environment_weights: EnvironmentWeights = EnvironmentWeights()) -> RunResult:
     """Plan directed routes, retaining completed candidates on deadline expiry."""
     started = monotonic()
     settings = effective_run_settings(settings, mode)
@@ -172,7 +176,11 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
     graph = overlay.graph
     heuristic = indexed_distance_heuristic(graph, deadline)
     data = build_request_cost_data(graph, home, turnaround, settings,
-                                   parts=overlay.parts, preferences=preferences, hills=hills)
+                                   parts=overlay.parts, preferences=preferences, hills=hills,
+                                   environment=environment, environment_weights=environment_weights,
+                                   deadline=deadline)
+    environment_active = any((environment_weights.greenery, environment_weights.water,
+                              environment_weights.traffic, environment_weights.wetland))
     cache = RequestCostCache()
     candidates: list[RunCandidate] = []
     reached_frontier: set[int] = set()
@@ -198,7 +206,8 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
             if mode == "round_trip":
                 used = frozenset(integer_arc(data.index, data.index.arc_indices[a]).segment for a in outbound.arc_ids)
                 return_context = LegCostContext(not left, used)
-                returning = reverse_path(graph, outbound) if data.shape_disabled and data.hills is None else None
+                returning = (reverse_path(graph, outbound)
+                             if data.shape_disabled and data.hills is None and not environment_active else None)
                 if returning is None:
                     returning = search_leg(overlay.destination, overlay.start, return_context)
                 if returning is None:

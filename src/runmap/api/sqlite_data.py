@@ -9,7 +9,8 @@ from runmap.paths.database_pool import DatabasePool
 
 class SQLitePathData:
     def __init__(self, path: Path, pool_size: int = 2, cache_kib: int = 16384, *, numeric_path: Path | None = None,
-                 numeric_cache_bytes: int = 128 * 1024**2) -> None:
+                 numeric_cache_bytes: int = 128 * 1024**2, environment_path: Path | None = None,
+                 environment_raster_bundle: Path | None = None) -> None:
         if not path.is_file():
             raise FileNotFoundError(path)
         self.pool = DatabasePool(path, pool_size, cache_kib)
@@ -23,7 +24,9 @@ class SQLitePathData:
                 raise ValueError("Path API requires prepared measurements and coverage")
             candidate = numeric_path or path.with_name("numeric-routing-v2.sqlite")
             if numeric_path is not None or candidate.is_file():
-                self.numeric = NumericRoutingData(candidate, self.metadata, numeric_cache_bytes)
+                self.numeric = NumericRoutingData(candidate, self.metadata, numeric_cache_bytes,
+                                                  environment_path=environment_path,
+                                                  raster_bundle=environment_raster_bundle)
         except BaseException:
             self.pool.close()
             raise

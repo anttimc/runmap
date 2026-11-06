@@ -78,6 +78,15 @@ Each leg retains coordinates, distance, cost/breakdown, preference observations,
 expanded-node count, and ordered physical traversals. A traversal identifies its
 original segment and directed start/end graph chainages.
 
+The leg cost breakdown also includes `environment_greenery`,
+`environment_water`, `environment_traffic`, and `environment_wetland` in
+equivalent metres. Public requests currently leave all four at zero because
+environment preference controls are not enabled.
+When joined environment data is present, observations report
+`environment_unknown_greenery_m`, `environment_unknown_water_m`,
+`environment_unknown_traffic_m`, and `environment_unknown_wetland_m` as graph
+metres, including fields whose weight is Off. These are null without joined data.
+
 One-way candidates have null orientation and centre diagnostics. Their effective
 shape settings have zero width, and centre/side/reuse strengths are zero. They
 require no return connection. Round trips retain repeated-distance and shape
@@ -130,6 +139,9 @@ Dataset services own read-only database connections and shared immutable numeric
 working sets. Searches own endpoint overlays, traversal state, cost context, and
 partial-endpoint hill detail. Numeric working sets are cached by exact bounds;
 different bounds currently do not share retained chunks.
+With an environment join configured, a numeric working set also retains the
+selected physical-segment intervals. Search reads them from memory, while
+distance exploration keeps its distance-only cost.
 
 Numeric exploration snapshots retain independent sparse reached-node identities
 and distances. They survive graph-cache eviction without retaining native graph

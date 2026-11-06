@@ -20,6 +20,7 @@ from rasterio.io import DatasetReader
 from runmap.paths.database import network_metadata, open_network_database
 from runmap.paths.graph import geometry_length_m
 from runmap.routing.types import Coordinate
+from runmap.routing.deadlines import check_deadline
 from runmap.sources.environment import file_identity
 
 MODEL = "environment-cell-projection-v1"
@@ -222,7 +223,8 @@ def open_environment_join(path: Path, *, network_dataset_id: str,
                           network_feature_identity: str, raster_dataset_id: str,
                           raster_sha256: str) -> sqlite3.Connection:
     """Reject a join prepared from a different graph or analytical raster."""
-    connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+    connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True,
+                                 check_same_thread=False)
     try:
         if connection.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
             raise ValueError("Unsupported environment join schema")
@@ -240,10 +242,12 @@ def open_environment_join(path: Path, *, network_dataset_id: str,
 
 
 def read_environment_segments(connection: sqlite3.Connection,
-                              segment_numbers: Sequence[int]) -> dict[int, tuple[EnvironmentInterval, ...]]:
+                              segment_numbers: Sequence[int], *,
+                              deadline: float | None = None) -> dict[int, tuple[EnvironmentInterval, ...]]:
     """Load only requested physical segments for a bounded routing window."""
     result: dict[int, list[EnvironmentInterval]] = {number: [] for number in segment_numbers}
     for offset in range(0, len(segment_numbers), 500):
+        check_deadline(deadline)
         batch = segment_numbers[offset:offset + 500]
         placeholders = ",".join("?" for _ in batch)
         for row in connection.execute(f"""SELECT segment_number, segment_id, graph_start_m, graph_end_m,
@@ -251,9 +255,28 @@ def read_environment_segments(connection: sqlite3.Connection,
             traffic_context_support FROM intervals WHERE segment_number IN ({placeholders})
             ORDER BY segment_number, ordinal""", batch):
             result[row[0]].append(EnvironmentInterval(row[1], *row[2:5], tuple(row[5:9]), tuple(row[9:11])))
+        check_deadline(deadline)
     if any(not value for value in result.values()):
         raise ValueError("Environment join lacks a selected segment")
     return {key: tuple(value) for key, value in result.items()}
+
+
+def read_environment_by_segment_ids(connection: sqlite3.Connection, network: sqlite3.Connection,
+                                     segment_ids: Sequence[str], *, deadline: float | None = None
+                                     ) -> dict[str, tuple[EnvironmentInterval, ...]]:
+    """Resolve bounded reference graph IDs through the prepared network identity table."""
+    numbers: list[int] = []
+    for offset in range(0, len(segment_ids), 500):
+        check_deadline(deadline)
+        batch = segment_ids[offset:offset + 500]
+        placeholders = ",".join("?" for _ in batch)
+        numbers.extend(row[0] for row in network.execute(
+            f"SELECT number FROM segments WHERE id IN ({placeholders})", batch))
+    intervals = read_environment_segments(connection, numbers, deadline=deadline)
+    result = {rows[0].segment_id: rows for rows in intervals.values()}
+    if result.keys() != set(segment_ids):
+        raise ValueError("Environment join lacks a matching physical segment")
+    return result
 
 
 def main() -> None:

@@ -1,9 +1,11 @@
 //! Evaluate route preference costs during native graph traversal.
 
 use crate::endpoint_overlay::{Edge, projected_length, segment_points};
+use crate::environment_cost::{self, EnvironmentIntervals};
 use crate::fields::{self, FieldSettings, IntegrationError};
 use crate::numeric::*;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy)]
@@ -17,6 +19,8 @@ pub struct ShapeSettings {
 
 pub struct CostSettings {
     pub hill_weight: f64,
+    pub environment_weights: [f64; 4],
+    pub environment: Option<Arc<EnvironmentIntervals>>,
     pub shape: Option<ShapeSettings>,
     pub used_segments: HashSet<i64>,
     pub used_spans: HashMap<i64, Vec<(f64, f64)>>,
@@ -33,6 +37,20 @@ pub fn validate_settings(settings: &CostSettings) -> Result<(), RoutingError> {
     if !settings.hill_weight.is_finite() || settings.hill_weight < 0.0 {
         return Err(RoutingError::Invalid(
             "Hill weight must be finite and nonnegative",
+        ));
+    }
+    if settings
+        .environment_weights
+        .iter()
+        .any(|value| !value.is_finite() || *value < 0.0)
+        || (settings
+            .environment_weights
+            .iter()
+            .any(|value| *value > 0.0)
+            && settings.environment.is_none())
+    {
+        return Err(RoutingError::Invalid(
+            "Environment weights require prepared intervals",
         ));
     }
     if settings
@@ -251,7 +269,7 @@ pub fn evaluate_cost(
     settings: &CostSettings,
     cache: &mut CostCache,
     deadline: Option<Instant>,
-) -> Result<([f64; 5], [f64; 7]), RoutingError> {
+) -> Result<([f64; 5], [f64; 7], [f64; 4], [f64; 4]), RoutingError> {
     let _profile = crate::profiling::span(crate::profiling::Phase::Cost);
     let chunk = &chunks[edge.chunk];
     let mut costs = [edge.length, 0.0, 0.0, 0.0, 0.0];
@@ -281,10 +299,28 @@ pub fn evaluate_cost(
         [0.0; 7]
     };
     costs[4] = settings.hill_weight * hills[0];
-    if costs.iter().any(|v| !v.is_finite() || *v < 0.0) || !costs.iter().sum::<f64>().is_finite() {
+    let (environment, unknown) = if let Some(prepared) = &settings.environment {
+        let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
+        let intervals = prepared
+            .get(&segment_id)
+            .ok_or(RoutingError::Invalid("Missing environment segment"))?;
+        environment_cost::integrate(intervals, edge.low, edge.high, settings.environment_weights)?
+    } else {
+        ([0.0; 4], [0.0; 4])
+    };
+    if costs
+        .iter()
+        .chain(environment.iter())
+        .any(|v| !v.is_finite() || *v < 0.0)
+        || !costs
+            .iter()
+            .chain(environment.iter())
+            .sum::<f64>()
+            .is_finite()
+    {
         return Err(RoutingError::Invalid(
             "Native cost components must be finite and nonnegative",
         ));
     }
-    Ok((costs, hills))
+    Ok((costs, hills, environment, unknown))
 }

@@ -91,7 +91,7 @@ The runtime uses three related artifact sets:
 | Elevation catalog, coverage manifests, and raster files | Identify source coverage and retain source/derived terrain products |
 | Prepared network SQLite database | Serve geometry, measurements, policy evidence, inspection, and spatial queries |
 | Numeric routing SQLite artifact | Supply compact graph buffers and prepared costs to native routing |
-| Environment join SQLite artifact | Bind analytical raster cells to physical segment chainage for future routing costs |
+| Environment join SQLite artifact | Bind analytical raster cells to physical segment chainage for optional native route costs |
 
 The network and numeric artifacts must describe the same dataset and prepared
 models. Opening validates their identities. SQLite delivery reads selected data
@@ -133,6 +133,14 @@ Native routing is an in-process Rust library exposed through PyO3. Python select
 prepared graph buffers and orchestrates requests; Rust owns graph traversal,
 endpoint overlays, and cost evaluation during search. The same native graph
 service supports planning and distance exploration.
+
+When configured, Python validates the environment join against the network and
+raster manifest, selects its intervals for the bounded graph, and attaches them
+to the native graph. Rust integrates the intervals in the arc cost callback;
+the configured join is not queried during search.
+The reference window loader can resolve the same join through network segment
+identities. Its planner integrates those intervals with the shared pure function
+and caches each directed arc's result for comparisons with native search.
 
 Shared routing contracts, policies, geometry, and offline preparation live in
 `routing/`. The Python search and cost implementations live in

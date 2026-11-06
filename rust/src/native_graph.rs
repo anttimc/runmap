@@ -3,13 +3,17 @@
 use crate::chunk_graph::{self, Bounds, GraphIndex};
 use crate::chunk_search::{self, SearchSettings, check_deadline};
 use crate::endpoint_overlay::{self, Endpoint, node_id};
+use crate::environment_cost::{self, EnvironmentIntervals};
 use crate::fields::FieldSettings;
-use crate::numeric::{self, ARC_IDS, ARC_LENGTHS, ARC_NODES, Chunk, RoutingError, SEGMENT_IDS};
+use crate::numeric::{
+    self, ARC_IDS, ARC_LENGTHS, ARC_NODES, ARC_SEGMENTS, Chunk, RoutingError, SEGMENT_IDS,
+};
 use crate::routing_cost::{CostSettings, ShapeSettings, parse_hill_intervals};
 use pyo3::exceptions::{PyTimeoutError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 pub type SegmentEndpoint = (i64, f64, Option<f64>);
@@ -24,6 +28,7 @@ type PathOutput = (
     Py<PyBytes>,
     Py<PyBytes>,
     Py<PyBytes>,
+    (Py<PyBytes>, Py<PyBytes>),
     Py<PyBytes>,
     i64,
     i64,
@@ -135,11 +140,38 @@ fn floats(py: Python<'_>, values: impl Iterator<Item = f64>) -> Py<PyBytes> {
     PyBytes::new(py, &bytes).unbind()
 }
 
-#[pyclass(module = "runmap._routing_native", frozen)]
+fn validate_environment_graph(
+    graph: &GraphIndex,
+    chunks: &[Chunk<'_>],
+    intervals: &EnvironmentIntervals,
+) -> PyResult<()> {
+    for (chunk, selected) in chunks.iter().zip(&graph.selected) {
+        for arc in 0..chunk.counts.arcs {
+            let segment = chunk.columns[ARC_SEGMENTS].integer(arc) as usize;
+            if !selected[segment] {
+                continue;
+            }
+            let id = chunk.columns[SEGMENT_IDS].integer(segment);
+            let rows = intervals.get(&id).ok_or_else(|| {
+                PyValueError::new_err("Environment join lacks a selected segment")
+            })?;
+            let length = chunk.columns[ARC_LENGTHS].float(arc);
+            if (rows.last().unwrap()[1] - length).abs() > 1e-6 {
+                return Err(PyValueError::new_err(
+                    "Environment chainage does not match graph",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[pyclass(module = "runmap._routing_native")]
 pub struct NumericGraph {
     owners: Vec<Py<PyBytes>>,
     graph: GraphIndex,
     distance_scale: f64,
+    environment: Option<Arc<EnvironmentIntervals>>,
 }
 
 #[pymethods]
@@ -186,6 +218,7 @@ impl NumericGraph {
             owners: payloads,
             graph,
             distance_scale: scale,
+            environment: None,
         })
     }
 
@@ -202,6 +235,46 @@ impl NumericGraph {
     #[getter]
     fn has_frontier(&self) -> bool {
         self.graph.frontier.iter().any(|value| *value)
+    }
+
+    #[getter]
+    fn environment_prepared(&self) -> bool {
+        self.environment.is_some()
+    }
+
+    fn selected_segment_ids(&self, py: Python<'_>) -> Py<PyBytes> {
+        let chunks = views(py, &self.owners).expect("Validated graph chunks");
+        let mut ids = HashSet::new();
+        for (chunk, selected) in chunks.iter().zip(&self.graph.selected) {
+            for (segment, enabled) in selected.iter().enumerate() {
+                if *enabled {
+                    ids.insert(chunk.columns[SEGMENT_IDS].integer(segment));
+                }
+            }
+        }
+        ints(py, ids.into_iter())
+    }
+
+    fn set_environment_intervals(
+        &mut self,
+        py: Python<'_>,
+        values: Vec<(i64, Vec<[f64; 8]>)>,
+    ) -> PyResult<()> {
+        if self.environment.is_some() {
+            return Err(PyValueError::new_err(
+                "Environment intervals are already attached",
+            ));
+        }
+        let count = values.len();
+        let intervals: EnvironmentIntervals = values.into_iter().collect();
+        if intervals.len() != count {
+            return Err(PyValueError::new_err("Duplicate environment segment"));
+        }
+        environment_cost::validate_intervals(&intervals).map_err(routing_error)?;
+        let chunks = views(py, &self.owners)?;
+        validate_environment_graph(&self.graph, &chunks, &intervals)?;
+        self.environment = Some(Arc::new(intervals));
+        Ok(())
     }
 
     #[pyo3(signature = (start_node=None, *, start_segment=None, profile=0, maximum=f64::INFINITY, reverse=false, timeout_seconds=None))]
@@ -233,6 +306,8 @@ impl NumericGraph {
                     deadline: end,
                     costs: CostSettings {
                         hill_weight: 0.0,
+                        environment_weights: [0.0; 4],
+                        environment: None,
                         shape: None,
                         used_segments: HashSet::new(),
                         used_spans: HashMap::new(),
@@ -253,7 +328,7 @@ impl NumericGraph {
     }
 
     #[pyo3(signature = (start_node=None, destination_node=None, *, start_segment=None, destination_segment=None,
-                       start_point=None, destination_point=None, profile=0, hill_weight=0.0, shape=None, used_segments=Vec::new(), used_spans=Vec::new(), hill_intervals=Vec::new(), timeout_seconds=None))]
+                       start_point=None, destination_point=None, profile=0, hill_weight=0.0, environment_weights=[0.0; 4], shape=None, used_segments=Vec::new(), used_spans=Vec::new(), hill_intervals=Vec::new(), timeout_seconds=None))]
     #[allow(clippy::too_many_arguments)] // Core search receives structured settings.
     fn shortest_path(
         &self,
@@ -266,6 +341,7 @@ impl NumericGraph {
         destination_point: Option<(f64, f64)>,
         profile: usize,
         hill_weight: f64,
+        environment_weights: [f64; 4],
         shape: Option<ShapeArguments>,
         used_segments: Vec<i64>,
         used_spans: Vec<(i64, f64, f64)>,
@@ -297,6 +373,8 @@ impl NumericGraph {
                     deadline: end,
                     costs: CostSettings {
                         hill_weight,
+                        environment_weights,
+                        environment: self.environment.clone(),
                         shape: shape_settings(shape),
                         used_segments: used_segments.into_iter().collect(),
                         used_spans: used_spans.into_iter().fold(
@@ -343,6 +421,19 @@ impl NumericGraph {
             ),
             floats(py, result.components.iter().flat_map(|c| c.iter().copied())),
             floats(py, result.hills.iter().flat_map(|h| h.iter().copied())),
+            (
+                floats(
+                    py,
+                    result.environment.iter().flat_map(|e| e.iter().copied()),
+                ),
+                floats(
+                    py,
+                    result
+                        .environment_unknown
+                        .iter()
+                        .flat_map(|u| u.iter().copied()),
+                ),
+            ),
             ints(py, result.frontier.into_iter()),
             start_id,
             destination_id,

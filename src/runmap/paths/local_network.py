@@ -9,6 +9,7 @@ from runmap.paths.database import (NetworkMetadata, network_metadata, query_netw
                                    query_segment_features)
 from runmap.paths.coverage import near_coverage_boundary
 from runmap.paths.dead_ends import Classification
+from runmap.paths.environment_join import EnvironmentInterval, read_environment_by_segment_ids
 from runmap.paths.measurements import MeasurementData, pack_measurement_data
 from runmap.paths.preparation import PreparedSegment
 from runmap.routing.hill_types import HillData, HillFeatures
@@ -28,11 +29,14 @@ class LocalNetwork:
     frontier_nodes: frozenset[str]
     frontier_indices: frozenset[int]
     coverage_limited_segments: frozenset[str]
+    environment: dict[str, tuple[EnvironmentInterval, ...]] | None = None
 
 
 def load_local_network(connection: sqlite3.Connection, bounds: Bounds,
                        profile: EdgeProfile | None = None, *, include_terrain: bool = True,
-                       include_measurements: bool = True, include_coverage: bool = True) -> LocalNetwork:
+                       include_measurements: bool = True, include_coverage: bool = True,
+                       environment_connection: sqlite3.Connection | None = None,
+                       deadline: float | None = None) -> LocalNetwork:
     """Retain complete segments and distinguish unloaded links from source edges."""
     metadata = network_metadata(connection)
     profile = profile or exploration_profile(avoid_stairs=False)
@@ -63,8 +67,10 @@ def load_local_network(connection: sqlite3.Connection, bounds: Bounds,
     limited = (frozenset(key for key, segment in routing.segments.items()
                         if metadata.coverage is None or near_coverage_boundary(metadata.coverage, segment["geometry"]))
                if include_coverage else frozenset())
+    environment = (read_environment_by_segment_ids(environment_connection, connection,
+                    list(routing.segments), deadline=deadline) if environment_connection is not None else None)
     return LocalNetwork(metadata, bounds, routing, measurements, hills, classifications,
-                        frontier, frozenset(index.node_indices[node] for node in frontier), limited)
+                        frontier, frozenset(index.node_indices[node] for node in frontier), limited, environment)
 
 
 def _graph_policy(features: dict[str, PreparedSegment], profile_id: str) -> PreparedGraphPolicy:
