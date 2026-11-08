@@ -9,6 +9,7 @@ import {
 } from "maplibre-gl";
 import type { FeatureCollection, Feature, LineString } from "geojson";
 import { startRouteProfile } from "./route-profile";
+import { downloadRouteGpx } from "./gpx";
 import { mapPadding } from "./layout";
 import { requestRun, snapEndpoint } from "./api";
 import type {
@@ -353,6 +354,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     generateButton.setAttribute("aria-busy", String(generating));
     element<HTMLButtonElement>("run-fit").disabled = !candidate;
     element<HTMLButtonElement>("run-elevation").disabled = !candidate;
+    element<HTMLButtonElement>("run-gpx").disabled = !candidate;
     element("run-results").hidden = !candidate || !active();
   }
   function pick(value?: "home" | "turnaround"): void {
@@ -732,6 +734,10 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   element("run-elevation").addEventListener("click", () => {
     const candidate = response?.candidates[selected];
     if (candidate) void profile.toggle(candidate);
+  });
+  element("run-gpx").addEventListener("click", () => {
+    const candidate = response?.candidates[selected];
+    if (candidate) downloadRouteGpx(candidate);
   });
   return {
     modeChanged,

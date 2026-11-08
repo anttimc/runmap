@@ -130,7 +130,7 @@ for contracts. Remaining work:
   controls remain undelivered; snapshots are process-local.
 - **Coverage:** explicitly select and prepare bounds for wider public coverage
   or a private Jämsä region.
-- **Features:** running-time models, target duration, route import/export, and
+- **Features:** running-time models, target duration, route import, and
   movable-centre/enclosure controls.
 - **Experiments:** a bounded Odin or Go implementation if justified by profiling
   or a learning objective.

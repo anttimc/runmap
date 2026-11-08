@@ -179,8 +179,9 @@ hill preferences, and Generate run in the panel footer.
 3. Adjust Avoid hills where supported, then select Generate run. Generate again
    after moving endpoints or changing routing settings.
 4. The floating **Your run** card at the lower right shows the selected route's
-   distance, Fit run, Show elevation, and direction key independently of the
-   settings panel. Show elevation expands the same card with the plot above
+   distance beside the title and direction underneath, independently of the
+   settings panel. A single row of equal-width actions offers **Fit run**,
+   **Show elevation**, and **Export GPX**. Show elevation expands the same card with the plot above
    the distance and actions; the button becomes Hide elevation to collapse it.
    On phones, the card sits above the settings sheet
    and replaces the map legend while visible.
@@ -189,6 +190,15 @@ hill preferences, and Generate run in the panel footer.
    round-trip details include outbound/return distances, repetition, and shape
    diagnostics. Click the route or select **Show elevation** to open its profile.
    Cancel stops waiting in the browser; server work has its own deadline.
+
+Use **Export GPX** in the results card to download the displayed route as a
+GPX 1.1 track. The track follows the shown travel direction, including both legs
+of round trips and repeated stretches, with the shared turnaround point included
+once. One-way tracks end at the destination. The filename includes the route
+direction/type and distance. Export happens locally in the browser without an
+additional API request and includes coordinates only, without elevation,
+timestamps, or turn-by-turn instructions. If settings have changed since planning,
+export still downloads the displayed route; generate again to apply new settings.
 
 One way finds one legal directed path to the destination, minimizing distance
 plus enabled route preferences. It can succeed where no legal return exists.
@@ -246,7 +256,7 @@ Hill-enabled results include estimated ascent/descent and terrain coverage;
 Off results leave terrain observations unavailable. A retraced route is labeled
 “Out and back”. Completed candidates can survive the second candidate's
 deadline expiry. Running time, fixed target distance, editable waypoints, retained
-sections, and GPX export are not available.
+sections are not available.
 
 ## Shared settings and coverage
 

@@ -757,21 +757,29 @@
           </section>
           <div class="run-result-summary">
             <div class="heading-row">
-              <h2 id="run-results-title" class="section-title">Your run</h2>
-              <span id="run-details" class="help-tip">
-                <button
-                  type="button"
-                  class="help-trigger"
-                  aria-label="Run details"
-                  aria-expanded="false"
-                >
-                  ?
-                </button>
-                <span role="tooltip" class="help-content" id="run-detail-content"></span>
-              </span>
-            </div>
-            <div class="run-result-actions">
+              <div class="control-label">
+                <h2 id="run-results-title" class="section-title">Your run</h2>
+                <span id="run-details" class="help-tip">
+                  <button
+                    type="button"
+                    class="help-trigger"
+                    aria-label="Run details"
+                    aria-expanded="false"
+                  >
+                    ?
+                  </button>
+                  <span role="tooltip" class="help-content" id="run-detail-content"></span>
+                </span>
+              </div>
               <div id="run-candidates" class="run-candidates"></div>
+            </div>
+            <div class="route-key" aria-label="Selected run direction">
+              <span
+                ><i class="run-key"></i
+                ><span id="run-direction-label">Arrows show travel direction</span></span
+              >
+            </div>
+            <div class="run-result-actions" role="group" aria-label="Route actions">
               <button id="run-fit" type="button" disabled>Fit run</button>
               <button
                 id="run-elevation"
@@ -782,12 +790,7 @@
               >
                 Show elevation
               </button>
-            </div>
-            <div class="route-key" aria-label="Selected run direction">
-              <span
-                ><i class="run-key"></i
-                ><span id="run-direction-label">Arrows show travel direction</span></span
-              >
+              <button id="run-gpx" type="button" disabled>Export GPX</button>
             </div>
           </div>
         </section>
