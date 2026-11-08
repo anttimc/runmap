@@ -281,7 +281,8 @@ processing during each route request.
 
 The pure environment cost function and both routing backends now supply four
 nonnegative penalty terms with an explicit conservative policy for NoData and
-unsupported context. Public controls use initial versioned Low=0.25 and High=1.0 weights (Off=0); regional calibration remains outstanding. Design individual and combined preference
+unsupported context. Public controls use Low=0.25 and Off=0 for all fields.
+Traffic High uses 4.0; other fields use High=1.0. Regional calibration remains outstanding. Design individual and combined preference
 weights, defaults, ranges, an explicit Off state, and route exposure/coverage
 summaries together. Check route behavior and latency using saved route requests
 before enabling controls. These are integration checks, not a manual
@@ -460,8 +461,10 @@ explicitly. Keep this proposal clearly marked or archive it once superseded.
   and [multipolygon geometry](https://wiki.openstreetmap.org/wiki/Relation:multipolygon).
 
 Environment routing controls: `environment_greenery`, `environment_water`,
-`environment_traffic`, and `environment_wetland` accept Off/Low/High. The initial
-`environment-levels-v1` table uses 0/0.25/1.0 dimensionless weights. Controls are
+`environment_traffic`, and `environment_wetland` accept Off/Low/High. Traffic uses
+0/0.25/4.0 dimensionless weights (`environment-traffic-levels-v2`); other fields
+use 0/0.25/1.0 (`environment-levels-v1`). The stronger traffic High setting is
+provisional pending saved-route calibration. Controls are
 capability gated on the configured native environment join and default to Off.
 Route details show equivalent metre contributions and unknown metres per field.
 Local runner acceptance was recorded on 2026-11-06; reproducible regional

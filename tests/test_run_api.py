@@ -152,7 +152,8 @@ class RunApiTests(unittest.TestCase):
         settings = PreferenceSettings(environment_greenery="low", environment_traffic="high")
         resolved = resolve_prepared_preferences(settings, capabilities)
         self.assertEqual(resolved.weights.environment_greenery, 0.25)
-        self.assertEqual(resolved.weights.environment_traffic, 1.0)
+        self.assertEqual(resolved.weights.environment_traffic, 4.0)
+        self.assertEqual(resolved.weight_tables.environment_traffic.version, "environment-traffic-levels-v2")
         self.assertEqual(resolved.weights.environment_water, 0.0)
         with self.assertRaisesRegex(ValueError, "Unsupported environment_greenery"):
             resolve_prepared_preferences(settings, prepared_preference_capabilities(None, None))

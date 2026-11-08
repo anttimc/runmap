@@ -20,6 +20,9 @@ Remaining reproducible validation work:
 
 - Record saved regional requests with dataset/model/settings identities and
   compare route tradeoffs, lengths, and missing context across preferences.
+- Record reproducible comparisons for traffic High=4.0, including detours,
+  loop shape, and penalties for missing context. The local runner reported
+  improved routing on 2026-11-08; saved-route calibration remains outstanding.
 - Measure bounded join loading, expanded states, and routing latency with
   environment preferences enabled. User acceptance does not replace a recorded
   performance benchmark.

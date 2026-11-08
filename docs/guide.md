@@ -325,8 +325,11 @@ exists, the panel reports that layers are unavailable. See
 [regional setup](development.md#capital-area-environment-layers).
 
 Environment routing controls: `environment_greenery`, `environment_water`,
-`environment_traffic`, and `environment_wetland` accept Off/Low/High. The initial
-`environment-levels-v1` table uses 0/0.25/1.0 dimensionless weights. Controls are
+`environment_traffic`, and `environment_wetland` accept Off/Low/High. Traffic uses
+0/0.25/4.0 dimensionless weights (`environment-traffic-levels-v2`); other fields
+use 0/0.25/1.0 (`environment-levels-v1`). At exposure 0.3, traffic High adds 120
+equivalent metres per 100 graph metres, versus 30 at the previous weight.
+The stronger setting remains provisional pending saved-route calibration. Controls are
 capability gated on the configured native environment join and default to Off.
 The run headline shows running distance. Details show routing penalties for enabled
 preferences using the settings saved with the result. Missing mapped context is
@@ -340,5 +343,6 @@ values express routing costs and do not increase the displayed running distance.
 Environment preferences use compact Off/Low/High sliders alongside Avoid hills.
 
 The local runner accepted environment route planning and the preference UI on
-2026-11-06. Recorded calibration and performance benchmarks remain separate
+2026-11-06 and reported improved routing with traffic High=4.0 on 2026-11-08.
+Recorded calibration and performance benchmarks remain separate
 follow-up validation in the [roadmap](roadmap.md).

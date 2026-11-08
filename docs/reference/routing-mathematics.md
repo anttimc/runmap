@@ -20,11 +20,11 @@ separate from the CLI anchor-baseline experiment.
 `mapped-context-environment-cost-v1` calculation for the prepared G/W/T/H
 segment join. Native numeric search now uses the same calculation when a
 validated join is configured and nonzero weights are passed to the numeric
-planner. The public API still passes all weights as zero, so current UI routes
-are unchanged. The Python reference planner accepts the same bounded intervals
+planner. Public requests resolve Off/Low/High to versioned weights when the
+prepared join is available. The Python reference planner accepts the same bounded intervals
 and weights, caches each arc's cost, and reports the same component breakdown.
 Each weight is a finite nonnegative, dimensionless multiplier and defaults to
-zero (Off). UI levels and nonzero defaults have not been selected.
+zero (Off). The level tables are described below.
 
 For a traversal span measured in stored graph chainage, the four penalty
 densities are $w_g(1-G)$, $w_w(1-W)$, $w_tT$, and $w_hH$. Integrating each density
@@ -355,8 +355,12 @@ rounds that budget up to whole kilometres. This conservative search extent also
 covers candidates in directed networks with unequal outward and return legs.
 
 Environment routing controls: `environment_greenery`, `environment_water`,
-`environment_traffic`, and `environment_wetland` accept Off/Low/High. The initial
-`environment-levels-v1` table uses 0/0.25/1.0 dimensionless weights. Controls are
+`environment_traffic`, and `environment_wetland` accept Off/Low/High. Traffic uses
+0/0.25/4.0 dimensionless weights (`environment-traffic-levels-v2`); other fields
+use 0/0.25/1.0 (`environment-levels-v1`). At exposure 0.3, traffic High adds 120
+equivalent metres per 100 graph metres, versus 30 at the previous weight.
+Unsupported context also receives the stronger maximum penalty.
+The stronger setting remains provisional pending saved-route calibration. Controls are
 capability gated on the configured native environment join and default to Off.
 Route details show equivalent metre contributions and unknown metres per field.
 Regional calibration and latency acceptance remain outstanding.

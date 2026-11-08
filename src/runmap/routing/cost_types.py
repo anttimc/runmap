@@ -47,7 +47,7 @@ class PreferenceWeightTables:
     greenery: PreferenceWeightTable = PreferenceWeightTable("greenery-off-v1")
     environment_greenery: PreferenceWeightTable = PreferenceWeightTable("environment-levels-v1", low=0.25, high=1.0)
     environment_water: PreferenceWeightTable = PreferenceWeightTable("environment-levels-v1", low=0.25, high=1.0)
-    environment_traffic: PreferenceWeightTable = PreferenceWeightTable("environment-levels-v1", low=0.25, high=1.0)
+    environment_traffic: PreferenceWeightTable = PreferenceWeightTable("environment-traffic-levels-v2", low=0.25, high=4.0)
     environment_wetland: PreferenceWeightTable = PreferenceWeightTable("environment-levels-v1", low=0.25, high=1.0)
 
 
