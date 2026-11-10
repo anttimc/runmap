@@ -124,12 +124,12 @@ pub fn parse_hill_intervals(payload: &[u8]) -> Result<Vec<[f64; 16]>, RoutingErr
     Ok(intervals)
 }
 
-fn add_interval(
-    values: &mut [f64; 7],
+fn add_interval<const N: usize>(
+    values: &mut [f64; N],
     edge: Edge,
     start: f64,
     end: f64,
-    features: [f64; 7],
+    features: [f64; N],
 ) -> Result<(), RoutingError> {
     if end <= start {
         return Err(RoutingError::Invalid("Invalid prepared hill chainage"));
@@ -148,11 +148,19 @@ pub fn hill_features(
     edge: Edge,
     settings: &CostSettings,
 ) -> Result<[f64; 7], RoutingError> {
+    integrate_hills(chunk, edge, settings)
+}
+
+fn integrate_hills<const N: usize>(
+    chunk: &Chunk<'_>,
+    edge: Edge,
+    settings: &CostSettings,
+) -> Result<[f64; N], RoutingError> {
     let direction = usize::from(edge.backward);
-    let totals: [f64; 7] = std::array::from_fn(|i| {
+    let totals: [f64; N] = std::array::from_fn(|i| {
         chunk.columns[HILL_TOTALS].float((edge.segment * 2 + direction) * 7 + i)
     });
-    if totals[6] <= 0.0 {
+    if chunk.columns[HILL_TOTALS].float((edge.segment * 2 + direction) * 7 + 6) <= 0.0 {
         return Err(RoutingError::Invalid("Hill features are unavailable"));
     }
     let length = chunk.columns[ARC_LENGTHS].float(edge.arc);
@@ -164,7 +172,7 @@ pub fn hill_features(
     if edge.low == 0.0 && edge.high == length {
         return Ok(totals);
     }
-    let mut values = [0.0; 7];
+    let mut values = [0.0; N];
     let lo = chunk.columns[HILL_OFFSETS].integer(edge.segment) as usize;
     let hi = chunk.columns[HILL_OFFSETS].integer(edge.segment + 1) as usize;
     if lo == hi {
@@ -212,7 +220,17 @@ pub fn hill_features(
 
 fn clipped_geometry(chunk: &Chunk<'_>, edge: Edge) -> Vec<(f64, f64)> {
     let _profile = crate::profiling::span(crate::profiling::Phase::Geometry);
-    let points = segment_points(chunk, edge.segment);
+    let mut points = segment_points(chunk, edge.segment);
+    if edge.geometry_low.is_none()
+        && edge.geometry_high.is_none()
+        && edge.geometry_endpoints.is_none()
+    {
+        points.dedup();
+        if points.len() < 2 {
+            points.clear();
+        }
+        return points;
+    }
     let total = projected_length(&points);
     let lo = edge.geometry_low.unwrap_or(0.0);
     let hi = edge.geometry_high.unwrap_or(total);
@@ -341,17 +359,80 @@ pub fn total_cost(cost: &EdgeCost) -> f64 {
 }
 
 fn validate_cost(cost: &EdgeCost) -> Result<(), RoutingError> {
-    let invalid_component = cost
-        .components
+    validated_total(&cost.components, &cost.environment_penalties).map(|_| ())
+}
+
+fn validated_total(
+    components: &[f64; 5],
+    environment: &environment_cost::FieldValues,
+) -> Result<f64, RoutingError> {
+    let invalid_component = components
         .iter()
-        .chain(&cost.environment_penalties)
+        .chain(environment)
         .any(|value| !value.is_finite() || *value < 0.0);
-    if invalid_component || !total_cost(cost).is_finite() {
+    let total = components.iter().chain(environment).sum::<f64>();
+    if invalid_component || !total.is_finite() {
         return Err(RoutingError::Invalid(
             "Native cost components must be finite and nonnegative",
         ));
     }
-    Ok(())
+    Ok(total)
+}
+
+/// Traversal needs the objective only; final-path evaluation supplies diagnostics.
+pub fn evaluate_search_cost(
+    chunks: &[Chunk<'_>],
+    edge: Edge,
+    settings: &CostSettings,
+    cache: &mut CostCache,
+    deadline: Option<Instant>,
+) -> Result<f64, RoutingError> {
+    let _profile = crate::profiling::span(crate::profiling::Phase::Cost);
+    let chunk = &chunks[edge.chunk];
+    let shape = shape_costs(chunk, edge, settings, cache, deadline)?;
+    let hill = if settings.hill_weight > 0.0 {
+        integrate_hills::<1>(chunk, edge, settings)?[0]
+    } else {
+        0.0
+    };
+    let environment = search_environment_costs(chunk, edge, settings)?;
+    validated_total(
+        &[
+            edge.length,
+            shape.centre,
+            shape.side,
+            shape.reuse,
+            settings.hill_weight * hill,
+        ],
+        &environment,
+    )
+}
+
+fn search_environment_costs(
+    chunk: &Chunk<'_>,
+    edge: Edge,
+    settings: &CostSettings,
+) -> Result<environment_cost::FieldValues, RoutingError> {
+    if settings
+        .environment_weights
+        .iter()
+        .all(|weight| *weight == 0.0)
+    {
+        return Ok([0.0; environment_cost::FIELDS.len()]);
+    }
+    let prepared = settings.environment.as_ref().ok_or(RoutingError::Invalid(
+        "Environment weights require prepared intervals",
+    ))?;
+    let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
+    let intervals = prepared
+        .get(&segment_id)
+        .ok_or(RoutingError::Invalid("Missing environment segment"))?;
+    environment_cost::integrate_penalties(
+        intervals,
+        edge.low,
+        edge.high,
+        settings.environment_weights,
+    )
 }
 
 pub fn evaluate_cost(
@@ -390,6 +471,172 @@ pub fn evaluate_cost(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample_edge() -> Edge {
+        Edge {
+            chunk: 0,
+            arc: 0,
+            segment: 0,
+            source: 0,
+            target: 1,
+            length: 20.0,
+            low: 0.0,
+            high: 20.0,
+            backward: false,
+            geometry_low: None,
+            geometry_high: None,
+            geometry_endpoints: None,
+        }
+    }
+
+    fn sample_chunk<'a>(geometry: &'a [u8], offsets: &'a [u8]) -> Chunk<'a> {
+        const LENGTH: [u8; 8] = 20.0_f64.to_le_bytes();
+        const SEGMENT: [u8; 8] = 7_i64.to_le_bytes();
+        let mut columns = [Column { bytes: &[] }; 23];
+        columns[GEOMETRY_XY] = Column { bytes: geometry };
+        columns[GEOMETRY_OFFSETS] = Column { bytes: offsets };
+        columns[ARC_LENGTHS] = Column { bytes: &LENGTH };
+        columns[SEGMENT_IDS] = Column { bytes: &SEGMENT };
+        columns[HILL_OFFSETS] = Column { bytes: &[0; 16] };
+        columns[HILL_TOTALS] = Column { bytes: &[0; 112] };
+        Chunk {
+            counts: Counts {
+                nodes: 2,
+                segments: 1,
+                arcs: 1,
+                profiles: 1,
+                points: geometry.len() / 16,
+                intervals: 0,
+            },
+            columns,
+        }
+    }
+
+    #[test]
+    fn full_geometry_preserves_pieces_and_partial_endpoint_overrides() {
+        let geometry: Vec<u8> = [0.0_f64, 0.0, 0.0, 0.0, 10.0, 0.0, 10.0, 0.0, 20.0, 0.0]
+            .into_iter()
+            .flat_map(f64::to_le_bytes)
+            .collect();
+        let offsets: Vec<u8> = [0_i64, 5].into_iter().flat_map(i64::to_le_bytes).collect();
+        let chunk = sample_chunk(&geometry, &offsets);
+        let mut edge = sample_edge();
+        assert_eq!(
+            clipped_geometry(&chunk, edge),
+            vec![(0.0, 0.0), (10.0, 0.0), (20.0, 0.0)]
+        );
+        edge.geometry_low = Some(5.0);
+        edge.geometry_high = Some(15.0);
+        edge.geometry_endpoints = Some(((5.0, 1.0), (15.0, 1.0)));
+        assert_eq!(
+            clipped_geometry(&chunk, edge),
+            vec![(5.0, 1.0), (10.0, 0.0), (15.0, 1.0)]
+        );
+        // A zero-length polyline must not introduce a sampled field piece.
+        let zero_offsets: Vec<u8> = [0_i64, 2].into_iter().flat_map(i64::to_le_bytes).collect();
+        let repeated = sample_chunk(&geometry[..32], &zero_offsets);
+        assert!(clipped_geometry(&repeated, sample_edge()).is_empty());
+    }
+
+    fn sample_settings() -> CostSettings {
+        CostSettings {
+            hill_weight: 2.0,
+            environment_weights: [0.0; 4],
+            environment: Some(Arc::new(HashMap::from([(
+                7,
+                vec![
+                    environment_cost::EnvironmentInterval {
+                        start_m: 0.0,
+                        end_m: 10.0,
+                        values: [0.2, 0.4, f64::NAN, 0.8],
+                        context_support: 1.0,
+                        traffic_context_support: 0.0,
+                    },
+                    environment_cost::EnvironmentInterval {
+                        start_m: 10.0,
+                        end_m: 20.0,
+                        values: [0.8, 0.6, 0.1, 0.2],
+                        context_support: 1.0,
+                        traffic_context_support: 1.0,
+                    },
+                ],
+            )]))),
+            shape: None,
+            used_segments: HashSet::from([7]),
+            used_spans: HashMap::new(),
+            hill_intervals: HashMap::from([(
+                7,
+                vec![
+                    [
+                        0.0, 10.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 10.0,
+                    ],
+                    [
+                        10.0, 20.0, 6.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 7.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 10.0,
+                    ],
+                ],
+            )]),
+        }
+    }
+
+    #[test]
+    fn scalar_objective_matches_diagnostics_for_full_and_partial_edges() {
+        let geometry: Vec<u8> = [0.0_f64, 0.0, 10.0, 0.0, 20.0, 0.0]
+            .into_iter()
+            .flat_map(f64::to_le_bytes)
+            .collect();
+        let offsets: Vec<u8> = [0_i64, 3].into_iter().flat_map(i64::to_le_bytes).collect();
+        let mut chunk = sample_chunk(&geometry, &offsets);
+        let totals: Vec<u8> = [
+            9.0_f64, 1.0, 2.0, 3.0, 4.0, 5.0, 20.0, 12.0, 1.0, 2.0, 3.0, 4.0, 5.0, 20.0,
+        ]
+        .into_iter()
+        .flat_map(f64::to_le_bytes)
+        .collect();
+        chunk.columns[HILL_TOTALS] = Column { bytes: &totals };
+        let chunks = [chunk];
+        let shape = ShapeSettings {
+            fields: FieldSettings {
+                home: (0.0, 0.0),
+                destination: (20.0, 0.0),
+                radius: 5.0,
+                transition_width: 2.0,
+                spacing: 2.0,
+            },
+            centre: 1.0,
+            side: 2.0,
+            reuse: 3.0,
+            penalize_right: true,
+        };
+        let mut settings = sample_settings();
+        for shape in [None, Some(shape)] {
+            settings.shape = shape;
+            for weights in [[0.0; 4], [1.0, 0.0, 4.0, 0.0], [1.0, 2.0, 4.0, 3.0]] {
+                settings.environment_weights = weights;
+                for backward in [false, true] {
+                    for (low, high) in [(0.0, 20.0), (5.0, 15.0)] {
+                        let mut edge = sample_edge();
+                        edge.low = low;
+                        edge.high = high;
+                        edge.length = high - low;
+                        edge.backward = backward;
+                        edge.geometry_low = Some(low);
+                        edge.geometry_high = Some(high);
+                        let mut cache = CostCache {
+                            integrals: HashMap::new(),
+                        };
+                        let expected =
+                            evaluate_cost(&chunks, edge, &settings, &mut cache, None).unwrap();
+                        let actual =
+                            evaluate_search_cost(&chunks, edge, &settings, &mut cache, None)
+                                .unwrap();
+                        assert_eq!(actual, total_cost(&expected));
+                    }
+                }
+            }
+        }
+    }
 
     fn sample_cost() -> EdgeCost {
         EdgeCost {

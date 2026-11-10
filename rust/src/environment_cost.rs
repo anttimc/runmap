@@ -101,6 +101,24 @@ pub fn integrate(
     high: f64,
     weights: FieldValues,
 ) -> Result<(FieldValues, FieldValues), RoutingError> {
+    integrate_intervals::<true>(intervals, low, high, weights)
+}
+
+pub fn integrate_penalties(
+    intervals: &[EnvironmentInterval],
+    low: f64,
+    high: f64,
+    weights: FieldValues,
+) -> Result<FieldValues, RoutingError> {
+    integrate_intervals::<false>(intervals, low, high, weights).map(|(penalties, _)| penalties)
+}
+
+fn integrate_intervals<const DIAGNOSTICS: bool>(
+    intervals: &[EnvironmentInterval],
+    low: f64,
+    high: f64,
+    weights: FieldValues,
+) -> Result<(FieldValues, FieldValues), RoutingError> {
     if low < 0.0
         || high <= low
         || !low.is_finite()
@@ -121,9 +139,12 @@ pub fn integrate(
             continue;
         }
         for (index, field) in FIELDS.into_iter().enumerate() {
+            if !DIAGNOSTICS && weights[index] == 0.0 {
+                continue;
+            }
             let value = interval.values[index];
             let supported = field_supported(interval, field, value);
-            if !supported {
+            if DIAGNOSTICS && !supported {
                 unknown[index] += length;
             }
             if weights[index] > 0.0 {
@@ -194,6 +215,10 @@ mod tests {
         assert_eq!(unknown, [0.0, 10.0, 10.0, 0.0]);
         let (partial, unknown) = integrate(&intervals, 5.0, 15.0, weights).unwrap();
         assert_close(partial, [5.0, 16.0, 24.0, 16.0]);
+        assert_eq!(
+            integrate_penalties(&intervals, 5.0, 15.0, weights).unwrap(),
+            partial
+        );
         assert_eq!(unknown, [0.0, 5.0, 5.0, 0.0]);
     }
 
@@ -217,9 +242,17 @@ mod tests {
                 traffic_context_support,
             }];
             let (penalties, unknown) = integrate(&intervals, 0.0, 10.0, [1.0; 4]).unwrap();
+            assert_eq!(
+                integrate_penalties(&intervals, 0.0, 10.0, [1.0; 4]).unwrap(),
+                penalties
+            );
             assert_eq!(penalties, expected);
             assert_eq!(unknown, expected);
             let (disabled, unknown) = integrate(&intervals, 0.0, 10.0, [0.0; 4]).unwrap();
+            assert_eq!(
+                integrate_penalties(&intervals, 0.0, 10.0, [0.0; 4]).unwrap(),
+                disabled
+            );
             assert_eq!(disabled, [0.0; 4]);
             assert_eq!(unknown, expected);
         }
@@ -239,6 +272,7 @@ mod tests {
         let intervals = &values[&7];
         for (low, high) in [(-1.0, 5.0), (5.0, 5.0), (0.0, 11.0), (f64::NAN, 5.0)] {
             assert!(integrate(intervals, low, high, [1.0; 4]).is_err());
+            assert!(integrate_penalties(intervals, low, high, [1.0; 4]).is_err());
         }
     }
 }

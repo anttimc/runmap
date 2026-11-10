@@ -12,6 +12,11 @@ area, see the [2026-11-02 native profile](archive/history/2026-11-02-native-rout
 It separates normal-build timings from instrumentation overhead and does not
 include the complete API request.
 
+The [2026-11-10 hot-loop comparison](archive/history/2026-11-10-native-search-hot-loop.md)
+measures early edge rejection, scalar objectives, full-geometry handling, edge
+passing, and predecessor storage separately on a fixed working area. Its timings
+exclude graph preparation, API window expansion, rendering, and serialization.
+
 The representative Leppävaara API request, including all three window attempts,
 route rendering, and JSON serialization, measured 48 ms median with hills off
 and 62 ms with hills high across ten repeated requests. Corresponding p95 values

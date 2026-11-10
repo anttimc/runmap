@@ -134,6 +134,12 @@ prepared graph buffers and orchestrates requests; Rust owns graph traversal,
 endpoint overlays, and cost evaluation during search. The same native graph
 service supports planning and distance exploration.
 
+Native traversal evaluates a scalar objective and defers diagnostic arrays to
+selected-path evaluation. Read-only edge visits borrow a temporary base edge or
+an existing overlay edge. Predecessors retain compact base-arc or overlay-edge
+identifiers; full edges are reconstructed only for the selected path. Shape
+integrals remain search-owned, and full segment geometry bypasses clipping.
+
 When configured, Python validates the environment join against the network and
 raster manifest, selects its intervals for the bounded graph, and attaches named
 measurement/support records to the native graph. `environment_fields.py` owns

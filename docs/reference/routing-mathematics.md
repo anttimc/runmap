@@ -269,14 +269,21 @@ At zero width there is one candidate. Its legs are searched independently when
 hills are active; with hills Off, legal retracing can supply the return path.
 
 Each completed leg is optimized using A*. All penalties are nonnegative, so
-cost is at least graph distance. Spatial integrals use midpoint sampling. The
+cost is at least graph distance. If the current node's accumulated cost is
+already at least the best known cost of a neighbor, native traversal skips that
+edge's cost evaluation: adding a nonnegative edge cost cannot improve the
+neighbor. Traversal computes only the scalar objective; selected paths use the
+same component functions to produce full diagnostics, including unknown
+environment lengths when their preference weights are zero.
+
+Spatial integrals use midpoint sampling. The
 spacing limit is $h=\min(10\,\mathrm{m},R/4,B/4)$. Each straight piece of projected
 geometry of length $\ell$ uses $n=\max(2,\lceil\ell/h\rceil)$ equally spaced
 midpoint samples, so the actual step is $\ell/n$. The Python reference uses the
 same rule. The [dated sampling comparison](../archive/history/2026-11-02-integration-comparison.md)
 records the speed and numerical-error measurements behind this choice.
-Hill integrals sum the measured intervals. Traffic lights, busy roads and
-greenery currently add zero.
+Hill and prepared environment integrals use physical chainage intervals.
+Traffic-light penalties remain unimplemented.
 
 ## 6. Observations and validation
 

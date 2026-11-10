@@ -1,0 +1,1022 @@
+{
+  "date": "2026-11-10",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "python": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "rustc": "1.99.1 (58cf8f9c3 2026-10-13)",
+  "build": "Maturin release; python,pyo3/extension-module; profiling disabled; default release options",
+  "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+  "feature_identity": "54d3377ce4c981966caa15f603987010c8b570ab6ff6365517c71fbbee9df3f8",
+  "measurement_sha256": "cbd12dcf1a757b40cff025069a19814228dc55fe87936588744a6d3d2fd4fbc4",
+  "models": {
+    "version": "prepared-path-features-v1",
+    "flat_version": "flat-run-thresholds-v1",
+    "flat_minimum_length_m": 50.0,
+    "flat_grade_thresholds": [
+      1.0,
+      1.5,
+      2.0,
+      2.5,
+      3.0,
+      3.5,
+      4.0,
+      4.5,
+      5.0,
+      5.5,
+      6.0,
+      6.5,
+      7.0,
+      7.5,
+      8.0,
+      8.5,
+      9.0,
+      9.5,
+      10.0
+    ],
+    "coverage_version": "coverage-band-100m-v1",
+    "classifier_version": "building-access-v1",
+    "access_policy": "public:all:stairs-0",
+    "entrance_limit_m": 150.0,
+    "policy_version": "public-pedestrian-v1",
+    "boundary_version": "prepared-route-boundaries-v1",
+    "profiles": [
+      {
+        "id": "public:all:stairs-0",
+        "forbidden_access_values": [
+          "no",
+          "private",
+          "destination",
+          "customers",
+          "permit",
+          "delivery"
+        ],
+        "forbidden_highways": [],
+        "surface_preference": "all"
+      },
+      {
+        "id": "public:all:stairs-1",
+        "forbidden_access_values": [
+          "no",
+          "private",
+          "destination",
+          "customers",
+          "permit",
+          "delivery"
+        ],
+        "forbidden_highways": [
+          "steps"
+        ],
+        "surface_preference": "all"
+      },
+      {
+        "id": "public:surfaced:stairs-0",
+        "forbidden_access_values": [
+          "no",
+          "private",
+          "destination",
+          "customers",
+          "permit",
+          "delivery"
+        ],
+        "forbidden_highways": [],
+        "surface_preference": "surfaced"
+      },
+      {
+        "id": "public:surfaced:stairs-1",
+        "forbidden_access_values": [
+          "no",
+          "private",
+          "destination",
+          "customers",
+          "permit",
+          "delivery"
+        ],
+        "forbidden_highways": [
+          "steps"
+        ],
+        "surface_preference": "surfaced"
+      }
+    ],
+    "hill_model": {
+      "version": "minetti-excess-uphill-preference-v4",
+      "source_doi": "10.1152/japplphysiol.01177.2001",
+      "coefficients": [
+        155.4,
+        -30.4,
+        -43.3,
+        46.3,
+        19.5,
+        3.6
+      ],
+      "fitted_grade_limit": 0.45,
+      "outside_fit_policy": "boundary_tangent",
+      "uncertain_grade_percent": 20.0,
+      "uphill_reference_grade_percent": 5.0,
+      "uphill_grade_power": 2.0
+    }
+  },
+  "environment_dataset": "de078fed501c0d3b0e9290879479063183a61b848183e5c075ea06cbe5f27cbb",
+  "bounds": [
+    374971.56657009746,
+    6675095.112818664,
+    381827.50090309826,
+    6680883.1672423985
+  ],
+  "home": [
+    24.795,
+    60.216
+  ],
+  "turnaround": [
+    24.815,
+    60.225
+  ],
+  "initial_samples_per_round": 60,
+  "final_samples_per_round": 100,
+  "rounds": 3,
+  "result_sizes": {
+    "distance": {
+      "expanded_nodes": 2479,
+      "searches": 2,
+      "path_edges": 152,
+      "outcomes": [
+        "complete"
+      ],
+      "output_bytes": 19456
+    },
+    "shape": {
+      "expanded_nodes": 11126,
+      "searches": 4,
+      "path_edges": 392,
+      "outcomes": [
+        "complete",
+        "complete"
+      ],
+      "output_bytes": 50176
+    },
+    "hills_high": {
+      "expanded_nodes": 19172,
+      "searches": 4,
+      "path_edges": 435,
+      "outcomes": [
+        "complete",
+        "complete"
+      ],
+      "output_bytes": 55680
+    },
+    "traffic_high": {
+      "expanded_nodes": 21521,
+      "searches": 4,
+      "path_edges": 424,
+      "outcomes": [
+        "complete",
+        "complete"
+      ],
+      "output_bytes": 54272
+    },
+    "combined": {
+      "expanded_nodes": 36240,
+      "searches": 4,
+      "path_edges": 399,
+      "outcomes": [
+        "complete",
+        "complete"
+      ],
+      "output_bytes": 51072
+    },
+    "explore_forward": {
+      "expanded_nodes": 17469,
+      "reached_nodes": 17469,
+      "output_bytes": 279528
+    },
+    "explore_reverse": {
+      "expanded_nodes": 17469,
+      "reached_nodes": 17469,
+      "output_bytes": 279528
+    }
+  },
+  "matrices": {
+    "summary.json": {
+      "01-prune": {
+        "distance": {
+          "median_ms": 0.5856454954482615,
+          "round_medians_ms": [
+            0.5825419793836772,
+            0.5982504808343947,
+            0.5765204841736704
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 5.5212919833138585,
+          "round_medians_ms": [
+            5.578416486969218,
+            5.474812496686354,
+            5.5073540133889765
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 9.691020502941683,
+          "round_medians_ms": [
+            9.699333022581413,
+            9.638979012379423,
+            9.750083001563326
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 10.220853990176693,
+          "round_medians_ms": [
+            10.211208515102044,
+            10.319874505512416,
+            10.12439647456631
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 18.59693750157021,
+          "round_medians_ms": [
+            18.4461249737069,
+            18.569353997008875,
+            18.72812502551824
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.742062479024753,
+          "round_medians_ms": [
+            1.7405204707756639,
+            1.7437294882256538,
+            1.7411460285075009
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.7517500091344118,
+          "round_medians_ms": [
+            1.7511040205135942,
+            1.7515619983896613,
+            1.7536045052111149
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "02-scalar": {
+        "distance": {
+          "median_ms": 0.40125002851709723,
+          "round_medians_ms": [
+            0.41281248559243977,
+            0.40043750777840614,
+            0.3905835037585348
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 4.540249472483993,
+          "round_medians_ms": [
+            4.545228992355987,
+            4.529770492808893,
+            4.553937527816743
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 7.716354506555945,
+          "round_medians_ms": [
+            7.768041483359411,
+            7.6850419864058495,
+            7.712312479270622
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 10.219541523838416,
+          "round_medians_ms": [
+            10.143187508219853,
+            10.369187482865527,
+            10.198521020356566
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 18.28589549404569,
+          "round_medians_ms": [
+            18.15262550371699,
+            18.031562998658046,
+            18.76839599572122
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.7629999783821404,
+          "round_medians_ms": [
+            1.7601244908291847,
+            1.7658954893704504,
+            1.7600420105736703
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.7636874981690198,
+          "round_medians_ms": [
+            1.7613334930501878,
+            1.7670005036052316,
+            1.7687284853309393
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "03-geometry": {
+        "distance": {
+          "median_ms": 0.39925050805322826,
+          "round_medians_ms": [
+            0.39741650107316673,
+            0.4052084987051785,
+            0.3964790084864944
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 4.134562477702275,
+          "round_medians_ms": [
+            4.1203539876732975,
+            4.1673960222397,
+            4.124437517020851
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 7.063749973895028,
+          "round_medians_ms": [
+            7.01620799372904,
+            7.122375478502363,
+            7.050646003335714
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 9.288875007769093,
+          "round_medians_ms": [
+            9.344270511064678,
+            9.065770980669186,
+            9.491271019214764
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 16.77149996976368,
+          "round_medians_ms": [
+            16.499312478117645,
+            17.11935398634523,
+            16.54852050705813
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.7641044687479734,
+          "round_medians_ms": [
+            1.7713124980218709,
+            1.7632084782235324,
+            1.760416489560157
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.752854004735127,
+          "round_medians_ms": [
+            1.7471669998485595,
+            1.7493545019533485,
+            1.7743539938237518
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "04-environment-cache": {
+        "distance": {
+          "median_ms": 0.40183300734497607,
+          "round_medians_ms": [
+            0.40720851393416524,
+            0.4038125043734908,
+            0.39937501423992217
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 3.8717290153726935,
+          "round_medians_ms": [
+            3.8610625197179615,
+            3.8776249857619405,
+            3.869770996971056
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 6.5606665157247335,
+          "round_medians_ms": [
+            6.5360414737369865,
+            6.577416497748345,
+            6.5781874873209745
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 10.224812489468604,
+          "round_medians_ms": [
+            10.22208298672922,
+            9.903853992000222,
+            10.413813026389107
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 18.431729025905952,
+          "round_medians_ms": [
+            18.39558349456638,
+            18.773812014842406,
+            17.90183348930441
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.7547915049362928,
+          "round_medians_ms": [
+            1.7557704995851964,
+            1.76145852310583,
+            1.7484379932284355
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.7579165287315845,
+          "round_medians_ms": [
+            1.7624790198169649,
+            1.747353991959244,
+            1.7640000151004642
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "05-borrow": {
+        "distance": {
+          "median_ms": 0.39862500852905214,
+          "round_medians_ms": [
+            0.4000005137640983,
+            0.40454152622260153,
+            0.39427101728506386
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 5.0493534945417196,
+          "round_medians_ms": [
+            5.047833023127168,
+            5.040916992584243,
+            5.065187520813197
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 8.551229519071057,
+          "round_medians_ms": [
+            8.514437504345551,
+            8.540749520761892,
+            8.595041988883168
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 11.215145495953038,
+          "round_medians_ms": [
+            11.297249497147277,
+            11.221541499253362,
+            11.110916995676234
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 19.910541479475796,
+          "round_medians_ms": [
+            19.582833017921075,
+            19.954270479502156,
+            20.21418750518933
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.770979491993785,
+          "round_medians_ms": [
+            1.7624585016164929,
+            1.7752290004864335,
+            1.7745214863680303
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.7791245190892369,
+          "round_medians_ms": [
+            1.7729375103954226,
+            1.7887295107357204,
+            1.771249546436593
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "06-compact": {
+        "distance": {
+          "median_ms": 0.3455420082900673,
+          "round_medians_ms": [
+            0.3452500095590949,
+            0.342958519468084,
+            0.34689600579440594
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 4.02402100735344,
+          "round_medians_ms": [
+            3.9974164974410087,
+            3.997499996330589,
+            4.130833491217345
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 6.817937479354441,
+          "round_medians_ms": [
+            6.792520493036136,
+            6.790020997868851,
+            6.876645493321121
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 9.186604496790096,
+          "round_medians_ms": [
+            8.948541508289054,
+            8.944895525928587,
+            9.659770992584527
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 16.114312515128404,
+          "round_medians_ms": [
+            15.870270988671109,
+            16.60233348957263,
+            16.048875026172027
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.7794794985093176,
+          "round_medians_ms": [
+            1.7852704913821071,
+            1.7838755156844854,
+            1.7741665069479495
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.7945420404430479,
+          "round_medians_ms": [
+            1.7917710065376014,
+            1.7998750263359398,
+            1.7960210097953677
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "baseline": {
+        "distance": {
+          "median_ms": 0.7326659979298711,
+          "round_medians_ms": [
+            0.7193750061560422,
+            0.7343539909925312,
+            0.7409584941342473
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 6.631083495449275,
+          "round_medians_ms": [
+            6.6660209849942476,
+            6.60502101527527,
+            6.641646032221615
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 11.907104490092024,
+          "round_medians_ms": [
+            12.030270998366177,
+            11.838562524644658,
+            11.840770981507376
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 12.726854009088129,
+          "round_medians_ms": [
+            13.292520976392552,
+            12.502958532422781,
+            12.315438012592494
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 23.200812458526343,
+          "round_medians_ms": [
+            23.409021028783172,
+            23.00895846565254,
+            23.049542010994628
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.8728750001173466,
+          "round_medians_ms": [
+            1.8682295049075037,
+            1.8696460174396634,
+            1.8821250123437494
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.878562499769032,
+          "round_medians_ms": [
+            1.8859170086216182,
+            1.8652505241334438,
+            1.8795205105561763
+          ],
+          "exact_baseline_match": true
+        }
+      }
+    },
+    "convention-summary.json": {
+      "03-geometry": {
+        "distance": {
+          "median_ms": 0.41704150498844683,
+          "round_medians_ms": [
+            0.431646010838449,
+            0.40843748138286173,
+            0.41314601548947394
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 4.424041981110349,
+          "round_medians_ms": [
+            4.413187532918528,
+            4.4289170182310045,
+            4.434624512214214
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 7.523708482040092,
+          "round_medians_ms": [
+            7.498792023397982,
+            7.50083351158537,
+            7.565708481706679
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 9.701437462354079,
+          "round_medians_ms": [
+            9.798562008654699,
+            9.58816648926586,
+            9.67264550854452
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 18.4600830252748,
+          "round_medians_ms": [
+            17.68739550607279,
+            18.606937519507483,
+            19.574812497012317
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.7584165034350008,
+          "round_medians_ms": [
+            1.7542084970045835,
+            1.7666044877842069,
+            1.759228965966031
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.7711244872771204,
+          "round_medians_ms": [
+            1.7661039892118424,
+            1.7732289852574468,
+            1.7731669649947435
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "06-compact": {
+        "distance": {
+          "median_ms": 0.3505624772515148,
+          "round_medians_ms": [
+            0.35514598130248487,
+            0.34681250690482557,
+            0.35420848871581256
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 4.042645974550396,
+          "round_medians_ms": [
+            4.063541477080435,
+            4.040770989377052,
+            4.03072900371626
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 6.869666976854205,
+          "round_medians_ms": [
+            6.925416499143466,
+            6.862229492980987,
+            6.847875483799726
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 9.186416486045346,
+          "round_medians_ms": [
+            9.592479473212734,
+            8.974604512332007,
+            8.934937475714833
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 16.590333019848913,
+          "round_medians_ms": [
+            17.309229529928416,
+            16.12439547898248,
+            16.30110401310958
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.7960830009542406,
+          "round_medians_ms": [
+            1.800229016225785,
+            1.805041014449671,
+            1.7802079673856497
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.7899585072882473,
+          "round_medians_ms": [
+            1.784416992450133,
+            1.8035209795925766,
+            1.789458008715883
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "07-value-costs": {
+        "distance": {
+          "median_ms": 0.35912549355998635,
+          "round_medians_ms": [
+            0.35933349863626063,
+            0.35412501893006265,
+            0.36210400867275894
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 3.8058540085330606,
+          "round_medians_ms": [
+            3.794333490077406,
+            3.8140625110827386,
+            3.8086870044935495
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 6.4851669885683805,
+          "round_medians_ms": [
+            6.438645999878645,
+            6.490937492344528,
+            6.509021011879668
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 8.62216649693437,
+          "round_medians_ms": [
+            9.181958506815135,
+            8.403583487961441,
+            8.680187514983118
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 15.770771016832441,
+          "round_medians_ms": [
+            15.79422948998399,
+            16.032270505093038,
+            15.513499994995072
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.8253544985782355,
+          "round_medians_ms": [
+            1.810708490666002,
+            1.8281665106769651,
+            1.8281459924764931
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.8324999837204814,
+          "round_medians_ms": [
+            1.837166491895914,
+            1.8323539989069104,
+            1.8317915091756731
+          ],
+          "exact_baseline_match": true
+        }
+      }
+    },
+    "final-summary.json": {
+      "07-value-costs": {
+        "distance": {
+          "median_ms": 0.35949997254647315,
+          "round_medians_ms": [
+            0.35856247995980084,
+            0.356708507752046,
+            0.3632495063357055
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 3.7862710014451295,
+          "round_medians_ms": [
+            3.784791537327692,
+            3.785395994782448,
+            3.792437491938472
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 6.436395982746035,
+          "round_medians_ms": [
+            6.417978991521522,
+            6.4321664976887405,
+            6.455354014178738
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 8.384062006371096,
+          "round_medians_ms": [
+            8.32343750516884,
+            8.330374985234812,
+            8.519979484844953
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 15.25002100970596,
+          "round_medians_ms": [
+            15.056228992762044,
+            15.090041502844542,
+            15.72685400606133
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.800375001039356,
+          "round_medians_ms": [
+            1.7971874913200736,
+            1.7943750135600567,
+            1.8075209809467196
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.8138540035579354,
+          "round_medians_ms": [
+            1.804187981178984,
+            1.8155834986828268,
+            1.8207289976999164
+          ],
+          "exact_baseline_match": true
+        }
+      },
+      "baseline": {
+        "distance": {
+          "median_ms": 0.7313120004255325,
+          "round_medians_ms": [
+            0.7212710042949766,
+            0.7314370013773441,
+            0.7354999834205955
+          ],
+          "exact_baseline_match": true
+        },
+        "shape": {
+          "median_ms": 6.29118800861761,
+          "round_medians_ms": [
+            6.287104013608769,
+            6.256082997424528,
+            6.371520517859608
+          ],
+          "exact_baseline_match": true
+        },
+        "hills_high": {
+          "median_ms": 11.085041478509083,
+          "round_medians_ms": [
+            11.149978992762044,
+            10.978708509355783,
+            11.15797899547033
+          ],
+          "exact_baseline_match": true
+        },
+        "traffic_high": {
+          "median_ms": 11.965208483161405,
+          "round_medians_ms": [
+            12.088791496353224,
+            11.695500026689842,
+            12.107562506571412
+          ],
+          "exact_baseline_match": true
+        },
+        "combined": {
+          "median_ms": 21.720500488299876,
+          "round_medians_ms": [
+            21.575250517344102,
+            21.607645991025493,
+            22.0284165116027
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_forward": {
+          "median_ms": 1.867208513431251,
+          "round_medians_ms": [
+            1.8562920158728957,
+            1.8704374670051038,
+            1.8683960079215467
+          ],
+          "exact_baseline_match": true
+        },
+        "explore_reverse": {
+          "median_ms": 1.8712710298132151,
+          "round_medians_ms": [
+            1.8644164956640452,
+            1.8780624668579549,
+            1.8709585128817707
+          ],
+          "exact_baseline_match": true
+        }
+      }
+    }
+  },
+  "snapshot_sha256": {
+    "artifacts/hot-loop-2026-11-10/baseline/chunk_search.rs": "2ba7d45ff6674d9ab173a3aee12a46f8fac01c5fc8cd9823a8e19a82f2acf38b",
+    "artifacts/hot-loop-2026-11-10/baseline/environment_cost.rs": "9047b9891ac890f271f95fd5a529f1abd2440895fe917e027d800891aa873f6b",
+    "artifacts/hot-loop-2026-11-10/baseline/native.so": "4f38fdffa048b2e6832ce0c08c23822aa1a0612d848361e7bebe02f30043001c",
+    "artifacts/hot-loop-2026-11-10/baseline/routing_cost.rs": "9dad1281ffec086ec6425848f367e5c21d54f0b2d8177d4d6290c6400c048e4a",
+    "artifacts/hot-loop-2026-11-10/01-prune/chunk_search.rs": "a699192dfac579a42b8af7ccce8a961a11a87571a46625e9e990fa845815fd73",
+    "artifacts/hot-loop-2026-11-10/01-prune/native.so": "aa88fcfb3c3ef8734e82e61b824de6434fa1f31041afa5ed596e22d4e5aca855",
+    "artifacts/hot-loop-2026-11-10/02-scalar/chunk_search.rs": "07718bb25c74b34b50a41e937052d3f9b02b7adb374f322691ed5fc523291fdc",
+    "artifacts/hot-loop-2026-11-10/02-scalar/environment_cost.rs": "cce05e2c5e73198d4cef2987c4ed69db9a49f2d981a1d3bb351e432c0ada62ae",
+    "artifacts/hot-loop-2026-11-10/02-scalar/native.so": "1bec579feb31bc5a956f13ef64cd81b88d88f995181d10712a1247c6101e9ba0",
+    "artifacts/hot-loop-2026-11-10/02-scalar/routing_cost.rs": "0cba38af26f1f0bf913e8b07422ba5197e7889dc9862a9d62d8e47c7584d87c8",
+    "artifacts/hot-loop-2026-11-10/03-geometry/native.so": "dbec0ced4005545371b7c5eed2adc01e703f8a4303c3ac5773863fafb67efacb",
+    "artifacts/hot-loop-2026-11-10/03-geometry/routing_cost.rs": "00d2d59c27948b31da2053c5935ac35ab3176459aac14bc9a8e92ee41f6504b5",
+    "artifacts/hot-loop-2026-11-10/04-environment-cache/chunk_search.rs": "0511005e6998fc03140332e360df3531de12a147834b9084b14f608173498686",
+    "artifacts/hot-loop-2026-11-10/04-environment-cache/native.so": "00dc98011a975e5ea847113da65c8d984b8375658579c15171c3d7f7a40372b7",
+    "artifacts/hot-loop-2026-11-10/04-environment-cache/routing_cost.rs": "f3b5059ca42f6ca7d63ccb855730c4e0652a077549f57a4aec6c011b3e29c1a7",
+    "artifacts/hot-loop-2026-11-10/05-borrow/chunk_search.rs": "ec324643e84054660d3e5935d6b2b2c4935314462493941311f62eb801f76c80",
+    "artifacts/hot-loop-2026-11-10/05-borrow/native.so": "40d1245bab9db0e9b79f9601827c9941366bb438c52d40fcc25c02fbce6a7359",
+    "artifacts/hot-loop-2026-11-10/05-borrow/routing_cost.rs": "d44f69f0aa13bfe07e1ff149ea76c7bcd989213c5ca472b0bf419a002b8c3d4c",
+    "artifacts/hot-loop-2026-11-10/06-compact/chunk_search.rs": "399a83bfa1aa7566e4f4b6a175b51a2d01cbb507fbab7b6d29e2eb48adc57bc2",
+    "artifacts/hot-loop-2026-11-10/06-compact/native.so": "b01c2856ed87a8cac92d6292999c6b702efa0492020aa5cd2590a03bead16ede",
+    "artifacts/hot-loop-2026-11-10/06-compact/routing_cost.rs": "d44f69f0aa13bfe07e1ff149ea76c7bcd989213c5ca472b0bf419a002b8c3d4c",
+    "artifacts/hot-loop-2026-11-10/07-value-costs/chunk_search.rs": "66d946786958366f3d9e4f60a7b1aa8fbaac2d701099388efc149a5ec07916df",
+    "artifacts/hot-loop-2026-11-10/07-value-costs/native.so": "02f7c2304229e3e496d6d322e4650f7426713f853d293b8b63292d8e77e89b3b",
+    "artifacts/hot-loop-2026-11-10/07-value-costs/routing_cost.rs": "b358d02fc7bc48c81739755b3592d87a6ddde5a8dd297633df303153c7a06fa2"
+  },
+  "installed_build_exact_baseline_match": {
+    "distance": true,
+    "shape": true,
+    "hills_high": true,
+    "traffic_high": true,
+    "combined": true,
+    "explore_forward": true,
+    "explore_reverse": true
+  },
+  "installed_native_sha256": "02f7c2304229e3e496d6d322e4650f7426713f853d293b8b63292d8e77e89b3b",
+  "benchmark_runner_sha256": "b7151c4e9df656fab8f1957b409c72092d6fb8ffc4eec1e80d3c4e5307f014f6"
+}

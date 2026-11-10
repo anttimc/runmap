@@ -89,6 +89,9 @@ gate scales with the linear gate and plots categories at two widths.
 The [environment routing profile](history/2026-11-09-environment-routing-profile.md)
 records preference-induced window expansion, graph-cache eviction, interval
 loading costs, and native search hotspots on the local Helsinki dataset.
+The [native search hot-loop comparison](history/2026-11-10-native-search-hot-loop.md)
+records incremental optimization timings, exact output comparisons, and rejected
+cache and edge-passing experiments on a fixed working area.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

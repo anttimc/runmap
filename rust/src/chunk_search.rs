@@ -3,7 +3,9 @@
 use crate::chunk_graph::{GraphIndex, SegmentRef};
 use crate::endpoint_overlay::{Edge, Overlay, node_id};
 use crate::numeric::*;
-use crate::routing_cost::{CostCache, CostSettings, evaluate_cost, total_cost, validate_settings};
+use crate::routing_cost::{
+    CostCache, CostSettings, evaluate_cost, evaluate_search_cost, validate_settings,
+};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::time::Instant;
@@ -58,6 +60,62 @@ pub struct SearchResult {
     pub environment_unknown: Vec<crate::environment_cost::FieldValues>,
 }
 
+#[derive(Clone, Copy)]
+enum EdgeRef {
+    Base { chunk: usize, arc: usize },
+    Overlay(usize),
+}
+
+struct EdgeVisit<'a> {
+    edge: &'a Edge,
+    reference: EdgeRef,
+}
+
+fn base_graph_edge(
+    graph: &GraphIndex,
+    chunk: &Chunk<'_>,
+    chunk_index: usize,
+    arc: usize,
+    segment: usize,
+) -> Edge {
+    let source = graph.chunk_nodes[chunk_index][chunk.columns[ARC_NODES].integer(arc * 2) as usize];
+    let target =
+        graph.chunk_nodes[chunk_index][chunk.columns[ARC_NODES].integer(arc * 2 + 1) as usize];
+    let length = chunk.columns[ARC_LENGTHS].float(arc);
+    Edge {
+        chunk: chunk_index,
+        arc,
+        segment,
+        source,
+        target,
+        length,
+        low: 0.0,
+        high: length,
+        backward: chunk.columns[ARC_REVERSE].bytes[arc] != 0,
+        geometry_low: None,
+        geometry_high: None,
+        geometry_endpoints: None,
+    }
+}
+
+fn resolve_edge(
+    graph: &GraphIndex,
+    chunks: &[Chunk<'_>],
+    overlay: &Overlay,
+    reference: EdgeRef,
+) -> Edge {
+    match reference {
+        EdgeRef::Base { chunk, arc } => base_graph_edge(
+            graph,
+            &chunks[chunk],
+            chunk,
+            arc,
+            chunks[chunk].columns[ARC_SEGMENTS].integer(arc) as usize,
+        ),
+        EdgeRef::Overlay(index) => overlay.edges[index],
+    }
+}
+
 pub fn check_deadline(deadline: Option<Instant>) -> Result<(), RoutingError> {
     if deadline.is_some_and(|end| Instant::now() >= end) {
         Err(RoutingError::TimedOut)
@@ -100,7 +158,7 @@ fn visit_base_graph_edges(
     overlay: &Overlay,
     node: usize,
     settings: &SearchSettings,
-    mut visit: impl FnMut(Edge) -> Result<(), RoutingError>,
+    mut visit: impl FnMut(EdgeVisit<'_>) -> Result<(), RoutingError>,
 ) -> Result<(), RoutingError> {
     if node >= graph.node_ids.len() {
         return Ok(());
@@ -130,23 +188,9 @@ fn visit_base_graph_edges(
             {
                 continue;
             }
-            let source = graph.chunk_nodes[c][chunk.columns[ARC_NODES].integer(arc * 2) as usize];
-            let target =
-                graph.chunk_nodes[c][chunk.columns[ARC_NODES].integer(arc * 2 + 1) as usize];
-            let length = chunk.columns[ARC_LENGTHS].float(arc);
-            visit(Edge {
-                chunk: c,
-                arc,
-                segment: s,
-                source,
-                target,
-                length,
-                low: 0.0,
-                high: length,
-                backward: chunk.columns[ARC_REVERSE].bytes[arc] != 0,
-                geometry_low: None,
-                geometry_high: None,
-                geometry_endpoints: None,
+            visit(EdgeVisit {
+                edge: &base_graph_edge(graph, chunk, c, arc, s),
+                reference: EdgeRef::Base { chunk: c, arc },
             })?;
         }
     }
@@ -159,7 +203,7 @@ fn visit_traversable_edges(
     overlay: &Overlay,
     node: usize,
     settings: &SearchSettings,
-    mut visit: impl FnMut(Edge) -> Result<(), RoutingError>,
+    mut visit: impl FnMut(EdgeVisit<'_>) -> Result<(), RoutingError>,
 ) -> Result<(), RoutingError> {
     visit_base_graph_edges(graph, chunks, overlay, node, settings, &mut visit)?;
     let extra = if settings.reverse {
@@ -168,26 +212,31 @@ fn visit_traversable_edges(
         overlay.outgoing.get(&node)
     };
     for index in extra.into_iter().flatten() {
-        let edge = overlay.edges[*index];
+        let edge = &overlay.edges[*index];
         let chunk = &chunks[edge.chunk];
         if chunk.columns[ARC_ALLOWED].bytes[edge.arc * chunk.counts.profiles + settings.profile]
             != 0
         {
-            visit(edge)?;
+            visit(EdgeVisit {
+                edge,
+                reference: EdgeRef::Overlay(*index),
+            })?;
         }
     }
     Ok(())
 }
 
 fn reconstruct_path(
+    graph: &GraphIndex,
+    chunks: &[Chunk<'_>],
     overlay: &Overlay,
-    predecessor_edges: &[Option<Edge>],
+    predecessor_edges: &[Option<EdgeRef>],
     reverse: bool,
 ) -> Option<Vec<Edge>> {
     let mut node = overlay.destination?;
     let mut edges = Vec::new();
     while node != overlay.start {
-        let edge = predecessor_edges[node]?;
+        let edge = resolve_edge(graph, chunks, overlay, predecessor_edges[node]?);
         edges.push(edge);
         node = if reverse { edge.target } else { edge.source };
     }
@@ -197,7 +246,7 @@ fn reconstruct_path(
 
 struct SearchState {
     best_costs: Vec<f64>,
-    predecessor_edges: Vec<Option<Edge>>,
+    predecessor_edges: Vec<Option<EdgeRef>>,
     cache: CostCache,
     open_queue: BinaryHeap<QueueEntry>,
     expanded: usize,
@@ -244,25 +293,30 @@ fn relax_edge(
     settings: &SearchSettings,
     state: &mut SearchState,
     cost_so_far: f64,
-    edge: Edge,
+    traversal: EdgeVisit<'_>,
 ) -> Result<(), RoutingError> {
+    let edge = traversal.edge;
     let next = if settings.reverse {
         edge.source
     } else {
         edge.target
     };
-    let cost = evaluate_cost(
+    // Every cost term is nonnegative, so this edge cannot improve the label.
+    if cost_so_far >= state.best_costs[next] {
+        return Ok(());
+    }
+    let cost = evaluate_search_cost(
         chunks,
-        edge,
+        *edge,
         &settings.costs,
         &mut state.cache,
         settings.deadline,
     )?;
-    let candidate = cost_so_far + total_cost(&cost);
+    let candidate = cost_so_far + cost;
     if candidate <= settings.cost_budget && candidate < state.best_costs[next] {
         state.best_costs[next] = candidate;
         if !state.predecessor_edges.is_empty() {
-            state.predecessor_edges[next] = Some(edge);
+            state.predecessor_edges[next] = Some(traversal.reference);
         }
         state.open_queue.push(QueueEntry {
             estimated_total_cost: candidate
@@ -319,7 +373,13 @@ fn build_search_result(
     mut state: SearchState,
 ) -> Result<SearchResult, RoutingError> {
     let _profile = crate::profiling::span(crate::profiling::Phase::Result);
-    let path = reconstruct_path(overlay, &state.predecessor_edges, settings.reverse);
+    let path = reconstruct_path(
+        graph,
+        chunks,
+        overlay,
+        &state.predecessor_edges,
+        settings.reverse,
+    );
     let cost = overlay.destination.and_then(|n| {
         state.best_costs[n]
             .is_finite()

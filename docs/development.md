@@ -217,6 +217,25 @@ contains build/run commands and visual-report generation. Restore the normal
 extension after profiling. This measures fixed-area routing primitives; use
 `benchmark_run_latency` for complete request handling.
 
+For an uninstrumented comparison of native builds, preserve each release library
+before rebuilding and load it in a separate process:
+
+```sh
+uv run --no-sync maturin build --release --locked --out artifacts/search-wheels
+cp rust/target/release/lib_routing_native.dylib artifacts/search-baseline.so
+uv run --no-sync python -m runmap.experiments.benchmark_search_hot_loop \
+  --native artifacts/search-baseline.so --repeats 100 \
+  --report artifacts/search-baseline.json
+```
+
+The library path above is for macOS; use the corresponding shared library on
+other platforms. The benchmark requires the local Helsinki network, numeric
+artifact, environment join, and `helsinki-capital-area-v3` raster bundle. It
+warms each workload, excludes graph preparation and result fingerprinting from
+timings, and hashes every result field. Alternate baseline and candidate
+processes over multiple rounds. See the [incremental hot-loop report](archive/history/2026-11-10-native-search-hot-loop.md)
+for measured workloads, retained changes, and rejected experiments.
+
 For sampling experiments, the optional Cargo `integration-experiment` feature
 builds a standalone Rust example that varies quadrature spacing and minimum
 sample counts without changing routing defaults or rebuilding the Python
