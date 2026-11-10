@@ -3,7 +3,7 @@
 use crate::chunk_graph::{GraphIndex, SegmentRef};
 use crate::endpoint_overlay::{Edge, Overlay, node_id};
 use crate::numeric::*;
-use crate::routing_cost::{CostCache, CostSettings, evaluate_cost, validate_settings};
+use crate::routing_cost::{CostCache, CostSettings, evaluate_cost, total_cost, validate_settings};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::time::Instant;
@@ -251,14 +251,14 @@ fn relax_edge(
     } else {
         edge.target
     };
-    let (components, _, environment, _) = evaluate_cost(
+    let cost = evaluate_cost(
         chunks,
         edge,
         &settings.costs,
         &mut state.cache,
         settings.deadline,
     )?;
-    let candidate = cost_so_far + components.iter().chain(environment.iter()).sum::<f64>();
+    let candidate = cost_so_far + total_cost(&cost);
     if candidate <= settings.cost_budget && candidate < state.best_costs[next] {
         state.best_costs[next] = candidate;
         if !state.predecessor_edges.is_empty() {
@@ -331,17 +331,17 @@ fn build_search_result(
     let mut environment_unknown = Vec::new();
     for edge in path.iter().flatten() {
         check_deadline(settings.deadline)?;
-        let (c, h, e, u) = evaluate_cost(
+        let cost = evaluate_cost(
             chunks,
             *edge,
             &settings.costs,
             &mut state.cache,
             settings.deadline,
         )?;
-        components.push(c);
-        hills.push(h);
-        environment.push(e);
-        environment_unknown.push(u);
+        components.push(cost.components);
+        hills.push(cost.hill_features);
+        environment.push(cost.environment_penalties);
+        environment_unknown.push(cost.environment_unknown_m);
     }
     let distances = if overlay.destination.is_none() {
         state

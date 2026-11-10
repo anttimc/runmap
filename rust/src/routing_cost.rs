@@ -1,4 +1,4 @@
-//! Evaluate route preference costs during native graph traversal.
+//! Compose edge costs from shape, hill, and environment terms during traversal.
 
 use crate::endpoint_overlay::{Edge, projected_length, segment_points};
 use crate::environment_cost::{self, EnvironmentIntervals};
@@ -29,6 +29,21 @@ pub struct CostSettings {
 
 pub struct CostCache {
     pub integrals: HashMap<IntegralKey, fields::Integrals>,
+}
+
+pub struct EdgeCost {
+    /// Stable output order: distance, centre, side, reuse, hills.
+    pub components: [f64; 5],
+    pub hill_features: [f64; 7],
+    pub environment_penalties: environment_cost::FieldValues,
+    pub environment_unknown_m: environment_cost::FieldValues,
+}
+
+#[derive(Default)]
+struct ShapeCosts {
+    centre: f64,
+    side: f64,
+    reuse: f64,
 }
 
 type IntegralKey = (usize, usize, u64, u64);
@@ -263,75 +278,148 @@ fn shape_integrals(
     Ok(value)
 }
 
+fn traversal_reused(chunk: &Chunk<'_>, edge: Edge, settings: &CostSettings) -> bool {
+    let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
+    settings.used_segments.contains(&segment_id)
+        || settings.used_spans.get(&segment_id).is_some_and(|spans| {
+            spans
+                .iter()
+                .any(|(low, high)| edge.low >= low - 1e-7 && edge.high <= high + 1e-7)
+        })
+}
+
+fn shape_costs(
+    chunk: &Chunk<'_>,
+    edge: Edge,
+    settings: &CostSettings,
+    cache: &mut CostCache,
+    deadline: Option<Instant>,
+) -> Result<ShapeCosts, RoutingError> {
+    let Some(shape) = settings.shape else {
+        return Ok(ShapeCosts::default());
+    };
+    let (radial, right, length) = shape_integrals(chunk, edge, shape, cache, deadline)?;
+    let penalized_side_length = if shape.penalize_right {
+        right.max(0.0)
+    } else {
+        (length - right).max(0.0)
+    };
+    Ok(ShapeCosts {
+        centre: shape.centre * radial,
+        side: shape.side * penalized_side_length,
+        reuse: if traversal_reused(chunk, edge, settings) {
+            shape.reuse * edge.length
+        } else {
+            0.0
+        },
+    })
+}
+
+fn environment_costs(
+    chunk: &Chunk<'_>,
+    edge: Edge,
+    settings: &CostSettings,
+) -> Result<(environment_cost::FieldValues, environment_cost::FieldValues), RoutingError> {
+    let Some(prepared) = &settings.environment else {
+        return Ok((
+            [0.0; environment_cost::FIELDS.len()],
+            [0.0; environment_cost::FIELDS.len()],
+        ));
+    };
+    let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
+    let intervals = prepared
+        .get(&segment_id)
+        .ok_or(RoutingError::Invalid("Missing environment segment"))?;
+    environment_cost::integrate(intervals, edge.low, edge.high, settings.environment_weights)
+}
+
+pub fn total_cost(cost: &EdgeCost) -> f64 {
+    cost.components
+        .iter()
+        .chain(&cost.environment_penalties)
+        .sum()
+}
+
+fn validate_cost(cost: &EdgeCost) -> Result<(), RoutingError> {
+    let invalid_component = cost
+        .components
+        .iter()
+        .chain(&cost.environment_penalties)
+        .any(|value| !value.is_finite() || *value < 0.0);
+    if invalid_component || !total_cost(cost).is_finite() {
+        return Err(RoutingError::Invalid(
+            "Native cost components must be finite and nonnegative",
+        ));
+    }
+    Ok(())
+}
+
 pub fn evaluate_cost(
     chunks: &[Chunk<'_>],
     edge: Edge,
     settings: &CostSettings,
     cache: &mut CostCache,
     deadline: Option<Instant>,
-) -> Result<
-    (
-        [f64; 5],
-        [f64; 7],
-        environment_cost::FieldValues,
-        environment_cost::FieldValues,
-    ),
-    RoutingError,
-> {
+) -> Result<EdgeCost, RoutingError> {
     let _profile = crate::profiling::span(crate::profiling::Phase::Cost);
     let chunk = &chunks[edge.chunk];
-    let mut costs = [edge.length, 0.0, 0.0, 0.0, 0.0];
-    if let Some(shape) = settings.shape {
-        let (radial, right, length) = shape_integrals(chunk, edge, shape, cache, deadline)?;
-        costs[1] = shape.centre * radial;
-        costs[2] = shape.side
-            * if shape.penalize_right {
-                right.max(0.0)
-            } else {
-                (length - right).max(0.0)
-            };
-        let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
-        let reused = settings.used_segments.contains(&segment_id)
-            || settings.used_spans.get(&segment_id).is_some_and(|spans| {
-                spans
-                    .iter()
-                    .any(|(lo, hi)| edge.low >= lo - 1e-7 && edge.high <= hi + 1e-7)
-            });
-        if reused {
-            costs[3] = shape.reuse * edge.length;
-        }
-    }
-    let hills = if settings.hill_weight > 0.0 {
+    let shape = shape_costs(chunk, edge, settings, cache, deadline)?;
+    let hill_features = if settings.hill_weight > 0.0 {
         hill_features(chunk, edge, settings)?
     } else {
         [0.0; 7]
     };
-    costs[4] = settings.hill_weight * hills[0];
-    let (environment, unknown) = if let Some(prepared) = &settings.environment {
-        let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
-        let intervals = prepared
-            .get(&segment_id)
-            .ok_or(RoutingError::Invalid("Missing environment segment"))?;
-        environment_cost::integrate(intervals, edge.low, edge.high, settings.environment_weights)?
-    } else {
-        (
-            [0.0; environment_cost::FIELDS.len()],
-            [0.0; environment_cost::FIELDS.len()],
-        )
+    let [hill_penalty_m, ..] = hill_features;
+    let (environment_penalties, environment_unknown_m) = environment_costs(chunk, edge, settings)?;
+    let cost = EdgeCost {
+        components: [
+            edge.length,
+            shape.centre,
+            shape.side,
+            shape.reuse,
+            settings.hill_weight * hill_penalty_m,
+        ],
+        hill_features,
+        environment_penalties,
+        environment_unknown_m,
     };
-    if costs
-        .iter()
-        .chain(environment.iter())
-        .any(|v| !v.is_finite() || *v < 0.0)
-        || !costs
-            .iter()
-            .chain(environment.iter())
-            .sum::<f64>()
-            .is_finite()
-    {
-        return Err(RoutingError::Invalid(
-            "Native cost components must be finite and nonnegative",
-        ));
+    validate_cost(&cost)?;
+    Ok(cost)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_cost() -> EdgeCost {
+        EdgeCost {
+            components: [10.0, 1.0, 2.0, 3.0, 4.0],
+            hill_features: [1000.0; 7],
+            environment_penalties: [0.1, 0.2, 0.3, 0.4],
+            environment_unknown_m: [1000.0; environment_cost::FIELDS.len()],
+        }
     }
-    Ok((costs, hills, environment, unknown))
+
+    #[test]
+    fn objective_includes_penalties_without_double_counting_diagnostics() {
+        let cost = sample_cost();
+        assert!(validate_cost(&cost).is_ok());
+        assert!((total_cost(&cost) - 21.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn rejects_invalid_components_and_overflowing_totals() {
+        for invalid in [-1.0, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let mut cost = sample_cost();
+            cost.components[0] = invalid;
+            assert!(validate_cost(&cost).is_err());
+            let mut cost = sample_cost();
+            cost.environment_penalties[environment_cost::EnvironmentField::Traffic as usize] =
+                invalid;
+            assert!(validate_cost(&cost).is_err());
+        }
+        let mut cost = sample_cost();
+        cost.components = [f64::MAX; 5];
+        assert!(validate_cost(&cost).is_err());
+    }
 }
