@@ -17,6 +17,7 @@ from tempfile import NamedTemporaryFile
 import rasterio
 from rasterio.io import DatasetReader
 
+from runmap.environment_fields import EnvironmentField, EnvironmentValues, EnvironmentSupport, EnvironmentLengths
 from runmap.paths.database import network_metadata, open_network_database
 from runmap.paths.graph import geometry_length_m
 from runmap.routing.types import Coordinate
@@ -24,8 +25,8 @@ from runmap.routing.deadlines import check_deadline
 from runmap.sources.environment import file_identity
 
 MODEL = "environment-cell-projection-v1"
-FIELDS = ("greenery", "water", "traffic", "wetland")
-SUPPORT = ("context_support", "traffic_context_support")
+FIELDS = EnvironmentValues._fields
+SUPPORT = EnvironmentSupport._fields
 SCHEMA_VERSION = 1
 
 
@@ -35,8 +36,8 @@ class EnvironmentInterval:
     graph_start_m: float
     graph_end_m: float
     projected_length_m: float
-    values: tuple[float | None, float | None, float | None, float | None]
-    support: tuple[float | None, float | None]
+    values: EnvironmentValues
+    support: EnvironmentSupport
 
 
 @dataclass(frozen=True)
@@ -122,7 +123,9 @@ def project_segment(segment_id: str, geometry: Sequence[Coordinate],
                 values = _cell_values(raster, bands, x, y, cache)
                 intervals.append(EnvironmentInterval(
                     segment_id, chainage + start * graph_step, chainage + end * graph_step,
-                    (end - start) * projected_length, values[:4], values[4:],
+                    (end - start) * projected_length,
+                    EnvironmentValues(*values[:len(FIELDS)]),
+                    EnvironmentSupport(*values[len(FIELDS):]),
                 ))
         chainage += graph_step
     if not intervals:
@@ -134,34 +137,36 @@ def project_segment(segment_id: str, geometry: Sequence[Coordinate],
 
 
 def integrate_intervals(intervals: Sequence[EnvironmentInterval], start_m: float,
-                        end_m: float) -> tuple[tuple[float | None, ...], tuple[float, ...]]:
+                        end_m: float) -> tuple[EnvironmentValues, EnvironmentLengths]:
     """Average fields over one traversal span, retaining known-length coverage."""
     if start_m < 0 or end_m <= start_m or not intervals or end_m > intervals[-1].graph_end_m + 1e-6:
         raise ValueError("Invalid environment traversal span")
-    sums = [0.0] * 4
-    lengths = [0.0] * 4
+    sums = {field: 0.0 for field in EnvironmentField}
+    lengths = {field: 0.0 for field in EnvironmentField}
     for interval in intervals:
         span = interval.graph_end_m - interval.graph_start_m
         overlap = max(0.0, min(end_m, interval.graph_end_m) - max(start_m, interval.graph_start_m))
         if overlap <= 0 or span <= 0:
             continue
         length = interval.projected_length_m * overlap / span
-        for index, value in enumerate(interval.values):
+        for field in EnvironmentField:
+            value = getattr(interval.values, field)
             if value is not None:
-                sums[index] += value * length
-                lengths[index] += length
-    return tuple(sums[i] / lengths[i] if lengths[i] else None for i in range(4)), tuple(lengths)
+                sums[field] += value * length
+                lengths[field] += length
+    return (EnvironmentValues(**{field: sums[field] / lengths[field] if lengths[field] else None
+                                 for field in EnvironmentField}), EnvironmentLengths(**lengths))
 
 
 def _schema(connection: sqlite3.Connection) -> None:
-    connection.executescript("""
+    field_columns = ", ".join(f"{field} REAL" for field in FIELDS + SUPPORT)
+    connection.executescript(f"""
         CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE intervals (
             segment_number INTEGER NOT NULL, segment_id TEXT NOT NULL, ordinal INTEGER NOT NULL,
             graph_start_m REAL NOT NULL, graph_end_m REAL NOT NULL,
             projected_length_m REAL NOT NULL,
-            greenery REAL, water REAL, traffic REAL, wetland REAL,
-            context_support REAL, traffic_context_support REAL,
+            {field_columns},
             PRIMARY KEY(segment_number, ordinal)
         ) WITHOUT ROWID;
     """)
@@ -197,7 +202,8 @@ def _write_join(destination: Path, network: Path, bundle: Path) -> None:
         with target:
             for number, segment_id, geometry, projected, length in _source_segments(source):
                 intervals = project_segment(segment_id, geometry, projected, length, raster, bands, cache)
-                target.executemany("INSERT INTO intervals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                placeholders = ", ".join("?" for _ in range(6 + len(FIELDS) + len(SUPPORT)))
+                target.executemany(f"INSERT INTO intervals VALUES ({placeholders})",
                                    ((number, segment_id, ordinal, item.graph_start_m, item.graph_end_m,
                                      item.projected_length_m, *item.values, *item.support)
                                     for ordinal, item in enumerate(intervals)))
@@ -250,11 +256,15 @@ def read_environment_segments(connection: sqlite3.Connection,
         check_deadline(deadline)
         batch = segment_numbers[offset:offset + 500]
         placeholders = ",".join("?" for _ in batch)
-        for row in connection.execute(f"""SELECT segment_number, segment_id, graph_start_m, graph_end_m,
-            projected_length_m, greenery, water, traffic, wetland, context_support,
-            traffic_context_support FROM intervals WHERE segment_number IN ({placeholders})
-            ORDER BY segment_number, ordinal""", batch):
-            result[row[0]].append(EnvironmentInterval(row[1], *row[2:5], tuple(row[5:9]), tuple(row[9:11])))
+        field_columns = ", ".join(FIELDS + SUPPORT)
+        cursor = connection.execute(f"""SELECT segment_number, segment_id, graph_start_m, graph_end_m,
+            projected_length_m, {field_columns} FROM intervals WHERE segment_number IN ({placeholders})
+            ORDER BY segment_number, ordinal""", batch)
+        for number, segment_id, start_m, end_m, projected_length_m, *measurements in cursor:
+            result[number].append(EnvironmentInterval(
+                segment_id, start_m, end_m, projected_length_m,
+                EnvironmentValues(*measurements[:len(FIELDS)]),
+                EnvironmentSupport(*measurements[len(FIELDS):])))
         check_deadline(deadline)
     if any(not value for value in result.values()):
         raise ValueError("Environment join lacks a selected segment")

@@ -277,6 +277,23 @@ Repeated traversals must count each passage when route summaries are added.
 The following cost/UI work consumes this prepared join without raster
 processing during each route request.
 
+`environment_fields.py` defines Python field names, typed measurements and
+support records, and penalty direction/support rules. The Python–Rust boundary
+accepts named interval records and weight dictionaries, and returns per-field
+cost/unknown-length buffers keyed by field name. Numeric positions are internal
+to Rust: loading resolves names once into fixed arrays and `EnvironmentField`
+variants, so integration needs no string lookups or per-traversal allocation.
+Unknown weight names and mismatched Python/native field sets are rejected.
+
+To add a field, extend the Python enum, field definition, typed measurement and
+weight records, and the Rust enum/list and exhaustive name/density rules. The
+interval loader, weight marshalling, and result decoding need no positional
+edits. A new prepared field also requires its raster band/join schema identity
+to be updated; public preference and response contracts must expose the new
+cost explicitly. Rebuild the native extension after changing this boundary;
+the public run request/response JSON and current prepared artifact format are
+unchanged by the named interface.
+
 ### Cost structure and weighting UI
 
 The pure environment cost function and both routing backends now supply four

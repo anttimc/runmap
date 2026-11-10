@@ -6,10 +6,11 @@ import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
+from runmap.environment_fields import EnvironmentField, EnvironmentLengths, FIELD_DEFINITIONS
 from runmap.paths.environment_join import EnvironmentInterval
 
 COST_MODEL = "mapped-context-environment-cost-v1"
-FIELD_NAMES = ("greenery", "water", "traffic", "wetland")
+FIELD_NAMES = tuple(field.value for field in EnvironmentField)
 
 
 @dataclass(frozen=True)
@@ -26,12 +27,12 @@ class EnvironmentCost:
     water_m: float
     traffic_m: float
     wetland_m: float
-    unknown_graph_m: tuple[float, float, float, float]
+    unknown_graph_m: EnvironmentLengths
 
 
-def _weights(weights: EnvironmentWeights) -> tuple[float, float, float, float]:
-    values = (weights.greenery, weights.water, weights.traffic, weights.wetland)
-    if any(not math.isfinite(value) or value < 0 for value in values):
+def _weights(weights: EnvironmentWeights) -> dict[EnvironmentField, float]:
+    values = {field: getattr(weights, field) for field in EnvironmentField}
+    if any(not math.isfinite(value) or value < 0 for value in values.values()):
         raise ValueError("Environment weights must be finite and nonnegative")
     return values
 
@@ -47,10 +48,11 @@ def _valid_interval(interval: EnvironmentInterval, previous: float) -> None:
             raise ValueError("Environment values and support must lie in [0, 1]")
 
 
-def _supported(interval: EnvironmentInterval, field: int) -> bool:
-    value = interval.values[field]
-    return (value is not None and interval.support[0] == 1
-            and (field != 2 or interval.support[1] == 1))
+def _supported(interval: EnvironmentInterval, field: EnvironmentField) -> bool:
+    value = getattr(interval.values, field)
+    return (value is not None and interval.support.context_support == 1
+            and (not FIELD_DEFINITIONS[field].requires_traffic_support
+                 or interval.support.traffic_context_support == 1))
 
 
 def evaluate_environment_cost(intervals: Sequence[EnvironmentInterval], start_m: float,
@@ -69,28 +71,29 @@ def evaluate_environment_cost(intervals: Sequence[EnvironmentInterval], start_m:
         previous = interval.graph_end_m
     if end_m > previous + 1e-6:
         raise ValueError("Environment traversal exceeds prepared segment length")
-    penalties: list[list[float]] = [[] for _ in FIELD_NAMES]
-    unknown: list[list[float]] = [[] for _ in FIELD_NAMES]
+    penalties: dict[EnvironmentField, list[float]] = {field: [] for field in EnvironmentField}
+    unknown: dict[EnvironmentField, list[float]] = {field: [] for field in EnvironmentField}
     for interval in intervals:
         length = max(0.0, min(end_m, interval.graph_end_m) - max(start_m, interval.graph_start_m))
         if length <= 0:
             continue
-        for field, weight in enumerate(strengths):
+        for field, weight in strengths.items():
             supported = _supported(interval, field)
             if not supported:
                 unknown[field].append(length)
             if weight == 0:
                 continue
-            value = interval.values[field]
-            unit_penalty = ((1 - value) if field < 2 else value) if supported and value is not None else 1.0
+            value = getattr(interval.values, field)
+            unit_penalty = 1.0
+            if supported and value is not None:
+                unit_penalty = 1 - value if FIELD_DEFINITIONS[field].prefer_high else value
             penalties[field].append(weight * length * unit_penalty)
-    costs = [math.fsum(values) for values in penalties]
-    if any(not math.isfinite(value) or value < 0 for value in costs):
+    costs = {field: math.fsum(values) for field, values in penalties.items()}
+    if any(not math.isfinite(value) or value < 0 for value in costs.values()):
         raise ValueError("Invalid environment cost")
-    unknown_lengths = [math.fsum(values) for values in unknown]
     return EnvironmentCost(
-        greenery_m=costs[0], water_m=costs[1], traffic_m=costs[2], wetland_m=costs[3],
-        unknown_graph_m=(unknown_lengths[0], unknown_lengths[1], unknown_lengths[2], unknown_lengths[3]),
+        **{f"{field}_m": cost for field, cost in costs.items()},
+        unknown_graph_m=EnvironmentLengths(**{field: math.fsum(values) for field, values in unknown.items()}),
     )
 
 
@@ -98,19 +101,14 @@ def sum_environment_costs(costs: Iterable[EnvironmentCost]) -> EnvironmentCost:
     """Count every route passage, including repeated or reverse traversals."""
     records = tuple(costs)
     return EnvironmentCost(
-        greenery_m=math.fsum(record.greenery_m for record in records),
-        water_m=math.fsum(record.water_m for record in records),
-        traffic_m=math.fsum(record.traffic_m for record in records),
-        wetland_m=math.fsum(record.wetland_m for record in records),
-        unknown_graph_m=(
-            math.fsum(record.unknown_graph_m[0] for record in records),
-            math.fsum(record.unknown_graph_m[1] for record in records),
-            math.fsum(record.unknown_graph_m[2] for record in records),
-            math.fsum(record.unknown_graph_m[3] for record in records),
-        ),
+        **{f"{field}_m": math.fsum(getattr(record, f"{field}_m") for record in records)
+           for field in EnvironmentField},
+        unknown_graph_m=EnvironmentLengths(**{
+            field: math.fsum(getattr(record.unknown_graph_m, field) for record in records)
+            for field in EnvironmentField}),
     )
 
 
 def total_environment_penalty(cost: EnvironmentCost) -> float:
     """Return the nonnegative increment to the existing route objective."""
-    return math.fsum((cost.greenery_m, cost.water_m, cost.traffic_m, cost.wetland_m))
+    return math.fsum(getattr(cost, f"{field}_m") for field in EnvironmentField)

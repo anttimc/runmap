@@ -54,8 +54,8 @@ pub struct SearchResult {
     pub cost: Option<f64>,
     pub components: Vec<[f64; 5]>,
     pub hills: Vec<[f64; 7]>,
-    pub environment: Vec<[f64; 4]>,
-    pub environment_unknown: Vec<[f64; 4]>,
+    pub environment: Vec<crate::environment_cost::FieldValues>,
+    pub environment_unknown: Vec<crate::environment_cost::FieldValues>,
 }
 
 pub fn check_deadline(deadline: Option<Instant>) -> Result<(), RoutingError> {

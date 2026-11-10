@@ -3,6 +3,7 @@
 import math
 from dataclasses import replace
 from collections.abc import Iterable
+from runmap.environment_fields import EnvironmentField
 
 from runmap.routing.cost_types import (
     CostBreakdown,
@@ -116,9 +117,8 @@ def path_observations(arc_ids: Iterable[str], data: RequestCostData,
                     if data.hills is not None else PreferenceObservations())
     if data.environment is not None:
         unknown = sum_environment_costs(cache.environment_costs[index] for index in indices).unknown_graph_m
-        observations = replace(observations, environment_unknown_greenery_m=unknown[0],
-                               environment_unknown_water_m=unknown[1], environment_unknown_traffic_m=unknown[2],
-                               environment_unknown_wetland_m=unknown[3])
+        observations = replace(observations, **{
+            f"environment_unknown_{field}_m": getattr(unknown, field) for field in EnvironmentField})
     return observations
 
 

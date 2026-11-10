@@ -86,6 +86,9 @@ The [first MAP mixture report](history/57-loop-length-mixture.md) compares one
 through four polynomial experts on the Leppävaara spatial holdouts.
 The [RBF gate report](history/58-rbf-loop-length-gate.md) compares two nonlinear
 gate scales with the linear gate and plots categories at two widths.
+The [environment routing profile](history/2026-11-09-environment-routing-profile.md)
+records preference-induced window expansion, graph-cache eviction, interval
+loading costs, and native search hotspots on the local Helsinki dataset.
 
 The terrain and routing mathematics were moved into maintained
 [reference pages](../README.md), rather than archived.

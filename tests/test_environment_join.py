@@ -36,7 +36,7 @@ def test_cell_join_preserves_chainage_nodata_and_partial_spans() -> None:
     assert [item.graph_start_m for item in intervals] == pytest.approx([0, 10])
     assert [item.graph_end_m for item in intervals] == pytest.approx([10, 20])
     assert [item.projected_length_m for item in intervals] == pytest.approx([9, 9])
-    assert intervals[1].values[1] is None
+    assert intervals[1].values.water is None
     assert intervals[1].support == (0, 0)
     values, known = integrate_intervals(intervals, 5, 15)
     assert values == pytest.approx((0.4, 0.5, 0.6, 0.5))

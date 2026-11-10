@@ -28,11 +28,39 @@ type PathOutput = (
     Py<PyBytes>,
     Py<PyBytes>,
     Py<PyBytes>,
-    (Py<PyBytes>, Py<PyBytes>),
+    HashMap<&'static str, (Py<PyBytes>, Py<PyBytes>)>,
     Py<PyBytes>,
     i64,
     i64,
 );
+
+/// Extract named Python records once; the search retains only dense native data.
+fn environment_interval(
+    input: &Bound<'_, PyAny>,
+) -> PyResult<environment_cost::EnvironmentInterval> {
+    let values = input.getattr("values")?;
+    let support = input.getattr("support")?;
+    let mut fields = [0.0; environment_cost::FIELDS.len()];
+    for field in environment_cost::FIELDS {
+        fields[field as usize] = values
+            .getattr(environment_cost::field_name(field))?
+            .extract::<Option<f64>>()?
+            .unwrap_or(f64::NAN);
+    }
+    Ok(environment_cost::EnvironmentInterval {
+        start_m: input.getattr("graph_start_m")?.extract()?,
+        end_m: input.getattr("graph_end_m")?.extract()?,
+        values: fields,
+        context_support: support
+            .getattr("context_support")?
+            .extract::<Option<f64>>()?
+            .unwrap_or(f64::NAN),
+        traffic_context_support: support
+            .getattr("traffic_context_support")?
+            .extract::<Option<f64>>()?
+            .unwrap_or(f64::NAN),
+    })
+}
 
 pub fn routing_error(error: RoutingError) -> PyErr {
     match error {
@@ -156,7 +184,7 @@ fn validate_environment_graph(
                 PyValueError::new_err("Environment join lacks a selected segment")
             })?;
             let length = chunk.columns[ARC_LENGTHS].float(arc);
-            if (rows.last().unwrap()[1] - length).abs() > 1e-6 {
+            if (rows.last().unwrap().end_m - length).abs() > 1e-6 {
                 return Err(PyValueError::new_err(
                     "Environment chainage does not match graph",
                 ));
@@ -258,7 +286,7 @@ impl NumericGraph {
     fn set_environment_intervals(
         &mut self,
         py: Python<'_>,
-        values: Vec<(i64, Vec<[f64; 8]>)>,
+        values: Vec<(i64, Vec<Py<PyAny>>)>,
     ) -> PyResult<()> {
         if self.environment.is_some() {
             return Err(PyValueError::new_err(
@@ -266,7 +294,17 @@ impl NumericGraph {
             ));
         }
         let count = values.len();
-        let intervals: EnvironmentIntervals = values.into_iter().collect();
+        let intervals: EnvironmentIntervals = values
+            .into_iter()
+            .map(|(segment, rows)| {
+                Ok((
+                    segment,
+                    rows.into_iter()
+                        .map(|row| environment_interval(row.bind(py)))
+                        .collect::<PyResult<Vec<_>>>()?,
+                ))
+            })
+            .collect::<PyResult<_>>()?;
         if intervals.len() != count {
             return Err(PyValueError::new_err("Duplicate environment segment"));
         }
@@ -275,6 +313,13 @@ impl NumericGraph {
         validate_environment_graph(&self.graph, &chunks, &intervals)?;
         self.environment = Some(Arc::new(intervals));
         Ok(())
+    }
+
+    fn environment_fields(&self) -> Vec<&'static str> {
+        environment_cost::FIELDS
+            .into_iter()
+            .map(environment_cost::field_name)
+            .collect()
     }
 
     #[pyo3(signature = (start_node=None, *, start_segment=None, profile=0, maximum=f64::INFINITY, reverse=false, timeout_seconds=None))]
@@ -306,7 +351,7 @@ impl NumericGraph {
                     deadline: end,
                     costs: CostSettings {
                         hill_weight: 0.0,
-                        environment_weights: [0.0; 4],
+                        environment_weights: [0.0; environment_cost::FIELDS.len()],
                         environment: None,
                         shape: None,
                         used_segments: HashSet::new(),
@@ -328,7 +373,7 @@ impl NumericGraph {
     }
 
     #[pyo3(signature = (start_node=None, destination_node=None, *, start_segment=None, destination_segment=None,
-                       start_point=None, destination_point=None, profile=0, hill_weight=0.0, environment_weights=[0.0; 4], shape=None, used_segments=Vec::new(), used_spans=Vec::new(), hill_intervals=Vec::new(), timeout_seconds=None))]
+                       start_point=None, destination_point=None, profile=0, hill_weight=0.0, environment_weights=None, shape=None, used_segments=Vec::new(), used_spans=Vec::new(), hill_intervals=Vec::new(), timeout_seconds=None))]
     #[allow(clippy::too_many_arguments)] // Core search receives structured settings.
     fn shortest_path(
         &self,
@@ -341,7 +386,7 @@ impl NumericGraph {
         destination_point: Option<(f64, f64)>,
         profile: usize,
         hill_weight: f64,
-        environment_weights: [f64; 4],
+        environment_weights: Option<HashMap<String, f64>>,
         shape: Option<ShapeArguments>,
         used_segments: Vec<i64>,
         used_spans: Vec<(i64, f64, f64)>,
@@ -349,6 +394,9 @@ impl NumericGraph {
         timeout_seconds: Option<f64>,
     ) -> PyResult<PathOutput> {
         let end = deadline(timeout_seconds)?;
+        let environment_weights =
+            environment_cost::named_weights(environment_weights.unwrap_or_default())
+                .map_err(routing_error)?;
         let start = endpoint(start_node, start_segment, start_point)?;
         let destination = endpoint(destination_node, destination_segment, destination_point)?;
         let chunks = views(py, &self.owners)?;
@@ -421,19 +469,25 @@ impl NumericGraph {
             ),
             floats(py, result.components.iter().flat_map(|c| c.iter().copied())),
             floats(py, result.hills.iter().flat_map(|h| h.iter().copied())),
-            (
-                floats(
-                    py,
-                    result.environment.iter().flat_map(|e| e.iter().copied()),
-                ),
-                floats(
-                    py,
-                    result
-                        .environment_unknown
-                        .iter()
-                        .flat_map(|u| u.iter().copied()),
-                ),
-            ),
+            environment_cost::FIELDS
+                .into_iter()
+                .map(|field| {
+                    let index = field as usize;
+                    (
+                        environment_cost::field_name(field),
+                        (
+                            floats(py, result.environment.iter().map(|values| values[index])),
+                            floats(
+                                py,
+                                result
+                                    .environment_unknown
+                                    .iter()
+                                    .map(|values| values[index]),
+                            ),
+                        ),
+                    )
+                })
+                .collect(),
             ints(py, result.frontier.into_iter()),
             start_id,
             destination_id,

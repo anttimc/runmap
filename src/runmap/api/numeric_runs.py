@@ -96,19 +96,16 @@ def _leg(path: NumericPath, segments: RouteSegments, snaps: tuple[Snap, Snap], h
                 coordinates.append(point)
         traversals.append(TraversalResponse(segment_id=segment["id"], start_m=float(a), end_m=float(b)))
     sums = path.components.sum(axis=0).tolist()
-    environment = path.environment_costs.sum(axis=0).tolist()
+    environment = {f"environment_{field}": float(values.sum()) for field, values in path.environment_costs.items()}
     assert path.cost is not None
     breakdown = CostBreakdown(distance_m=sums[0], centre=sums[1], side=sums[2], reuse=sums[3],
-                              hills=sums[4], total=path.cost, environment_greenery=environment[0],
-                              environment_water=environment[1], environment_traffic=environment[2],
-                              environment_wetland=environment[3])
+                              hills=sums[4], total=path.cost, **environment)
     observations = (hill_observations(HillFeatures(*path.hill_features.sum(axis=0).tolist()))
                     if hills else PreferenceObservations())
     if path.environment_prepared:
-        unknown = path.environment_unknown_m.sum(axis=0).tolist()
-        observations = replace(observations, environment_unknown_greenery_m=unknown[0],
-                               environment_unknown_water_m=unknown[1], environment_unknown_traffic_m=unknown[2],
-                               environment_unknown_wetland_m=unknown[3])
+        observations = replace(observations, **{
+            f"environment_unknown_{field}_m": float(values.sum())
+            for field, values in path.environment_unknown_m.items()})
     return LegResponse(coordinates=coordinates, distance_m=sums[0], cost=path.cost,
                        cost_breakdown=breakdown, observations=observations,
                        expanded_nodes=path.expanded_nodes, traversals=traversals)

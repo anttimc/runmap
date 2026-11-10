@@ -19,7 +19,7 @@ pub struct ShapeSettings {
 
 pub struct CostSettings {
     pub hill_weight: f64,
-    pub environment_weights: [f64; 4],
+    pub environment_weights: environment_cost::FieldValues,
     pub environment: Option<Arc<EnvironmentIntervals>>,
     pub shape: Option<ShapeSettings>,
     pub used_segments: HashSet<i64>,
@@ -269,7 +269,15 @@ pub fn evaluate_cost(
     settings: &CostSettings,
     cache: &mut CostCache,
     deadline: Option<Instant>,
-) -> Result<([f64; 5], [f64; 7], [f64; 4], [f64; 4]), RoutingError> {
+) -> Result<
+    (
+        [f64; 5],
+        [f64; 7],
+        environment_cost::FieldValues,
+        environment_cost::FieldValues,
+    ),
+    RoutingError,
+> {
     let _profile = crate::profiling::span(crate::profiling::Phase::Cost);
     let chunk = &chunks[edge.chunk];
     let mut costs = [edge.length, 0.0, 0.0, 0.0, 0.0];
@@ -306,7 +314,10 @@ pub fn evaluate_cost(
             .ok_or(RoutingError::Invalid("Missing environment segment"))?;
         environment_cost::integrate(intervals, edge.low, edge.high, settings.environment_weights)?
     } else {
-        ([0.0; 4], [0.0; 4])
+        (
+            [0.0; environment_cost::FIELDS.len()],
+            [0.0; environment_cost::FIELDS.len()],
+        )
     };
     if costs
         .iter()

@@ -9,6 +9,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from runmap import _routing_native
+from runmap.environment_fields import EnvironmentField, EnvironmentValues, EnvironmentSupport
 from runmap.paths.database import NetworkMetadata, network_metadata
 from runmap.paths.numeric_database import iter_numeric_payloads
 from runmap.paths.environment_join import read_environment_segments
@@ -75,8 +76,8 @@ class NumericPath:
     end_m: NDArray[np.float64]
     components: NDArray[np.float64]
     hill_features: NDArray[np.float64]
-    environment_costs: NDArray[np.float64]
-    environment_unknown_m: NDArray[np.float64]
+    environment_costs: dict[EnvironmentField, NDArray[np.float64]]
+    environment_unknown_m: dict[EnvironmentField, NDArray[np.float64]]
     frontier_node_ids: NDArray[np.int64]
     start_node_id: int
     destination_node_id: int
@@ -92,18 +93,15 @@ def _attach_environment(native: _routing_native.NumericGraph, connection: sqlite
                         deadline: float | None) -> int:
     """Retain bounded intervals from an identity-validated join connection."""
     numbers = np.frombuffer(native.selected_segment_ids(), dtype="<i8").tolist()
+    if set(native.environment_fields()) != set(EnvironmentField):
+        raise ValueError("Python and native environment fields differ; rebuild the native extension")
     segments = read_environment_segments(connection, numbers, deadline=deadline)
-    payload = [
-        (number, [(item.graph_start_m, item.graph_end_m,
-                   *(math.nan if value is None else value for value in item.values),
-                   *(math.nan if value is None else value for value in item.support))
-                  for item in intervals])
-        for number, intervals in segments.items()
-    ]
     check_deadline(deadline)
-    native.set_environment_intervals(payload)
+    native.set_environment_intervals(list(segments.items()))
     check_deadline(deadline)
-    return sum(len(intervals) for intervals in segments.values()) * 80
+    # Two chainage values, named measurements/support, and the existing 16-byte allowance.
+    interval_bytes = 8 * (2 + len(EnvironmentValues._fields) + len(EnvironmentSupport._fields)) + 16
+    return sum(len(intervals) for intervals in segments.values()) * interval_bytes
 
 
 def load_numeric_graph(connection: sqlite3.Connection, bounds: Bounds, *,
@@ -179,18 +177,20 @@ def numeric_shortest_path(graph: LoadedNumericGraph, start: NumericEndpoint, des
         start_segment=_segment_endpoint(start), destination_segment=_segment_endpoint(destination),
         start_point=start.point, destination_point=destination.point,
         profile=_profile_index(graph, profile), hill_weight=hill_weight,
-        environment_weights=(environment_weights.greenery, environment_weights.water,
-                             environment_weights.traffic, environment_weights.wetland),
+        environment_weights={field.value: getattr(environment_weights, field) for field in EnvironmentField},
         shape=_shape_arguments(shape),
         used_segments=() if shape is None else shape.used_segment_ids,
         used_spans=() if shape is None else shape.used_spans, hill_intervals=list(intervals.items()),
         timeout_seconds=_remaining(deadline))
-    cost, expanded, arcs, segments, starts, ends, components, hills, (environment, unknown), frontier, start_id, destination_id = result
+    cost, expanded, arcs, segments, starts, ends, components, hills, environment, frontier, start_id, destination_id = result
+    costs = {EnvironmentField(name): np.frombuffer(penalties, dtype="<f8")
+             for name, (penalties, _) in environment.items()}
+    unknown = {EnvironmentField(name): np.frombuffer(lengths, dtype="<f8")
+               for name, (_, lengths) in environment.items()}
     return NumericPath(cost, expanded, np.frombuffer(arcs, dtype="<i8"), np.frombuffer(segments, dtype="<i8"),
                        np.frombuffer(starts, dtype="<f8"), np.frombuffer(ends, dtype="<f8"),
                        np.frombuffer(components, dtype="<f8").reshape(-1, 5),
                        np.frombuffer(hills, dtype="<f8").reshape(-1, 7),
-                       np.frombuffer(environment, dtype="<f8").reshape(-1, 4),
-                       np.frombuffer(unknown, dtype="<f8").reshape(-1, 4),
+                       costs, unknown,
                        np.frombuffer(frontier, dtype="<i8"), start_id, destination_id,
                        graph.native.environment_prepared)

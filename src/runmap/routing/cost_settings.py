@@ -1,6 +1,7 @@
 """Validate preference capabilities and resolve independently versioned weights."""
 
 import math
+from runmap.environment_fields import EnvironmentField
 
 from runmap.routing.cost_types import (
     PreferenceCapabilities, PreferenceCapability, PreferenceLevel, PreferenceSettings,
@@ -27,7 +28,7 @@ def prepared_preference_capabilities(model: HillModel | None, valid_fraction: fl
         PreferenceCapability(("off",), None, None, "Buffered green-area context is not prepared."),
         **({f"environment_{field}": PreferenceCapability(("off", "low", "high"),
             "mapped-context-environment-cost-v1", None, None) for field in
-            ("greenery", "water", "traffic", "wetland")} if environment else {}),
+            EnvironmentField} if environment else {}),
     )
 
 
@@ -71,6 +72,6 @@ def resolve_prepared_preferences(settings: PreferenceSettings, capabilities: Pre
         _resolve_weight("greenery", settings.greenery, capabilities.greenery, tables.greenery),
         **{f"environment_{field}": _resolve_weight(f"environment_{field}",
             getattr(settings, f"environment_{field}"), getattr(capabilities, f"environment_{field}"),
-            getattr(tables, f"environment_{field}")) for field in ("greenery", "water", "traffic", "wetland")},
+            getattr(tables, f"environment_{field}")) for field in EnvironmentField},
     )
     return ResolvedPreferences(settings, weights, tables)

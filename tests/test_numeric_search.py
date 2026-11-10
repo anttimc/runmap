@@ -17,6 +17,7 @@ import numpy as np
 from rasterio.warp import transform
 
 from runmap import _routing_native
+from runmap.environment_fields import EnvironmentField, EnvironmentValues, EnvironmentSupport
 from runmap.paths.database import export_network_database, open_network_database
 from runmap.paths.environment_join import EnvironmentInterval
 from runmap.paths.exploration import Snap
@@ -76,38 +77,47 @@ class NumericSearchTests(unittest.TestCase):
                        in connection.execute("SELECT number, payload FROM segments") if number in selected}
         self.assertEqual(set(lengths), selected)
         target = self.segments["sb"]
-        intervals = [EnvironmentInterval("sb", 0, 50, 50, (1, 0, 0, 0), (1, 1)),
-                     EnvironmentInterval("sb", 50, 100, 50, (0, 0, None, 0), (1, 0))]
-        prepared = [(number, [(0, length, 1, 0, 0, 0, 1, 1)]) for number, length in lengths.items()
+        intervals = [EnvironmentInterval("sb", 0, 50, 50, EnvironmentValues(1, 0, 0, 0), EnvironmentSupport(1, 1)),
+                     EnvironmentInterval("sb", 50, 100, 50, EnvironmentValues(0, 0, None, 0), EnvironmentSupport(1, 0))]
+        prepared = [(number, [EnvironmentInterval(str(number), 0, length, length,
+                        EnvironmentValues(1, 0, 0, 0), EnvironmentSupport(1, 1))]) for number, length in lengths.items()
                     if number != target]
-        prepared.append((target, [(0, 50, 1, 0, 0, 0, 1, 1),
-                                  (50, 100, 0, 0, math.nan, 0, 1, 0)]))
+        prepared.append((target, intervals))
         with self.assertRaisesRegex(ValueError, "lacks a selected segment"):
             self.graph.native.set_environment_intervals([])
         with self.assertRaisesRegex(ValueError, "Invalid prepared environment"):
-            self.graph.native.set_environment_intervals([(target, [(0, 100, 2, 0, 0, 0, 1, 1)])])
-        shortened = prepared[:-1] + [(target, [(0, 90, 1, 0, 0, 0, 1, 1)])]
+            self.graph.native.set_environment_intervals([(target, [replace(intervals[0], values=EnvironmentValues(2, 0, 0, 0))])])
+        shortened = prepared[:-1] + [(target, [replace(intervals[0], graph_end_m=90)])]
         with self.assertRaisesRegex(ValueError, "chainage does not match"):
             self.graph.native.set_environment_intervals(shortened)
         self.graph.native.set_environment_intervals(prepared)
+        self.assertEqual(set(self.graph.native.environment_fields()), set(EnvironmentField))
         start, end = self._segment_endpoint("sb", 25), self._segment_endpoint("sb", 75)
         weights = EnvironmentWeights(greenery=0.5, traffic=0.25)
         expected = evaluate_environment_cost(intervals, 25, 75, weights)
+        named = self.graph.native.shortest_path(start_segment=(target, 25, None),
+            destination_segment=(target, 75, None),
+            environment_weights={"traffic": weights.traffic, "greenery": weights.greenery})
+        cost, _, _, _, _, _, _, _, fields, _, _, _ = named
+        self.assertAlmostEqual(cost, 50 + expected.greenery_m + expected.traffic_m)
+        for field in EnvironmentField:
+            penalties, unknown = fields[field]
+            np.testing.assert_allclose(np.frombuffer(penalties, dtype="<f8"), [getattr(expected, f"{field}_m")])
+            np.testing.assert_allclose(np.frombuffer(unknown, dtype="<f8"), [getattr(expected.unknown_graph_m, field)])
         for first, last in ((start, end), (end, start)):
             path = numeric_shortest_path(self.graph, first, last, environment_weights=weights)
             self.assertEqual(path.segment_ids.tolist(), [target])
             self.assertAlmostEqual(path.cost, 50 + expected.greenery_m + expected.traffic_m)
-            np.testing.assert_allclose(path.environment_costs[0], [expected.greenery_m, 0,
-                                                                   expected.traffic_m, 0])
-            np.testing.assert_allclose(path.environment_unknown_m[0], expected.unknown_graph_m)
+            for field in EnvironmentField:
+                self.assertAlmostEqual(path.environment_costs[field][0], getattr(expected, f"{field}_m"))
+                self.assertAlmostEqual(path.environment_unknown_m[field][0], getattr(expected.unknown_graph_m, field))
         off = numeric_shortest_path(self.graph, start, end)
         self.assertEqual(off.cost, 50)
-        np.testing.assert_array_equal(off.environment_costs, np.zeros((1, 4)))
+        for costs in off.environment_costs.values():
+            np.testing.assert_array_equal(costs, np.zeros(1))
         keys = {number: key for key, number in self.segments.items()}
         environment = {
-            keys[number]: tuple(EnvironmentInterval(keys[number], row[0], row[1], row[1] - row[0],
-                tuple(None if math.isnan(value) else value for value in row[2:6]), tuple(row[6:8]))
-                for row in rows)
+            keys[number]: tuple(replace(row, segment_id=keys[number]) for row in rows)
             for number, rows in prepared
         }
         with closing(open_network_database(self.reference)) as connection:
@@ -127,13 +137,15 @@ class NumericSearchTests(unittest.TestCase):
             self.assertEqual(reference.outcomes, native.outcomes)
             for a, b in zip(reference.candidates[0].legs, native.candidates[0].legs):
                 self.assertAlmostEqual(a.path.cost, b.cost)
-                self.assertAlmostEqual(a.costs.environment_greenery, b.environment_costs[:, 0].sum())
-                self.assertAlmostEqual(a.costs.environment_traffic, b.environment_costs[:, 2].sum())
+                self.assertAlmostEqual(a.costs.environment_greenery, b.environment_costs[EnvironmentField.GREENERY].sum())
+                self.assertAlmostEqual(a.costs.environment_traffic, b.environment_costs[EnvironmentField.TRAFFIC].sum())
                 self.assertTrue(b.environment_prepared)
                 self.assertAlmostEqual(a.observations.environment_unknown_traffic_m,
-                                       b.environment_unknown_m[:, 2].sum())
+                                       b.environment_unknown_m[EnvironmentField.TRAFFIC].sum())
 
     def test_environment_weight_requires_prepared_graph(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Unknown environment weight"):
+            self.graph.native.shortest_path(self.nodes["s"], self.nodes["b"], environment_weights={"typo": 1})
         with self.assertRaisesRegex(ValueError, "Environment weights require"):
             numeric_shortest_path(self.graph, self._endpoint("s"), self._endpoint("c"),
                                   environment_weights=EnvironmentWeights(greenery=1))
@@ -161,7 +173,7 @@ class NumericSearchTests(unittest.TestCase):
                                      self._segment_endpoint("sb", 75),
                                      environment_weights=EnvironmentWeights(greenery=0.5))
         self.assertEqual(path.cost, 75)
-        self.assertEqual(path.environment_costs[:, 0].tolist(), [25])
+        self.assertEqual(path.environment_costs[EnvironmentField.GREENERY].tolist(), [25])
         reference = plan_run(local.routing, self._snap("sb", 25, 375025), self._snap("sb", 75, 375075),
                              RunSettings(avoidance_ratio=0), mode="one_way", environment=local.environment,
                              environment_weights=EnvironmentWeights(greenery=.5))
@@ -464,8 +476,9 @@ class NumericSearchTests(unittest.TestCase):
             lengths = {number: json.loads(payload)["length_m"] for number, payload
                        in connection.execute("SELECT number, payload FROM segments")}
         loaded.native.set_environment_intervals([
-            (number, [(0, length, 0 if number == segment_ids["ab"] else 1,
-                       0, 0, 0, 1, 1)]) for number, length in lengths.items()
+            (number, [EnvironmentInterval(str(number), 0, length, length,
+                EnvironmentValues(0 if number == segment_ids["ab"] else 1, 0, 0, 0),
+                EnvironmentSupport(1, 1))]) for number, length in lengths.items()
         ])
         start, destination = NumericEndpoint(node_id=ids["a"]), NumericEndpoint(node_id=ids["b"])
         direct = numeric_plan_run(loaded, start, destination, xy[0], xy[1],
@@ -478,7 +491,7 @@ class NumericSearchTests(unittest.TestCase):
         self.assertNotIn(segment_ids["ab"], avoided.candidates[0].legs[0].segment_ids)
         environment = {
             key: (EnvironmentInterval(key, 0, lengths[number], lengths[number],
-                    (0 if key == "ab" else 1, 0, 0, 0), (1, 1)),)
+                    EnvironmentValues(0 if key == "ab" else 1, 0, 0, 0), EnvironmentSupport(1, 1)),)
             for key, number in segment_ids.items()
         }
         for mode in ("one_way", "round_trip"):

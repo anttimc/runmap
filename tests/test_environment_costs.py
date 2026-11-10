@@ -1,6 +1,7 @@
 """Check environment cost integration and unknown-context behavior."""
 
 import pytest
+from runmap.environment_fields import EnvironmentValues, EnvironmentSupport
 
 from runmap.paths.environment_join import EnvironmentInterval
 from runmap.routing.environment_costs import (
@@ -13,8 +14,8 @@ from runmap.routing.environment_costs import (
 
 def _intervals() -> tuple[EnvironmentInterval, ...]:
     return (
-        EnvironmentInterval("s", 0, 10, 9, (0.2, 0.4, 0.6, 0.1), (1, 1)),
-        EnvironmentInterval("s", 10, 20, 9, (0.8, None, 0.0, 0.7), (1, 0)),
+        EnvironmentInterval("s", 0, 10, 9, EnvironmentValues(0.2, 0.4, 0.6, 0.1), EnvironmentSupport(1, 1)),
+        EnvironmentInterval("s", 10, 20, 9, EnvironmentValues(0.8, None, 0.0, 0.7), EnvironmentSupport(1, 0)),
     )
 
 
@@ -41,9 +42,9 @@ def test_off_and_repeated_traversals() -> None:
 
 
 def test_known_zero_and_unsupported_zero_have_different_costs() -> None:
-    values = (1.0, 1.0, 0.0, 0.0)
-    known = (EnvironmentInterval("s", 0, 10, 9, values, (1, 1)),)
-    unsupported = (EnvironmentInterval("s", 0, 10, 9, values, (0, 1)),)
+    values = EnvironmentValues(1.0, 1.0, 0.0, 0.0)
+    known = (EnvironmentInterval("s", 0, 10, 9, values, EnvironmentSupport(1, 1)),)
+    unsupported = (EnvironmentInterval("s", 0, 10, 9, values, EnvironmentSupport(0, 1)),)
     weights = EnvironmentWeights(1, 1, 1, 1)
     assert total_environment_penalty(evaluate_environment_cost(known, 0, 10, weights)) == 0
     result = evaluate_environment_cost(unsupported, 0, 10, weights)
@@ -56,9 +57,9 @@ def test_rejects_invalid_weights_span_and_join_data() -> None:
         evaluate_environment_cost(_intervals(), 0, 20, EnvironmentWeights(traffic=-1))
     with pytest.raises(ValueError, match="exceeds"):
         evaluate_environment_cost(_intervals(), 0, 21, EnvironmentWeights(traffic=1))
-    gap = (_intervals()[0], EnvironmentInterval("s", 11, 20, 9, (0.5, 0.5, 0.5, 0.5), (1, 1)))
+    gap = (_intervals()[0], EnvironmentInterval("s", 11, 20, 9, EnvironmentValues(0.5, 0.5, 0.5, 0.5), EnvironmentSupport(1, 1)))
     with pytest.raises(ValueError, match="contiguous"):
         evaluate_environment_cost(gap, 0, 20, EnvironmentWeights())
-    bad_value = (EnvironmentInterval("s", 0, 10, 9, (1.2, 0.5, 0.5, 0.5), (1, 1)),)
+    bad_value = (EnvironmentInterval("s", 0, 10, 9, EnvironmentValues(1.2, 0.5, 0.5, 0.5), EnvironmentSupport(1, 1)),)
     with pytest.raises(ValueError, match=r"\[0, 1\]"):
         evaluate_environment_cost(bad_value, 0, 10, EnvironmentWeights())

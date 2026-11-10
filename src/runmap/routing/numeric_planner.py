@@ -6,6 +6,7 @@ from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
+from runmap.environment_fields import EnvironmentField
 
 from runmap.routing.cost_settings import prepared_preference_capabilities, resolve_prepared_preferences
 from runmap.routing.settings import effective_run_settings
@@ -47,9 +48,9 @@ def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaroun
     capabilities = prepared_preference_capabilities(graph.metadata.models.hill_model, graph.metadata.hill_valid_fraction, environment=graph.native.environment_prepared)
     resolved = resolve_prepared_preferences(preferences, capabilities)
     if any(getattr(preferences, f"environment_{field}") != "off"
-           for field in ("greenery", "water", "traffic", "wetland")):
+           for field in EnvironmentField):
         environment_weights = EnvironmentWeights(**{field: getattr(resolved.weights, f"environment_{field}")
-            for field in ("greenery", "water", "traffic", "wetland")})
+            for field in EnvironmentField})
     candidates: list[NumericRunCandidate] = []
     outcomes: list[Literal["complete", "unreachable", "deadline"]] = []
     frontiers: list[NDArray[np.int64]] = []

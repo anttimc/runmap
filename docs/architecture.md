@@ -135,8 +135,11 @@ endpoint overlays, and cost evaluation during search. The same native graph
 service supports planning and distance exploration.
 
 When configured, Python validates the environment join against the network and
-raster manifest, selects its intervals for the bounded graph, and attaches them
-to the native graph. Rust integrates the intervals in the arc cost callback;
+raster manifest, selects its intervals for the bounded graph, and attaches named
+measurement/support records to the native graph. `environment_fields.py` owns
+the Python field vocabulary and semantics. The PyO3 boundary resolves interval
+and weight names into dense native arrays and returns diagnostics by field name.
+Rust integrates the intervals in the arc cost callback;
 the configured join is not queried during search.
 The reference window loader can resolve the same join through network segment
 identities. Its planner integrates those intervals with the shared pure function
