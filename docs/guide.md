@@ -180,24 +180,29 @@ hill preferences, and Generate run in the panel footer.
    after moving endpoints or changing routing settings.
 4. The floating **Your run** card at the lower right shows the selected route's
    distance beside the title and direction underneath, independently of the
-   settings panel. A single row of equal-width actions offers **Fit run**,
-   **Show elevation**, and **Export GPX**. Show elevation expands the same card with the plot above
-   the distance and actions; the button becomes Hide elevation to collapse it.
+   settings panel. Compact actions offer **Fit**, **Elevation**, **GPX**, and
+   **Suunto** when configured. They share one row where space permits and wrap
+   on narrow screens. Elevation toggles the plot above the distance and actions;
+   accessible labels and tooltips describe each action. Touch controls retain
+   larger targets.
    On phones, the card sits above the settings sheet
    and replaces the map legend while visible.
-   Use Fit run to frame the route with space for the card.
+   Use Fit to frame the route with space for the card.
    Details help shows the destination distance for one-way routes;
    round-trip details include outbound/return distances, repetition, and shape
-   diagnostics. Click the route or select **Show elevation** to open its profile.
+   diagnostics. Click the route or select **Elevation** to open its profile.
    Cancel stops waiting in the browser; server work has its own deadline.
 
-Use **Export GPX** in the results card to download the displayed route as a
+Use **GPX** in the results card to download the displayed route as a
 GPX 1.1 track. The track follows the shown travel direction, including both legs
 of round trips and repeated stretches, with the shared turnaround point included
 once. One-way tracks end at the destination. The filename includes the route
-direction/type and distance. Export happens locally in the browser without an
-additional API request and includes coordinates only, without elevation,
-timestamps, or turn-by-turn instructions. If settings have changed since planning,
+direction/type and distance. Export happens in the browser after a
+route profile request to include smoothed ground elevation in metres at sampled
+track points. Points without elevation data omit elevation; bridges and tunnels
+use ground height. Timestamps and turn-by-turn instructions are not included.
+If loading elevation fails, export reports an error so you can retry.
+If settings have changed since planning,
 export still downloads the displayed route; generate again to apply new settings.
 
 One way finds one legal directed path to the destination, minimizing distance
@@ -243,7 +248,7 @@ See [evidence and attribution limits](traffic-light-avoidance.md).
 
 ### Route elevation
 
-Click the selected route, or use **Show elevation** while planning is enabled.
+Click the selected route, or use **Elevation** while planning is enabled.
 The chart shows sampled smoothed ground elevation in metres against cumulative
 route distance. Round trips include both legs and mark the turnaround. Repeated
 stretches appear each time they are travelled. Hover over the chart or focus the

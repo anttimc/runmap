@@ -188,8 +188,9 @@ The browser owns map rendering, interaction state, and requests to the API.
 A coordinator shares the start location and routing policy between path
 exploration and planning. Feature controllers own their requests and displayed
 results. Map-layer visibility is independent of planner activation.
-The browser also serializes the selected candidate's ordered geometry to GPX
-and downloads it locally; export requires no server endpoint or profile request.
+The browser requests the selected candidate's route profile and serializes its
+ordered sample coordinates and available elevations to GPX for local download.
+Profile sampling retains geometry vertices and adds terrain samples along edges.
 
 Route elevation is a separate on-demand read of ordered traversal geometry and
 manifest-pinned smoothed height COGs. It does not execute a routing search or

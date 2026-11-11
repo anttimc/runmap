@@ -10,6 +10,7 @@ import {
 import type { FeatureCollection, Feature, LineString } from "geojson";
 import { startRouteProfile } from "./route-profile";
 import { downloadRouteGpx } from "./gpx";
+import { loadExportProfile } from "./route-export";
 import { mapPadding } from "./layout";
 import { requestRun, snapEndpoint } from "./api";
 import type {
@@ -750,9 +751,25 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     const candidate = response?.candidates[selected];
     if (candidate) void profile.toggle(candidate);
   });
-  element("run-gpx").addEventListener("click", () => {
+  element("run-gpx").addEventListener("click", async () => {
     const candidate = response?.candidates[selected];
-    if (candidate) downloadRouteGpx(candidate);
+    if (!candidate) return;
+    const button = element<HTMLButtonElement>("run-gpx");
+    button.disabled = true;
+    button.textContent = "GPX…";
+    button.setAttribute("aria-label", "Preparing GPX with elevation");
+    button.setAttribute("aria-busy", "true");
+    try {
+      const elevation = await loadExportProfile(options.datasetId, candidate);
+      downloadRouteGpx(candidate, elevation);
+    } catch (error) {
+      status.textContent = `GPX export failed. ${(error as Error).message}`;
+    } finally {
+      button.disabled = !response?.candidates[selected];
+      button.textContent = "GPX";
+      button.setAttribute("aria-label", "Export GPX");
+      button.setAttribute("aria-busy", "false");
+    }
   });
   return {
     modeChanged,

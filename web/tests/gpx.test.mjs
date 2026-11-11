@@ -26,7 +26,7 @@ const roundTrip = {
 };
 
 function points(xml) {
-  return [...xml.matchAll(/<trkpt lat="([^"]+)" lon="([^"]+)" \/>/g)].map(([, lat, lon]) => [
+  return [...xml.matchAll(/<trkpt lat="([^"]+)" lon="([^"]+)"(?: \/>|>)/g)].map(([, lat, lon]) => [
     Number(lon),
     Number(lat),
   ]);
@@ -43,6 +43,31 @@ test("one-way GPX uses GPX 1.1 latitude/longitude and ends at destination", () =
   assert.equal((xml.match(/<trkseg>/g) ?? []).length, 1);
   assert.deepEqual(points(xml), outbound.coordinates);
   assert.doesNotMatch(xml, /<ele>|<time>|<rtept/);
+});
+
+test("profile samples export elevation in metres, preserve return order, and omit missing heights", () => {
+  const locations = [
+    [24.8, 60.2],
+    [24.805, 60.205],
+    [24.81, 60.21],
+    [24.8, 60.2],
+  ];
+  const heights = [-2.5, 0, null, 12.75];
+  const profile = {
+    intervals: locations.slice(1).map((location, index) => ({
+      coordinates: [locations[index], location],
+      start_elevation_m: heights[index],
+      end_elevation_m: heights[index + 1],
+    })),
+  };
+  const xml = routeGpx(roundTrip, profile);
+  assert.deepEqual(points(xml), locations);
+  assert.deepEqual(
+    [...xml.matchAll(/<ele>([^<]+)<\/ele>/g)].map((match) => Number(match[1])),
+    [-2.5, 0, 12.75],
+  );
+  assert.match(xml, /<trkpt lat="60.21" lon="24.81" \/>/);
+  assert.deepEqual(points(routeGpx(oneWay, { intervals: [] })), outbound.coordinates);
 });
 
 test("round trips keep the return leg and repeated paths, joining turnaround once", () => {
