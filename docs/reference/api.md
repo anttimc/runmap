@@ -254,3 +254,38 @@ areas beyond the prepared footprint are transparent. The `support` layer adds a
 subtle gray tint to prepared cells and amber hatching where field/road context is
 limited. Hatching uses global tile-pixel coordinates to avoid pattern seams.
 These tiles are colored displays, not numerical inputs for routing or sampling.
+
+## Local Suunto export
+
+The optional `/api/integrations/suunto` API accepts loopback access only. Browser
+origins must match the backend or a local Vite origin at port 5173. Writes require
+`X-Runmap-Action: suunto` and JSON bodies. Unconfigured operations return 503;
+untrusted origins/hosts/clients or a missing action header return 403.
+
+| Endpoint | Contract |
+| --- | --- |
+| `GET /api/integrations/suunto` | `{configured: boolean}`; configuration presence does not establish login success |
+| `POST /api/integrations/suunto/imports` | `{operation_id: UUID, name: string, gpx: string, use_in_watch: boolean = true}` |
+| `GET /api/integrations/suunto/imports/{id}` | Read durable status, or 404 if unknown |
+| `POST /api/integrations/suunto/imports/{id}/select` | Explicitly select an existing verified creation; empty JSON body |
+
+Operations return `{id, name, use_in_watch, state, error}` with `Cache-Control: no-store`.
+`use_in_watch` records the original export preference. States are `running`, `failed`,
+`post-pending`, `created-unverified`, `created`, `selection-pending`, or `selected`.
+`error` is a sanitized category or null. Receipt state takes precedence over a
+process error: a selection error may coexist with `created`.
+
+Names must contain non-whitespace text and be at most 200 characters. GPX is
+limited to 2 MiB UTF-8 and the importer's single-track running profile with
+2–10,000 points. Validation occurs before login and writes. Reusing a UUID with
+different input returns 409. Identical completed/interrupted submissions return
+the existing result and never launch another creation. Concurrent writes on the
+same operation return 409; retrieve status to recover. Different operations may
+run concurrently. Requests wait for the subprocess, with a 90-second deadline;
+timeout is recorded in `error`, while any creation receipt is retained.
+
+Only `created` and `selection-pending` permit a selection retry; `selected` is a
+no-op. Other states return 409. `post-pending` and `created-unverified` never
+permit automatic recreation or selection. Account-side selection does not confirm
+physical watch delivery. Operation metadata/GPX/results and importer receipts are
+private durable local files, independent of routing snapshots and caches.

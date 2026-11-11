@@ -225,6 +225,28 @@ type retains its result; changed routing inputs are marked out of date. Clear
 resets the run and shared start. Map layers retain their settings throughout.
 Endpoint and distance-start selection take priority over route inspection.
 
+### Send a route to Suunto
+
+When the [local Suunto integration](development.md#local-suunto-integration) is
+configured, **Suunto** opens a dialog for the displayed route. Edit the
+name, choose **Use on watch** (enabled by default), and select **Send**. It shares
+GPX export's elevation preparation and captures the selected route when the
+dialog opens. Changing planner settings does not regenerate that route.
+
+**Selected for watch sync** confirms account-side selection. Sync the Suunto app
+to transfer the route to the watch. Physical delivery is not observable in Runmap.
+The user confirmed the Runmap workflow and successful watch sync on 2026-11-11.
+The importer uses an unofficial API; its separate evidence confirms sync on a
+Suunto Vertical. Broader watch support and elevation display still need acceptance.
+
+The dialog remembers the latest operation ID locally. Reopen it and use
+**Check status** after a lost response or restart. **Retry watch selection**
+uses the existing route without creating another. If creation is unconfirmed,
+check the Suunto library before **Start new export**; creation is never retried
+automatically. Earlier receipts remain on the server even after starting a new
+export. At most 10,000 points and 2 MiB of GPX are accepted, without automatic
+geometry simplification. Turn instructions are not included.
+
 ### Traffic-light avoidance
 
 **Avoid traffic lights** offers Off, Low, and High when a matching signal sidecar

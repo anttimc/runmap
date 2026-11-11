@@ -829,22 +829,93 @@
               >
             </div>
             <div class="run-result-actions" role="group" aria-label="Route actions">
-              <button id="run-fit" type="button" disabled>Fit run</button>
+              <button
+                id="run-fit"
+                type="button"
+                aria-label="Fit run on map"
+                title="Fit run on map"
+                disabled
+              >
+                Fit
+              </button>
               <button
                 id="run-elevation"
                 type="button"
                 aria-controls="route-inspection"
                 aria-expanded="false"
+                aria-label="Show elevation"
+                title="Show elevation"
                 disabled
               >
-                Show elevation
+                Elevation
               </button>
-              <button id="run-gpx" type="button" disabled>Export GPX</button>
+              <button
+                id="run-gpx"
+                type="button"
+                aria-label="Export GPX"
+                title="Export GPX"
+                disabled
+              >
+                GPX
+              </button>
+              <button
+                id="run-suunto"
+                type="button"
+                aria-label="Send to Suunto"
+                title="Send to Suunto"
+                disabled
+                hidden
+              >
+                Suunto
+              </button>
             </div>
           </div>
         </section>
       </div>
     </main>
+    <dialog id="suunto-dialog" class="suunto-dialog" aria-labelledby="suunto-title">
+      <header>
+        <h2 id="suunto-title">Send to Suunto</h2>
+        <button
+          class="legend-more"
+          type="button"
+          popovertarget="suunto-help"
+          aria-label="About Suunto export"
+        >
+          ?
+        </button>
+        <button id="suunto-close" type="button" aria-label="Close Suunto export">Close</button>
+      </header>
+      <label for="suunto-name">Route name</label>
+      <input id="suunto-name" maxlength="200" required />
+      <label><input id="suunto-watch" type="checkbox" checked /> Use on watch</label>
+      <div
+        id="suunto-help"
+        class="info-popover"
+        popover
+        role="dialog"
+        aria-labelledby="suunto-help-title"
+      >
+        <div class="heading-row">
+          <h2 id="suunto-help-title">About Suunto export</h2>
+          <button type="button" popovertarget="suunto-help" popovertargetaction="hide">
+            Close
+          </button>
+        </div>
+        <p>
+          Uses an unofficial Suunto API through your locally configured account. The Suunto app
+          transfers selected routes to your watch during sync. Elevation represents smoothed ground
+          height; turn instructions are not included.
+        </p>
+      </div>
+      <p id="suunto-status" role="status" aria-live="polite"></p>
+      <div class="suunto-actions">
+        <button id="suunto-send" type="button">Send</button>
+        <button id="suunto-refresh" type="button" hidden>Check status</button>
+        <button id="suunto-select" type="button" hidden>Retry watch selection</button>
+        <button id="suunto-new" type="button" hidden>Start new export</button>
+      </div>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

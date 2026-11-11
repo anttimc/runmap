@@ -489,6 +489,41 @@ h1 {
   background: #e7f0eb;
   box-shadow: inset 3px 0 #087f8c;
 }
+.suunto-dialog {
+  width: min(420px, calc(100vw - 36px));
+  box-sizing: border-box;
+  border: 1px solid #d6ddd5;
+  border-radius: 16px;
+  background: #faf9f5;
+  color: inherit;
+  padding: 20px;
+}
+.suunto-dialog::backdrop {
+  background: rgb(25 38 43 / 23%);
+}
+.suunto-dialog header,
+.suunto-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.suunto-dialog h2 {
+  font-size: 1rem;
+}
+.suunto-dialog > label {
+  display: block;
+  margin: 14px 0 6px;
+}
+.suunto-dialog > input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.suunto-dialog p {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
 .settings-dialog {
   position: fixed;
   inset: 18px 18px 18px auto;
@@ -796,7 +831,7 @@ h1 {
   margin: 0;
 }
 .run-result-summary .route-key {
-  margin: 6px 0 12px;
+  margin: 6px 0 8px;
 }
 .run-result-summary .run-key {
   flex-shrink: 0;
@@ -805,16 +840,17 @@ h1 {
   margin: 0;
 }
 .run-result-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  padding-top: 12px;
+  padding-top: 8px;
   border-top: 1px solid #dce1da;
 }
 .run-result-actions button {
+  flex: 1 0 auto;
   min-width: 0;
-  min-height: 40px;
-  padding: 8px 4px;
+  min-height: 32px;
+  padding: 5px 6px;
   font-size: 0.74rem;
   white-space: nowrap;
 }
@@ -826,6 +862,11 @@ h1 {
 }
 .run-result-actions #run-gpx:hover:not(:disabled) {
   background: #dcebe2;
+}
+@media (pointer: coarse) {
+  .run-result-actions button {
+    min-height: 40px;
+  }
 }
 #route-inspection .heading-row {
   margin-bottom: 6px;

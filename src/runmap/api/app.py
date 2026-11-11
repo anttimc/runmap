@@ -41,6 +41,7 @@ from runmap.api.environment import router as environment_router
 from runmap.api.environment_rasters import router as environment_raster_router
 from runmap.api.environment_tiles import router as environment_tile_router
 from runmap.api.signals import router as signal_router
+from runmap.api.suunto import router as suunto_router
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -132,6 +133,7 @@ app.include_router(environment_router)
 app.include_router(environment_raster_router)
 app.include_router(environment_tile_router)
 app.include_router(signal_router)
+app.include_router(suunto_router)
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 
 

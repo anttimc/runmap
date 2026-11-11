@@ -11,6 +11,7 @@ import type { FeatureCollection, Feature, LineString } from "geojson";
 import { startRouteProfile } from "./route-profile";
 import { downloadRouteGpx } from "./gpx";
 import { loadExportProfile } from "./route-export";
+import { startSuuntoExport } from "./suunto";
 import { mapPadding } from "./layout";
 import { requestRun, snapEndpoint } from "./api";
 import type {
@@ -297,6 +298,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
   const centreMarker = new Marker({ element: handle, draggable: true });
   addRunLayers(map);
   const profile = startRouteProfile(map, options.datasetId);
+  startSuuntoExport(options.datasetId, () => response?.candidates[selected]);
   map.addLayer({
     id: "run-centre-circle",
     type: "line",
@@ -371,6 +373,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     element<HTMLButtonElement>("run-fit").disabled = !candidate;
     element<HTMLButtonElement>("run-elevation").disabled = !candidate;
     element<HTMLButtonElement>("run-gpx").disabled = !candidate;
+    element<HTMLButtonElement>("run-suunto").disabled = !candidate;
     element("run-results").hidden = !candidate || !active();
   }
   function pick(value?: "home" | "turnaround"): void {

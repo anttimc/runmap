@@ -1264,3 +1264,55 @@ uv run python -m runmap.paths.environment_join \
 
 Restart the API after publishing the join. Explicit
 `RUNMAP_ENVIRONMENT_JOIN_DATABASE` overrides sibling discovery.
+
+## Local Suunto integration
+
+Suunto export is optional and disabled by default. Install the separate
+`suunto-route-import` repository and its pinned dependencies using its README
+(Node.js 24+ and pnpm). Configure its private `.env` with `SUUNTO_EMAIL` and
+`SUUNTO_PASSWORD`; keep that file mode `600`. Runmap does not read these values
+into the browser or persist Suunto sessions.
+
+Start the backend with an absolute importer checkout path:
+
+```sh
+RUNMAP_SUUNTO_IMPORTER=/absolute/path/to/suunto-route-import \
+  uv run --extra web python -m uvicorn runmap.api.app:app --reload
+```
+
+`RUNMAP_SUUNTO_NODE` optionally selects a Node executable (default `node`).
+`RUNMAP_SUUNTO_STORAGE` optionally selects durable private operation storage
+(default `data/private/suunto` under the Runmap checkout). Keep storage on a local
+filesystem with POSIX file locking; the integration currently targets macOS/Linux.
+New operation directories use mode `700`, and GPX/metadata/results use `600`.
+Retain receipts for uncertain writes and protect backups: receipts contain private
+route/account data. No automatic retention cleanup is performed.
+
+Runmap invokes its own `integrations/suunto/runner.mjs`, loading the sibling's
+TypeScript modules through its installed `tsx` loader. It does not parse CLI log
+messages or modify the sibling repository. The adapter depends on that checkout's
+current internal module interfaces; rerun the integration checks after updating
+it. Node loads the sibling `.env` directly. Credentials never enter command-line
+arguments or frontend build variables.
+
+Only loopback clients/hosts are accepted. Browser origins must match the backend
+or the standard local Vite origin at port 5173. Suunto writes require the
+`X-Runmap-Action: suunto` header. Do not expose this single-account bridge through
+a public reverse proxy; hosted use requires per-user authentication and isolation.
+
+Requests wait up to 90 seconds for the importer. Durable operation IDs and receipts
+support recovery after interruption; writes are never retried automatically. The
+subprocess inherits the operation lock so an API restart does not allow selection
+while an earlier child process is still running.
+
+Offline validation:
+
+```sh
+uv run --extra web python -m unittest discover -s tests -p 'test_suunto.py' -v
+pnpm --dir web test
+pnpm --dir web build
+```
+
+These checks do not authenticate or create real routes. The user confirmed the
+live Runmap workflow and successful watch sync on 2026-11-11. Selection recovery,
+elevation display, and keyboard/touch review remain explicit acceptance checks.

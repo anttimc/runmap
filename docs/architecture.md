@@ -221,6 +221,25 @@ Configuration and operational constraints belong in [development](development.md
 Performance targets and remaining work belong in the
 [latency reference](100ms-routing-architecture.md) and [roadmap](roadmap.md).
 
+## Optional local Suunto export
+
+`web/src/route-export.ts` shares elevation preparation between GPX download and
+the Suunto dialog in `web/src/suunto.ts`. Both use the existing GPX serializer.
+`api/suunto.py` owns the optional loopback-only integration, durable operation
+records, per-operation file locks, and bounded subprocess execution.
+`integrations/suunto/runner.mjs` loads a separately installed TypeScript importer;
+that importer owns credential login, GPX validation, protobuf encoding, response
+verification, and creation/selection receipts. It uses `suunto-api-wrapper` for
+authentication and transport. The Suunto app owns physical watch sync.
+
+Operation records and receipts live outside routing datasets and survive API
+restarts. A client-generated UUID identifies one immutable export payload; repeated
+creation submissions reuse its result. Creation uncertainty requires manual
+library inspection; watch selection can be explicitly retried from a verified
+creation receipt. Credentials and raw upstream errors are never returned to the
+browser. See [setup](development.md#local-suunto-integration) and the
+[API contract](reference/api.md#local-suunto-export).
+
 ## Source map
 
 Python locations below are relative to `src/runmap/`.

@@ -186,7 +186,8 @@ export function startRouteProfile(
     element("route-profile-help").hidePopover();
     panel.querySelector(".help-trigger")!.setAttribute("aria-expanded", "false");
     panel.hidden = true;
-    element("run-elevation").textContent = "Show elevation";
+    element("run-elevation").setAttribute("aria-label", "Show elevation");
+    element("run-elevation").setAttribute("title", "Show elevation");
     element("run-elevation").setAttribute("aria-expanded", "false");
     marker.remove();
   }
@@ -199,7 +200,8 @@ export function startRouteProfile(
   async function open(candidate: Candidate): Promise<void> {
     close();
     panel.hidden = false;
-    element("run-elevation").textContent = "Hide elevation";
+    element("run-elevation").setAttribute("aria-label", "Hide elevation");
+    element("run-elevation").setAttribute("title", "Hide elevation");
     element("run-elevation").setAttribute("aria-expanded", "true");
     content.replaceChildren(paragraph("Loading route elevation…"));
     abort = new AbortController();

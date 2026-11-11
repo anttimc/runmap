@@ -129,6 +129,12 @@ for contracts. Remaining work:
 
 ## Optional / later
 
+- **Suunto follow-up acceptance:** the user confirmed the Runmap export workflow
+  and successful watch sync on 2026-11-11. Validate elevation display and review
+  keyboard/touch dialog behavior and lost-response/selection recovery with the
+  installed importer.
+  Broader watch support and authenticated per-user hosting remain later work.
+
 - **Hosting:** choose basemap/attribution, repeatable builds, bounded storage and
   misses, and deployment cache/concurrency limits. Object storage, CDN adapters,
   multiple workers, administrator acquisition jobs, and public acquisition
