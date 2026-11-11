@@ -8,6 +8,7 @@ pub mod fields;
 pub mod numeric;
 mod profiling;
 pub mod routing_cost;
+pub mod signal_cost;
 
 #[cfg(feature = "python")]
 mod native_graph;

@@ -1146,7 +1146,7 @@ h1 {
   font-size: 0.7rem;
   text-align: right;
 }
-.environment-score-legend,
+#traffic-light-status,
 #environment-layer-status {
   margin-block: 0.45rem;
   font-size: 0.72rem;

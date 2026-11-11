@@ -1,0 +1,567 @@
+{
+  "status": "139 signal markers",
+  "rendered": [
+    {
+      "id": "9299996738",
+      "kind": "uncertain"
+    },
+    {
+      "id": "1893869849",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1133392376",
+      "kind": "uncertain"
+    },
+    {
+      "id": "335654181",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "245548861",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5927481427",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5092994594",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5092994592",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5088337619",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1962413139",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1942552524",
+      "kind": "uncertain"
+    },
+    {
+      "id": "1942552523",
+      "kind": "uncertain"
+    },
+    {
+      "id": "1942552522",
+      "kind": "uncertain"
+    },
+    {
+      "id": "1657319660",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1657319657",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1657319654",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1657319649",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1657319642",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1657319640",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1537398076",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1537398065",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1537397851",
+      "kind": "uncertain"
+    },
+    {
+      "id": "1537397848",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1537397791",
+      "kind": "uncertain"
+    },
+    {
+      "id": "418338644",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "418338643",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "418338627",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "418338602",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "418338598",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "418338597",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "393452116",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "388851214",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "387797554",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "339858481",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "339858479",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "335404236",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "38460517",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "38460509",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1942050546",
+      "kind": "uncertain"
+    },
+    {
+      "id": "565484809",
+      "kind": "uncertain"
+    },
+    {
+      "id": "277954418",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "277954417",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "269650361",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "269648762",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1537397435",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "277952469",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "277952468",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "269652082",
+      "kind": "uncertain"
+    },
+    {
+      "id": "66364025",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "66363995",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "343800280",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1942050548",
+      "kind": "uncertain"
+    },
+    {
+      "id": "1930506510",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "726926395",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "726926348",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "282428395",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "282428394",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "282428389",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "282428388",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "26464952",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "343800278",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "343800219",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "7184084408",
+      "kind": "uncertain"
+    },
+    {
+      "id": "7184084407",
+      "kind": "uncertain"
+    },
+    {
+      "id": "7184084406",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5774184167",
+      "kind": "uncertain"
+    },
+    {
+      "id": "1137181633",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1137181602",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1137181575",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1137181562",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1137181545",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "525026243",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "498299156",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "393452111",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "61684599",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "38461541",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "7748153292",
+      "kind": "uncertain"
+    },
+    {
+      "id": "7748153291",
+      "kind": "uncertain"
+    },
+    {
+      "id": "7748153169",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6581850952",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5774184174",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "2626352763",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "2626352756",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "2611241423",
+      "kind": "uncertain"
+    },
+    {
+      "id": "1826908383",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1826908367",
+      "kind": "uncertain"
+    },
+    {
+      "id": "38461548",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "25220108",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5734434006",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5517310070",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5277747397",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5162702111",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5162702105",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "4268762307",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "7752678478",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "7752678471",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "7752678407",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "7752678406",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6669358641",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6669358640",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5774184063",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5774184060",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5517310078",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5517310077",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5517310074",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5517310073",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "3094275730",
+      "kind": "uncertain"
+    },
+    {
+      "id": "3094275729",
+      "kind": "uncertain"
+    },
+    {
+      "id": "525026325",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "343800235",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "288046478",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "252290261",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "252290252",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "252290229",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "38454105",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "9900647276",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "8050236096",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "8050236095",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6770068731",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6405130409",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6177990765",
+      "kind": "uncertain"
+    },
+    {
+      "id": "6013950804",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6013950791",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5929044006",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5734432988",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5734406703",
+      "kind": "uncertain"
+    },
+    {
+      "id": "5734406700",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "5279034337",
+      "kind": "uncertain"
+    },
+    {
+      "id": "4280108813",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "4280102331",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "4268749644",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1510217891",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "1510217883",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "252290220",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "25293251",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6669358645",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6669358644",
+      "kind": "pedestrian"
+    },
+    {
+      "id": "6669358638",
+      "kind": "uncertain"
+    },
+    {
+      "id": "4280111306",
+      "kind": "pedestrian"
+    }
+  ],
+  "layer": "circle",
+  "zoom": 15,
+  "hover": "Mapped pedestrian signal · OSM node 1893869849. highway=crossing; crossing=traffic_signals.",
+  "help": "Red points are mapped pedestrian signals. Amber points are other or uncertain\n                  signals, including vehicle lights and railway crossings. Turn on Environment and\n                  Traffic lights, then zoom in to see them. Select or hover over a point for its OSM\n                  node ID and source tags. Source nodes are not independent waits or live signal\n                  phases. Mapping may omit lights. This display is separate from routing avoidance.",
+  "mobileHelp": true,
+  "exceptions": []
+}

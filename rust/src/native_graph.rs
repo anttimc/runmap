@@ -9,6 +9,7 @@ use crate::numeric::{
     self, ARC_IDS, ARC_LENGTHS, ARC_NODES, ARC_SEGMENTS, Chunk, RoutingError, SEGMENT_IDS,
 };
 use crate::routing_cost::{CostSettings, ShapeSettings, parse_hill_intervals};
+use crate::signal_cost::{Arrival, GateRows, SignalData, SignalSettings, TurnRows};
 use pyo3::exceptions::{PyTimeoutError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -200,6 +201,7 @@ pub struct NumericGraph {
     graph: GraphIndex,
     distance_scale: f64,
     environment: Option<Arc<EnvironmentIntervals>>,
+    signals: Option<Arc<SignalData>>,
 }
 
 #[pymethods]
@@ -247,6 +249,7 @@ impl NumericGraph {
             graph,
             distance_scale: scale,
             environment: None,
+            signals: None,
         })
     }
 
@@ -268,6 +271,60 @@ impl NumericGraph {
     #[getter]
     fn environment_prepared(&self) -> bool {
         self.environment.is_some()
+    }
+
+    #[getter]
+    fn signals_prepared(&self) -> bool {
+        self.signals.is_some()
+    }
+
+    fn set_signals(&mut self, py: Python<'_>, gates: GateRows, turns: TurnRows) -> PyResult<()> {
+        if self.signals.is_some() {
+            return Err(PyValueError::new_err("Signals already attached"));
+        }
+        let chunks = views(py, &self.owners)?;
+        let mut lengths = HashMap::new();
+        for (chunk, selected) in chunks.iter().zip(&self.graph.selected) {
+            for arc in 0..chunk.counts.arcs {
+                let segment = chunk.columns[ARC_SEGMENTS].integer(arc) as usize;
+                if selected[segment] {
+                    lengths.insert(
+                        chunk.columns[SEGMENT_IDS].integer(segment),
+                        chunk.columns[ARC_LENGTHS].float(arc),
+                    );
+                }
+            }
+        }
+        let mut data = SignalData::default();
+        for (segment, offset, unresolved, directions) in gates {
+            if !(1..=3).contains(&directions)
+                || !offset.is_finite()
+                || offset <= 0.0
+                || lengths.get(&segment).is_none_or(|length| offset >= *length)
+            {
+                return Err(PyValueError::new_err("Invalid signal charging boundary"));
+            }
+            let rows = data.gates.entry(segment).or_default();
+            if rows.iter().any(|(existing, _, _)| *existing == offset) {
+                return Err(PyValueError::new_err("Duplicate signal boundary"));
+            }
+            rows.push((offset, unresolved, directions));
+        }
+        for (node, incoming, outgoing, unresolved) in turns {
+            if incoming == outgoing
+                || !lengths.contains_key(&outgoing)
+                || data
+                    .turns
+                    .insert((node, incoming, outgoing), unresolved)
+                    .is_some()
+            {
+                return Err(PyValueError::new_err(
+                    "Invalid or duplicate signal movement",
+                ));
+            }
+        }
+        self.signals = Some(Arc::new(data));
+        Ok(())
     }
 
     fn selected_segment_ids(&self, py: Python<'_>) -> Py<PyBytes> {
@@ -344,6 +401,7 @@ impl NumericGraph {
                     endpoint_overlay::prepare_overlay(&self.graph, &chunks, start, None, profile)?;
                 let start_id = node_id(&self.graph, overlay.start);
                 let settings = SearchSettings {
+                    signals: None,
                     profile,
                     cost_budget: maximum,
                     reverse,
@@ -373,7 +431,7 @@ impl NumericGraph {
     }
 
     #[pyo3(signature = (start_node=None, destination_node=None, *, start_segment=None, destination_segment=None,
-                       start_point=None, destination_point=None, profile=0, hill_weight=0.0, environment_weights=None, shape=None, used_segments=Vec::new(), used_spans=Vec::new(), hill_intervals=Vec::new(), timeout_seconds=None))]
+                       start_point=None, destination_point=None, profile=0, hill_weight=0.0, environment_weights=None, shape=None, used_segments=Vec::new(), used_spans=Vec::new(), hill_intervals=Vec::new(), signal_weight=0.0, signal_arrival=None, timeout_seconds=None))]
     #[allow(clippy::too_many_arguments)] // Core search receives structured settings.
     fn shortest_path(
         &self,
@@ -391,9 +449,42 @@ impl NumericGraph {
         used_segments: Vec<i64>,
         used_spans: Vec<(i64, f64, f64)>,
         hill_intervals: Vec<(i64, Py<PyBytes>)>,
+        signal_weight: f64,
+        signal_arrival: Option<(i64, f64, f64)>,
         timeout_seconds: Option<f64>,
     ) -> PyResult<PathOutput> {
         let end = deadline(timeout_seconds)?;
+        if !signal_weight.is_finite() || signal_weight < 0.0 {
+            return Err(PyValueError::new_err("Invalid signal weight"));
+        }
+        let signals = if signal_weight > 0.0 {
+            let data = self
+                .signals
+                .clone()
+                .ok_or_else(|| PyValueError::new_err("Signal passages are unavailable"))?;
+            let arrival = signal_arrival.map(|(segment, start, end)| Arrival {
+                segment,
+                start,
+                end,
+            });
+            if arrival.is_some_and(|a| {
+                a.segment < 0
+                    || !a.start.is_finite()
+                    || !a.end.is_finite()
+                    || a.start < 0.0
+                    || a.end < 0.0
+                    || a.start == a.end
+            }) {
+                return Err(PyValueError::new_err("Invalid signal arrival"));
+            }
+            Some(SignalSettings {
+                data,
+                weight: signal_weight,
+                arrival,
+            })
+        } else {
+            None
+        };
         let environment_weights =
             environment_cost::named_weights(environment_weights.unwrap_or_default())
                 .map_err(routing_error)?;
@@ -414,6 +505,7 @@ impl NumericGraph {
                 let start_id = node_id(&self.graph, overlay.start);
                 let destination_id = node_id(&self.graph, overlay.destination.unwrap());
                 let settings = SearchSettings {
+                    signals,
                     profile,
                     cost_budget: f64::INFINITY,
                     reverse: false,
@@ -467,7 +559,14 @@ impl NumericGraph {
                     .iter()
                     .map(|e| if e.backward { e.low } else { e.high }),
             ),
-            floats(py, result.components.iter().flat_map(|c| c.iter().copied())),
+            floats(
+                py,
+                result
+                    .components
+                    .iter()
+                    .zip(&result.signals)
+                    .flat_map(|(c, s)| c.iter().copied().chain(s.iter().map(|n| *n as f64))),
+            ),
             floats(py, result.hills.iter().flat_map(|h| h.iter().copied())),
             environment_cost::FIELDS
                 .into_iter()

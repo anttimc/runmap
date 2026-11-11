@@ -175,6 +175,10 @@ def _paths_command_parser() -> argparse.ArgumentParser:
     numeric = subparsers.add_parser("export-numeric", help="Export binary routing chunks from a prepared SQLite dataset")
     numeric.add_argument("database", type=Path)
     numeric.add_argument("output", type=Path)
+    signals = subparsers.add_parser("export-signals", help="Prepare traffic-light passages from the network's original OSM source")
+    signals.add_argument("database", type=Path)
+    signals.add_argument("source", type=Path)
+    signals.add_argument("output", type=Path)
     return parser
 
 
@@ -345,6 +349,12 @@ def _report_paths(experiment_id: str, graph: GraphDocument, outputs: Mapping[str
 def paths_command(argv: Sequence[str]) -> None:
     parser = _paths_command_parser()
     args = parser.parse_args(argv)
+    if args.command == "export-signals":
+        from runmap.paths.signals import export_signals
+
+        export_signals(args.database, args.source, args.output)
+        print(f"Signal passages: {args.output}")
+        return
     if args.command == "export-sqlite":
         _export_sqlite_command(args.graph, args.output, parser)
         return

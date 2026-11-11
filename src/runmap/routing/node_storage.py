@@ -11,7 +11,7 @@ from runmap.routing.types import Node
 
 Record = TypeVar("Record", covariant=True)
 NODE_FIELDS = frozenset(("id", "longitude", "latitude", "barrier", "access", "foot",
-                         "entrance", "crossing", "highway"))
+                         "entrance", "crossing", "highway", "tags"))
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +20,7 @@ class NodeColumns:
     coordinates: memoryview
     integers: memoryview
     metadata: StringRows
+    tags: StringRows | None
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -77,6 +78,9 @@ def external_node(data: NodeColumns, number: int) -> Node:
                     "longitude": int(longitude) if flags & 1 else longitude,
                     "latitude": int(latitude) if flags & 2 else latitude}
     record.update(cast(Node, string_row(data.metadata, number)))
+    if flags & 4:
+        assert data.tags is not None
+        record["tags"] = string_row(data.tags, number)
     return record
 
 
@@ -88,8 +92,11 @@ def pack_nodes(nodes: Mapping[str, Node], ids: tuple[str, ...]) -> NodeColumns:
         if node.keys() - NODE_FIELDS:
             raise ValueError("Unsupported node metadata fields")
         coordinates.extend((node["longitude"], node["latitude"]))
-        integers.append((type(node["longitude"]) is int) | ((type(node["latitude"]) is int) << 1))
+        integers.append((type(node["longitude"]) is int) | ((type(node["latitude"]) is int) << 1)
+                        | (("tags" in node) << 2))
     metadata = pack_string_rows(
-        {key: value for key, value in node.items() if key not in {"id", "longitude", "latitude"}}
+        {key: value for key, value in node.items() if key not in {"id", "longitude", "latitude", "tags"}}
         for node in nodes.values())
-    return NodeColumns(ids, memoryview(coordinates.tobytes()).cast("d"), memoryview(bytes(integers)), metadata)
+    return NodeColumns(ids, memoryview(coordinates.tobytes()).cast("d"), memoryview(bytes(integers)), metadata,
+                       (pack_string_rows(node.get("tags", {}) for node in nodes.values())
+                        if any("tags" in node for node in nodes.values()) else None))

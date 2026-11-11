@@ -208,12 +208,13 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
       pick(ready ? "turnaround" : undefined);
     },
   });
-  const environmentFields = ["greenery", "water", "traffic", "wetland"] as const;
+  const environmentFields = ["signals", "greenery", "water", "traffic", "wetland"] as const;
   const environmentControls = environmentFields.map((field) => {
-    const key = `environment_${field}` as const;
+    const key = field === "signals" ? "signals" : (`environment_${field}` as const);
     const capability = options.runPlanner?.preference_capabilities[key];
     const label = document.createElement("label");
     label.textContent = {
+      signals: "Avoid traffic lights",
       greenery: "Prefer greenery",
       water: "Prefer water",
       traffic: "Avoid traffic",
@@ -241,8 +242,22 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     update();
     const row = document.createElement("div");
     row.className = "environment-preference";
-    row.title = capability?.unavailable_reason ?? "Off / Low / High mapped surroundings preference";
-    row.append(label, slider, output);
+    if (field === "signals") {
+      const help = element("run-signal-help");
+      help.hidden = false;
+      const availability = element("run-signal-availability");
+      availability.textContent = capability?.unavailable_reason ?? "";
+      availability.hidden = !capability?.unavailable_reason;
+      const caption = document.createElement("span");
+      caption.className = "control-label";
+      caption.append(label, help);
+      row.append(caption, slider, output);
+      slider.setAttribute("aria-describedby", "run-signal-help-content");
+    } else {
+      row.title =
+        capability?.unavailable_reason ?? "Off / Low / High mapped surroundings preference";
+      row.append(label, slider, output);
+    }
     element("run-preferences").append(row);
     slider.addEventListener("input", () => {
       update();

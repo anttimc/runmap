@@ -16,6 +16,7 @@ from runmap.routing.environment_costs import EnvironmentCost, EnvironmentWeights
 from runmap.routing.hill_types import HillData, HillFeatures
 from runmap.routing.integer_graph import IntegerGraph
 from runmap.routing.types import Point
+from runmap.routing.signals import SignalData
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,7 @@ class RequestCostData:
     hills: HillData | None = None
     environment: Mapping[int, tuple[EnvironmentInterval, ...]] | None = None
     environment_weights: EnvironmentWeights = EnvironmentWeights()
+    signals: SignalData | None = None
 
 
 @dataclass

@@ -209,7 +209,7 @@ using opposite side preferences around the midpoint; Orientation chooses the
 candidate displayed. Centre, side, and reuse preferences are soft: crossing the
 centre, retracing, and equivalent candidates remain possible. Increasing width
 does not guarantee a longer run or enclosure of the midpoint. Zero width still
-plans a round trip, disabling shape penalties while keeping hill avoidance active;
+plans a round trip, disabling shape penalties while keeping supported avoidance preferences active;
 both Orientation choices show the single candidate.
 The Distance from start budget does not constrain either planner type.
 
@@ -219,6 +219,27 @@ markers while keeping the last generated route visible. Returning to the same
 type retains its result; changed routing inputs are marked out of date. Clear
 resets the run and shared start. Map layers retain their settings throughout.
 Endpoint and distance-start selection take priority over route inspection.
+
+### Traffic-light avoidance
+
+**Avoid traffic lights** offers Off, Low, and High when a matching signal sidecar
+is prepared. Low adds 60 equivalent metres per recognized crossing passage;
+High adds 180. These initial weights allow a finite detour and still return a
+route when lights are unavoidable. Other routing preferences also affect that
+tradeoff. The preference stays active at zero loop width and in one-way mode.
+
+Route details distinguish mapped passages from uncertain candidate passages.
+Both receive the selected penalty. Repeated crossings count again; merely
+touching a charging boundary or turning back on it does not count. Missing mapping
+can hide lights, and mapped stages do not establish actual waiting times.
+The environment **Avoid traffic** preference remains independent.
+To inspect the source data, open the main map's **Environment** section and enable
+**Traffic lights** with the Environment switch On. At street zoom levels, red
+points show mapped pedestrian signals and amber points show other or uncertain
+signals. Select or hover for a source-info popup; the question-mark popup explains
+the legend and limitations. This layer works independently of
+the route preference and raster environment layers; points do not count waits.
+See [evidence and attribution limits](traffic-light-avoidance.md).
 
 ### Route elevation
 
@@ -249,7 +270,9 @@ It penalizes terrain-derived excess effort, with an additional preference for
 gentler climbs. Flat ground and moderate descents add no hill penalty. Missing,
 bridge, and tunnel measurements use a conservative fallback reported separately.
 The weights and formula are in the [routing reference](reference/routing-mathematics.md).
-Traffic-light, busy-road, and greenery preferences are not implemented.
+Traffic-light avoidance is described above. Separate legacy busy-road and
+greenery controls remain unavailable; use the delivered environment preferences
+for mapped surroundings.
 
 The summary shows actual route distance; round-trip details include repeated distance.
 Hill-enabled results include estimated ascent/descent and terrain coverage;

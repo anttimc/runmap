@@ -22,11 +22,11 @@ from runmap.routing.geometry import (
 )
 from runmap.routing.graph import GraphData, arc_usable
 from runmap.routing.hill_types import HillData
-from runmap.routing.integer_graph import extend_integer_graph, integer_arc, integer_segment_id
+from runmap.routing.integer_graph import IntegerArc, extend_integer_graph, integer_arc, integer_segment_id
 from runmap.routing.run_types import RunMode, RunSettings
 from runmap.routing.settings import effective_run_settings
 from runmap.routing.types import Arc, Node, Segment
-from runmap.routing_reference.cost_preparation import build_request_cost_data, resolve_traversal
+from runmap.routing_reference.cost_preparation import build_request_cost_data, resolve_traversal, resolve_indexed_traversal
 from runmap.routing_reference.cost_types import (
     LegCostContext,
     PhysicalPart,
@@ -36,6 +36,8 @@ from runmap.routing_reference.cost_types import (
 from runmap.routing_reference.costs import indexed_arc_cost, path_cost_breakdown, path_observations
 from runmap.routing_reference.run_types import RunCandidate, RunLeg, RunOverlay, RunResult
 from runmap.routing_reference.search import PathResult, shortest_path
+from runmap.routing_reference.signal_search import signal_shortest_path
+from runmap.routing.signals import SignalData, SignalTraversal, signal_counts
 
 
 def endpoint_overlay(index: GraphData, home: Snap, turnaround: Snap,
@@ -145,11 +147,38 @@ def indexed_distance_heuristic(graph: GraphData, deadline: float | None) -> Call
     return estimate
 
 
+def _signal_traversal(data: RequestCostData, arc: IntegerArc) -> SignalTraversal:
+    traversal = resolve_indexed_traversal(data, arc)
+    start, end = traversal.graph_start_m, traversal.graph_end_m
+    return SignalTraversal(traversal.segment, end if arc.reverse else start,
+                           start if arc.reverse else end, arc.source)
+
+
+def _signal_counts(data: RequestCostData, previous: IntegerArc | None, current: IntegerArc) -> tuple[int, int]:
+    if data.signals is None:
+        return 0, 0
+    return signal_counts(data.signals, _signal_traversal(data, previous) if previous else None,
+                         _signal_traversal(data, current))
+
+
 def _run_leg(path: PathResult, data: RequestCostData, cache: RequestCostCache,
-             context: LegCostContext) -> RunLeg:
-    return RunLeg(path, path_cost_breakdown(path.arc_ids, data, cache, context),
+             context: LegCostContext, initial_arc: str | None = None) -> RunLeg:
+    breakdown = path_cost_breakdown(path.arc_ids, data, cache, context)
+    observations = path_observations(path.arc_ids, data, cache)
+    if data.preferences.weights.signals:
+        resolved, unresolved = 0, 0
+        previous = integer_arc(data.index, data.index.arc_indices[initial_arc]) if initial_arc else None
+        for key in path.arc_ids:
+            current = integer_arc(data.index, data.index.arc_indices[key])
+            a, b = _signal_counts(data, previous, current)
+            resolved, unresolved = resolved + a, unresolved + b
+            previous = current
+        penalty = data.preferences.weights.signals * (resolved + unresolved)
+        breakdown = replace(breakdown, signals=penalty, total=breakdown.total + penalty)
+        observations = replace(observations, signal_passages=resolved, unresolved_signal_passages=unresolved)
+    return RunLeg(path, breakdown,
                   tuple(resolve_traversal(data, data.graph.arcs[a]) for a in path.arc_ids),
-                  path_observations(path.arc_ids, data, cache))
+                  observations)
 
 
 def _run_candidate(legs: tuple[RunLeg, ...], graph: GraphData, left: bool | None) -> RunCandidate:
@@ -165,11 +194,12 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
              hills: HillData | None = None,
              frontier_nodes: frozenset[int] = frozenset(),
              environment: Mapping[str, tuple[EnvironmentInterval, ...]] | None = None,
-             environment_weights: EnvironmentWeights = EnvironmentWeights()) -> RunResult:
+             environment_weights: EnvironmentWeights = EnvironmentWeights(),
+             signals: SignalData | None = None) -> RunResult:
     """Plan directed routes, retaining completed candidates on deadline expiry."""
     started = monotonic()
     settings = effective_run_settings(settings, mode)
-    resolved = resolve_preferences(preferences, hills=hills)
+    resolved = resolve_preferences(preferences, hills=hills, signals=signals is not None)
     if resolved.weights.hills and hills is not None and hills.graph is not index.document:
         raise ValueError("Hill features belong to a different prepared graph")
     overlay = endpoint_overlay(index, home, turnaround, deadline)
@@ -178,6 +208,7 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
     data = build_request_cost_data(graph, home, turnaround, settings,
                                    parts=overlay.parts, preferences=preferences, hills=hills,
                                    environment=environment, environment_weights=environment_weights,
+                                   signals=signals,
                                    deadline=deadline)
     environment_active = any((environment_weights.greenery, environment_weights.water,
                               environment_weights.traffic, environment_weights.wetland))
@@ -189,7 +220,13 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
         if node in frontier_nodes:
             reached_frontier.add(node)
 
-    def search_leg(start: str, end: str, context: LegCostContext) -> PathResult | None:
+    def search_leg(start: str, end: str, context: LegCostContext, initial_arc: str | None = None) -> PathResult | None:
+        if resolved.weights.signals:
+            return signal_shortest_path(graph, start, end,
+                arc_cost=partial(indexed_arc_cost, data=data, cache=cache, leg=context, deadline=deadline),
+                transition_cost=lambda previous, current: sum(_signal_counts(data, previous, current)) * resolved.weights.signals,
+                heuristic=heuristic, initial_arc=initial_arc,
+                visit_node=observe if frontier_nodes else None, deadline=deadline)
         return shortest_path(graph, start, end,
             indexed_arc_cost=partial(indexed_arc_cost, data=data, cache=cache, leg=context, deadline=deadline),
             indexed_heuristic=heuristic, deadline=deadline, visit_node=observe if frontier_nodes else None)
@@ -207,13 +244,15 @@ def plan_run(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettin
                 used = frozenset(integer_arc(data.index, data.index.arc_indices[a]).segment for a in outbound.arc_ids)
                 return_context = LegCostContext(not left, used)
                 returning = (reverse_path(graph, outbound)
-                             if data.shape_disabled and data.hills is None and not environment_active else None)
+                             if data.shape_disabled and data.hills is None and not environment_active
+                             and not resolved.weights.signals else None)
+                arrival = outbound.arc_ids[-1] if outbound.arc_ids else None
                 if returning is None:
-                    returning = search_leg(overlay.destination, overlay.start, return_context)
+                    returning = search_leg(overlay.destination, overlay.start, return_context, arrival)
                 if returning is None:
                     outcomes.append("unreachable")
                     continue
-                legs += (_run_leg(returning, data, cache, return_context),)
+                legs += (_run_leg(returning, data, cache, return_context, arrival),)
             candidates.append(_run_candidate(legs, graph, left if mode == "round_trip" else None))
             outcomes.append("complete")
         except TimeoutError:

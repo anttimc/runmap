@@ -33,6 +33,13 @@ weaker within-polygon park/reserve greenery and inclusion of all water polygons.
 The [2026-11-02 native routing profile](history/2026-11-02-native-routing-profile.md)
 separates Rust phase timings and allocation traffic, with reproduction commands
 and links to generated visual reports in `artifacts/`.
+The [traffic-light smoke check](history/2026-11-10-traffic-light-avoidance.md)
+records source identities, prepared passage counts, and the short crossing/detour
+tradeoff; it does not establish regional calibration or performance acceptance.
+The [November 11 route regression](history/2026-11-11-signal-route-regression.md)
+records the false-zero Leppävaara–Pajamäki result, spur and mixed-connection
+corrections, and spatial source inspection. It supersedes the initial v1
+attribution behavior without rewriting the earlier smoke evidence.
 
 The [2026-11-02 integration comparison](history/2026-11-02-integration-comparison.md)
 compares spacing caps and minimum sample counts against a fine reference on real

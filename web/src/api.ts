@@ -35,6 +35,7 @@ interface RunRequest extends PathPolicy {
   settings: { avoidance_ratio: number; centre_enabled: boolean };
   preferences: {
     hills: PreferenceLevel;
+    signals?: PreferenceLevel;
     environment_greenery?: PreferenceLevel;
     environment_water?: PreferenceLevel;
     environment_traffic?: PreferenceLevel;

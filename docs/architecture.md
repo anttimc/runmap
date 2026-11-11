@@ -15,6 +15,9 @@ flowchart LR
     Prepare --> Network["Prepared network.sqlite"]
     Network -->|offline export| Numeric["Numeric routing artifact"]
     Network -->|physical segment projection| EnvJoin["Environment join SQLite"]
+    Network --> SignalJoin["Signal passage SQLite"]
+    OSM -->|exact matching source| SignalJoin
+    SignalJoin --> API
     EnvRaster["Regional analytical raster"] --> EnvJoin
     Terrain --> API["Python / FastAPI"]
     Network --> API
@@ -54,6 +57,22 @@ semantics when a request loads only part of the network.
 <a id="sqlite-storage-foundation"></a>
 
 ## Prepared storage
+
+`paths/signal_preparation.py` attributes full-dataset OSM crossing evidence to
+canonical charging gates and directed junction movements. `paths/signals.py`
+publishes an identity-bound `signals.sqlite` sidecar. Runtime loads only rows for
+selected segments, keeping original stage attribution through cropped windows.
+Native graphs retain compact signal maps alongside their environment data.
+Signals On uses movement-state search; Signals Off retains the optimized
+node-label search. Python reference planning implements the same passage contract
+with independent arc-state labels. See [traffic-light avoidance](traffic-light-avoidance.md).
+
+`api/signals.py` serves viewport-bounded source-signal points from the sidecar's
+spatial index, independently of raster availability and route attribution.
+`web/src/traffic-lights.ts` owns the Environment-section point control, source-tag
+inspection, and cancellation/stale-response handling. Raw OSM is not loaded during
+interactive requests, and vehicle signal evidence remains visually distinct from
+explicit pedestrian evidence.
 
 Regional environment preparation is independent of terrain and network topology.
 `environment/regional.py` normalizes retained OSM objects, selects full geometries

@@ -12,6 +12,7 @@ from runmap.paths.exploration import Snap
 from runmap.paths.numeric_database import open_numeric_database
 from runmap.paths.numeric_hills import read_hill_intervals
 from runmap.paths.environment_join import open_environment_join
+from runmap.paths.signals import open_signals
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points
 from runmap.routing.numeric_search import LoadedNumericGraph, NumericEndpoint, load_numeric_graph
@@ -20,7 +21,8 @@ from runmap.routing.types import Bounds
 
 class NumericRoutingData:
     def __init__(self, path: Path, metadata: NetworkMetadata, cache_bytes: int = 128 * 1024**2, *,
-                 environment_path: Path | None = None, raster_bundle: Path | None = None) -> None:
+                 environment_path: Path | None = None, raster_bundle: Path | None = None,
+                 signal_path: Path | None = None) -> None:
         if cache_bytes < 0:
             raise ValueError("Numeric routing cache bytes must be nonnegative")
         self.connection = open_numeric_database(path, check_same_thread=False)
@@ -31,7 +33,11 @@ class NumericRoutingData:
             self.connection.close()
             raise
         self.environment_connection: sqlite3.Connection | None = None
+        self.signal_connection: sqlite3.Connection | None = None
         try:
+            signal_path = signal_path or path.with_name("signals.sqlite")
+            if signal_path.is_file():
+                self.signal_connection = open_signals(signal_path, metadata, check_same_thread=False)
             if environment_path is not None:
                 if raster_bundle is None:
                     raise ValueError("Environment routing requires a raster bundle")
@@ -42,6 +48,10 @@ class NumericRoutingData:
                     raster_dataset_id=manifest["dataset_id"],
                     raster_sha256=manifest["artifacts"][0]["sha256"])
         except BaseException:
+            if self.signal_connection is not None:
+                self.signal_connection.close()
+            if self.environment_connection is not None:
+                self.environment_connection.close()
             self.connection.close()
             raise
         self.lock = Lock()
@@ -73,14 +83,15 @@ class NumericRoutingData:
             self.connection.set_progress_handler(lambda: int(monotonic() >= deadline), 1000)
             try:
                 graph = load_numeric_graph(self.connection, bounds, deadline=deadline,
-                                           environment_connection=self.environment_connection)
+                                           environment_connection=self.environment_connection,
+                                           signal_connection=self.signal_connection)
             except sqlite3.OperationalError:
                 check_deadline(deadline)
                 raise
             finally:
                 self.connection.set_progress_handler(None, 0)
             # Include an allowance for native CSR/index storage, beyond retained buffers.
-            size = (graph.buffer_bytes + graph.environment_bytes + graph.native.node_count * 256
+            size = (graph.buffer_bytes + graph.environment_bytes + graph.signal_bytes + graph.native.node_count * 256
                     + graph.native.segment_count * 256)
             while self.graphs and self.resident_bytes + size > self.cache_bytes:
                 _, (_, removed) = self.graphs.popitem(last=False)
@@ -108,3 +119,5 @@ class NumericRoutingData:
             self.connection.close()
             if self.environment_connection is not None:
                 self.environment_connection.close()
+            if self.signal_connection is not None:
+                self.signal_connection.close()

@@ -26,6 +26,7 @@ from runmap.routing_reference.run_types import RunResult
 from runmap.routing.graph import GraphData
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.hill_types import HillData
+from runmap.routing.signals import SignalData
 from runmap.paths.exploration import Snap
 from runmap.routing.types import GraphDocument
 from test_measurements import enrich
@@ -276,9 +277,9 @@ class SQLiteRunTests(unittest.TestCase):
 
         def partial(index: GraphData, home: Snap, turnaround: Snap, settings: RunSettings, deadline: float,
                       *, preferences: PreferenceSettings, hills: HillData | None,
-                      frontier_nodes: frozenset[int], mode: RunMode) -> RunResult:
+                      frontier_nodes: frozenset[int], mode: RunMode, signals: SignalData | None = None) -> RunResult:
             result = plan_run(index, home, turnaround, settings, deadline, preferences=preferences,
-                               hills=hills, frontier_nodes=frontier_nodes)
+                               hills=hills, frontier_nodes=frontier_nodes, signals=signals)
             return replace(result, candidates=result.candidates[:1], outcomes=("complete", "deadline"))
 
         with patch("runmap.routing_reference.sqlite_runs.plan_run", side_effect=partial):

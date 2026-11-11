@@ -1,6 +1,6 @@
 # Roadmap
 
-Outstanding work, reviewed 2026-11-06. See the [guide](guide.md) for delivered
+Outstanding work, reviewed 2026-11-11. See the [guide](guide.md) for delivered
 features and [architecture](architecture.md) for implementation details.
 Implementation, automated checks, and local runner acceptance are separate.
 Record reproducible inputs, dataset/model/settings identities, and machine/toolchain
@@ -51,10 +51,12 @@ Municipal maps are reference model outputs, not measured noise or comfort labels
 
 ## Planned: routing improvements
 
-- **Traffic-light avoidance:** retain crossing/signal/island/railway evidence;
-  model directed passage and endpoint/repeated events, using search state where
-  arrival/exit matters. Validate branching, multi-node, avoidable, and unavoidable
-  crossings before exposing a control.
+- **Traffic-light avoidance validation:** [passage preparation and Python/Rust
+  routing](traffic-light-avoidance.md) are implemented. Review mapped stages against
+  actual local crossings, especially crossings split across ways, independent stages
+  within one way, branching, directional signals, and tram/island uncertainty.
+  Calibrate provisional Low=60 m / High=180 m detour weights using saved routes;
+  record regional cold/warm latency, state expansion, memory, and local runner acceptance.
 - **Guided assembly:** add waypoints, retained sections, and avoidance guidance.
   Validate directed walks, ordered constraints, repetition, and infeasible inputs.
 - **Automatic suggestions:** offer bounded, geographically different complete runs

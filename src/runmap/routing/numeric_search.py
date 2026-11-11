@@ -13,6 +13,7 @@ from runmap.environment_fields import EnvironmentField, EnvironmentValues, Envir
 from runmap.paths.database import NetworkMetadata, network_metadata
 from runmap.paths.numeric_database import iter_numeric_payloads
 from runmap.paths.environment_join import read_environment_segments
+from runmap.paths.signals import read_signals
 from runmap.routing.environment_costs import EnvironmentWeights
 from runmap.routing.settings import resolve_shape_strengths
 from runmap.routing.deadlines import check_deadline
@@ -35,6 +36,7 @@ class LoadedNumericGraph:
     payload_load_ms: float
     index_prepare_ms: float
     environment_bytes: int = 0
+    signal_bytes: int = 0
 
 
 @dataclass(frozen=True)
@@ -82,6 +84,8 @@ class NumericPath:
     start_node_id: int
     destination_node_id: int
     environment_prepared: bool = False
+    signal_counts: NDArray[np.float64] | None = None
+    signal_weight: float = 0.0
 
 
 def _remaining(deadline: float | None) -> float | None:
@@ -106,7 +110,8 @@ def _attach_environment(native: _routing_native.NumericGraph, connection: sqlite
 
 def load_numeric_graph(connection: sqlite3.Connection, bounds: Bounds, *,
                        deadline: float | None = None, verify_checksums: bool = False,
-                       environment_connection: sqlite3.Connection | None = None) -> LoadedNumericGraph:
+                       environment_connection: sqlite3.Connection | None = None,
+                       signal_connection: sqlite3.Connection | None = None) -> LoadedNumericGraph:
     metadata = network_metadata(connection)
     started = perf_counter()
     payloads: list[bytes] = []
@@ -120,9 +125,18 @@ def load_numeric_graph(connection: sqlite3.Connection, bounds: Bounds, *,
     environment_bytes = 0
     if environment_connection is not None:
         environment_bytes = _attach_environment(native, environment_connection, deadline)
+    signal_bytes = 0
+    if signal_connection is not None:
+        numbers = np.frombuffer(native.selected_segment_ids(), dtype="<i8").tolist()
+        signals = read_signals(signal_connection, numbers, deadline=deadline)
+        gates = [(g.segment, g.offset_m, g.unresolved, g.directions) for rows in signals.gates.values() for g in rows]
+        turns = [(t.node, t.incoming, t.outgoing, t.unresolved) for t in signals.turns.values()]
+        native.set_signals(gates, turns)
+        signal_bytes = len(gates) * 64 + len(turns) * 96
+        check_deadline(deadline)
     index_ms = (perf_counter()-started)*1000
     return LoadedNumericGraph(native, metadata, bounds, len(payloads), sum(map(len, payloads)), payload_ms, index_ms,
-                              environment_bytes)
+                              environment_bytes, signal_bytes)
 
 
 def _segment_endpoint(endpoint: NumericEndpoint) -> tuple[int, float, float | None] | None:
@@ -168,7 +182,9 @@ def _shape_arguments(shape: NumericShapeCosts | None) -> ShapeArguments | None:
 def numeric_shortest_path(graph: LoadedNumericGraph, start: NumericEndpoint, destination: NumericEndpoint, *,
                           profile: EdgeProfile | None = None, hill_weight: float = 0.0,
                           shape: NumericShapeCosts | None = None, deadline: float | None = None,
-                          environment_weights: EnvironmentWeights = EnvironmentWeights()) -> NumericPath:
+                          environment_weights: EnvironmentWeights = EnvironmentWeights(),
+                          signal_weight: float = 0.0,
+                          signal_arrival: tuple[int, float, float] | None = None) -> NumericPath:
     if hill_weight > 0 and graph.metadata.models.hill_model is None:
         raise ValueError("Hill features are unavailable")
     intervals = {endpoint.segment_id: endpoint.hill_intervals for endpoint in (start, destination)
@@ -181,6 +197,7 @@ def numeric_shortest_path(graph: LoadedNumericGraph, start: NumericEndpoint, des
         shape=_shape_arguments(shape),
         used_segments=() if shape is None else shape.used_segment_ids,
         used_spans=() if shape is None else shape.used_spans, hill_intervals=list(intervals.items()),
+        signal_weight=signal_weight, signal_arrival=signal_arrival,
         timeout_seconds=_remaining(deadline))
     cost, expanded, arcs, segments, starts, ends, components, hills, environment, frontier, start_id, destination_id = result
     costs = {EnvironmentField(name): np.frombuffer(penalties, dtype="<f8")
@@ -189,8 +206,10 @@ def numeric_shortest_path(graph: LoadedNumericGraph, start: NumericEndpoint, des
                for name, (_, lengths) in environment.items()}
     return NumericPath(cost, expanded, np.frombuffer(arcs, dtype="<i8"), np.frombuffer(segments, dtype="<i8"),
                        np.frombuffer(starts, dtype="<f8"), np.frombuffer(ends, dtype="<f8"),
-                       np.frombuffer(components, dtype="<f8").reshape(-1, 5),
+                       np.frombuffer(components, dtype="<f8").reshape(-1, 7)[:, :5],
                        np.frombuffer(hills, dtype="<f8").reshape(-1, 7),
                        costs, unknown,
                        np.frombuffer(frontier, dtype="<i8"), start_id, destination_id,
-                       graph.native.environment_prepared)
+                       graph.native.environment_prepared,
+                       np.frombuffer(components, dtype="<f8").reshape(-1, 7)[:, 5:] if signal_weight else None,
+                       signal_weight)

@@ -217,6 +217,15 @@ contains build/run commands and visual-report generation. Restore the normal
 extension after profiling. This measures fixed-area routing primitives; use
 `benchmark_run_latency` for complete request handling.
 
+Add `--environment data/paths/prepared/helsinki-capital-area/environment-join.sqlite`
+and `--environment-raster-bundle data/environment/prepared/helsinki-capital-area-v3`
+to both `profile_native` captures to include shape round trips with traffic high
+and an environment-off control on the same joined graph. Both arguments are
+required together; join source identities are validated. The original workloads
+keep their graph without environment data. See the
+[environment profile results](archive/history/2026-11-10-native-routing-profile.md#environment-penalty-extension)
+for the measured scope and reproduction command.
+
 For an uninstrumented comparison of native builds, preserve each release library
 before rebuilding and load it in a separate process:
 
@@ -554,6 +563,39 @@ graph once; SQLite reloads a local graph per request/expansion. Output hashes
 compare snapped endpoints, candidate geometry/traversals, costs, observations,
 and configuration, excluding search expansion counts and timing. See the
 [planner report](archive/history/48-sqlite-runs.md) for results and limitations.
+
+## Prepare traffic-light passages
+
+Rebuild the native extension after updating the routing code, then prepare the
+optional sidecar from the exact JSON source recorded in the network metadata:
+
+```sh
+uv run maturin develop --release
+uv run python -m runmap.cli paths export-signals \
+  data/paths/prepared/helsinki-capital-area/network.sqlite \
+  data/paths/raw/helsinki-capital-area/osm-network-boundaries-none.json \
+  data/paths/prepared/helsinki-capital-area/signals.sqlite
+```
+
+The command verifies source identity, compiles passages over the full network,
+and refuses to overwrite an existing output. Use a new destination to inspect
+a replacement generation, then activate it as `signals.sqlite` beside the network
+while the service is stopped. Restart the API and reload the browser to refresh
+capabilities. Numeric routing and terrain artifacts do not need rebuilding for
+this sidecar-only operation. The service loads bounded signal maps automatically;
+without the file the control supports Off only. The source must match the
+network's SHA-256; the newer local PBF is not a substitute for an older source.
+
+Current exports use sidecar schema 2 and passage model
+`directed-signal-passages-v2`. Re-export earlier model-v1 sidecars to obtain the
+mixed-junction correction and spatial source points for the Environment map
+control. A native rebuild is also required for the immediate-retracing fix.
+The original network and numeric graph formats remain unchanged.
+
+New graph imports also retain node/way crossing metadata. Re-exporting those
+graphs changes their identity and requires matching dependent artifacts. See
+[storage contracts](reference/prepared-data.md#traffic-light-sidecar) and
+[attribution limits](traffic-light-avoidance.md).
 
 ## Configuration
 

@@ -99,13 +99,19 @@ def _leg(path: NumericPath, segments: RouteSegments, snaps: tuple[Snap, Snap], h
     environment = {f"environment_{field}": float(values.sum()) for field, values in path.environment_costs.items()}
     assert path.cost is not None
     breakdown = CostBreakdown(distance_m=sums[0], centre=sums[1], side=sums[2], reuse=sums[3],
-                              hills=sums[4], total=path.cost, **environment)
+                              hills=sums[4], total=path.cost,
+                              signals=0.0 if path.signal_counts is None else float(path.signal_counts.sum()) * path.signal_weight,
+                              **environment)
     observations = (hill_observations(HillFeatures(*path.hill_features.sum(axis=0).tolist()))
                     if hills else PreferenceObservations())
     if path.environment_prepared:
         observations = replace(observations, **{
             f"environment_unknown_{field}_m": float(values.sum())
             for field, values in path.environment_unknown_m.items()})
+    if path.signal_counts is not None:
+        counts = path.signal_counts.sum(axis=0)
+        observations = replace(observations, signal_passages=int(counts[0]),
+                               unresolved_signal_passages=int(counts[1]))
     return LegResponse(coordinates=coordinates, distance_m=sums[0], cost=path.cost,
                        cost_breakdown=breakdown, observations=observations,
                        expanded_nodes=path.expanded_nodes, traversals=traversals)

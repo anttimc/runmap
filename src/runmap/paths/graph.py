@@ -106,8 +106,10 @@ def _selected_tags(tags: Mapping[str, str]) -> Tags:
         "oneway", "oneway:foot", "lit",
         "bridge", "tunnel", "layer", "level", "location", "indoor", "covered",
         "sac_scale",
+        "crossing", "traffic_signals", "footway", "cycleway", "railway", "direction", "button_operated",
     )
-    return {name: str(tags[name]) for name in names if name in tags}
+    return {name: str(value) for name, value in tags.items()
+            if name in names or name.startswith(("crossing:", "traffic_signals:"))}
 
 
 def _node_record(element: OsmElement) -> Node:
@@ -120,6 +122,11 @@ def _node_record(element: OsmElement) -> Node:
     for name in ("barrier", "access", "foot", "entrance", "crossing", "highway"):
         if name in tags:
             record[name] = str(tags[name])
+    evidence = {key: value for key, value in tags.items()
+                if key in {"crossing", "highway", "traffic_signals", "railway", "direction", "button_operated",
+                           "footway", "cycleway"} or key.startswith(("crossing:", "traffic_signals:"))}
+    if evidence:
+        record["tags"] = evidence
     return record
 
 

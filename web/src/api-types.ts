@@ -109,6 +109,7 @@ export interface ShellResponse extends FeatureCollection<
 export interface RunPlannerConfiguration {
   preference_defaults: {
     hills: PreferenceLevel;
+    signals?: PreferenceLevel;
     environment_greenery?: PreferenceLevel;
     environment_water?: PreferenceLevel;
     environment_traffic?: PreferenceLevel;
@@ -116,6 +117,7 @@ export interface RunPlannerConfiguration {
   };
   preference_capabilities: {
     hills: { supported_levels: PreferenceLevel[]; unavailable_reason: string | null };
+    signals?: { supported_levels: PreferenceLevel[]; unavailable_reason: string | null };
     environment_greenery?: {
       supported_levels: PreferenceLevel[];
       unavailable_reason: string | null;
@@ -132,6 +134,8 @@ export interface RunPlannerConfiguration {
   };
 }
 export interface TerrainObservations {
+  signal_passages?: number | null;
+  unresolved_signal_passages?: number | null;
   estimated_ascent_m: number | null;
   estimated_descent_m: number | null;
   terrain_valid_fraction: number | null;

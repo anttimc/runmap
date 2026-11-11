@@ -40,6 +40,7 @@ from runmap.regions import find_region
 from runmap.api.environment import router as environment_router
 from runmap.api.environment_rasters import router as environment_raster_router
 from runmap.api.environment_tiles import router as environment_tile_router
+from runmap.api.signals import router as signal_router
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -130,6 +131,7 @@ app = FastAPI(title="Runmap", version="0.1.0", lifespan=lifespan)
 app.include_router(environment_router)
 app.include_router(environment_raster_router)
 app.include_router(environment_tile_router)
+app.include_router(signal_router)
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 
 
@@ -157,7 +159,9 @@ def paths_config(request: Request):
                 "message": "Path analysis is unavailable. Prepare graph measurements locally."}
     sqlite = isinstance(data, SQLitePathData)
     model = data.metadata.models.hill_model if sqlite else data.hills.model if data.hills else None
-    capabilities = (prepared_preference_capabilities(model, data.metadata.hill_valid_fraction, environment=data.numeric is not None and data.numeric.environment_connection is not None)
+    capabilities = (prepared_preference_capabilities(model, data.metadata.hill_valid_fraction,
+                        environment=data.numeric is not None and data.numeric.environment_connection is not None,
+                        signals=data.signal_connection is not None)
                     if sqlite else preference_capabilities(data.hills))
     return {**(database_path_config(data) if sqlite else path_config(data)), "tile_template": tile_template(data),
             "tile_min_zoom": 13, "tile_max_zoom": 16,

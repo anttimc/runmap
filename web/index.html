@@ -199,6 +199,24 @@
                 <div id="run-hills-labels" class="range-notes" aria-hidden="true">
                   <span>Off</span><span>Low</span><span>High</span>
                 </div>
+                <span id="run-signal-help" class="help-tip" hidden>
+                  <button
+                    type="button"
+                    class="help-trigger"
+                    aria-label="About traffic-light avoidance"
+                    aria-expanded="false"
+                  >
+                    ?
+                  </button>
+                  <span id="run-signal-help-content" role="tooltip" class="help-content">
+                    <span id="run-signal-availability" hidden></span>
+                    Prefer fewer mapped signal crossings. Low trades about 60 m of additional route
+                    cost to avoid a passage; High about 180 m. Other preferences affect the
+                    tradeoff, and unavoidable lights remain possible. Uncertain crossing movements
+                    receive the same penalty. Mapping may omit lights; counts do not predict waiting
+                    time.
+                  </span>
+                </span>
               </div>
             </div>
           </section>
@@ -349,6 +367,24 @@
               >
                 Environment
               </button>
+              <span class="help-tip">
+                <button
+                  type="button"
+                  class="help-trigger"
+                  aria-label="About Environment"
+                  aria-expanded="false"
+                >
+                  ?
+                </button>
+                <span role="tooltip" class="help-content">
+                  Score layers show mapped context from 0 (clear) to 1 (strong), at 10 m resolution.
+                  Greenery appears when Environment is switched on. Transparent areas can mean zero
+                  or unavailable data; Coverage distinguishes them. Gray means prepared coverage;
+                  amber marks limited context. Traffic exposure is an uncalibrated proxy, and
+                  wetland presence does not establish path wetness. Mapping completeness is
+                  unverified.
+                </span>
+              </span>
               <label class="layer-switch"
                 ><input
                   id="layer-environment"
@@ -361,18 +397,24 @@
             <div id="environment-controls" class="section-options" hidden>
               <p id="environment-layer-status" role="status">Loading environment coverage…</p>
               <div id="environment-layer-controls"></div>
-              <p class="environment-score-legend">
-                Scores: 0 clear → 1 strong. Coverage: gray = prepared, amber = limited context.
-              </p>
-              <details>
-                <summary>How to read environment scores</summary>
-                <p>
-                  All layers start Off. Score layers are transparent where the score is zero or data
-                  is unavailable; use Coverage to distinguish them. Mapping completeness is
-                  unverified: zero does not establish real-world absence. Traffic is an uncalibrated
-                  exposure proxy. Wetland presence does not establish path wetness.
-                </p>
-              </details>
+              <span id="traffic-light-help" class="help-tip" hidden>
+                <button
+                  type="button"
+                  class="help-trigger"
+                  aria-label="About traffic lights"
+                  aria-expanded="false"
+                >
+                  ?
+                </button>
+                <span role="tooltip" class="help-content">
+                  Red points are mapped pedestrian signals. Amber points are other or uncertain
+                  signals, including vehicle lights and railway crossings. Turn on Environment and
+                  Traffic lights, then zoom in to see them. Select or hover over a point for its OSM
+                  node ID and source tags. Source nodes are not independent waits or live signal
+                  phases. Mapping may omit lights. This display is separate from routing avoidance.
+                </span>
+              </span>
+              <p id="traffic-light-status" role="status" hidden></p>
             </div>
           </section>
           <section class="layer-section">
@@ -687,6 +729,13 @@
           </button>
         </div>
       </aside>
+      <div
+        id="traffic-light-point-popup"
+        class="help-content"
+        popover="auto"
+        role="tooltip"
+        aria-label="Traffic-light source details"
+      ></div>
       <div
         id="legend-help"
         class="info-popover"

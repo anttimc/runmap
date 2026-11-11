@@ -241,6 +241,45 @@ Export writes a staging database and publishes without overwriting an existing
 destination. Schema/model changes require re-export to a new file. See
 [SQLite export](../development.md#export-a-sqlite-network-dataset).
 
+## Traffic-light sidecar
+
+Optional `signals.sqlite` uses SQL schema 2 and model
+`directed-signal-passages-v2`. It binds the exact network dataset/feature identities
+and raw OSM SHA-256. `stages` records attribution kind; indexed `gates` stores
+segment numbers, graph-chainage boundaries, direction masks (forward=1,
+backward=2, both=3), and unresolved status. Indexed `turns` stores via-node row IDs,
+incoming/outgoing segment numbers, and unresolved status. `evidence` retains raw
+node/way tags for inspection. These numeric IDs belong to the matching network
+generation and are also used by its numeric export.
+
+Schema 2 adds `signal_points` and its WGS84 `signal_point_bounds` R-tree, retaining
+source node coordinates, IDs, tags, and display classification. These points
+include source evidence outside the runnable graph. Viewport queries refine
+R-tree candidates against exact point coordinates and cap the response at 5,000
+features. Raw signal nodes and prepared route passages are distinct domains.
+The reader accepts schemas 1 and 2 with a compatible model, but schema 1 lacks
+map evidence. Version-1 attribution sidecars must be regenerated for model v2;
+their mixed-junction omissions cannot be repaired by the runtime.
+
+Export requires the exact original raw JSON and publishes a new file atomically
+without overwriting existing data. It recovers evidence discarded by old graph
+preparation without changing network geometry, measurements, or numeric chunks.
+No network SQL schema change or numeric graph format bump is required.
+
+Runtime selects gates by retained segment and movements by outgoing segment in
+batches of 500 IDs; incoming identity can refer outside the loaded window.
+Attribution never reruns on cropped geometry. Reading is bounded by the selected
+segments and their movement rows, independent of total source evidence size.
+Normal unloaded-node frontiers still trigger the planner's window expansion.
+The reference loader translates persisted IDs into its window's integer domains.
+
+The SQLite path service discovers this file beside `network.sqlite`; absence
+supports Signals Off only. A mismatched sidecar fails identity validation.
+Connections and native maps live with their dataset/working-set owners; restart
+the API after publishing a sidecar. See
+[preparation](../development.md#prepare-traffic-light-passages) and
+[attribution limitations](../traffic-light-avoidance.md#evidence-and-attribution).
+
 ## Selected windows and identities
 
 Spatial queries return complete selected segments, their endpoint nodes, and

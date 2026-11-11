@@ -114,11 +114,10 @@ export async function startEnvironmentLayers(map: Map): Promise<void> {
       );
     const config = (await response.json()) as EnvironmentConfig;
     addControls(map, config);
-    status.textContent = "Mapped context · 10 m. Greenery appears when Environment is switched on.";
+    status.textContent = "10 m resolution";
     map.on("error", (event) => {
       if ("sourceId" in event && String(event.sourceId).startsWith("environment-field-"))
-        status.textContent =
-          "An environment tile failed. Reload to retry. Transparent failed tiles do not indicate zero exposure.";
+        status.textContent = "Environment tile failed. Reload to retry.";
     });
   } catch (error: unknown) {
     status.textContent = error instanceof Error ? error.message : "Environment layers unavailable.";

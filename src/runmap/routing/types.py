@@ -20,6 +20,7 @@ class Node(TypedDict):
     entrance: NotRequired[str]
     crossing: NotRequired[str]
     highway: NotRequired[str]
+    tags: NotRequired[Tags]
 
 
 class StartSnap(Node):

@@ -65,7 +65,9 @@ def _generate_run(data: SQLitePathData, options: RunRequest, started: float,
     deadline = started + timeout_s
     settings = effective_run_settings(RunSettings(**options.settings.model_dump()), options.mode)
     preferences = PreferenceSettings(**options.preferences.model_dump())
-    capabilities = prepared_preference_capabilities(data.metadata.models.hill_model, data.metadata.hill_valid_fraction, environment=data.numeric is not None and data.numeric.environment_connection is not None)
+    capabilities = prepared_preference_capabilities(data.metadata.models.hill_model, data.metadata.hill_valid_fraction,
+        environment=data.numeric is not None and data.numeric.environment_connection is not None,
+        signals=data.signal_connection is not None)
     response = RunResponse(dataset_id=data.dataset_id, mode=options.mode, status="no_eligible_snap", search=RunSearchMetadata(),
         cost_model=CostConfigurationResponse(shape_settings=options.settings.model_copy(update={"avoidance_ratio": settings.avoidance_ratio}),
             shape_strengths=resolve_shape_strengths(settings),

@@ -8,22 +8,25 @@ from runmap.routing.cost_types import (
     PreferenceWeights, PreferenceWeightTable, PreferenceWeightTables, ResolvedPreferences,
 )
 from runmap.routing.hill_types import HillData, HillModel
+from runmap.routing.signals import SIGNAL_MODEL
 
 
 COST_MODEL_VERSION = "distance-preferences-v1"
 COST_UNITS = "equivalent_metres"
 
 
-def preference_capabilities(hills: HillData | None = None) -> PreferenceCapabilities:
+def preference_capabilities(hills: HillData | None = None, *, signals: bool = False) -> PreferenceCapabilities:
     """Advertise only implemented algorithms with verified feature support."""
-    return prepared_preference_capabilities(hills.model if hills else None, hills.valid_fraction if hills else None)
+    return prepared_preference_capabilities(hills.model if hills else None, hills.valid_fraction if hills else None, signals=signals)
 
 
-def prepared_preference_capabilities(model: HillModel | None, valid_fraction: float | None, *, environment: bool = False) -> PreferenceCapabilities:
+def prepared_preference_capabilities(model: HillModel | None, valid_fraction: float | None, *, environment: bool = False,
+                                    signals: bool = False) -> PreferenceCapabilities:
     return PreferenceCapabilities(
         (PreferenceCapability(("off", "low", "high"), model.version, valid_fraction, None)
          if model is not None else PreferenceCapability(("off",), None, None, "Prepared hill measurements are unavailable.")),
-        PreferenceCapability(("off",), None, None, "Crossing passage attribution is not prepared."),
+        (PreferenceCapability(("off", "low", "high"), SIGNAL_MODEL, None, None) if signals else
+         PreferenceCapability(("off",), None, None, "Crossing passage attribution is not prepared.")),
         PreferenceCapability(("off",), None, None, "Buffered road context is not prepared."),
         PreferenceCapability(("off",), None, None, "Buffered green-area context is not prepared."),
         **({f"environment_{field}": PreferenceCapability(("off", "low", "high"),
@@ -58,8 +61,8 @@ def _resolve_weight(name: str, level: PreferenceLevel, capability: PreferenceCap
 
 def resolve_preferences(settings: PreferenceSettings,
                         tables: PreferenceWeightTables = PreferenceWeightTables(), *,
-                        hills: HillData | None = None) -> ResolvedPreferences:
-    capabilities = preference_capabilities(hills)
+                        hills: HillData | None = None, signals: bool = False) -> ResolvedPreferences:
+    capabilities = preference_capabilities(hills, signals=signals)
     return resolve_prepared_preferences(settings, capabilities, tables)
 
 

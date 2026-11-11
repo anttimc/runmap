@@ -43,6 +43,19 @@ export function environmentDetails(
     wetland: "Wetland avoidance",
   };
   const details: string[] = [];
+  if (settings.signals && settings.signals !== "off") {
+    const passages = candidate.legs.reduce(
+      (sum, leg) => sum + (leg.observations?.signal_passages ?? 0),
+      0,
+    );
+    const unresolved = candidate.legs.reduce(
+      (sum, leg) => sum + (leg.observations?.unresolved_signal_passages ?? 0),
+      0,
+    );
+    details.push(
+      `Traffic lights · ${settings.signals === "high" ? "High" : "Low"}: ${passages} mapped passages, ${unresolved} uncertain passages. Mapping may omit lights.`,
+    );
+  }
   for (const [field, label] of Object.entries(labels)) {
     const level = settings[`environment_${field}`];
     if (!level || level === "off") continue;
@@ -63,7 +76,10 @@ export function environmentDetails(
     details.push(detail);
   }
   return details.length
-    ? "Environment routing penalties\n" + details.join("\n") +
+    ? (settings.signals && settings.signals !== "off"
+        ? "Routing preferences\n"
+        : "Environment routing penalties\n") +
+        details.join("\n") +
         "\nEquivalent kilometres express preference costs, not extra running distance."
     : "";
 }

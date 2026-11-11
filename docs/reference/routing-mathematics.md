@@ -283,7 +283,7 @@ midpoint samples, so the actual step is $\ell/n$. The Python reference uses the
 same rule. The [dated sampling comparison](../archive/history/2026-11-02-integration-comparison.md)
 records the speed and numerical-error measurements behind this choice.
 Hill and prepared environment integrals use physical chainage intervals.
-Traffic-light penalties remain unimplemented.
+Traffic-light passages add discrete movement costs as described below.
 
 ## 6. Observations and validation
 
@@ -308,6 +308,55 @@ request caches, capabilities, and A* agreement with separate Dijkstra searches.
 They do not establish surveyed path grades or local runner acceptance. Dated
 [hill calibration reports](../archive/history/32-hill-routing.md) preserve earlier
 models and selected examples; their identities must match before comparisons.
+
+## Traffic-light passages
+
+For a directed walk $P$, add $w_s(N_r(P)+N_u(P))$ to the existing objective.
+$N_r$ counts resolved mapped-stage occurrences; $N_u$ counts unresolved candidate
+occurrences. Model `signal-detour-metres-v1` sets Off=0, Low=60, High=180 equivalent
+metres per occurrence. These initial detour budgets require local calibration;
+they do not predict waiting seconds. All penalties remain finite and nonnegative,
+preserving the distance heuristic's lower bound and unavoidable connectivity.
+
+Prepared gates use physical graph chainage and direction masks. A traversal
+charges a gate strictly inside its span. Ending on a gate defers the charge;
+departing on the same segment in the same direction charges once if the prior
+traversal arrived at the gate. Starting there without an arrival, touching it,
+or reversing on it adds no charge. A later crossing in either allowed direction
+is another occurrence. Gates survive partial endpoint splits without rescaling.
+
+Junction movements charge by `(via node, incoming segment, outgoing segment)`.
+Connections involving road and path links at an explicitly signaled crossing
+receive the unresolved fallback when the crossing movement cannot be resolved.
+The attribution retains these even when a canonical gate covers a connected
+crossing way; excluding them would make uncertain movements free shortcuts.
+Search labels therefore retain arrival segment/direction when signals are active.
+Python reference labels use incoming arcs, while Rust uses incoming physical
+movements. Each retains enough context to distinguish future costs. Signals Off
+continues using the existing node-only search. Arc costs remain independently
+cached; passage costs are evaluated against the current arrival.
+
+Within a Signals On leg, immediate reversal of the incoming physical segment is
+pruned. Such a spur cannot change which side of the crossing the runner approached
+from. The first expansion of a leg may reverse the arrival supplied by the prior
+leg, preserving requested turnaround behavior. This rule prevents two-edge loops
+from laundering arrival-dependent costs; it does not claim complete real-world
+crossing attribution or globally optimal loop assembly.
+
+The outbound final traversal initializes return-leg arrival context. Signal
+preferences disable the reference zero-width retracing shortcut; both legs are
+searched and their passage costs reconstructed with the same evaluator. This
+preserves the existing sequential, heuristic loop objective. Cost breakdowns
+report `signals`; observations report resolved and unresolved counts separately.
+With Signals Off, observations are null and signal costs zero. Distance-only
+exploration continues to ignore signal costs.
+
+Attribution is a mapped-stage approximation. See
+[evidence and attribution](../traffic-light-avoidance.md#evidence-and-attribution)
+for grouping rules and limitations. `tests/test_signals.py` compares native costs
+with reference movement search and a zero-heuristic Dijkstra oracle, and covers
+split gates, direction, leg seams, repeated/unavoidable passages, uncertain
+evidence, source identity, and sidecar-backed API results.
 
 ## Turnaround region estimate
 

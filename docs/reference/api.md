@@ -18,6 +18,8 @@ See [architecture](../architecture.md) for the service boundaries and
 | `GET /api/regions/{region_id}/terrain/v{version}/{manifest_id}/w{wavelength}/{z}/{x}/{y}.png` | Versioned terrain tiles |
 | `GET /api/regions/{region_id}/contours/v{version}/{manifest_id}/{z}/{x}/{y}.mvt` | Source-elevation contour tiles |
 | `GET /api/paths/config` | Dataset, coverage, policy options, tile templates, and planner/shell capabilities |
+| `GET /api/paths/signals/config` | Source-signal overlay availability, network identity, and minimum map zoom |
+| `GET /api/paths/signals?dataset={id}&west={lon}&south={lat}&east={lon}&north={lat}` | Bounded source-signal GeoJSON points, separate from route passage counts |
 | `POST /api/paths/run/profile` | Absolute terrain elevation profile for ordered route traversals |
 | `GET /api/paths/snap` | Eligible endpoint snap and nearby alternatives |
 | `POST /api/paths/snapshots` | Prepare a forward-distance exploration snapshot |
@@ -66,6 +68,24 @@ limited by snapshot expiry and support ETag/304. Expired or evicted snapshot IDs
 return HTTP 410. The browser prepares a replacement once on expiry.
 
 ## Run planning
+
+`preferences.signals` accepts Off/Low/High when the SQLite dataset has a matching
+prepared signal sidecar. Configuration advertises its supported levels and
+versioned equivalent-metre weights. Without that artifact only Off is supported;
+non-Off requests return 400. Leg breakdown `signals` includes both resolved and
+unresolved candidate penalties. Observations `signal_passages` and
+`unresolved_signal_passages` count occurrences, including repeats; both are null
+when the preference is Off. Zero recognized passages does not prove the absence
+of lights. The explicit JSON service does not discover sidecars; the reference
+SQLite planner supports them. See [traffic-light avoidance](../traffic-light-avoidance.md).
+
+The source-signal map requires sidecar schema 2. Points expose OSM IDs, source tags,
+and `kind` (`pedestrian` or `uncertain`), including nodes outside the runnable graph.
+Missing map evidence returns 404, a stale network identity 409, and invalid bounds
+422. Viewports over 2,500 km² or 5,000 points return `status=zoom_in` with no
+features. The browser additionally requires zoom 13 and rejects stale/cancelled
+viewport responses. A source node is not a distinct wait or proof of a charged
+route movement.
 
 The request accepts `mode: "one_way" | "round_trip"`; omission defaults to
 `round_trip`. Endpoint fields remain `home` and `turnaround`. For one-way planning

@@ -45,7 +45,8 @@ def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaroun
     settings = effective_run_settings(settings, mode)
     if not all(math.isfinite(v) for v in (*home_point, *turnaround_point)) or math.dist(home_point, turnaround_point) < .01:
         raise ValueError("Home and turnaround must be finite and spatially distinct")
-    capabilities = prepared_preference_capabilities(graph.metadata.models.hill_model, graph.metadata.hill_valid_fraction, environment=graph.native.environment_prepared)
+    capabilities = prepared_preference_capabilities(graph.metadata.models.hill_model, graph.metadata.hill_valid_fraction,
+        environment=graph.native.environment_prepared, signals=graph.native.signals_prepared)
     resolved = resolve_prepared_preferences(preferences, capabilities)
     if any(getattr(preferences, f"environment_{field}") != "off"
            for field in EnvironmentField):
@@ -60,7 +61,7 @@ def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaroun
             shape = NumericShapeCosts(home_point, turnaround_point, settings, left)
             outbound = numeric_shortest_path(graph, home, turnaround, profile=profile,
                 hill_weight=resolved.weights.hills, shape=shape, deadline=deadline,
-                environment_weights=environment_weights)
+                environment_weights=environment_weights, signal_weight=resolved.weights.signals)
             frontiers.append(outbound.frontier_node_ids)
             if outbound.cost is None:
                 outcomes.append("unreachable")
@@ -70,7 +71,9 @@ def numeric_plan_run(graph: LoadedNumericGraph, home: NumericEndpoint, turnaroun
                 returning = numeric_shortest_path(graph, turnaround, home, profile=profile,
                     hill_weight=resolved.weights.hills,
                     shape=replace(shape, penalize_right=not left, used_spans=_used_spans(outbound)), deadline=deadline,
-                    environment_weights=environment_weights)
+                    environment_weights=environment_weights, signal_weight=resolved.weights.signals,
+                    signal_arrival=(int(outbound.segment_ids[-1]), float(outbound.start_m[-1]),
+                                    float(outbound.end_m[-1])) if len(outbound.segment_ids) else None)
                 frontiers.append(returning.frontier_node_ids)
                 if returning.cost is None:
                     outcomes.append("unreachable")

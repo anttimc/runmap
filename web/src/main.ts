@@ -10,6 +10,7 @@ import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 import "maplibre-gl/dist/maplibre-gl.css";
 import { startLayout } from "./layout";
 import { startEnvironmentLayers } from "./environment-layers";
+import { startTrafficLights } from "./traffic-lights";
 import "./style.css";
 import { startMapTools } from "./app";
 import { loadMapConfig } from "./api";
@@ -214,6 +215,7 @@ async function start(): Promise<void> {
     setStatus("Loading overlay…", "busy");
     void startMapTools(map, config.slope_legend);
     void startEnvironmentLayers(map);
+    void startTrafficLights(map);
   });
 
   element<HTMLInputElement>("contours-visible").addEventListener("change", (event) => {

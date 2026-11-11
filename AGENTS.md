@@ -21,6 +21,14 @@ responsibilities, dependencies, and data flow.
 Use `uv` to manage Python environments and dependencies and to run Python
 commands, including tests.
 
+# User interface
+
+Keep primary controls and map panels concise. Put additional explanations,
+interpretation guidance, caveats, and model or technical details in contextual
+info popups, using the existing help pattern. Keep visible labels, values, short
+legends, and actionable loading/error statuses only where they help operate the
+UI. Info popups must work with keyboard and touch as well as a pointer.
+
 # Documentation
 
 Keep maintained documentation up to date in the same change as implementation

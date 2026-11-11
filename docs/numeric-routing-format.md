@@ -89,6 +89,17 @@ must remain distinguishable from source coverage boundaries and true dead ends.
 
 ## Binary layout
 
+Signal passages are loaded separately from an optional identity-validated
+[`signals.sqlite` sidecar](reference/prepared-data.md#traffic-light-sidecar).
+The main graph binary layout stays at version 2. Python passes bounded gate and
+movement rows into native maps; their estimated retained bytes count toward the
+working-set cache budget. No raw OSM evidence enters a request working set.
+Signals On uses movement labels and carries arrival context across run legs;
+Signals Off keeps the existing node-label search and compact `EdgeRef` predecessors.
+The private binding serializes five base cost components followed by two passage
+counts per traversal; the Python adapter exposes separate component/count arrays.
+
+
 `numeric_chunks` stores a payload, byte count, and SHA-256 per chunk. An unsigned
 little-endian header, described by `struct.Struct("<8sI4x6Q")`, contains:
 

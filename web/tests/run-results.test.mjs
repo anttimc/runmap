@@ -75,3 +75,16 @@ test("environment details use route settings and omit Off fields and zero missin
     /12 m of the route lacks mapped context/,
   );
 });
+
+test("signal details report repeated and uncertain passages without claiming complete coverage", () => {
+  const candidate = {
+    legs: [
+      { observations: { signal_passages: 2, unresolved_signal_passages: 1 } },
+      { observations: { signal_passages: 2, unresolved_signal_passages: 0 } },
+    ],
+  };
+  const text = environmentDetails(candidate, { signals: "high" });
+  assert.match(text, /Traffic lights · High: 4 mapped passages, 1 uncertain passages/);
+  assert.match(text, /Mapping may omit lights/);
+  assert.equal(environmentDetails(candidate, { signals: "off" }), "");
+});

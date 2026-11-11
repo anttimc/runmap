@@ -40,6 +40,7 @@ impl Ord for QueueEntry {
 }
 
 pub struct SearchSettings {
+    pub signals: Option<crate::signal_cost::SignalSettings>,
     pub profile: usize,
     pub cost_budget: f64,
     pub reverse: bool,
@@ -49,6 +50,7 @@ pub struct SearchSettings {
 }
 
 pub struct SearchResult {
+    pub signals: Vec<[i64; 2]>,
     pub distances: Vec<(i64, f64)>,
     pub frontier: Vec<i64>,
     pub expanded: usize,
@@ -415,6 +417,7 @@ fn build_search_result(
         Vec::new()
     };
     Ok(SearchResult {
+        signals: vec![[0; 2]; components.len()],
         distances,
         frontier: state.frontier,
         expanded: state.expanded,
@@ -435,6 +438,11 @@ pub fn search_routes(
 ) -> Result<SearchResult, RoutingError> {
     check_deadline(settings.deadline)?;
     validate_settings(&settings.costs)?;
+    if let Some(signals) = &settings.signals {
+        if !signals.weight.is_finite() || signals.weight < 0.0 {
+            return Err(RoutingError::Invalid("Invalid signal weight"));
+        }
+    }
     if settings.profile >= graph.profiles
         || settings.cost_budget.is_nan()
         || settings.cost_budget < 0.0
@@ -451,6 +459,7 @@ pub fn search_routes(
     };
     if blocked(overlay.start) || overlay.destination.is_some_and(blocked) {
         return Ok(SearchResult {
+            signals: Vec::new(),
             distances: Vec::new(),
             frontier: Vec::new(),
             expanded: 0,
@@ -462,7 +471,253 @@ pub fn search_routes(
             environment_unknown: Vec::new(),
         });
     }
+    if settings.signals.is_some() {
+        return search_signal_routes(graph, chunks, overlay, &settings);
+    }
     let mut state = initialize_search_state(graph, overlay, &settings);
     expand_search_frontier(graph, chunks, overlay, &settings, &mut state)?;
     build_search_result(graph, chunks, overlay, &settings, state)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct MovementState {
+    node: usize,
+    segment: i64,
+    backward: bool,
+}
+
+struct MovementLabel {
+    state: MovementState,
+    arrival: Option<crate::signal_cost::Arrival>,
+    cost: f64,
+    predecessor: Option<(usize, EdgeRef)>,
+}
+
+struct MovementSearch {
+    labels: Vec<MovementLabel>,
+    indices: HashMap<MovementState, usize>,
+    queue: BinaryHeap<QueueEntry>,
+    cache: CostCache,
+    frontier: Vec<i64>,
+    expanded: usize,
+    destination: Option<usize>,
+    scale: f64,
+}
+
+fn initialize_movement_search(
+    graph: &GraphIndex,
+    overlay: &Overlay,
+    settings: &SearchSettings,
+) -> MovementSearch {
+    let signals = settings.signals.as_ref().unwrap();
+    let scale = compute_safe_heuristic_scale(graph, overlay, settings.heuristic_distance_scale);
+    let start = MovementState {
+        node: overlay.start,
+        segment: signals.arrival.map_or(-1, |a| a.segment),
+        backward: signals.arrival.is_some_and(|a| a.end < a.start),
+    };
+    let labels = vec![MovementLabel {
+        state: start,
+        arrival: signals.arrival,
+        cost: 0.0,
+        predecessor: None,
+    }];
+    let indices = HashMap::from([(start, 0_usize)]);
+    let queue = BinaryHeap::from([QueueEntry {
+        estimated_total_cost: estimate_remaining_cost(graph, overlay, start.node, scale),
+        cost_so_far: 0.0,
+        node_id: node_id(graph, start.node),
+        node: 0,
+    }]);
+    let cache = CostCache {
+        integrals: HashMap::new(),
+    };
+    MovementSearch {
+        labels,
+        indices,
+        queue,
+        cache,
+        frontier: Vec::new(),
+        expanded: 0,
+        destination: None,
+        scale,
+    }
+}
+
+fn relax_movement_edge(
+    graph: &GraphIndex,
+    chunks: &[Chunk<'_>],
+    overlay: &Overlay,
+    settings: &SearchSettings,
+    search: &mut MovementSearch,
+    entry: QueueEntry,
+    visit: EdgeVisit<'_>,
+) -> Result<(), RoutingError> {
+    use crate::signal_cost::{arrival, counts};
+    let signals = settings.signals.as_ref().unwrap();
+    let edge = *visit.edge;
+    let current = arrival(chunks, edge);
+    let label = &search.labels[entry.node];
+    let previous = label.arrival;
+    // Retracing a spur cannot change which side of a crossing we approached from.
+    // A requested turnaround starts a new leg and may reverse its initial arrival.
+    if label.predecessor.is_some()
+        && previous.is_some_and(|prior| {
+            prior.segment == current.segment
+                && (prior.end > prior.start) != (current.end > current.start)
+        })
+    {
+        return Ok(());
+    }
+    let state = MovementState {
+        node: edge.target,
+        segment: current.segment,
+        backward: edge.backward,
+    };
+    let number = *search.indices.entry(state).or_insert_with(|| {
+        let number = search.labels.len();
+        search.labels.push(MovementLabel {
+            state,
+            arrival: Some(current),
+            cost: f64::INFINITY,
+            predecessor: None,
+        });
+        number
+    });
+    if entry.cost_so_far >= search.labels[number].cost {
+        return Ok(());
+    }
+    let passages = counts(
+        &signals.data,
+        previous,
+        current,
+        node_id(graph, edge.source),
+    );
+    let cost = entry.cost_so_far
+        + evaluate_search_cost(
+            chunks,
+            edge,
+            &settings.costs,
+            &mut search.cache,
+            settings.deadline,
+        )?
+        + signals.weight * (passages[0] + passages[1]) as f64;
+    if !cost.is_finite() {
+        return Err(RoutingError::Invalid("Signal cost overflow"));
+    }
+    if cost < search.labels[number].cost && cost <= settings.cost_budget {
+        search.labels[number].cost = cost;
+        search.labels[number].arrival = Some(current);
+        search.labels[number].predecessor = Some((entry.node, visit.reference));
+        search.queue.push(QueueEntry {
+            estimated_total_cost: cost
+                + estimate_remaining_cost(graph, overlay, edge.target, search.scale),
+            cost_so_far: cost,
+            node_id: node_id(graph, edge.target),
+            node: number,
+        });
+    }
+    Ok(())
+}
+
+fn expand_movement_frontier(
+    graph: &GraphIndex,
+    chunks: &[Chunk<'_>],
+    overlay: &Overlay,
+    settings: &SearchSettings,
+    search: &mut MovementSearch,
+) -> Result<(), RoutingError> {
+    while let Some(entry) = search.queue.pop() {
+        check_deadline(settings.deadline)?;
+        let label = &search.labels[entry.node];
+        if entry.cost_so_far != label.cost {
+            continue;
+        }
+        let node = label.state.node;
+        if node < graph.frontier.len() && graph.frontier[node] {
+            search.frontier.push(node_id(graph, node));
+        }
+        if overlay.destination == Some(node) {
+            search.destination = Some(entry.node);
+            break;
+        }
+        search.expanded += 1;
+        visit_traversable_edges(graph, chunks, overlay, node, settings, |visit| {
+            relax_movement_edge(graph, chunks, overlay, settings, search, entry, visit)
+        })?;
+    }
+    Ok(())
+}
+
+fn build_movement_result(
+    graph: &GraphIndex,
+    chunks: &[Chunk<'_>],
+    overlay: &Overlay,
+    settings: &SearchSettings,
+    mut search: MovementSearch,
+) -> Result<SearchResult, RoutingError> {
+    use crate::signal_cost::{arrival, counts};
+    let signals = settings.signals.as_ref().unwrap();
+    let cost = search.destination.map(|n| search.labels[n].cost);
+    let path = search.destination.map(|mut n| {
+        let mut path = Vec::new();
+        while let Some((previous, reference)) = search.labels[n].predecessor {
+            path.push(resolve_edge(graph, chunks, overlay, reference));
+            n = previous;
+        }
+        path.reverse();
+        path
+    });
+    let mut result = SearchResult {
+        distances: Vec::new(),
+        frontier: search.frontier,
+        expanded: search.expanded,
+        path,
+        cost,
+        components: Vec::new(),
+        hills: Vec::new(),
+        environment: Vec::new(),
+        environment_unknown: Vec::new(),
+        signals: Vec::new(),
+    };
+    let mut previous = signals.arrival;
+    for edge in result.path.iter().flatten() {
+        check_deadline(settings.deadline)?;
+        let current = arrival(chunks, *edge);
+        result.signals.push(counts(
+            &signals.data,
+            previous,
+            current,
+            node_id(graph, edge.source),
+        ));
+        previous = Some(current);
+        let cost = evaluate_cost(
+            chunks,
+            *edge,
+            &settings.costs,
+            &mut search.cache,
+            settings.deadline,
+        )?;
+        result.components.push(cost.components);
+        result.hills.push(cost.hill_features);
+        result.environment.push(cost.environment_penalties);
+        result.environment_unknown.push(cost.environment_unknown_m);
+    }
+    Ok(result)
+}
+
+fn search_signal_routes(
+    graph: &GraphIndex,
+    chunks: &[Chunk<'_>],
+    overlay: &Overlay,
+    settings: &SearchSettings,
+) -> Result<SearchResult, RoutingError> {
+    if settings.reverse || overlay.destination.is_none() {
+        return Err(RoutingError::Invalid(
+            "Signal search requires a forward destination",
+        ));
+    }
+    let mut search = initialize_movement_search(graph, overlay, settings);
+    expand_movement_frontier(graph, chunks, overlay, settings, &mut search)?;
+    build_movement_result(graph, chunks, overlay, settings, search)
 }

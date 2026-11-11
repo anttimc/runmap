@@ -18,6 +18,7 @@ from runmap.routing.integer_graph import IntegerArc, integer_arc, integer_segmen
 from runmap.routing.run_types import RunSettings
 from runmap.routing.settings import resolve_shape_strengths
 from runmap.routing.types import Arc
+from runmap.routing.signals import SignalData
 from runmap.routing_reference.cost_types import (
     IndexedTraversal,
     PhysicalPart,
@@ -60,6 +61,7 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
                             hills: HillData | None = None,
                             environment: Mapping[str, tuple[EnvironmentInterval, ...]] | None = None,
                             environment_weights: EnvironmentWeights = EnvironmentWeights(),
+                            signals: SignalData | None = None,
                             deadline: float | None = None) -> RequestCostData:
     home_point, destination = projected_points([[home.longitude, home.latitude],
                                                 [turnaround.longitude, turnaround.latitude]])
@@ -67,7 +69,7 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
     if separation < 0.01:
         raise ValueError("Home and turnaround must be spatially distinct")
     strengths = resolve_shape_strengths(settings)
-    resolved = resolve_preferences(preferences, hills=hills)
+    resolved = resolve_preferences(preferences, hills=hills, signals=signals is not None)
     index = graph.integer
     if index is None:
         raise ValueError("Graph has no prepared integer index")
@@ -87,7 +89,7 @@ def build_request_cost_data(graph: GraphData, home: Snap, turnaround: Snap,
         separation * settings.transition_ratio,
         min(10.0, separation * min(settings.radius_ratio, settings.transition_ratio) / 4),
         strengths, settings.avoidance_ratio == 0, parts if parts is not None else {},
-        resolved, hills if resolved.weights.hills else None, prepared_environment, environment_weights,
+        resolved, hills if resolved.weights.hills else None, prepared_environment, environment_weights, signals,
     )
 
 

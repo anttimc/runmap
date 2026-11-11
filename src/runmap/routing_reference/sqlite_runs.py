@@ -6,6 +6,7 @@ from runmap.api.sqlite_runs import RunAreaLimits, _area_exceeded, _area_limited
 from runmap.paths.coverage import near_coverage_boundary
 from runmap.paths.database import count_network_segments
 from runmap.paths.local_network import LocalNetwork, load_local_network
+from runmap.paths.signals import read_reference_signals
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import indexed_segment_points
@@ -39,8 +40,11 @@ def _plan_windows(data: SQLitePathData, options: RunRequest, response: RunRespon
                 include_terrain=preferences.hills != "off", include_measurements=False, include_coverage=False)
             attempt.nodes = len(local.routing.nodes)
             check_deadline(deadline)
+            signals = (read_reference_signals(connection, data.signal_connection, local.routing, deadline=deadline)
+                       if preferences.signals != "off" and data.signal_connection is not None else None)
             result = plan_run(local.routing, response.home, response.turnaround, settings, deadline,
-                               preferences=preferences, hills=local.hills, frontier_nodes=local.frontier_indices, mode=options.mode)
+                               preferences=preferences, hills=local.hills, frontier_nodes=local.frontier_indices,
+                               mode=options.mode, signals=signals)
             attempt.reached_frontier = bool(result.reached_frontier)
             attempt.source_coverage_limited = _source_limited(data, result, response)
             if "deadline" in result.outcomes:
