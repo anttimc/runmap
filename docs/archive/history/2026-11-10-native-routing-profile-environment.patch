@@ -1,0 +1,188 @@
+--- a/src/runmap/experiments/profile_native.py
++++ b/src/runmap/experiments/profile_native.py
+@@ -24,11 +24,12 @@
+ from runmap.experiments.benchmark_native_routing import DEFAULT_BOUNDS, _endpoint
+ from runmap.experiments.latency import latency_summary
+ from runmap.paths.database import network_metadata
++from runmap.paths.environment_join import open_environment_join
+ from runmap.paths.numeric_database import open_numeric_database
+ from runmap.routing.cost_types import PreferenceSettings
+ from runmap.routing.geometry import projected_points
+ from runmap.routing.numeric_planner import NumericRunResult, numeric_plan_run
+-from runmap.routing.numeric_search import NumericDistances, load_numeric_graph, numeric_distances
++from runmap.routing.numeric_search import LoadedNumericGraph, NumericDistances, load_numeric_graph, numeric_distances
+ from runmap.routing.run_types import RunSettings
+ 
+ 
+@@ -73,6 +74,8 @@
+     legs = [leg for candidate in result.candidates for leg in candidate.legs]
+     return dict(expanded_nodes=sum(leg.expanded_nodes for leg in legs), searches=len(legs),
+                 path_edges=sum(len(leg.arc_ids) for leg in legs), outcomes=result.outcomes,
++                environment_penalties={field: sum(float(leg.environment_costs[field].sum()) for leg in legs)
++                                       for field in legs[0].environment_costs} if legs else {},
+                 output_bytes=sum(array.nbytes for leg in legs for array in (
+                     leg.arc_ids, leg.segment_ids, leg.start_m, leg.end_m, leg.components,
+                     leg.hill_features, leg.frontier_node_ids,
+@@ -94,9 +97,30 @@
+                 phases={name: [asdict(row) for row in values] for name, values in phases.items()})
+ 
+ 
+-def profile(database: Path, numeric: Path, repeats: int, instrumented: bool) -> dict[str, object]:
++def _environment_graph(numeric: Path, environment: Path, raster_bundle: Path,
++                       instrumented: bool) -> tuple[LoadedNumericGraph, dict[str, object]]:
++    """Prepare a separate joined graph so historical workloads retain their inputs."""
++    manifest = json.loads((raster_bundle / "manifest.json").read_text())
++    with closing(open_numeric_database(numeric)) as connection:
++        metadata = network_metadata(connection)
++        identity = dict(network_dataset_id=metadata.dataset_id,
++                        network_feature_identity=metadata.feature_identity,
++                        raster_dataset_id=manifest["dataset_id"],
++                        raster_sha256=manifest["artifacts"][0]["sha256"])
++        with closing(open_environment_join(environment, **identity)) as joined:
++            graph, duration, rows = _measure(
++                lambda: load_numeric_graph(connection, DEFAULT_BOUNDS, environment_connection=joined),
++                "allocations" if instrumented else "baseline", instrumented)
++    return graph, dict(identity=identity, environment_bytes=graph.environment_bytes,
++                       prepare_elapsed_ms=duration, prepare_phases=rows)
++
++
++def profile(database: Path, numeric: Path, repeats: int, instrumented: bool,
++            environment: Path | None = None, raster_bundle: Path | None = None) -> dict[str, object]:
+     if repeats < 1:
+         raise ValueError("Repeat count must be positive")
++    if (environment is None) != (raster_bundle is None):
++        raise ValueError("Provide both the environment join and raster bundle")
+     if instrumented and not hasattr(_routing_native, "profile_begin"):
+         raise RuntimeError("Build the extension with --features profiling first")
+     if not instrumented and hasattr(_routing_native, "profile_begin"):
+@@ -124,6 +148,16 @@
+         "shape_hills_high_roundtrip": lambda: numeric_plan_run(graph, start, destination, points[0], points[1],
+                                                                preferences=PreferenceSettings(hills="high")),
+     }
++    environment_prepare: dict[str, object] | None = None
++    if environment is not None and raster_bundle is not None:
++        joined_graph, environment_prepare = _environment_graph(numeric, environment, raster_bundle, instrumented)
++        workloads.update({
++            "shape_environment_off_roundtrip": lambda: numeric_plan_run(
++                joined_graph, start, destination, points[0], points[1]),
++            "shape_environment_traffic_high_roundtrip": lambda: numeric_plan_run(
++                joined_graph, start, destination, points[0], points[1],
++                preferences=PreferenceSettings(environment_traffic="high")),
++        })
+     results: dict[str, object] = {}
+     for name, function in workloads.items():
+         function()  # Warm up; the immutable graph is reused, search state and costs are recomputed.
+@@ -141,6 +175,7 @@
+                 index_prepare_ms=graph.index_prepare_ms, prepare_phases=prepare_rows,
+                 edge_layout_bytes=_routing_native.profile_layout() if instrumented else None,
+                 peak_rss_bytes=rss if sys.platform == "darwin" else rss * 1024,
++                environment_prepare=environment_prepare,
+                 workloads=results,
+                 note="Fixed loaded working area; no HTTP, retries, route geometry rendering, or response cache. "
+                      "Normal baseline and instrumented builds run in separate processes. Timings are exclusive. "
+@@ -156,9 +191,12 @@
+     parser.add_argument("numeric", type=Path)
+     parser.add_argument("--repeats", type=int, default=20)
+     parser.add_argument("--instrumented", action="store_true")
++    parser.add_argument("--environment", type=Path, help="Prepared environment join; adds off/high traffic workloads")
++    parser.add_argument("--environment-raster-bundle", type=Path, help="Raster bundle used to validate the join")
+     parser.add_argument("--report", type=Path, required=True)
+     args = parser.parse_args()
+-    result = profile(args.database, args.numeric, args.repeats, args.instrumented)
++    result = profile(args.database, args.numeric, args.repeats, args.instrumented,
++                     args.environment, args.environment_raster_bundle)
+     args.report.parent.mkdir(parents=True, exist_ok=True)
+     args.report.write_text(json.dumps(result, indent=2) + "\n")
+     print(f"Wrote {args.report}")
+--- a/src/runmap/experiments/plot_native_profile.py
++++ b/src/runmap/experiments/plot_native_profile.py
+@@ -8,7 +8,7 @@
+ from pathlib import Path
+ import shutil
+ from statistics import median
+-from typing import Literal, TypedDict, cast
++from typing import Literal, NotRequired, TypedDict, cast
+ 
+ import matplotlib
+ matplotlib.use("Agg")
+@@ -31,6 +31,7 @@
+ 
+ 
+ class Capture(TypedDict):
++    environment_prepare: NotRequired[dict[str, object] | None]
+     created_utc: str
+     dataset_id: str
+     platform: str
+@@ -50,6 +51,8 @@
+     "distance_only_roundtrip": "Distance-only loop",
+     "shape_roundtrip": "Shape loop",
+     "shape_hills_high_roundtrip": "Shape + hills loop",
++    "shape_environment_off_roundtrip": "Shape + environment off",
++    "shape_environment_traffic_high_roundtrip": "Shape + traffic high",
+ }
+ GROUPS = {
+     "Search state": ("initialize",),
+@@ -70,6 +73,13 @@
+ 
+ 
+ def _verify(baseline: Capture, profile: Capture) -> None:
++    for capture in (baseline, profile):
++        if set(capture["workloads"]) != set(baseline["workloads"]):
++            raise ValueError("Capture workloads disagree")
++    baseline_environment = baseline.get("environment_prepare")
++    profile_environment = profile.get("environment_prepare")
++    if ((baseline_environment or {}).get("identity") != (profile_environment or {}).get("identity")):
++        raise ValueError("Capture environment identities disagree")
+     for key in ("dataset_id", "revision", "nodes", "segments", "chunks", "payload_bytes"):
+         if baseline[key] != profile[key]:
+             raise ValueError(f"Capture identities disagree: {key}")
+@@ -80,7 +90,7 @@
+ 
+ 
+ def _chart(baseline: Capture, profile: Capture, output: Path) -> str:
+-    names = list(LABELS)
++    names = [name for name in LABELS if name in baseline["workloads"]]
+     positions = np.arange(len(names))
+     plt.rcParams.update({"font.family": "sans-serif", "font.size": 10,
+                          "axes.spines.top": False, "axes.spines.right": False})
+@@ -137,6 +147,8 @@
+     phase_rows: list[str] = []
+     csv_rows: list[dict[str, str | float]] = []
+     for name, label in LABELS.items():
++        if name not in baseline["workloads"]:
++            continue
+         normal = baseline["workloads"][name]["baseline"]
+         modes = profile["workloads"][name]
+         durations = [median(normal["elapsed_ms"])] + [median(modes[mode]["elapsed_ms"])
+@@ -162,6 +174,12 @@
+     layout = profile["edge_layout_bytes"]
+     if layout is None:
+         raise ValueError("The profiling capture must include native layout sizes")
++    environment_note = (
++        "<p>Environment workloads use a separate joined graph with traffic off/high. "
++        "Environment interval integration is included in Cost / cache; "
++        "Field integration measures shape fields. Joined graph preparation is outside workload timings.</p>"
++        if profile.get("environment_prepare") else ""
++    )
+     return f"""<!doctype html><html lang="en"><meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1"><title>Native routing profile · {date}</title>
+ <style>body{{font:16px/1.55 system-ui,sans-serif;color:#172033;background:#f5f7fb;margin:0}}
+@@ -175,7 +193,7 @@
+ {profile['chunks']} chunks and {profile['payload_bytes'] / 2**20:.1f} MiB of retained graph payloads.
+ All result fingerprints match between normal and profiling builds.</p>
+ <div class="card">{svg}</div>
+-<div class="card"><h2>Reading the measurements</h2>
++<div class="card"><h2>Reading the measurements</h2>{environment_note}
+ <p>Each edge occupies {layout[0]} bytes and each stored predecessor entry occupies {layout[1]} bytes.
+ Shape loops perform four searches;
+ distance-only loops perform two, so their totals are not a controlled per-search comparison.</p>
+@@ -199,7 +217,8 @@
+ </tr></thead><tbody>{phase_rows}</tbody></table></div>
+ <div class="card"><h2>Scope and reproduction</h2>
+ <p>Fixed working area around Leppävaara, home (24.795, 60.216), turnaround (24.815, 60.225).
+-Default loop settings; separate hills-off and hills-high workloads. Each repetition recomputes searches and costs
++Default loop settings; separate hills-off and hills-high workloads. When an environment join is supplied,
++additional workloads compare environment off and traffic high on the same joined graph. Each repetition recomputes searches and costs
+ over a shared immutable graph. No automatic area expansion, HTTP, route rendering, or exact-response cache.
+ OS cache was uncontrolled. This is a local diagnostic, not a general latency guarantee.</p>
+ <p>{escape(profile['platform'])}; Python {escape(profile['python'])}. Source revision

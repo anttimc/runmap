@@ -1,0 +1,62 @@
+--- a/rust/src/chunk_search.rs
++++ b/rust/src/chunk_search.rs
+@@ -61,7 +61,7 @@
+ }
+ 
+ #[derive(Clone, Copy)]
+-enum EdgeRef {
++pub(crate) enum EdgeRef {
+     Base { chunk: usize, arc: usize },
+     Overlay(usize),
+ }
+--- a/rust/src/bindings.rs
++++ b/rust/src/bindings.rs
+@@ -67,6 +67,6 @@
+     use crate::endpoint_overlay::Edge;
+     (
+         std::mem::size_of::<Edge>(),
+-        std::mem::size_of::<Option<Edge>>(),
++        std::mem::size_of::<Option<crate::chunk_search::EdgeRef>>(),
+     )
+ }
+--- a/src/runmap/experiments/profile_native.py
++++ b/src/runmap/experiments/profile_native.py
+@@ -75,7 +75,8 @@
+                 path_edges=sum(len(leg.arc_ids) for leg in legs), outcomes=result.outcomes,
+                 output_bytes=sum(array.nbytes for leg in legs for array in (
+                     leg.arc_ids, leg.segment_ids, leg.start_m, leg.end_m, leg.components,
+-                    leg.hill_features, leg.frontier_node_ids)))
++                    leg.hill_features, leg.frontier_node_ids,
++                    *leg.environment_costs.values(), *leg.environment_unknown_m.values())))
+ 
+ 
+ def _samples(function: Callable[[], RoutingResult], repeats: int, mode: str, instrumented: bool) -> dict[str, object]:
+--- a/src/runmap/experiments/plot_native_profile.py
++++ b/src/runmap/experiments/plot_native_profile.py
+@@ -170,14 +170,14 @@
+ table{{width:100%;border-collapse:collapse;font-size:14px}}td,th{{padding:9px 12px;text-align:right;border-bottom:1px solid #e2e8f0}}
+ td:first-child,th:first-child{{text-align:left}}code{{font-size:.9em}}.muted{{color:#536176}}a{{color:#1d4ed8}}
+ </style><main><p class="muted">Runmap · measured {date} · native Rust routing</p>
+-<h1>Large state buffers; many small geometry allocations</h1>
++<h1>Native routing phase timings and allocation traffic</h1>
+ <p>Real Helsinki data, {profile['nodes']:,} active nodes, {profile['segments']:,} selected segments,
+ {profile['chunks']} chunks and {profile['payload_bytes'] / 2**20:.1f} MiB of retained graph payloads.
+ All result fingerprints match between normal and profiling builds.</p>
+ <div class="card">{svg}</div>
+ <div class="card"><h2>Reading the measurements</h2>
+-<p><b>Investigate geometry/cost work for CPU time, and compact predecessor storage for memory traffic.</b>
+-Each predecessor entry occupies {layout[1]} bytes. Shape loops perform four searches;
++<p>Each edge occupies {layout[0]} bytes and each stored predecessor entry occupies {layout[1]} bytes.
++Shape loops perform four searches;
+ distance-only loops perform two, so their totals are not a controlled per-search comparison.</p>
+ <p>Timing and allocation captures are separate. Panel A uses the normal release build.
+ Panel B shows exclusive times from detailed instrumentation, which perturbs short operations;
+@@ -203,7 +203,7 @@
+ over a shared immutable graph. No automatic area expansion, HTTP, route rendering, or exact-response cache.
+ OS cache was uncontrolled. This is a local diagnostic, not a general latency guarantee.</p>
+ <p>{escape(profile['platform'])}; Python {escape(profile['python'])}. Source revision
+-<code>{escape(profile['revision'])}</code> plus profiling changes in the working tree.
++<code>{escape(profile['revision'])}</code>; see the dated report for working-tree changes.
+ Dataset <code>{escape(profile['dataset_id'])}</code>.</p>
+ <p><a href="baseline.json">Normal capture</a> · <a href="instrumented.json">Profiling capture</a> ·
+ <a href="phases.csv">Phase CSV</a> · <a href="overview.png">PNG</a> · <a href="overview.svg">SVG</a></p></div></main></html>"""

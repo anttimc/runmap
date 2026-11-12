@@ -40,6 +40,12 @@ The [November 11 route regression](history/2026-11-11-signal-route-regression.md
 records the false-zero Leppävaara–Pajamäki result, spur and mixed-connection
 corrections, and spatial source inspection. It supersedes the initial v1
 attribution behavior without rewriting the earlier smoke evidence.
+The [November 10 rerun](history/2026-11-10-native-routing-profile.md) repeats those
+workloads after the native search optimizations and records compact predecessor
+storage, reduced geometry allocation traffic, and remaining cost/traversal work.
+The [November 11 distance-only corridor profile](history/2026-11-11-distance-search-profile.md)
+compares Leppävaara–Oulunkylä against the earlier native build and separates
+millisecond searches from repeated graph/environment preparation.
 
 The [2026-11-02 integration comparison](history/2026-11-02-integration-comparison.md)
 compares spacing caps and minimum sample counts against a fine reference on real

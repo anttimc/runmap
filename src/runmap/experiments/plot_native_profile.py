@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import shutil
 from statistics import median
-from typing import Literal, TypedDict, cast
+from typing import Literal, NotRequired, TypedDict, cast
 
 import matplotlib
 matplotlib.use("Agg")
@@ -31,6 +31,7 @@ class Sample(TypedDict):
 
 
 class Capture(TypedDict):
+    environment_prepare: NotRequired[dict[str, object] | None]
     created_utc: str
     dataset_id: str
     platform: str
@@ -50,6 +51,8 @@ LABELS = {
     "distance_only_roundtrip": "Distance-only loop",
     "shape_roundtrip": "Shape loop",
     "shape_hills_high_roundtrip": "Shape + hills loop",
+    "shape_environment_off_roundtrip": "Shape + environment off",
+    "shape_environment_traffic_high_roundtrip": "Shape + traffic high",
 }
 GROUPS = {
     "Search state": ("initialize",),
@@ -70,6 +73,13 @@ def _value(sample: Sample, phases: tuple[str, ...], field: Literal["milliseconds
 
 
 def _verify(baseline: Capture, profile: Capture) -> None:
+    for capture in (baseline, profile):
+        if set(capture["workloads"]) != set(baseline["workloads"]):
+            raise ValueError("Capture workloads disagree")
+    baseline_environment = baseline.get("environment_prepare")
+    profile_environment = profile.get("environment_prepare")
+    if ((baseline_environment or {}).get("identity") != (profile_environment or {}).get("identity")):
+        raise ValueError("Capture environment identities disagree")
     for key in ("dataset_id", "revision", "nodes", "segments", "chunks", "payload_bytes"):
         if baseline[key] != profile[key]:
             raise ValueError(f"Capture identities disagree: {key}")
@@ -80,7 +90,7 @@ def _verify(baseline: Capture, profile: Capture) -> None:
 
 
 def _chart(baseline: Capture, profile: Capture, output: Path) -> str:
-    names = list(LABELS)
+    names = [name for name in LABELS if name in baseline["workloads"]]
     positions = np.arange(len(names))
     plt.rcParams.update({"font.family": "sans-serif", "font.size": 10,
                          "axes.spines.top": False, "axes.spines.right": False})
@@ -137,6 +147,8 @@ def _tables(baseline: Capture, profile: Capture) -> tuple[str, str, list[dict[st
     phase_rows: list[str] = []
     csv_rows: list[dict[str, str | float]] = []
     for name, label in LABELS.items():
+        if name not in baseline["workloads"]:
+            continue
         normal = baseline["workloads"][name]["baseline"]
         modes = profile["workloads"][name]
         durations = [median(normal["elapsed_ms"])] + [median(modes[mode]["elapsed_ms"])
@@ -162,6 +174,12 @@ def _document(baseline: Capture, profile: Capture, svg: str, timing_rows: str, p
     layout = profile["edge_layout_bytes"]
     if layout is None:
         raise ValueError("The profiling capture must include native layout sizes")
+    environment_note = (
+        "<p>Environment workloads use a separate joined graph with traffic off/high. "
+        "Environment interval integration is included in Cost / cache; "
+        "Field integration measures shape fields. Joined graph preparation is outside workload timings.</p>"
+        if profile.get("environment_prepare") else ""
+    )
     return f"""<!doctype html><html lang="en"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Native routing profile · {date}</title>
 <style>body{{font:16px/1.55 system-ui,sans-serif;color:#172033;background:#f5f7fb;margin:0}}
@@ -170,14 +188,14 @@ main{{max-width:1450px;margin:auto;padding:40px}}h1{{font-size:36px;line-height:
 table{{width:100%;border-collapse:collapse;font-size:14px}}td,th{{padding:9px 12px;text-align:right;border-bottom:1px solid #e2e8f0}}
 td:first-child,th:first-child{{text-align:left}}code{{font-size:.9em}}.muted{{color:#536176}}a{{color:#1d4ed8}}
 </style><main><p class="muted">Runmap · measured {date} · native Rust routing</p>
-<h1>Large state buffers; many small geometry allocations</h1>
+<h1>Native routing phase timings and allocation traffic</h1>
 <p>Real Helsinki data, {profile['nodes']:,} active nodes, {profile['segments']:,} selected segments,
 {profile['chunks']} chunks and {profile['payload_bytes'] / 2**20:.1f} MiB of retained graph payloads.
 All result fingerprints match between normal and profiling builds.</p>
 <div class="card">{svg}</div>
-<div class="card"><h2>Reading the measurements</h2>
-<p><b>Investigate geometry/cost work for CPU time, and compact predecessor storage for memory traffic.</b>
-Each predecessor entry occupies {layout[1]} bytes. Shape loops perform four searches;
+<div class="card"><h2>Reading the measurements</h2>{environment_note}
+<p>Each edge occupies {layout[0]} bytes and each stored predecessor entry occupies {layout[1]} bytes.
+Shape loops perform four searches;
 distance-only loops perform two, so their totals are not a controlled per-search comparison.</p>
 <p>Timing and allocation captures are separate. Panel A uses the normal release build.
 Panel B shows exclusive times from detailed instrumentation, which perturbs short operations;
@@ -199,11 +217,12 @@ small differences also reflect machine noise and cache state.</p>
 </tr></thead><tbody>{phase_rows}</tbody></table></div>
 <div class="card"><h2>Scope and reproduction</h2>
 <p>Fixed working area around Leppävaara, home (24.795, 60.216), turnaround (24.815, 60.225).
-Default loop settings; separate hills-off and hills-high workloads. Each repetition recomputes searches and costs
+Default loop settings; separate hills-off and hills-high workloads. When an environment join is supplied,
+additional workloads compare environment off and traffic high on the same joined graph. Each repetition recomputes searches and costs
 over a shared immutable graph. No automatic area expansion, HTTP, route rendering, or exact-response cache.
 OS cache was uncontrolled. This is a local diagnostic, not a general latency guarantee.</p>
 <p>{escape(profile['platform'])}; Python {escape(profile['python'])}. Source revision
-<code>{escape(profile['revision'])}</code> plus profiling changes in the working tree.
+<code>{escape(profile['revision'])}</code>; see the dated report for working-tree changes.
 Dataset <code>{escape(profile['dataset_id'])}</code>.</p>
 <p><a href="baseline.json">Normal capture</a> · <a href="instrumented.json">Profiling capture</a> ·
 <a href="phases.csv">Phase CSV</a> · <a href="overview.png">PNG</a> · <a href="overview.svg">SVG</a></p></div></main></html>"""

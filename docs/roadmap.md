@@ -95,6 +95,9 @@ for contracts. Remaining work:
   generation, concurrency, and ownership guarantees. Benchmark overlapping
   windows and long routes. Further incremental/hierarchical search, spatial
   batching, and caching should follow profiles and preserve valid cost bounds.
+  Address oversized graphs that bypass the cache and full-area environment
+  attachment with preferences Off; preserve selected-route diagnostics. See the
+  [distance-only corridor profile](archive/history/2026-11-11-distance-search-profile.md).
 
 ## Planned: terrain and maintainability
 

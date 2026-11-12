@@ -67,6 +67,6 @@ fn profile_layout() -> (usize, usize) {
     use crate::endpoint_overlay::Edge;
     (
         std::mem::size_of::<Edge>(),
-        std::mem::size_of::<Option<Edge>>(),
+        std::mem::size_of::<Option<crate::chunk_search::EdgeRef>>(),
     )
 }

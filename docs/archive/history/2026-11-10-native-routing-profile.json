@@ -1,0 +1,799 @@
+{
+  "created_utc": "2026-11-10T12:49:20.237041+00:00",
+  "revision": "1420cddbd5ab0c09975f0c584bee7df15f5762f8",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "processor": "arm",
+  "python": "3.14.6",
+  "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+  "bounds": [
+    374971.56657009746,
+    6675095.112818664,
+    381827.50090309826,
+    6680883.1672423985
+  ],
+  "home": [
+    24.795,
+    60.216
+  ],
+  "turnaround": [
+    24.815,
+    60.225
+  ],
+  "nodes": 34653,
+  "segments": 44930,
+  "chunks": 230,
+  "payload_bytes": 21711472,
+  "prepare_elapsed_ms": 147.35779102193192,
+  "payload_load_ms": 137.21529097529128,
+  "index_prepare_ms": 10.033458995167166,
+  "peak_rss_bytes": 154550272,
+  "note": "Fixed loaded working area; no HTTP, retries, route geometry rendering, or response cache. Normal baseline and instrumented builds run in separate processes. Timings are exclusive. Detailed timing includes per-edge timer overhead; allocations are a separate timer-free pass. Requested bytes sum alloc/alloc_zeroed/full new realloc sizes, not live bytes, RSS, or copied bytes. Python/SQLite allocator requests are excluded; Rust serialization staging buffers are included. Graph preparation is sampled once per process, with uncontrolled OS cache; not a cold-disk measurement.",
+  "source_scope": "Committed revision plus profiling-corrections.patch; unfinished working-tree traffic-light changes excluded.",
+  "normal_repeats": 40,
+  "profiling_repeats": 20,
+  "edge_layout_bytes": [
+    144,
+    24
+  ],
+  "installed_extension_changed": false,
+  "sha256": {
+    "normal.so": "02f7c2304229e3e496d6d322e4650f7426713f853d293b8b63292d8e77e89b3b",
+    "profiling.so": "80c8c3d6f15aa8a7a7d3f04a200cf048bc1fc193117e93e5d9daa2b83bd06b87",
+    "baseline.json": "318485ac033956813618e817a4b75261e246bb1f33d25e16e5f2e6d63f867a10",
+    "instrumented.json": "26a2f00d304fdfda3baaaeee9ac7ab36f8a1f3e6d53400c1a5f139acd85d2245",
+    "profiling-corrections.patch": "1e66f8dea71619b8c730c65819ecf2a0a21058a122c98ff6c849ca4843e3e7c8"
+  },
+  "workloads": {
+    "distance_1km": {
+      "normal_summary": {
+        "p50_ms": 0.203437521122396,
+        "p95_ms": 0.27973605028819293,
+        "p99_ms": 0.2843162982026115
+      },
+      "historical_2026_11_02_summary": {
+        "p50_ms": 0.233291502809152,
+        "p95_ms": 0.33428783062845463,
+        "p99_ms": 0.3485235833795741
+      },
+      "fingerprint": "e03a0b7597ada3b39044651049a84864f46fbaf2d3b3f2e7c193f4923f2c2f1d",
+      "fingerprints_match_all_modes": true,
+      "result": {
+        "expanded_nodes": 2374,
+        "reached_nodes": 2374,
+        "output_bytes": 37984
+      },
+      "median_ms_by_mode": {
+        "coarse": 0.22981251822784543,
+        "detail": 0.3081460017710924,
+        "allocations": 0.25691650807857513
+      },
+      "allocation_requests": 44.0,
+      "requested_bytes": 711996.0,
+      "phases": {
+        "views": {
+          "milliseconds": 0.0138335,
+          "calls": 1.0,
+          "allocations": 7.0,
+          "requested_bytes": 211328.0
+        },
+        "overlay": {
+          "milliseconds": 0.0008335,
+          "calls": 1.0,
+          "allocations": 15.0,
+          "requested_bytes": 1748.0
+        },
+        "initialize": {
+          "milliseconds": 0.002459,
+          "calls": 1.0,
+          "allocations": 2.0,
+          "requested_bytes": 321816.0
+        },
+        "traversal": {
+          "milliseconds": 0.2117995,
+          "calls": 1.0,
+          "allocations": 6.0,
+          "requested_bytes": 8064.0
+        },
+        "result": {
+          "milliseconds": 0.016396,
+          "calls": 1.0,
+          "allocations": 11.0,
+          "requested_bytes": 131008.0
+        },
+        "serialize": {
+          "milliseconds": 0.0017915000000000001,
+          "calls": 3.0,
+          "allocations": 2.0,
+          "requested_bytes": 37984.0
+        },
+        "cost": {
+          "milliseconds": 0.058636,
+          "calls": 3246.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "clip_geometry": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "decode_geometry": {
+          "milliseconds": 8.3e-05,
+          "calls": 1.0,
+          "allocations": 1.0,
+          "requested_bytes": 48.0
+        },
+        "integration": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "hill_decode": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "index": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        }
+      }
+    },
+    "distance_3km": {
+      "normal_summary": {
+        "p50_ms": 1.7974375223275274,
+        "p95_ms": 1.9642250350443644,
+        "p99_ms": 2.0511543937027454
+      },
+      "historical_2026_11_02_summary": {
+        "p50_ms": 2.4670415150467306,
+        "p95_ms": 3.190768713830039,
+        "p99_ms": 3.2092950062360615
+      },
+      "fingerprint": "1d662906b3c5fd8bd8c144aefd7e4ae629a4525198b0361a6d1cb64ec30eb82e",
+      "fingerprints_match_all_modes": true,
+      "result": {
+        "expanded_nodes": 17469,
+        "reached_nodes": 17469,
+        "output_bytes": 279528
+      },
+      "median_ms_by_mode": {
+        "coarse": 1.9714795344043523,
+        "detail": 2.3640834842808545,
+        "allocations": 2.074833493679762
+      },
+      "allocation_requests": 51.0,
+      "requested_bytes": 1895652.0,
+      "phases": {
+        "views": {
+          "milliseconds": 0.015667,
+          "calls": 1.0,
+          "allocations": 7.0,
+          "requested_bytes": 211328.0
+        },
+        "overlay": {
+          "milliseconds": 0.0010425,
+          "calls": 1.0,
+          "allocations": 15.0,
+          "requested_bytes": 1748.0
+        },
+        "initialize": {
+          "milliseconds": 0.002979,
+          "calls": 1.0,
+          "allocations": 2.0,
+          "requested_bytes": 321816.0
+        },
+        "traversal": {
+          "milliseconds": 1.8687185,
+          "calls": 1.0,
+          "allocations": 9.0,
+          "requested_bytes": 32672.0
+        },
+        "result": {
+          "milliseconds": 0.0351245,
+          "calls": 1.0,
+          "allocations": 14.0,
+          "requested_bytes": 1048512.0
+        },
+        "serialize": {
+          "milliseconds": 0.0122915,
+          "calls": 3.0,
+          "allocations": 3.0,
+          "requested_bytes": 279528.0
+        },
+        "cost": {
+          "milliseconds": 0.42717649999999996,
+          "calls": 23396.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "clip_geometry": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "decode_geometry": {
+          "milliseconds": 8.3e-05,
+          "calls": 1.0,
+          "allocations": 1.0,
+          "requested_bytes": 48.0
+        },
+        "integration": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "hill_decode": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "index": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        }
+      }
+    },
+    "distance_only_roundtrip": {
+      "normal_summary": {
+        "p50_ms": 0.36604146589525044,
+        "p95_ms": 0.4391038790345192,
+        "p99_ms": 0.4524368850979954
+      },
+      "historical_2026_11_02_summary": {
+        "p50_ms": 0.40218752110376954,
+        "p95_ms": 0.5423023627372459,
+        "p99_ms": 0.5564737465465441
+      },
+      "fingerprint": "d3e0e6b3e05a8cd49ca995a1f25b4fa4224e0ebccffb2c10b85a702a20009740",
+      "fingerprints_match_all_modes": true,
+      "result": {
+        "expanded_nodes": 2479,
+        "searches": 2,
+        "path_edges": 152,
+        "outcomes": [
+          "complete"
+        ],
+        "output_bytes": 29184
+      },
+      "median_ms_by_mode": {
+        "coarse": 0.35679200664162636,
+        "detail": 0.47606247244402766,
+        "allocations": 0.41797899757511914
+      },
+      "allocation_requests": 206.0,
+      "requested_bytes": 3254248.0,
+      "phases": {
+        "views": {
+          "milliseconds": 0.027937,
+          "calls": 2.0,
+          "allocations": 14.0,
+          "requested_bytes": 422656.0
+        },
+        "overlay": {
+          "milliseconds": 0.0028335,
+          "calls": 2.0,
+          "allocations": 52.0,
+          "requested_bytes": 7752.0
+        },
+        "initialize": {
+          "milliseconds": 0.02475,
+          "calls": 2.0,
+          "allocations": 6.0,
+          "requested_bytes": 2574400.0
+        },
+        "traversal": {
+          "milliseconds": 0.2787,
+          "calls": 2.0,
+          "allocations": 14.0,
+          "requested_bytes": 32512.0
+        },
+        "result": {
+          "milliseconds": 0.009148,
+          "calls": 2.0,
+          "allocations": 60.0,
+          "requested_bytes": 153216.0
+        },
+        "serialize": {
+          "milliseconds": 0.012291,
+          "calls": 30.0,
+          "allocations": 56.0,
+          "requested_bytes": 63552.0
+        },
+        "cost": {
+          "milliseconds": 0.06749250000000001,
+          "calls": 3770.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "clip_geometry": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "decode_geometry": {
+          "milliseconds": 0.000167,
+          "calls": 4.0,
+          "allocations": 4.0,
+          "requested_bytes": 160.0
+        },
+        "integration": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "hill_decode": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "index": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        }
+      }
+    },
+    "shape_roundtrip": {
+      "normal_summary": {
+        "p50_ms": 3.7307710153982043,
+        "p95_ms": 3.866762187681161,
+        "p99_ms": 3.8852301432052627
+      },
+      "historical_2026_11_02_summary": {
+        "p50_ms": 5.6421875196974725,
+        "p95_ms": 5.994306251523085,
+        "p99_ms": 6.054256228962913
+      },
+      "fingerprint": "96f3245943c121ec56583aeeac816812be0aa62c21b29f9e995c213ada3ddce3",
+      "fingerprints_match_all_modes": true,
+      "result": {
+        "expanded_nodes": 11126,
+        "searches": 4,
+        "path_edges": 392,
+        "outcomes": [
+          "complete",
+          "complete"
+        ],
+        "output_bytes": 75264
+      },
+      "median_ms_by_mode": {
+        "coarse": 4.133249982260168,
+        "detail": 6.030291988281533,
+        "allocations": 4.592395969666541
+      },
+      "allocation_requests": 15950.0,
+      "requested_bytes": 10036544.0,
+      "phases": {
+        "views": {
+          "milliseconds": 0.062751,
+          "calls": 4.0,
+          "allocations": 28.0,
+          "requested_bytes": 845312.0
+        },
+        "overlay": {
+          "milliseconds": 0.006729,
+          "calls": 4.0,
+          "allocations": 104.0,
+          "requested_bytes": 15504.0
+        },
+        "initialize": {
+          "milliseconds": 0.050833,
+          "calls": 4.0,
+          "allocations": 12.0,
+          "requested_bytes": 5148800.0
+        },
+        "traversal": {
+          "milliseconds": 1.559393,
+          "calls": 4.0,
+          "allocations": 28.0,
+          "requested_bytes": 65024.0
+        },
+        "result": {
+          "milliseconds": 0.0254575,
+          "calls": 4.0,
+          "allocations": 120.0,
+          "requested_bytes": 306432.0
+        },
+        "serialize": {
+          "milliseconds": 0.034705,
+          "calls": 60.0,
+          "allocations": 112.0,
+          "requested_bytes": 135552.0
+        },
+        "cost": {
+          "milliseconds": 2.033271,
+          "calls": 16106.0,
+          "allocations": 46.0,
+          "requested_bytes": 2801120.0
+        },
+        "clip_geometry": {
+          "milliseconds": 0.6095539999999999,
+          "calls": 15480.0,
+          "allocations": 12.0,
+          "requested_bytes": 768.0
+        },
+        "decode_geometry": {
+          "milliseconds": 0.32932,
+          "calls": 15488.0,
+          "allocations": 15488.0,
+          "requested_bytes": 718032.0
+        },
+        "integration": {
+          "milliseconds": 1.155799,
+          "calls": 15480.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "hill_decode": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "index": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        }
+      }
+    },
+    "shape_hills_high_roundtrip": {
+      "normal_summary": {
+        "p50_ms": 6.372292002197355,
+        "p95_ms": 6.603801785968244,
+        "p99_ms": 6.715343032265082
+      },
+      "historical_2026_11_02_summary": {
+        "p50_ms": 10.022499976912513,
+        "p95_ms": 10.69026245677378,
+        "p99_ms": 10.73076187283732
+      },
+      "fingerprint": "428d2d0a8734a524a5654cced3f03d8b07c71306aa1df542774fe643ac259455",
+      "fingerprints_match_all_modes": true,
+      "result": {
+        "expanded_nodes": 19172,
+        "searches": 4,
+        "path_edges": 435,
+        "outcomes": [
+          "complete",
+          "complete"
+        ],
+        "output_bytes": 83520
+      },
+      "median_ms_by_mode": {
+        "coarse": 7.424166513374075,
+        "detail": 10.551541519816965,
+        "allocations": 8.316208026371896
+      },
+      "allocation_requests": 27006.0,
+      "requested_bytes": 12493608.0,
+      "phases": {
+        "views": {
+          "milliseconds": 0.066749,
+          "calls": 4.0,
+          "allocations": 28.0,
+          "requested_bytes": 845312.0
+        },
+        "overlay": {
+          "milliseconds": 0.0072695,
+          "calls": 4.0,
+          "allocations": 104.0,
+          "requested_bytes": 15504.0
+        },
+        "initialize": {
+          "milliseconds": 0.053584,
+          "calls": 4.0,
+          "allocations": 12.0,
+          "requested_bytes": 5148800.0
+        },
+        "traversal": {
+          "milliseconds": 2.9012469999999997,
+          "calls": 4.0,
+          "allocations": 32.0,
+          "requested_bytes": 130560.0
+        },
+        "result": {
+          "milliseconds": 0.031206499999999998,
+          "calls": 4.0,
+          "allocations": 120.0,
+          "requested_bytes": 306432.0
+        },
+        "serialize": {
+          "milliseconds": 0.040477,
+          "calls": 60.0,
+          "allocations": 112.0,
+          "requested_bytes": 139680.0
+        },
+        "cost": {
+          "milliseconds": 3.622624,
+          "calls": 27177.0,
+          "allocations": 49.0,
+          "requested_bytes": 4668920.0
+        },
+        "clip_geometry": {
+          "milliseconds": 1.0561905,
+          "calls": 26521.0,
+          "allocations": 12.0,
+          "requested_bytes": 768.0
+        },
+        "decode_geometry": {
+          "milliseconds": 0.584701,
+          "calls": 26529.0,
+          "allocations": 26529.0,
+          "requested_bytes": 1232512.0
+        },
+        "integration": {
+          "milliseconds": 1.994399,
+          "calls": 26521.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        },
+        "hill_decode": {
+          "milliseconds": 0.0012705,
+          "calls": 8.0,
+          "allocations": 8.0,
+          "requested_bytes": 5120.0
+        },
+        "index": {
+          "milliseconds": 0.0,
+          "calls": 0.0,
+          "allocations": 0.0,
+          "requested_bytes": 0.0
+        }
+      }
+    }
+  },
+  "environment_extension": {
+    "created_utc": "2026-11-10T13:06:59.578554+00:00",
+    "revision": "1420cddbd5ab0c09975f0c584bee7df15f5762f8",
+    "environment_prepare": {
+      "identity": {
+        "network_dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+        "network_feature_identity": "54d3377ce4c981966caa15f603987010c8b570ab6ff6365517c71fbbee9df3f8",
+        "raster_dataset_id": "de078fed501c0d3b0e9290879479063183a61b848183e5c075ea06cbe5f27cbb",
+        "raster_sha256": "b9d69d0dbbf886de6335887976a4977a54023b339d21567ca08877023e0a42e2"
+      },
+      "environment_bytes": 20220720,
+      "prepare_elapsed_ms": 1182.150124979671,
+      "prepare_phases": []
+    },
+    "repeats": 40,
+    "profiling_repeats": 20,
+    "source_patch": "2026-11-10-native-routing-profile-environment.patch",
+    "workloads": {
+      "shape_environment_off_roundtrip": {
+        "normal_summary": {
+          "p50_ms": 3.759729501325637,
+          "p95_ms": 3.9003024343401194,
+          "p99_ms": 3.967517501441762
+        },
+        "fingerprint": "945b67f9ae358f8489a71e1d6e4c40a7df564effbdee0b74ebb606e5599cfa31",
+        "fingerprints_match_all_modes": true,
+        "result": {
+          "expanded_nodes": 11126,
+          "searches": 4,
+          "path_edges": 392,
+          "outcomes": [
+            "complete",
+            "complete"
+          ],
+          "environment_penalties": {
+            "water": 0.0,
+            "greenery": 0.0,
+            "traffic": 0.0,
+            "wetland": 0.0
+          },
+          "output_bytes": 75264
+        },
+        "median_ms_by_mode": {
+          "coarse": 4.105187486857176,
+          "detail": 5.768270522821695,
+          "allocations": 4.635666991816834
+        },
+        "allocation_requests": 15950.0,
+        "requested_bytes": 10036544.0,
+        "phases": {
+          "views": {
+            "milliseconds": 0.0618325,
+            "calls": 4.0,
+            "allocations": 28.0,
+            "requested_bytes": 845312.0
+          },
+          "overlay": {
+            "milliseconds": 0.0061245,
+            "calls": 4.0,
+            "allocations": 104.0,
+            "requested_bytes": 15504.0
+          },
+          "initialize": {
+            "milliseconds": 0.0480415,
+            "calls": 4.0,
+            "allocations": 12.0,
+            "requested_bytes": 5148800.0
+          },
+          "traversal": {
+            "milliseconds": 1.444278,
+            "calls": 4.0,
+            "allocations": 28.0,
+            "requested_bytes": 65024.0
+          },
+          "result": {
+            "milliseconds": 0.024402,
+            "calls": 4.0,
+            "allocations": 120.0,
+            "requested_bytes": 306432.0
+          },
+          "serialize": {
+            "milliseconds": 0.033269,
+            "calls": 60.0,
+            "allocations": 112.0,
+            "requested_bytes": 135552.0
+          },
+          "cost": {
+            "milliseconds": 2.003932,
+            "calls": 16106.0,
+            "allocations": 46.0,
+            "requested_bytes": 2801120.0
+          },
+          "clip_geometry": {
+            "milliseconds": 0.6075215,
+            "calls": 15480.0,
+            "allocations": 12.0,
+            "requested_bytes": 768.0
+          },
+          "decode_geometry": {
+            "milliseconds": 0.2969355,
+            "calls": 15488.0,
+            "allocations": 15488.0,
+            "requested_bytes": 718032.0
+          },
+          "integration": {
+            "milliseconds": 1.124665,
+            "calls": 15480.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "hill_decode": {
+            "milliseconds": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "index": {
+            "milliseconds": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          }
+        }
+      },
+      "shape_environment_traffic_high_roundtrip": {
+        "normal_summary": {
+          "p50_ms": 8.68731303489767,
+          "p95_ms": 9.569062493392266,
+          "p99_ms": 9.793354995781556
+        },
+        "fingerprint": "78187227eeffe22eec23ea3730de1f457b8b63d1cc7ffdb37136754b364efcbc",
+        "fingerprints_match_all_modes": true,
+        "result": {
+          "expanded_nodes": 21521,
+          "searches": 4,
+          "path_edges": 424,
+          "outcomes": [
+            "complete",
+            "complete"
+          ],
+          "environment_penalties": {
+            "water": 0.0,
+            "traffic": 8337.692735271727,
+            "wetland": 0.0,
+            "greenery": 0.0
+          },
+          "output_bytes": 81408
+        },
+        "median_ms_by_mode": {
+          "coarse": 9.24820898217149,
+          "detail": 12.744792009470984,
+          "allocations": 10.228083498077467
+        },
+        "allocation_requests": 29879.0,
+        "requested_bytes": 13516528.0,
+        "phases": {
+          "views": {
+            "milliseconds": 0.064687,
+            "calls": 4.0,
+            "allocations": 28.0,
+            "requested_bytes": 845312.0
+          },
+          "overlay": {
+            "milliseconds": 0.0068345,
+            "calls": 4.0,
+            "allocations": 104.0,
+            "requested_bytes": 15504.0
+          },
+          "initialize": {
+            "milliseconds": 0.0526875,
+            "calls": 4.0,
+            "allocations": 12.0,
+            "requested_bytes": 5148800.0
+          },
+          "traversal": {
+            "milliseconds": 2.7220405,
+            "calls": 4.0,
+            "allocations": 29.0,
+            "requested_bytes": 81408.0
+          },
+          "result": {
+            "milliseconds": 0.0300645,
+            "calls": 4.0,
+            "allocations": 120.0,
+            "requested_bytes": 306432.0
+          },
+          "serialize": {
+            "milliseconds": 0.038792999999999994,
+            "calls": 60.0,
+            "allocations": 112.0,
+            "requested_bytes": 138624.0
+          },
+          "cost": {
+            "milliseconds": 5.783773500000001,
+            "calls": 30018.0,
+            "allocations": 50.0,
+            "requested_bytes": 5602816.0
+          },
+          "clip_geometry": {
+            "milliseconds": 1.146102,
+            "calls": 29404.0,
+            "allocations": 12.0,
+            "requested_bytes": 768.0
+          },
+          "decode_geometry": {
+            "milliseconds": 0.618258,
+            "calls": 29412.0,
+            "allocations": 29412.0,
+            "requested_bytes": 1376864.0
+          },
+          "integration": {
+            "milliseconds": 2.141558,
+            "calls": 29404.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "hill_decode": {
+            "milliseconds": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "index": {
+            "milliseconds": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          }
+        }
+      }
+    },
+    "sha256": {
+      "baseline.json": "45c293bea70a99ab07403dbc9175b37a2b0d929a569287cd0721656cd3ee98d3",
+      "instrumented.json": "de9db29d4562cd57cbf14de6f59e1e1b480129c80632261707b2fd39211db8cb",
+      "environment_patch": "ea4bfe6baccbdaadb66254b43feaee81c48f8c44ed4bb245c43cdfad32a630f2"
+    }
+  }
+}

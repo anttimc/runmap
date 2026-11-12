@@ -1,0 +1,817 @@
+{
+  "revision": "6556209be45c9a27ccb79c81ec4209f080c8cd7b",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "native": {
+    "current": {
+      "outbound": {
+        "median_ms": 3.670041507575661,
+        "round_medians_ms": [
+          3.680999972857535,
+          3.6498125118669122,
+          3.667583514470607
+        ],
+        "expanded_nodes": 24951,
+        "cost": 9805.093748244366,
+        "path_edges": 319,
+        "fingerprints": [
+          "a75b0b78d9ccfef91187a7ed5ef063d9536508642f76dea9655f95673f820294"
+        ]
+      },
+      "return": {
+        "median_ms": 3.0694580054841936,
+        "round_medians_ms": [
+          3.0989374790806323,
+          3.0692500004079193,
+          3.0486454779747874
+        ],
+        "expanded_nodes": 21497,
+        "cost": 9805.093748244377,
+        "path_edges": 319,
+        "fingerprints": [
+          "1cb7be67f3432d40cc645598fb0b11be1c36bc87f3ada47225280114029e2b07"
+        ]
+      }
+    },
+    "previous": {
+      "outbound": {
+        "median_ms": 3.5799375036731362,
+        "round_medians_ms": [
+          3.5390624834690243,
+          4.451270971912891,
+          3.493917000014335
+        ],
+        "expanded_nodes": 24951,
+        "cost": 9805.093748244366,
+        "path_edges": 319,
+        "fingerprints": [
+          "a75b0b78d9ccfef91187a7ed5ef063d9536508642f76dea9655f95673f820294"
+        ]
+      },
+      "return": {
+        "median_ms": 2.9802089848089963,
+        "round_medians_ms": [
+          2.971541485749185,
+          3.009999985806644,
+          2.9600414854940027
+        ],
+        "expanded_nodes": 21497,
+        "cost": 9805.093748244377,
+        "path_edges": 319,
+        "fingerprints": [
+          "1cb7be67f3432d40cc645598fb0b11be1c36bc87f3ada47225280114029e2b07"
+        ]
+      }
+    }
+  },
+  "requests": {
+    "current-request": {
+      "first_ms": 766.450957977213,
+      "repeated_median_ms": 281.4612499787472,
+      "phases_ms": {
+        "snap": 3.626165969762951,
+        "segment_count": 6.877665990032256,
+        "numeric_prepare": 254.08824998885393,
+        "numeric_search": 9.095582994632423,
+        "route_metadata": 2.26545799523592,
+        "render": 2.3710000095888972,
+        "json_serialization": 0.2091249916702509
+      },
+      "status": "complete",
+      "search": {
+        "attempts": [
+          {
+            "bounds_epsg3067": [
+              376697.69588393223,
+              6671858.7419865,
+              389583.70613071165,
+              6684744.75223328
+            ],
+            "nodes": 154651,
+            "segments": 215358,
+            "reason": "settled",
+            "reached_frontier": false,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          }
+        ],
+        "retries": 0,
+        "area_limited_reason": null,
+        "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+      },
+      "candidates": [
+        {
+          "distance_m": 19610.187496488743,
+          "outbound_distance_m": 9805.093748244366,
+          "returning_distance_m": 9805.093748244377,
+          "expanded_nodes": 46448
+        }
+      ],
+      "fingerprints": [
+        "6aca35118ed874835077fc3cf0db1875e49d4a7f871bcfd16b258535ea8fe1c8"
+      ],
+      "graphs": null,
+      "resident_bytes": 0
+    },
+    "cache512-request": {
+      "first_ms": 694.7092919726856,
+      "repeated_median_ms": 26.375207991804928,
+      "phases_ms": {
+        "snap": 3.5108330193907022,
+        "segment_count": 6.560792040545493,
+        "numeric_prepare": 0.08529098704457283,
+        "numeric_search": 9.028375032357872,
+        "route_metadata": 2.1884579909965396,
+        "render": 2.363207982853055,
+        "json_serialization": 0.20970799960196018
+      },
+      "status": "complete",
+      "search": {
+        "attempts": [
+          {
+            "bounds_epsg3067": [
+              376697.69588393223,
+              6671858.7419865,
+              389583.70613071165,
+              6684744.75223328
+            ],
+            "nodes": 154651,
+            "segments": 215358,
+            "reason": "settled",
+            "reached_frontier": false,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          }
+        ],
+        "retries": 0,
+        "area_limited_reason": null,
+        "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+      },
+      "candidates": [
+        {
+          "distance_m": 19610.187496488743,
+          "outbound_distance_m": 9805.093748244366,
+          "returning_distance_m": 9805.093748244377,
+          "expanded_nodes": 46448
+        }
+      ],
+      "fingerprints": [
+        "6aca35118ed874835077fc3cf0db1875e49d4a7f871bcfd16b258535ea8fe1c8"
+      ],
+      "graphs": null,
+      "resident_bytes": 188258368
+    },
+    "environment128-request": {
+      "first_ms": 4454.4155829935335,
+      "repeated_median_ms": 3525.3472499898635,
+      "phases_ms": {
+        "snap": 23.921166954096407,
+        "segment_count": 236.65295902173966,
+        "numeric_prepare": 3257.5773329590447,
+        "numeric_search": 9.307916974648833,
+        "route_metadata": 2.8985830140300095,
+        "render": 2.4918330018408597,
+        "json_serialization": 0.24683302035555243
+      },
+      "status": "complete",
+      "search": {
+        "attempts": [
+          {
+            "bounds_epsg3067": [
+              376697.69588393223,
+              6671858.7419865,
+              389583.70613071165,
+              6684744.75223328
+            ],
+            "nodes": 154651,
+            "segments": 215358,
+            "reason": "settled",
+            "reached_frontier": false,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          }
+        ],
+        "retries": 0,
+        "area_limited_reason": null,
+        "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+      },
+      "candidates": [
+        {
+          "distance_m": 19610.187496488743,
+          "outbound_distance_m": 9805.093748244366,
+          "returning_distance_m": 9805.093748244377,
+          "expanded_nodes": 46448
+        }
+      ],
+      "fingerprints": [
+        "ae85fee89ec752ef1f81b97b22cf4268240881118fe7cc4dcf0c484ec2c3ff8a"
+      ],
+      "graphs": null,
+      "resident_bytes": 0
+    },
+    "environment512-request": {
+      "first_ms": 4105.437709018588,
+      "repeated_median_ms": 25.664082961156964,
+      "phases_ms": {
+        "snap": 3.5549160093069077,
+        "segment_count": 6.192333006765693,
+        "numeric_prepare": 0.08333404548466206,
+        "numeric_search": 8.78483394626528,
+        "route_metadata": 2.1914170356467366,
+        "render": 2.413042006082833,
+        "json_serialization": 0.20520901307463646
+      },
+      "status": "complete",
+      "search": {
+        "attempts": [
+          {
+            "bounds_epsg3067": [
+              376697.69588393223,
+              6671858.7419865,
+              389583.70613071165,
+              6684744.75223328
+            ],
+            "nodes": 154651,
+            "segments": 215358,
+            "reason": "settled",
+            "reached_frontier": false,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          }
+        ],
+        "retries": 0,
+        "area_limited_reason": null,
+        "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+      },
+      "candidates": [
+        {
+          "distance_m": 19610.187496488743,
+          "outbound_distance_m": 9805.093748244366,
+          "returning_distance_m": 9805.093748244377,
+          "expanded_nodes": 46448
+        }
+      ],
+      "fingerprints": [
+        "ae85fee89ec752ef1f81b97b22cf4268240881118fe7cc4dcf0c484ec2c3ff8a"
+      ],
+      "graphs": [
+        {
+          "nodes": 154651,
+          "segments": 199421,
+          "payload_bytes": 96969024,
+          "environment_bytes": 80764640,
+          "accounted_bytes": 269023008
+        }
+      ],
+      "resident_bytes": 269023008
+    }
+  },
+  "phases": {
+    "outbound": {
+      "coarse": {
+        "median_ms": 3.862561978166923,
+        "phases": {
+          "views": {
+            "ms": 0.0713955,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "overlay": {
+            "ms": 0.002104,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "initialize": {
+            "ms": 0.058541499999999996,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "traversal": {
+            "ms": 3.6488335000000003,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "result": {
+            "ms": 0.0201665,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "serialize": {
+            "ms": 0.044064,
+            "calls": 15.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "cost": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "clip_geometry": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "decode_geometry": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "integration": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "hill_decode": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "index": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          }
+        }
+      },
+      "detail": {
+        "median_ms": 4.474833491258323,
+        "phases": {
+          "views": {
+            "ms": 0.071583,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "overlay": {
+            "ms": 0.001834,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "initialize": {
+            "ms": 0.053979,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "traversal": {
+            "ms": 3.6252765,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "result": {
+            "ms": 0.020602000000000002,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "serialize": {
+            "ms": 0.0439355,
+            "calls": 15.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "cost": {
+            "ms": 0.6317280000000001,
+            "calls": 35030.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "clip_geometry": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "decode_geometry": {
+            "ms": 0.000125,
+            "calls": 2.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "integration": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "hill_decode": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "index": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          }
+        }
+      },
+      "allocations": {
+        "median_ms": 4.000812477897853,
+        "phases": {
+          "views": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 10.0,
+            "requested_bytes": 1702272.0
+          },
+          "overlay": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 26.0,
+            "requested_bytes": 3876.0
+          },
+          "initialize": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 3.0,
+            "requested_bytes": 5809760.0
+          },
+          "traversal": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 9.0,
+            "requested_bytes": 65408.0
+          },
+          "result": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 41.0,
+            "requested_bytes": 315184.0
+          },
+          "serialize": {
+            "ms": 0.0,
+            "calls": 15.0,
+            "allocations": 32.0,
+            "requested_bytes": 145200.0
+          },
+          "cost": {
+            "ms": 0.0,
+            "calls": 35030.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "clip_geometry": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "decode_geometry": {
+            "ms": 0.0,
+            "calls": 2.0,
+            "allocations": 2.0,
+            "requested_bytes": 96.0
+          },
+          "integration": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "hill_decode": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "index": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          }
+        }
+      }
+    },
+    "return": {
+      "coarse": {
+        "median_ms": 3.1667915172874928,
+        "phases": {
+          "views": {
+            "ms": 0.0802705,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "overlay": {
+            "ms": 0.001875,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "initialize": {
+            "ms": 0.054375,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "traversal": {
+            "ms": 2.9582915,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "result": {
+            "ms": 0.019125,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "serialize": {
+            "ms": 0.0426255,
+            "calls": 15.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "cost": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "clip_geometry": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "decode_geometry": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "integration": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "hill_decode": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "index": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          }
+        }
+      },
+      "detail": {
+        "median_ms": 3.795937489485368,
+        "phases": {
+          "views": {
+            "ms": 0.0772915,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "overlay": {
+            "ms": 0.00175,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "initialize": {
+            "ms": 0.054646,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "traversal": {
+            "ms": 3.0463375,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "result": {
+            "ms": 0.019875,
+            "calls": 1.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "serialize": {
+            "ms": 0.04373,
+            "calls": 15.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "cost": {
+            "ms": 0.542583,
+            "calls": 30032.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "clip_geometry": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "decode_geometry": {
+            "ms": 0.00012550000000000001,
+            "calls": 2.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "integration": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "hill_decode": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "index": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          }
+        }
+      },
+      "allocations": {
+        "median_ms": 3.473041520919651,
+        "phases": {
+          "views": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 10.0,
+            "requested_bytes": 1702272.0
+          },
+          "overlay": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 26.0,
+            "requested_bytes": 3876.0
+          },
+          "initialize": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 3.0,
+            "requested_bytes": 5809760.0
+          },
+          "traversal": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 9.0,
+            "requested_bytes": 65408.0
+          },
+          "result": {
+            "ms": 0.0,
+            "calls": 1.0,
+            "allocations": 41.0,
+            "requested_bytes": 315184.0
+          },
+          "serialize": {
+            "ms": 0.0,
+            "calls": 15.0,
+            "allocations": 32.0,
+            "requested_bytes": 145200.0
+          },
+          "cost": {
+            "ms": 0.0,
+            "calls": 30032.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "clip_geometry": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "decode_geometry": {
+            "ms": 0.0,
+            "calls": 2.0,
+            "allocations": 2.0,
+            "requested_bytes": 96.0
+          },
+          "integration": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "hill_decode": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          },
+          "index": {
+            "ms": 0.0,
+            "calls": 0.0,
+            "allocations": 0.0,
+            "requested_bytes": 0.0
+          }
+        }
+      }
+    }
+  },
+  "inputs": {
+    "request": {
+      "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+      "mode": "round_trip",
+      "home": {
+        "longitude": 24.8138,
+        "latitude": 60.2198,
+        "segment_id": null
+      },
+      "turnaround": {
+        "longitude": 24.9675,
+        "latitude": 60.2294,
+        "segment_id": null
+      },
+      "settings": {
+        "avoidance_ratio": 0.0,
+        "centre_enabled": true,
+        "radius_ratio": 0.15,
+        "transition_ratio": 0.05,
+        "side_strength": 2.0,
+        "reuse_strength": 4.0
+      },
+      "preferences": {
+        "hills": "off",
+        "signals": "off",
+        "busy_roads": "off",
+        "greenery": "off",
+        "environment_greenery": "off",
+        "environment_water": "off",
+        "environment_traffic": "off",
+        "environment_wetland": "off"
+      },
+      "radius_m": 50.0,
+      "surface": "all",
+      "avoid_stairs": true
+    },
+    "native": "artifacts/distance-profile-2026-11-11/profiling.so",
+    "source_root": "None",
+    "environment": false,
+    "cache_mib": 128,
+    "repeats": 30,
+    "bounds": [
+      376697.69588393223,
+      6671858.7419865,
+      389583.70613071165,
+      6684744.75223328
+    ],
+    "prepare_ms": 157.5882500037551,
+    "payload_load_ms": 104.26462499890476,
+    "index_prepare_ms": 53.20641596335918,
+    "nodes": 154651,
+    "segments": 199421,
+    "chunks": 1077,
+    "payload_bytes": 96969024,
+    "accounted_bytes_without_join": 187611456,
+    "distance_scale": 0.9875466740314615,
+    "snapped_home": {
+      "segment_id": "w1042663570p0",
+      "graph_offset_m": 3.2026399909057477,
+      "chainage_m": 3.2083432556095044,
+      "longitude": 24.813456442169052,
+      "latitude": 60.21980160114782,
+      "offset_m": 19.03986098441413
+    },
+    "snapped_turnaround": {
+      "segment_id": "w24450859p1",
+      "graph_offset_m": 34.317388235282046,
+      "chainage_m": 34.406801015759314,
+      "longitude": 24.96726349937331,
+      "latitude": 60.22952005447281,
+      "offset_m": 18.721470035992667
+    }
+  },
+  "sha256": {
+    "artifacts/distance-profile-2026-11-11/current.so": "584aab8a02b00026695f76eb1cf1daadb0c29a588a21e3585515e5c29d94922b",
+    "artifacts/distance-profile-2026-11-11/profiling.so": "be47015d8c7635816a47d4a0600e84ffe363a7d7d2f95f1d075259a65c2ec2c9",
+    "artifacts/native-profile-2026-11-10/normal.so": "02f7c2304229e3e496d6d322e4650f7426713f853d293b8b63292d8e77e89b3b",
+    "artifacts/distance-profile-2026-11-11/benchmark.py": "93a2e3f0ab078304ff96eb76bc644aaf46fc366ce3aac9d4d6266d190f5f7442"
+  },
+  "matches_across_revisions": true
+}

@@ -63,7 +63,7 @@ pub struct SearchResult {
 }
 
 #[derive(Clone, Copy)]
-enum EdgeRef {
+pub(crate) enum EdgeRef {
     Base { chunk: usize, arc: usize },
     Overlay(usize),
 }
