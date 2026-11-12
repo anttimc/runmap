@@ -1,61 +1,65 @@
 # Goals
 
-Help a runner understand terrain before choosing a run across the Helsinki
-capital area. The project is also a place to learn through replaceable,
-understandable implementations.
+Help runners easily choose their preferences, generate a suitable running route,
+and transfer it to a sports watch. Map exploration is a secondary purpose:
+help runners design routes roughly themselves and discover training hills
+without relying on route optimization.
 
 ## Intended outcomes
 
-- **Find flatter options:** locate connected paths, recognize short rises and
-  sustained climbs, and understand travel direction beyond a total-ascent number.
-- **Find training hills:** distinguish short steep climbs, longer gentle climbs,
-  and rolling terrain through inspectable measurements.
-- **Explore interactively:** navigate an intended viewport of roughly 20 × 20 km
-  without processing or transferring the entire source raster on each movement.
-  Coverage may be larger; performance promises require representative measurements.
-- **Understand running surroundings:** explore overlapping greenery (including parks/reserves), water,
-  traffic-exposure, and wetland attributes, then express supported preferences,
-  including independent wetland avoidance. Preserve
-  missing-data uncertainty and explain tradeoffs; the
-  [routing integration and road-noise learning tracks](environment-preferences.md#two-development-directions)
-  build on the existing pilot rasters. Study road-noise prediction from OSM using
-  municipal reference maps independently of application integration.
-- **Adjust routes interactively:** move the start or turnaround, or change the
-  centre-cost width, and see the revised route without a perceptible wait.
-  Measure backend response and visible browser latency separately; a fast cached
-  repeat does not establish responsiveness when endpoints or settings change.
-- **Experiment independently:** change mathematical definitions without rewriting
-  acquisition or the UI, run calculations outside the web application, and trace
-  displayed measurements to their sources and settings.
-- **Learn low-level implementation:** implement and measure small numerical and
-  algorithmic kernels in Rust behind clear Python boundaries. Prefer an
-  understandable scalar implementation first, preserving a readable reference
-  and measuring the effect on complete interactions.
+- **Plan with preferences:** make it easy to express the desired terrain and
+  surroundings, generate a route, and understand the resulting tradeoffs.
+  Reusing preferences through a saved profile or multiple presets is a possible
+  improvement; its form is not yet decided.
+- **Take the route running:** make transfer to a sports watch straightforward.
+  Existing GPX export and the optional local Suunto integration provide the
+  starting point; support for other watches is not yet committed.
+- **Interact responsively:** keep map use, route generation, and route review
+  responsive. Assess complete browser interactions as well as backend computation,
+  including changed inputs and uncached requests.
+- **Shape a route:** give runners more control over where a route goes while
+  retaining useful guidance. Route shaping follows responsiveness in priority;
+  automatic suggestions come later.
+- **Explore independently:** understand paths, terrain, and surroundings without
+  generating an optimized route. Support rough route design and finding short
+  steep hills, sustained climbs, and rolling terrain for training.
+- **Understand the evidence:** make route choices and measurements interpretable,
+  preserving uncertainty about missing data, access, crossings, and structures.
+
+## Audience and coverage
+
+Runmap is currently a hobby project used with locally prepared data. The near-term
+ambition is to make it useful and shareable with friends. Cloud hosting would
+make access easier; a public service is a longer-term ambition, subject to the
+resources needed to operate it.
+
+Current prepared coverage focuses on the Helsinki capital area. Finland is the
+target for wider coverage, rather than a promise of nationwide availability.
 
 ## Product direction
 
-Help the runner understand available paths, assemble a run with guidance, and
-eventually compare a few useful automatic suggestions. Use one attributed
-pedestrian graph across these tools. Real junctions, access restrictions,
-bridges, tunnels, and uncertainty matter more than partitioning the map into
-cycles. Runs may retrace necessary access stems.
+The core planning and export features are present. Improve the everyday workflow
+before expanding automatic recommendations: prioritize responsiveness, then
+route shaping. Consider saved preferences and hosting as ways to make repeated
+use and sharing easier; their implementation and scheduling remain undecided.
 
-Keep preparation separate from ordinary interaction. Prefer explicit data and
-focused functions, local files, and measured improvements over infrastructure
-introduced in anticipation of future scale.
+Keep exploration useful on its own. Discovering training hills is an intended
+outcome, not a claim that automatic hill discovery is already available.
 
-Keep interactive startup and active memory independent of total prepared path
-coverage: query the relevant area from a local SQLite dataset and process a
-bounded working set in the application. Retain compact numeric representations
-for that working set. See the [migration roadmap](roadmap.md#next-sqlite-storage-and-bounded-network-loading)
-for implementation stages and planner area-expansion limits.
+Use prepared pedestrian-network and terrain evidence consistently across
+exploration and planning. Respect real junctions, access restrictions, bridges,
+and tunnels; allow necessary retracing. Keep ordinary interaction independent
+of data acquisition and able to work over bounded areas as coverage grows.
+Implementation boundaries belong in the [architecture](architecture.md), and
+performance targets and outstanding work belong in the [roadmap](roadmap.md).
 
 ## Scope
 
 Terrain and path measurements inform route choice; they do not establish current
 path conditions or predict heart rate, personal effort, or training outcomes.
-Accounts, social features, live activity tracking, training prescriptions, and
-turn-by-turn navigation are outside the current product scope.
+Social features, live activity tracking, training prescriptions, and turn-by-turn
+navigation are outside the current product scope. Accounts are not a current
+requirement; whether saved preferences or hosting need them remains undecided.
 
 See the [guide](guide.md) for delivered behavior and the [roadmap](roadmap.md)
 for next steps and optional experiments.

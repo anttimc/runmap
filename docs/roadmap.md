@@ -1,6 +1,7 @@
 # Roadmap
 
-Outstanding work, reviewed 2026-11-11. See the [guide](guide.md) for delivered
+Outstanding work. Product direction reviewed 2026-11-12; detailed backlog last
+reviewed 2026-11-11. See the [guide](guide.md) for delivered
 features and [architecture](architecture.md) for implementation details.
 Implementation, automated checks, and local runner acceptance are separate.
 Record reproducible inputs, dataset/model/settings identities, and machine/toolchain
@@ -9,6 +10,20 @@ details for reviews and benchmarks. Preserve dated reports as evidence.
 Environment exploration, costs, routing integration, and preference controls are
 implemented. The local runner accepted environment route planning and the UI on
 2026-11-06. Main-map visuals and rendering were accepted on 2026-11-05.
+
+## Product priorities
+
+The core workflow is preference-based route generation followed by sports-watch
+export. Prioritize application responsiveness, then easier route shaping;
+automatic suggestions come later. Map exploration, including finding training
+hills and rough route design without optimization, remains a secondary purpose.
+See [goals](goals.md) for audience and scope.
+
+Saved preferences (one profile or multiple presets), cloud access for sharing
+with friends, and broader Finnish coverage need scope decisions before being
+scheduled. Public hosting is a longer-term ambition subject to operating resources.
+The detailed backlog below still needs review against these priorities; section
+order does not establish execution order.
 
 <a id="planned-environment-preferences-experiment"></a>
 
@@ -157,8 +172,9 @@ unfinished [archived tasks](archive/README.md) are not scheduled.
 
 ## Deferred: validation and acceptance
 
-Revisit these checks after environment exploration and costs, or when a concrete
-issue makes one relevant. Preserve the existing routing acceptance recorded below.
+Review these checks against the product priorities above, bringing forward those
+needed to assess responsiveness or a concrete issue. Environment exploration and
+costs are already delivered. Preserve the existing routing acceptance recorded below.
 
 ### Route modes and elevation
 

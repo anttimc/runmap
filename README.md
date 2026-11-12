@@ -1,13 +1,17 @@
 # Runmap
 
-A hobby project for exploring running-path hilliness across the Helsinki capital area,
-and experimenting with elevation data and routing mathematics.
+Runmap helps runners plan routes around their preferences, explore terrain and
+surroundings, and export a chosen route to a sports watch. Current prepared
+coverage focuses on the Helsinki capital area.
 
-The map has independent terrain-gradient, path-gradient, and distance layers,
-route elevation profiles, and an opt-in planner for one-way routes or round trips with
-optional hill avoidance. Routing and map appearance settings live in a Settings dialog.
-See the [guide](docs/guide.md) for behavior and limitations, and the
-[goals](docs/goals.md) for intended outcomes.
+Plan one-way routes or round trips with hill, environment, and traffic-light
+preferences, inspect route elevation, and download a GPX track. An optional
+local Suunto integration supports sending routes for watch sync. Independent
+terrain, path-gradient, and distance layers also support map exploration.
+
+The application currently runs with locally prepared data. Cloud hosting and
+wider coverage in Finland are future ambitions. See the [guide](docs/guide.md)
+for existing behavior and limitations, and the [goals](docs/goals.md) for direction.
 
 ## Quick start
 
