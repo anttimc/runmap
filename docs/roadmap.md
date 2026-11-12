@@ -55,6 +55,9 @@ Municipal maps are reference model outputs, not measured noise or comfort labels
   routing](traffic-light-avoidance.md) are implemented. Review mapped stages against
   actual local crossings, especially crossings split across ways, independent stages
   within one way, branching, directional signals, and tram/island uncertainty.
+  Resolve the [reported Slöörinpolku tram-signal source gap](traffic-light-avoidance.md#reported-tram-signal-coverage-gap-2026-11-11)
+  through corrected mapping or provenance-tracked local corrections; refreshing
+  the current OSM source alone does not supply its missing signal tags.
   Calibrate provisional Low=60 m / High=180 m detour weights using saved routes;
   record regional cold/warm latency, state expansion, memory, and local runner acceptance.
 - **Guided assembly:** add waypoints, retained sections, and avoidance guidance.

@@ -83,6 +83,25 @@ can represent separate crossing stages.
 
 ## Dated local inventory
 
+### Reported tram-signal coverage gap, 2026-11-11
+
+The runner reports pedestrian signals on the crossing from Slöörinpolku toward
+Albergan kartano at the south end of Alberganesplanadi. The routing snapshot and
+the current OSM API checked on this date both contain crossing way
+[317553233](https://www.openstreetmap.org/way/317553233), with nodes
+[5716179418](https://www.openstreetmap.org/node/5716179418) and
+[5716179385](https://www.openstreetmap.org/node/5716179385) tagged only
+`railway=tram_crossing`. Neither the way nor those nodes identifies signals.
+Consequently this crossing produces no signal marker or routing penalty;
+refreshing the same source alone will not repair it. A bare tram crossing does
+not establish signal control, so it must not automatically become a traffic light.
+
+The runner observation is not yet applied as a local correction. Resolving this
+gap requires corrected source mapping or a provenance-tracked local correction
+shared by map inspection and passage preparation. Any correction must review
+the two track nodes as one potential crossing stage rather than automatically
+charging twice.
+
 Read-only investigation on 2026-11-10 examined the default
 `data/paths/prepared/helsinki-capital-area/network.sqlite`, dataset ID
 `2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5`.
