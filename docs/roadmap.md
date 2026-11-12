@@ -101,8 +101,12 @@ for contracts. Follow the [scalability proposal](routing-scalability.md):
   a revised route visible within one second of a settings change or pin release.
   Fix benchmark hardware, concurrency, network conditions, and percentile; report
   warm edits, cold-area requests, and process-cold requests separately.
-- Prepare reusable packed environment/signal inputs, preserving selected-route
-  diagnostics while avoiding full-area attachment with zero weights. Extend
+- Prepare versioned reusable hill/environment/signal input chunks. Include
+  directional hill totals and partial detail, environment support/unknown coverage,
+  and directed signal gates/movements. The common input boundary and conditional
+  search loading are implemented; active environment/signal channels still load
+  per area. Preserve selected-route diagnostics and existing artifact compatibility.
+  Extend
   shared chunk reuse to avoid area-wide index assembly and serialize only related
   loads. Bound in-flight memory.
   Add cooperative cancellation and bounded
@@ -136,8 +140,8 @@ Other remaining work:
   cold storage, sustained concurrency, and larger datasets at fixed route size.
   Further incremental/hierarchical search, spatial
   batching, and caching should follow profiles and preserve valid cost bounds.
-  Address oversized graphs that bypass the cache and full-area environment
-  attachment with preferences Off; preserve selected-route diagnostics. See the
+  Address oversized graphs that bypass the cache and active-channel preparation;
+  preserve selected-route diagnostics. See the
   [distance-only corridor profile](archive/history/2026-11-11-distance-search-profile.md).
 
 ## Planned: terrain and maintainability

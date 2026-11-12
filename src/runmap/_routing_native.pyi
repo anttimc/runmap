@@ -1,6 +1,14 @@
 """Typed signatures for scalar integration and reusable native chunks."""
 
 from collections.abc import Sequence
+from runmap.paths.environment_join import EnvironmentInterval
+
+
+def environment_unknown_lengths(
+    values: Sequence[tuple[int, Sequence[EnvironmentInterval]]],
+    lengths: Sequence[tuple[int, float]],
+    spans: Sequence[tuple[int, float, float]], *, timeout_seconds: float | None = None,
+) -> dict[str, bytes]: ...
 
 
 class NumericChunk:

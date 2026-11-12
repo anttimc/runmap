@@ -159,9 +159,45 @@ immutable native chunk owners and validated chunk-local topology. Overlapping
 areas borrow resident chunks and load only missing ones; native reference counts
 keep active graphs valid after eviction or database shutdown. Each new area still
 assembles a merged node lookup, selection masks, and frontier flags. Optional
-environment/signal data remains attached per area. Preparation uses the service's
-existing lock; concurrent searches keep independent mutable state. Cache budgets
+environment/signal search data remains attached per area when requested.
+Preparation uses the service's existing lock; concurrent searches keep independent mutable state. Cache budgets
 and remaining loading costs are described in [development](development.md).
+
+### Prepared routing inputs
+
+Hills, mapped environment fields, and signals share one prepared-routing-input
+boundary. Each supplies immutable derived observations for the validated dataset
+generation; request-local weights turn those observations into costs. Source
+rasters and evidence retain their own preparation and map-delivery lifetimes.
+
+| Channel | Routing representation | Detail needed for |
+| --- | --- | --- |
+| Hills | Directional segment totals with terrain-quality coverage | Exact partial-segment integration at endpoints or pins |
+| Environment | Segment-chainage intervals with field/support values | Partial integration and unknown-length observations |
+| Signals | Directed crossing gates and arrival-dependent turn movements | Passage attribution across segment and leg boundaries |
+
+The numeric data service owns the source handles, validates identities, and leases
+access to `routing/prepared_inputs.py`. Search requirements select the channels
+needed by active preferences. Hills use chunk-resident totals and load endpoint
+detail only when enabled. Environment and signal search data is attached only
+when its preferences are enabled. Zero-weight environment observations are filled
+from returned traversals after area expansion settles, using the same native
+integrator as eager search. Signals Off retains the existing absent passage counts.
+Distance exploration requests no optional search channels.
+
+Graph reuse is keyed by bounds and environment/signal channel presence. Weight
+changes within an enabled channel reuse its inputs; hill endpoint detail remains
+request-local. Availability describes the configured validated sources, independent
+of what a particular search loads. Shape fields and route reuse depend on the
+request and remain search-owned.
+
+This common boundary does not require identical representations. The current
+numeric format still embeds hill totals and stores hill endpoint detail separately;
+environment and signal sources remain sidecars. A future chunk-addressable input
+artifact includes all three channels, retaining their distinct directional,
+support, and movement semantics. Packed active-channel reuse is still planned.
+
+### Native traversal
 
 Native traversal evaluates a scalar objective and defers diagnostic arrays to
 selected-path evaluation. Read-only edge visits borrow a temporary base edge or

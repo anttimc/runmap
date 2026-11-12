@@ -1,6 +1,8 @@
 """Manage numeric artifact access and reuse bounded native routing working sets."""
 
 from collections import OrderedDict
+from collections.abc import Iterator
+from contextlib import contextmanager
 import json
 from pathlib import Path
 from threading import Lock
@@ -10,13 +12,13 @@ import sqlite3
 from runmap.paths.database import NetworkMetadata, network_metadata
 from runmap.paths.exploration import Snap
 from runmap.paths.numeric_database import open_numeric_database
-from runmap.paths.numeric_hills import read_hill_intervals
 from runmap.paths.environment_join import open_environment_join
 from runmap.paths.signals import open_signals
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points
 from runmap.routing.numeric_search import LoadedNumericGraph, NumericEndpoint, load_numeric_graph
 from runmap.routing.numeric_store import SharedGraphStore
+from runmap.routing.prepared_inputs import PreparedRoutingInputs, InputRequirements, endpoint_hill_detail
 from runmap.routing.types import Bounds
 
 
@@ -58,12 +60,14 @@ class NumericRoutingData:
         self.lock = Lock()
         self.cache_bytes = cache_bytes
         self.resident_bytes = 0
-        self.graphs: OrderedDict[Bounds, tuple[LoadedNumericGraph, int]] = OrderedDict()
+        self.graphs: OrderedDict[tuple[Bounds, bool, bool], tuple[LoadedNumericGraph, int]] = OrderedDict()
         self.chunk_store = SharedGraphStore(self.connection, cache_bytes // 2)
+        self.inputs = PreparedRoutingInputs(self.connection, self.environment_connection, self.signal_connection)
 
-    def prepare(self, bounds: Bounds, snaps: tuple[Snap, Snap], deadline: float, *, include_hill_intervals: bool = False
+    def prepare(self, bounds: Bounds, snaps: tuple[Snap, Snap], deadline: float, *,
+                requirements: InputRequirements = InputRequirements()
                 ) -> tuple[LoadedNumericGraph, NumericEndpoint, NumericEndpoint]:
-        graph, endpoints = self._prepare(bounds, snaps, deadline, include_hill_intervals=include_hill_intervals)
+        graph, endpoints = self._prepare(bounds, snaps, deadline, requirements=requirements)
         return graph, endpoints[0], endpoints[1]
 
     def prepare_start(self, bounds: Bounds, snap: Snap, deadline: float
@@ -71,7 +75,8 @@ class NumericRoutingData:
         graph, endpoints = self._prepare(bounds, (snap,), deadline)
         return graph, endpoints[0]
 
-    def _prepare(self, bounds: Bounds, snaps: tuple[Snap, ...], deadline: float, *, include_hill_intervals: bool = False
+    def _prepare(self, bounds: Bounds, snaps: tuple[Snap, ...], deadline: float, *,
+                 requirements: InputRequirements = InputRequirements()
                  ) -> tuple[LoadedNumericGraph, tuple[NumericEndpoint, ...]]:
         if not self.lock.acquire(timeout=max(0, deadline - monotonic())):
             raise TimeoutError("Numeric graph preparation deadline")
@@ -79,16 +84,19 @@ class NumericRoutingData:
             check_deadline(deadline)
             self.chunk_store.resize(self.cache_bytes // 2)
             self._evict_graphs(0)
-            endpoints = tuple(self._endpoint(snap, include_hill_intervals=include_hill_intervals) for snap in snaps)
-            cached = self.graphs.get(bounds)
+            endpoints = tuple(self._endpoint(snap, include_hill_intervals=requirements.hills)
+                              for snap in snaps)
+            key = bounds, requirements.environment, requirements.signals
+            cached = self.graphs.get(key)
             if cached is not None:
-                self.graphs.move_to_end(bounds)
+                self.graphs.move_to_end(key)
                 return cached[0], endpoints
             self.connection.set_progress_handler(lambda: int(monotonic() >= deadline), 1000)
             try:
                 graph = load_numeric_graph(self.connection, bounds, deadline=deadline,
-                                           environment_connection=self.environment_connection,
-                                           signal_connection=self.signal_connection, chunk_store=self.chunk_store)
+                                           environment_connection=self.inputs.environment if requirements.environment else None,
+                                           signal_connection=self.inputs.signals if requirements.signals else None,
+                                           chunk_store=self.chunk_store)
             except sqlite3.OperationalError:
                 check_deadline(deadline)
                 raise
@@ -98,7 +106,7 @@ class NumericRoutingData:
             size = graph.native.chunk_bytes + graph.native.index_bytes + graph.environment_bytes + graph.signal_bytes
             self._evict_graphs(size)
             if size + self.chunk_store.resident_bytes <= self.cache_bytes:
-                self.graphs[bounds] = graph, size
+                self.graphs[key] = graph, size
                 self.resident_bytes += size
             return graph, endpoints
         finally:
@@ -111,6 +119,17 @@ class NumericRoutingData:
             _, (_, removed) = self.graphs.popitem(last=False)
             self.resident_bytes -= removed
 
+    @contextmanager
+    def input_access(self, deadline: float | None) -> Iterator[PreparedRoutingInputs]:
+        acquired = self.lock.acquire() if deadline is None else self.lock.acquire(timeout=max(0, deadline-monotonic()))
+        if not acquired:
+            raise TimeoutError("Prepared routing inputs deadline")
+        try:
+            check_deadline(deadline)
+            yield self.inputs
+        finally:
+            self.lock.release()
+
     def _endpoint(self, snap: Snap, *, include_hill_intervals: bool = False) -> NumericEndpoint:
         row = self.connection.execute(
             "SELECT number FROM identities WHERE kind='segment' AND external_id=?", (snap.segment_id,)).fetchone()
@@ -118,7 +137,7 @@ class NumericRoutingData:
             raise ValueError("Snapped segment is missing from numeric artifact")
         return NumericEndpoint(segment_id=row[0], graph_offset_m=snap.graph_offset_m, chainage_m=snap.chainage_m,
                                point=projected_points([[snap.longitude, snap.latitude]])[0],
-                               hill_intervals=read_hill_intervals(self.connection, row[0]) if include_hill_intervals else None)
+                               hill_intervals=endpoint_hill_detail(self.inputs, row[0]) if include_hill_intervals else None)
 
     def close(self) -> None:
         with self.lock:

@@ -76,6 +76,7 @@ def measure_phases() -> Iterator[PhaseTimes]:
         stack.enter_context(patch.object(sqlite_runs, "numeric_plan_run", _timed("numeric_search", sqlite_runs.numeric_plan_run, phases)))
         stack.enter_context(patch.object(sqlite_runs, "load_route_segments", _timed("route_metadata", sqlite_runs.load_route_segments, phases)))
         stack.enter_context(patch.object(sqlite_runs, "render_numeric_result", _timed("render", sqlite_runs.render_numeric_result, phases)))
+        stack.enter_context(patch.object(sqlite_runs, "complete_route_inputs", _timed("route_input_diagnostics", sqlite_runs.complete_route_inputs, phases)))
         yield phases
 
 

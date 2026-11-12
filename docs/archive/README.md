@@ -49,6 +49,9 @@ millisecond searches from repeated graph/environment preparation.
 The [November 12 routing-edit measurements](history/2026-11-12-shared-store-measurements.md)
 measure long-route preference/endpoint edits after shared chunk reuse, with cache,
 optional-input, and concurrent-request controls.
+The [conditional-input follow-up](history/2026-11-12-conditional-routing-inputs.md)
+checks the common hill/environment/signal boundary and selected-route Off-mode
+diagnostics against those responses and measures the resulting latency/memory.
 
 The [2026-11-02 integration comparison](history/2026-11-02-integration-comparison.md)
 compares spacing caps and minimum sample counts against a fine reference on real

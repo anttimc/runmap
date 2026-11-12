@@ -7,7 +7,8 @@ from time import monotonic
 from fastapi import HTTPException
 
 from runmap.api import runs
-from runmap.api.numeric_runs import load_route_segments, render_numeric_result, route_near_boundary
+from runmap.api.numeric_runs import (RouteSegments, complete_route_inputs, load_route_segments,
+                                    render_numeric_result, route_near_boundary)
 from runmap.api.runs import (
     CostConfigurationResponse,
     RunRequest,
@@ -24,7 +25,8 @@ from runmap.routing.cost_settings import prepared_preference_capabilities, resol
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points
-from runmap.routing.numeric_planner import numeric_plan_run
+from runmap.routing.numeric_planner import NumericRunResult, numeric_plan_run
+from runmap.routing.prepared_inputs import search_input_requirements
 from runmap.routing.profiles import exploration_profile
 from runmap.routing.run_types import RunSettings
 from runmap.routing.settings import effective_run_settings, resolve_shape_strengths
@@ -125,12 +127,23 @@ def _area_limited(response: RunResponse, reason: str, attempt: RunSearchAttempt,
     return response
 
 
+def _complete_numeric_inputs(data: SQLitePathData, result: NumericRunResult, segments: RouteSegments,
+                              deadline: float | None) -> NumericRunResult:
+    assert data.numeric is not None
+    if (data.numeric.inputs.environment is None
+            or not any(not path.environment_prepared for candidate in result.candidates for path in candidate.legs)):
+        return result
+    with data.numeric.input_access(deadline) as inputs:
+        return complete_route_inputs(result, segments, inputs, deadline)
+
+
 def _plan_numeric_windows(data: SQLitePathData, options: RunRequest, response: RunResponse, settings: RunSettings,
                           preferences: PreferenceSettings, bounds: Bounds, started: float, deadline: float,
                           limits: RunAreaLimits) -> RunResponse:
     assert data.numeric is not None and response.home is not None and response.turnaround is not None
     assert response.search is not None
     snaps = response.home, response.turnaround
+    requirements = search_input_requirements(preferences)
     points = projected_points([[s.longitude, s.latitude] for s in snaps])
     for retry in range(limits.max_retries + 1):
         check_deadline(deadline)
@@ -145,8 +158,7 @@ def _plan_numeric_windows(data: SQLitePathData, options: RunRequest, response: R
         attempt.segments = count
         if count > limits.max_segments:
             return _area_limited(response, "maximum_segments", attempt, started)
-        graph, home, turnaround = data.numeric.prepare(bounds, snaps, deadline,
-                                                       include_hill_intervals=preferences.hills != "off")
+        graph, home, turnaround = data.numeric.prepare(bounds, snaps, deadline, requirements=requirements)
         attempt.nodes = graph.native.node_count
         result = numeric_plan_run(graph, home, turnaround, points[0], points[1], settings,
             profile=exploration_profile(options.surface, options.avoid_stairs), preferences=preferences, deadline=deadline, mode=options.mode)
@@ -159,6 +171,7 @@ def _plan_numeric_windows(data: SQLitePathData, options: RunRequest, response: R
                 [[s.longitude, s.latitude] for s in snaps]))
         if expired:
             attempt.reason = "deadline"
+            result = _complete_numeric_inputs(data, result, segments, None)
             return render_numeric_result(response, result, segments, started, hills=preferences.hills != "off")
         check_deadline(deadline)
         margin = max(limits.boundary_margin_m, min(east-west, north-south)*.05)
@@ -169,6 +182,7 @@ def _plan_numeric_windows(data: SQLitePathData, options: RunRequest, response: R
         if reason is None:
             if attempt.source_coverage_limited:
                 response.coverage_note = "Routes approach prepared source coverage edges; missing source connections may affect the result."
+            result = _complete_numeric_inputs(data, result, segments, deadline)
             return render_numeric_result(response, result, segments, started,
                 hills=preferences.hills != "off", deadline=deadline)
         attempt.reason = reason

@@ -8,6 +8,8 @@ import sqlite3
 from time import monotonic
 from typing import cast
 
+from runmap.environment_fields import EnvironmentField
+
 from runmap.api.runs import LegResponse, RunResponse, TraversalResponse, candidate_response
 from runmap.paths.exploration import Snap
 from runmap.routing.cost_types import CostBreakdown, PreferenceObservations
@@ -17,6 +19,7 @@ from runmap.routing.hill_types import HillFeatures
 from runmap.routing.hills import hill_observations
 from runmap.routing.numeric_planner import NumericRunCandidate, NumericRunResult
 from runmap.routing.numeric_search import NumericPath
+from runmap.routing.prepared_inputs import PreparedRoutingInputs, route_environment_unknown
 from runmap.routing.types import Bounds, Segment
 
 
@@ -24,6 +27,29 @@ from runmap.routing.types import Bounds, Segment
 class RouteSegments:
     records: dict[int, Segment]
     projected: dict[int, list[tuple[float, float]]]
+
+
+def complete_route_inputs(result: NumericRunResult, segments: RouteSegments, inputs: PreparedRoutingInputs,
+                           deadline: float | None) -> NumericRunResult:
+    """Complete observations that zero-weight searches did not need to load."""
+    if inputs.environment is None:
+        return result
+    paths = [path for candidate in result.candidates for path in candidate.legs if not path.environment_prepared]
+    if not paths:
+        return result
+    spans = [(int(number), float(a), float(b)) for path in paths
+             for number, a, b in zip(path.segment_ids, path.start_m, path.end_m)]
+    lengths = {number: segments.records[number]["length_m"] for number, _, _ in spans}
+    unknown = route_environment_unknown(inputs, lengths, spans, deadline)
+    completed: dict[int, NumericPath] = {}
+    offset = 0
+    for path in paths:
+        end = offset + len(path.segment_ids)
+        completed[id(path)] = replace(path, environment_prepared=True,
+            environment_unknown_m={field: unknown[field][offset:end] for field in EnvironmentField})
+        offset = end
+    return replace(result, candidates=tuple(replace(candidate,
+        legs=tuple(completed.get(id(path), path) for path in candidate.legs)) for candidate in result.candidates))
 
 
 def load_route_segments(connection: sqlite3.Connection, result: NumericRunResult,

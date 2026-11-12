@@ -39,8 +39,9 @@ not force rebuilding the entire adjacency index on every area change. Give each
 dataset generation separate ownership; hold borrowed chunks alive until its
 active searches finish. Bound both retained cache and in-flight working memory.
 
-**Separate topology, costs, and display geometry.** Prepare environment/signal
-data in compact chunk-addressable form to reduce per-request SQL/JSON/Python
+**Separate topology, prepared inputs, and display geometry.** Hills, mapped
+environment fields, and signals share the [prepared input boundary](architecture.md#prepared-routing-inputs).
+Prepare all three in compact chunk-addressable form to reduce per-request SQL/JSON/Python
 conversion. Attach only required cost channels to searches; load diagnostics and
 display geometry for selected traversals. Preserve geometry needed for exact shape
 integration and snapping: display-only deferral cannot remove those inputs.
@@ -89,8 +90,9 @@ and fetch/prepare only misses. Rust retains immutable payloads, validated
 chunk-local adjacency, sorted node/arc identities, segment lengths, and safe
 geometric scales. Active graphs retain native owners after eviction or shutdown.
 New areas still merge node indexes and rebuild selection/frontier state; a single
-preparation lock still serializes unrelated loads. Optional cost data remains
-attached per area. Overlapping-window, concurrent-preparation, eviction, deadline,
+preparation lock still serializes unrelated loads. Enabled environment/signal
+search data remains attached per area; inactive channels skip those loads.
+Overlapping-window, concurrent-preparation, eviction, deadline,
 and route-equivalence tests cover reuse. The
 [November 12 measurements](archive/history/2026-11-12-shared-store-measurements.md)
 cover long-route setting/endpoint edits, cache controls, and two concurrent
@@ -99,8 +101,11 @@ cost and about 2.1 s of planning for a fully cached 39.63 km mixed-preference
 request. Full interaction acceptance remains outstanding. An oversized graph
 bypasses exact-area retention but may reuse chunks
 that fit the shared cache. See [cache accounting](development.md#export-a-sqlite-network-dataset).
-Configured environment data is attached during graph loading even with preferences
-Off. The [2026-11-11 profile](archive/history/2026-11-11-distance-search-profile.md)
+Zero-weight environment observations now load only returned-route detail after
+window selection. The earlier unconditional attachment is preserved in the dated
+measurements. The [conditional-input follow-up](archive/history/2026-11-12-conditional-routing-inputs.md)
+checks response equality and measures the resulting performance. The
+[2026-11-11 profile](archive/history/2026-11-11-distance-search-profile.md)
 records about 9 ms planning but seconds of preparation on a 19.6 km distance-only
 round trip. The [longer-run measurements](100ms-routing-architecture.md#longer-run-validation)
 also show significant search time for shaped routes. Neither establishes the
@@ -113,8 +118,9 @@ bottleneck of a new request without measuring it.
    cold/warm data, concurrent requests, and increasing coverage at fixed route size.
 2. Build on the implemented shared chunk ownership and byte-bounded reuse.
    Reduce area-wide index assembly and unrelated-load serialization.
-   Separate topology from optional cost data; avoid full-area environment loading
-   when unused while preserving selected-route diagnostics. Measure cold requests
+   Pack and reuse the common hill/environment/signal input channels. Inactive
+   environment/signal search loading and selected-route zero-weight diagnostics
+   are implemented; active channels still need reusable packed storage. Measure cold requests
    as well as warm reuse; increasing the whole-graph cache alone is insufficient.
 3. Prototype landmark lower bounds in the existing Rust search and compare equal
    requests against the current heuristic and reference results.

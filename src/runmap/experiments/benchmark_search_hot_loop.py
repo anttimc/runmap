@@ -51,6 +51,7 @@ def _prepare_inputs(data: SQLitePathData) -> BenchmarkInputs:
     from runmap.api.runs import EndpointRequest, RunRequest
     from runmap.api.sqlite_runs import _snap
     from runmap.experiments.benchmark_native_routing import DEFAULT_BOUNDS
+    from runmap.routing.prepared_inputs import InputRequirements
 
     request = RunRequest(
         dataset_id=data.dataset_id,
@@ -61,7 +62,8 @@ def _prepare_inputs(data: SQLitePathData) -> BenchmarkInputs:
              _snap(data, request, False, monotonic() + 60))
     assert data.numeric is not None and snaps[0] is not None and snaps[1] is not None
     graph, start, destination = data.numeric.prepare(
-        DEFAULT_BOUNDS, snaps, monotonic() + 60, include_hill_intervals=True,
+        DEFAULT_BOUNDS, snaps, monotonic() + 60,
+        requirements=InputRequirements(hills=True, environment=True, signals=True),
     )
     return BenchmarkInputs(graph, start, destination)
 

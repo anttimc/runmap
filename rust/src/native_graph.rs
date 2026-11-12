@@ -61,6 +61,102 @@ fn environment_interval(
     })
 }
 
+fn environment_intervals(
+    py: Python<'_>,
+    values: Vec<(i64, Vec<Py<PyAny>>)>,
+) -> PyResult<EnvironmentIntervals> {
+    let count = values.len();
+    let intervals: EnvironmentIntervals = values
+        .into_iter()
+        .map(|(segment, rows)| {
+            Ok((
+                segment,
+                rows.into_iter()
+                    .map(|row| environment_interval(row.bind(py)))
+                    .collect::<PyResult<Vec<_>>>()?,
+            ))
+        })
+        .collect::<PyResult<_>>()?;
+    if intervals.len() != count {
+        return Err(PyValueError::new_err("Duplicate environment segment"));
+    }
+    environment_cost::validate_intervals(&intervals).map_err(routing_error)?;
+    Ok(intervals)
+}
+
+/// Compute the existing zero-weight observations after route selection.
+#[pyfunction]
+#[pyo3(signature = (values, lengths, spans, *, timeout_seconds=None))]
+pub fn environment_unknown_lengths(
+    py: Python<'_>,
+    values: Vec<(i64, Vec<Py<PyAny>>)>,
+    lengths: Vec<(i64, f64)>,
+    spans: Vec<(i64, f64, f64)>,
+    timeout_seconds: Option<f64>,
+) -> PyResult<HashMap<&'static str, Py<PyBytes>>> {
+    let end = deadline(timeout_seconds)?;
+    check_deadline(end).map_err(routing_error)?;
+    let intervals = environment_intervals(py, values)?;
+    validate_environment_lengths(&intervals, &lengths)?;
+    let rows = py
+        .detach(|| {
+            let mut rows = Vec::with_capacity(spans.len());
+            for (segment, a, b) in spans {
+                check_deadline(end)?;
+                if !a.is_finite() || !b.is_finite() {
+                    return Err(RoutingError::Invalid("Invalid environment traversal span"));
+                }
+                let values = intervals
+                    .get(&segment)
+                    .ok_or(RoutingError::Invalid("Missing environment segment"))?;
+                let (_, unknown) =
+                    environment_cost::integrate(values, a.min(b), a.max(b), [0.0; 4])?;
+                rows.push(unknown);
+            }
+            check_deadline(end)?;
+            Ok::<_, RoutingError>(rows)
+        })
+        .map_err(routing_error)?;
+    Ok(environment_cost::FIELDS
+        .into_iter()
+        .enumerate()
+        .map(|(index, field)| {
+            (
+                environment_cost::field_name(field),
+                floats(py, rows.iter().map(|row| row[index])),
+            )
+        })
+        .collect())
+}
+
+fn validate_environment_lengths(
+    intervals: &EnvironmentIntervals,
+    lengths: &[(i64, f64)],
+) -> PyResult<()> {
+    let mut seen = HashSet::new();
+    for &(segment, length) in lengths {
+        let rows = intervals
+            .get(&segment)
+            .ok_or_else(|| PyValueError::new_err("Missing environment segment"))?;
+        if segment < 0
+            || !seen.insert(segment)
+            || !length.is_finite()
+            || length <= 0.0
+            || (rows.last().unwrap().end_m - length).abs() > 1e-6
+        {
+            return Err(PyValueError::new_err(
+                "Environment chainage does not match graph",
+            ));
+        }
+    }
+    if seen.len() != intervals.len() {
+        return Err(PyValueError::new_err(
+            "Environment segments do not match route",
+        ));
+    }
+    Ok(())
+}
+
 pub fn routing_error(error: RoutingError) -> PyErr {
     match error {
         RoutingError::Invalid(message) => PyValueError::new_err(message),
@@ -442,22 +538,7 @@ impl NumericGraph {
                 "Environment intervals are already attached",
             ));
         }
-        let count = values.len();
-        let intervals: EnvironmentIntervals = values
-            .into_iter()
-            .map(|(segment, rows)| {
-                Ok((
-                    segment,
-                    rows.into_iter()
-                        .map(|row| environment_interval(row.bind(py)))
-                        .collect::<PyResult<Vec<_>>>()?,
-                ))
-            })
-            .collect::<PyResult<_>>()?;
-        if intervals.len() != count {
-            return Err(PyValueError::new_err("Duplicate environment segment"));
-        }
-        environment_cost::validate_intervals(&intervals).map_err(routing_error)?;
+        let intervals = environment_intervals(py, values)?;
         let chunks = views(py, &self.owners)?;
         validate_environment_graph(&self.graph, &chunks, &intervals)?;
         self.environment = Some(Arc::new(intervals));

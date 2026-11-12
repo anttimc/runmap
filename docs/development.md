@@ -380,6 +380,8 @@ smaller routing working sets. Restart the API after changing the artifact. See
 The shared chunk LRU may retain up to half this budget; exact-area graphs use the
 remaining accounted capacity. Graph accounting includes their chunk owners and
 native index allocation capacities, plus allowances for environment/signal data.
+Area-graph keys also include environment/signal search-channel presence, so an
+Off graph cannot satisfy an On request. Actual weights stay request-local.
 Shared owners are conservatively charged in both caches. Zero disables both.
 This is a cache accounting budget, not a process RSS cap: active requests retain
 evicted graphs safely, SQLite has its own page caches, and each search allocates
@@ -392,12 +394,20 @@ Changing working areas or expanding a window selects chunk IDs without fetching
 their BLOBs. Resident chunks reuse their validated native topology, adjacency
 payloads, sorted node/arc identities, segment lengths, and safe distance scale.
 Only missing chunks are fetched and prepared. The area-wide node lookup,
-segment selection, and frontier flags are still assembled for each new rectangle;
-environment and signal attachment also remain area-wide. Preparation remains
+segment selection, and frontier flags are still assembled for each new rectangle.
+Enabled environment/signal search channels still load per area. With their
+preferences Off, API planning skips those loads. Configured environment unknown-
+length observations are completed only for returned route segments, after window
+selection; signals Off exposes no passage counts. Hill totals remain embedded in
+the current numeric buffers, while enabled partial endpoints load hill detail
+through the same [prepared input boundary](architecture.md#prepared-routing-inputs).
+Preparation and selected-route source reads remain
 serialized under the numeric service lock. Rebuild the native extension after
 this change; existing artifacts need no re-export.
 For loads using the shared store, `payload_load_ms` includes preparation of native
 chunk misses; `index_prepare_ms` measures area assembly and optional cost attachment.
+Complete-request benchmarks separately report `route_input_diagnostics` for the
+deferred zero-weight route observations.
 The [ordered-edit benchmark](archive/history/2026-11-12-shared-store-measurements.md#reproduction)
 records cache states, chunk misses, nested preparation phases, and optional
 two-request contention. It measures endpoint edits, not the planned intermediate
@@ -1172,9 +1182,10 @@ traversals by graph chainage. To attach it to native numeric routing, set
 `RUNMAP_ENVIRONMENT_JOIN_RASTER_DIRECTORY` to the matching raster bundle if it
 differs from `data/environment/prepared/helsinki-capital-area-v3`. The network,
 numeric artifact, and join must have the same network identity. Startup rejects
-a mismatched join; each bounded graph loads only its selected segment intervals.
-The public API still passes environment weights Off, so this configuration alone
-does not change route choices. See the
+a mismatched join. Enabled preferences load their selected search-area intervals;
+when environment weights are Off, only returned-route diagnostic detail is read.
+Preferences default to Off, so this configuration alone does not change route
+choices. See the
 [join contract](reference/prepared-data.md#segment-projection-artifact).
 
 For programmatic route comparisons, pass `EnvironmentWeights` through

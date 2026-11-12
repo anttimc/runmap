@@ -147,6 +147,12 @@ distance exploration and hills Off load no interval detail. Endpoint detail is
 request-local, so graph-cache keys and owners stay independent of endpoints and
 hill preferences. Legacy embedded intervals remain usable without conversion.
 
+Hills are one channel of [prepared routing inputs](architecture.md#prepared-routing-inputs),
+alongside mapped environment fields and directed signals. Their current placement
+inside the topology payload is a storage compatibility detail. The common input
+boundary preserves directional totals and endpoint-only detail; packed input
+artifact work must include hills rather than treating them as a separate subsystem.
+
 ### Separate endpoint intervals
 
 Schema 2 stores `hill_intervals(segment_id, payload, sha256, byte_size, raw_size)`.

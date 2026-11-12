@@ -46,6 +46,10 @@ fn _routing_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module.add_function(wrap_pyfunction!(profile_layout, module)?)?;
     }
     module.add_function(wrap_pyfunction!(integrate_fields, module)?)?;
+    module.add_function(wrap_pyfunction!(
+        crate::native_graph::environment_unknown_lengths,
+        module
+    )?)?;
     module.add_class::<crate::native_graph::NumericChunk>()?;
     module.add_class::<crate::native_graph::NumericGraph>()
 }

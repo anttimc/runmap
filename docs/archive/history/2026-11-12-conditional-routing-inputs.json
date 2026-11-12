@@ -1,0 +1,1096 @@
+{
+  "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+  "feature_identity": "54d3377ce4c981966caa15f603987010c8b570ab6ff6365517c71fbbee9df3f8",
+  "native_sha256": "e794e8023ba8f4e2810a64ec6f15fb17da139b965f283ee7165a8048f1816573",
+  "python": "3.14.6",
+  "machine": "arm64",
+  "sqlite": "3.53.4",
+  "startup_ms": 4.4025410315953195,
+  "cache_budget_bytes": 134217728,
+  "environment_path": "data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
+  "environment_raster_bundle": "data/environment/prepared/helsinki-capital-area-v3",
+  "limits": {
+    "max_area_km2": 2500,
+    "max_segments": 650000,
+    "max_retries": 5,
+    "minimum_dimension_m": 1000,
+    "boundary_margin_m": 100
+  },
+  "timeout_s": 15,
+  "final_cache": {
+    "graphs": 0,
+    "graph_bytes": 0,
+    "chunks": 794,
+    "chunk_bytes": 67096696,
+    "total_bytes": 67096696
+  },
+  "peak_rss_bytes": 798670848,
+  "summaries": {
+    "distance_only": {
+      "p50_ms": 235.27037497842684,
+      "p95_ms": 236.33507501799613,
+      "p99_ms": 236.4297150215134,
+      "sample_count": 3,
+      "statuses": [
+        "complete",
+        "complete",
+        "complete"
+      ],
+      "equivalent": true,
+      "median_phases_ms": {
+        "chunk_access": 94.972874969244,
+        "chunk_payload_read": 30.400004237890244,
+        "chunk_prepare": 62.29195790365338,
+        "json_serialization": 0.3090410027652979,
+        "numeric_prepare": 162.0470419875346,
+        "numeric_search": 19.078875018749386,
+        "render": 3.7577080074697733,
+        "route_input_diagnostics": 6.253833998925984,
+        "route_metadata": 4.08458401216194,
+        "segment_count": 12.848791026044637,
+        "snap": 2.869917021598667
+      }
+    },
+    "shaped": {
+      "p50_ms": 1047.375167021528,
+      "p95_ms": 1059.8387791775167,
+      "p99_ms": 1060.9466558136046,
+      "sample_count": 3,
+      "statuses": [
+        "complete",
+        "complete",
+        "complete"
+      ],
+      "equivalent": true,
+      "median_phases_ms": {
+        "chunk_access": 266.8841250706464,
+        "chunk_payload_read": 92.11769059766084,
+        "chunk_prepare": 157.241900509689,
+        "json_serialization": 0.7365409983322024,
+        "numeric_prepare": 457.22637500148267,
+        "numeric_search": 384.09608404617757,
+        "render": 11.13162498222664,
+        "route_input_diagnostics": 15.774541010614485,
+        "route_metadata": 17.11704197805375,
+        "segment_count": 33.30758400261402,
+        "snap": 2.958333061542362
+      }
+    },
+    "hills_high": {
+      "p50_ms": 1246.017916011624,
+      "p95_ms": 1291.909779101843,
+      "p99_ms": 1295.9890558209736,
+      "sample_count": 3,
+      "statuses": [
+        "complete",
+        "complete",
+        "complete"
+      ],
+      "equivalent": true,
+      "median_phases_ms": {
+        "chunk_access": 247.67795897787437,
+        "chunk_payload_read": 82.53549924120307,
+        "chunk_prepare": 157.67589048482478,
+        "json_serialization": 0.8402090170420706,
+        "numeric_prepare": 428.31758299143985,
+        "numeric_search": 604.6587500022724,
+        "render": 10.026542004197836,
+        "route_input_diagnostics": 29.9894159543328,
+        "route_metadata": 32.881458988413215,
+        "segment_count": 32.93254098389298,
+        "snap": 2.9402500367723405
+      }
+    },
+    "moved_pin_hills_high": {
+      "p50_ms": 1169.928124989383,
+      "p95_ms": 1230.3721996722743,
+      "p99_ms": 1235.7450063107535,
+      "sample_count": 3,
+      "statuses": [
+        "complete",
+        "complete",
+        "complete"
+      ],
+      "equivalent": true,
+      "median_phases_ms": {
+        "chunk_access": 249.44499996490777,
+        "chunk_payload_read": 86.30022482248023,
+        "chunk_prepare": 157.0853847078979,
+        "json_serialization": 0.828874995931983,
+        "numeric_prepare": 429.63033297564834,
+        "numeric_search": 597.4911659723148,
+        "render": 9.988499979954213,
+        "route_input_diagnostics": 26.2917919899337,
+        "route_metadata": 29.346083058044314,
+        "segment_count": 32.38116705324501,
+        "snap": 2.2329999483190477
+      }
+    }
+  },
+  "concurrent_summaries": {
+    "distance_only": {
+      "p50_ms": 418.83591696387157,
+      "p95_ms": 497.62866699602455,
+      "p99_ms": 504.6324669988826,
+      "sample_count": 3,
+      "statuses": [
+        "complete",
+        "complete",
+        "complete"
+      ],
+      "equivalent": true,
+      "median_phases_ms": {
+        "json_serialization": 0.3363749710842967
+      }
+    },
+    "moved_pin_hills_high": {
+      "p50_ms": 1386.8094169883989,
+      "p95_ms": 1702.0482923020609,
+      "p99_ms": 1730.0695256632753,
+      "sample_count": 3,
+      "statuses": [
+        "complete",
+        "complete",
+        "complete"
+      ],
+      "equivalent": true,
+      "median_phases_ms": {
+        "json_serialization": 0.8407090208493173
+      }
+    }
+  },
+  "note": "Fresh worker, serial ordered edits, then optional two-request batches. Only the first edit starts with empty application caches. OS cache is uncontrolled. Timings include JSON serialization; HTTP, browser rendering, and debounce are excluded. Phase timers are nested; concurrent requests disable global instrumentation. Percentiles from few samples are descriptive, not production acceptance.",
+  "routing_base_revision": "a4e09c3",
+  "matches_previous_complete_responses": {
+    "distance_only": true,
+    "shaped": true,
+    "hills_high": true,
+    "moved_pin_hills_high": true
+  },
+  "first_pass": [
+    {
+      "name": "distance_only",
+      "request": {
+        "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+        "mode": "round_trip",
+        "home": {
+          "longitude": 24.795,
+          "latitude": 60.216,
+          "segment_id": null
+        },
+        "turnaround": {
+          "longitude": 25.03,
+          "latitude": 60.25,
+          "segment_id": null
+        },
+        "settings": {
+          "avoidance_ratio": 0.0,
+          "centre_enabled": true,
+          "radius_ratio": 0.15,
+          "transition_ratio": 0.05,
+          "side_strength": 2.0,
+          "reuse_strength": 4.0
+        },
+        "preferences": {
+          "hills": "off",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off",
+          "environment_greenery": "off",
+          "environment_water": "off",
+          "environment_traffic": "off",
+          "environment_wetland": "off"
+        },
+        "radius_m": 50.0,
+        "surface": "all",
+        "avoid_stairs": true
+      },
+      "cache_before": {
+        "graphs": 0,
+        "graph_bytes": 0,
+        "chunks": 0,
+        "chunk_bytes": 0,
+        "total_bytes": 0
+      },
+      "cache_after": {
+        "graphs": 0,
+        "graph_bytes": 0,
+        "chunks": 736,
+        "chunk_bytes": 67036624,
+        "total_bytes": 67036624
+      },
+      "elapsed_ms": 1661.2447910010815,
+      "phases_ms": {
+        "snap": 50.49999995389953,
+        "segment_count": 481.42170801293105,
+        "chunk_payload_read": 880.2259954973124,
+        "chunk_prepare": 64.54752048011869,
+        "chunk_access": 949.5309590129182,
+        "numeric_prepare": 1034.735958033707,
+        "numeric_search": 28.693666972685605,
+        "route_metadata": 24.94779200060293,
+        "route_input_diagnostics": 28.070583008229733,
+        "render": 3.8372089620679617,
+        "json_serialization": 0.34374999813735485
+      },
+      "phase_calls": {
+        "snap": 2,
+        "segment_count": 1,
+        "chunk_payload_read": 1891,
+        "chunk_prepare": 1891,
+        "chunk_access": 1,
+        "numeric_prepare": 1,
+        "numeric_search": 1,
+        "route_metadata": 1,
+        "route_input_diagnostics": 1,
+        "render": 1
+      },
+      "status": "complete",
+      "candidates": [
+        {
+          "distance_m": 30429.50592593346,
+          "outbound_distance_m": 15214.752962966719,
+          "returning_distance_m": 15214.752962966739,
+          "expanded_nodes": 93804
+        }
+      ],
+      "response_bytes": 110477,
+      "response_sha256": "3e7d140df9e9217f73777c3cecb489b477c8a692cd814f6745373e1690501b8c",
+      "search": {
+        "attempts": [
+          {
+            "bounds_epsg3067": [
+              374227.302824582,
+              6669026.737148542,
+              394556.4548966808,
+              6689355.88922064
+            ],
+            "nodes": 296021,
+            "segments": 412622,
+            "reason": "settled",
+            "reached_frontier": false,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          }
+        ],
+        "retries": 0,
+        "area_limited_reason": null,
+        "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+      }
+    },
+    {
+      "name": "shaped",
+      "request": {
+        "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+        "mode": "round_trip",
+        "home": {
+          "longitude": 24.795,
+          "latitude": 60.216,
+          "segment_id": null
+        },
+        "turnaround": {
+          "longitude": 25.03,
+          "latitude": 60.25,
+          "segment_id": null
+        },
+        "settings": {
+          "avoidance_ratio": 0.18,
+          "centre_enabled": true,
+          "radius_ratio": 0.15,
+          "transition_ratio": 0.05,
+          "side_strength": 2.0,
+          "reuse_strength": 4.0
+        },
+        "preferences": {
+          "hills": "off",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off",
+          "environment_greenery": "off",
+          "environment_water": "off",
+          "environment_traffic": "off",
+          "environment_wetland": "off"
+        },
+        "radius_m": 50.0,
+        "surface": "all",
+        "avoid_stairs": true
+      },
+      "cache_before": {
+        "graphs": 0,
+        "graph_bytes": 0,
+        "chunks": 736,
+        "chunk_bytes": 67036624,
+        "total_bytes": 67036624
+      },
+      "cache_after": {
+        "graphs": 0,
+        "graph_bytes": 0,
+        "chunks": 794,
+        "chunk_bytes": 67096696,
+        "total_bytes": 67096696
+      },
+      "elapsed_ms": 1601.0391670279205,
+      "phases_ms": {
+        "snap": 3.675707965157926,
+        "segment_count": 122.68008303362876,
+        "chunk_payload_read": 562.5878417631611,
+        "chunk_prepare": 156.60230355570093,
+        "chunk_access": 726.1691250023432,
+        "numeric_prepare": 916.0347909783013,
+        "numeric_search": 393.53241701610386,
+        "route_metadata": 63.94533405546099,
+        "route_input_diagnostics": 67.38470797426999,
+        "render": 10.585707961581647,
+        "json_serialization": 0.7353329565376043
+      },
+      "phase_calls": {
+        "snap": 2,
+        "segment_count": 2,
+        "chunk_payload_read": 5152,
+        "chunk_prepare": 5152,
+        "chunk_access": 2,
+        "numeric_prepare": 2,
+        "numeric_search": 2,
+        "route_metadata": 2,
+        "route_input_diagnostics": 1,
+        "render": 1
+      },
+      "status": "complete",
+      "candidates": [
+        {
+          "distance_m": 38538.23999999999,
+          "outbound_distance_m": 20210.351344580326,
+          "returning_distance_m": 18327.88865541967,
+          "expanded_nodes": 190750
+        },
+        {
+          "distance_m": 38538.240000000005,
+          "outbound_distance_m": 18327.88865541967,
+          "returning_distance_m": 20210.351344580336,
+          "expanded_nodes": 201157
+        }
+      ],
+      "response_bytes": 260232,
+      "response_sha256": "8efeb1b006f91ef3ada90af7cdc3d8305694d05b970b0ce7a1fc222cc7c30723",
+      "search": {
+        "attempts": [
+          {
+            "bounds_epsg3067": [
+              374227.302824582,
+              6669026.737148542,
+              394556.4548966808,
+              6689355.88922064
+            ],
+            "nodes": 296021,
+            "segments": 412622,
+            "reason": "unloaded_connections",
+            "reached_frontier": true,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          },
+          {
+            "bounds_epsg3067": [
+              364062.7267885326,
+              6658862.161112493,
+              404721.0309327302,
+              6699520.465256689
+            ],
+            "nodes": 465513,
+            "segments": 635917,
+            "reason": "settled",
+            "reached_frontier": false,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          }
+        ],
+        "retries": 1,
+        "area_limited_reason": null,
+        "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+      }
+    },
+    {
+      "name": "hills_high",
+      "request": {
+        "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+        "mode": "round_trip",
+        "home": {
+          "longitude": 24.795,
+          "latitude": 60.216,
+          "segment_id": null
+        },
+        "turnaround": {
+          "longitude": 25.03,
+          "latitude": 60.25,
+          "segment_id": null
+        },
+        "settings": {
+          "avoidance_ratio": 0.18,
+          "centre_enabled": true,
+          "radius_ratio": 0.15,
+          "transition_ratio": 0.05,
+          "side_strength": 2.0,
+          "reuse_strength": 4.0
+        },
+        "preferences": {
+          "hills": "high",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off",
+          "environment_greenery": "off",
+          "environment_water": "off",
+          "environment_traffic": "off",
+          "environment_wetland": "off"
+        },
+        "radius_m": 50.0,
+        "surface": "all",
+        "avoid_stairs": true
+      },
+      "cache_before": {
+        "graphs": 0,
+        "graph_bytes": 0,
+        "chunks": 794,
+        "chunk_bytes": 67096696,
+        "total_bytes": 67096696
+      },
+      "cache_after": {
+        "graphs": 0,
+        "graph_bytes": 0,
+        "chunks": 794,
+        "chunk_bytes": 67096696,
+        "total_bytes": 67096696
+      },
+      "elapsed_ms": 1301.9852500292473,
+      "phases_ms": {
+        "snap": 3.144082031212747,
+        "segment_count": 35.617416026070714,
+        "chunk_payload_read": 89.65942729264498,
+        "chunk_prepare": 156.45008336286992,
+        "chunk_access": 252.0991249475628,
+        "numeric_prepare": 436.7830840055831,
+        "numeric_search": 610.1535829948261,
+        "route_metadata": 93.49720797035843,
+        "route_input_diagnostics": 85.17895801924169,
+        "render": 9.800667001400143,
+        "json_serialization": 0.7956670015119016
+      },
+      "phase_calls": {
+        "snap": 2,
+        "segment_count": 2,
+        "chunk_payload_read": 5152,
+        "chunk_prepare": 5152,
+        "chunk_access": 2,
+        "numeric_prepare": 2,
+        "numeric_search": 2,
+        "route_metadata": 2,
+        "route_input_diagnostics": 1,
+        "render": 1
+      },
+      "status": "complete",
+      "candidates": [
+        {
+          "distance_m": 40832.21861838641,
+          "outbound_distance_m": 20331.443962966725,
+          "returning_distance_m": 20500.774655419682,
+          "expanded_nodes": 276145
+        },
+        {
+          "distance_m": 38324.18461838641,
+          "outbound_distance_m": 21114.463655419684,
+          "returning_distance_m": 17209.72096296673,
+          "expanded_nodes": 304267
+        }
+      ],
+      "response_bytes": 297105,
+      "response_sha256": "c8626fa2d766a163903d953d0418749811809e892e3a964747927893f46e3e78",
+      "search": {
+        "attempts": [
+          {
+            "bounds_epsg3067": [
+              374227.302824582,
+              6669026.737148542,
+              394556.4548966808,
+              6689355.88922064
+            ],
+            "nodes": 296021,
+            "segments": 412622,
+            "reason": "unloaded_connections",
+            "reached_frontier": true,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          },
+          {
+            "bounds_epsg3067": [
+              364062.7267885326,
+              6658862.161112493,
+              404721.0309327302,
+              6699520.465256689
+            ],
+            "nodes": 465513,
+            "segments": 635917,
+            "reason": "settled",
+            "reached_frontier": false,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          }
+        ],
+        "retries": 1,
+        "area_limited_reason": null,
+        "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+      }
+    },
+    {
+      "name": "moved_pin_hills_high",
+      "request": {
+        "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
+        "mode": "round_trip",
+        "home": {
+          "longitude": 24.795,
+          "latitude": 60.216,
+          "segment_id": null
+        },
+        "turnaround": {
+          "longitude": 25.028,
+          "latitude": 60.251,
+          "segment_id": null
+        },
+        "settings": {
+          "avoidance_ratio": 0.18,
+          "centre_enabled": true,
+          "radius_ratio": 0.15,
+          "transition_ratio": 0.05,
+          "side_strength": 2.0,
+          "reuse_strength": 4.0
+        },
+        "preferences": {
+          "hills": "high",
+          "signals": "off",
+          "busy_roads": "off",
+          "greenery": "off",
+          "environment_greenery": "off",
+          "environment_water": "off",
+          "environment_traffic": "off",
+          "environment_wetland": "off"
+        },
+        "radius_m": 50.0,
+        "surface": "all",
+        "avoid_stairs": true
+      },
+      "cache_before": {
+        "graphs": 0,
+        "graph_bytes": 0,
+        "chunks": 794,
+        "chunk_bytes": 67096696,
+        "total_bytes": 67096696
+      },
+      "cache_after": {
+        "graphs": 0,
+        "graph_bytes": 0,
+        "chunks": 794,
+        "chunk_bytes": 67096696,
+        "total_bytes": 67096696
+      },
+      "elapsed_ms": 1150.568209006451,
+      "phases_ms": {
+        "snap": 5.48737496137619,
+        "segment_count": 35.47920798882842,
+        "chunk_payload_read": 79.12292517721653,
+        "chunk_prepare": 155.84222879260778,
+        "chunk_access": 240.91637501260266,
+        "numeric_prepare": 420.48537504160777,
+        "numeric_search": 594.3539169966243,
+        "route_metadata": 33.43308303738013,
+        "route_input_diagnostics": 26.44991601118818,
+        "render": 9.811000025365502,
+        "json_serialization": 0.8121249848045409
+      },
+      "phase_calls": {
+        "snap": 2,
+        "segment_count": 2,
+        "chunk_payload_read": 5150,
+        "chunk_prepare": 5150,
+        "chunk_access": 2,
+        "numeric_prepare": 2,
+        "numeric_search": 2,
+        "route_metadata": 2,
+        "route_input_diagnostics": 1,
+        "render": 1
+      },
+      "status": "complete",
+      "candidates": [
+        {
+          "distance_m": 40705.760618386405,
+          "outbound_distance_m": 20172.669778035128,
+          "returning_distance_m": 20533.090840351277,
+          "expanded_nodes": 275536
+        },
+        {
+          "distance_m": 41970.72561838642,
+          "outbound_distance_m": 21146.77984035128,
+          "returning_distance_m": 20823.94577803514,
+          "expanded_nodes": 301249
+        }
+      ],
+      "response_bytes": 300041,
+      "response_sha256": "72bd9558c26d0005ec16988e96a2dd87a62a0fa1538651614387e8f3cfa6327f",
+      "search": {
+        "attempts": [
+          {
+            "bounds_epsg3067": [
+              374223.2991289258,
+              6669112.221314205,
+              394488.3491895546,
+              6689377.271374833
+            ],
+            "nodes": 295646,
+            "segments": 412164,
+            "reason": "unloaded_connections",
+            "reached_frontier": true,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          },
+          {
+            "bounds_epsg3067": [
+              364090.7740986114,
+              6658979.696283891,
+              404620.874219869,
+              6699509.796405147
+            ],
+            "nodes": 465444,
+            "segments": 635826,
+            "reason": "settled",
+            "reached_frontier": false,
+            "near_boundary": false,
+            "source_coverage_limited": false
+          }
+        ],
+        "retries": 1,
+        "area_limited_reason": null,
+        "optimality_note": "Boundary expansion is heuristic; a better route outside the loaded area can remain undetected."
+      }
+    }
+  ],
+  "repeated_passes": [
+    [
+      {
+        "name": "distance_only",
+        "elapsed_ms": 214.74629105068743,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 3.010250045917928,
+          "segment_count": 14.900250011123717,
+          "chunk_payload_read": 30.26074741501361,
+          "chunk_prepare": 61.76603480707854,
+          "chunk_access": 94.32954201474786,
+          "numeric_prepare": 160.68024997366592,
+          "numeric_search": 18.776917015202343,
+          "route_metadata": 3.562042023986578,
+          "route_input_diagnostics": 5.896833026781678,
+          "render": 3.7529999972321093,
+          "json_serialization": 0.3090410027652979
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 1,
+          "chunk_payload_read": 1891,
+          "chunk_prepare": 1891,
+          "chunk_access": 1,
+          "numeric_prepare": 1,
+          "numeric_search": 1,
+          "route_metadata": 1,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "3e7d140df9e9217f73777c3cecb489b477c8a692cd814f6745373e1690501b8c"
+      },
+      {
+        "name": "shaped",
+        "elapsed_ms": 914.5091669633985,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 2.805541967973113,
+          "segment_count": 33.30758400261402,
+          "chunk_payload_read": 81.52086118934676,
+          "chunk_prepare": 155.44320835033432,
+          "chunk_access": 242.98045894829556,
+          "numeric_prepare": 425.48383405664936,
+          "numeric_search": 383.61083302879706,
+          "route_metadata": 16.852626053150743,
+          "route_input_diagnostics": 14.825874997768551,
+          "render": 19.682958023622632,
+          "json_serialization": 0.7382499752566218
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5152,
+          "chunk_prepare": 5152,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "8efeb1b006f91ef3ada90af7cdc3d8305694d05b970b0ce7a1fc222cc7c30723"
+      },
+      {
+        "name": "hills_high",
+        "elapsed_ms": 1297.0088750007562,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 2.797708031721413,
+          "segment_count": 32.48541598441079,
+          "chunk_payload_read": 216.61636821227148,
+          "chunk_prepare": 156.76638059085235,
+          "chunk_access": 379.63266705628484,
+          "numeric_prepare": 562.4183340114541,
+          "numeric_search": 600.7081659627147,
+          "route_metadata": 30.725165968760848,
+          "route_input_diagnostics": 29.9894159543328,
+          "render": 10.026542004197836,
+          "json_serialization": 0.8666669600643218
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5152,
+          "chunk_prepare": 5152,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "c8626fa2d766a163903d953d0418749811809e892e3a964747927893f46e3e78"
+      },
+      {
+        "name": "moved_pin_hills_high",
+        "elapsed_ms": 1237.0882079703733,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 2.2329999483190477,
+          "segment_count": 32.38116705324501,
+          "chunk_payload_read": 175.9066610247828,
+          "chunk_prepare": 156.56356717227027,
+          "chunk_access": 338.7252090033144,
+          "numeric_prepare": 517.8317920072004,
+          "numeric_search": 597.4911659723148,
+          "route_metadata": 29.346083058044314,
+          "route_input_diagnostics": 23.451833054423332,
+          "render": 9.636249975301325,
+          "json_serialization": 0.814375001937151
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5150,
+          "chunk_prepare": 5150,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "72bd9558c26d0005ec16988e96a2dd87a62a0fa1538651614387e8f3cfa6327f"
+      }
+    ],
+    [
+      {
+        "name": "distance_only",
+        "elapsed_ms": 236.45337502239272,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 2.853957936167717,
+          "segment_count": 12.848791026044637,
+          "chunk_payload_read": 30.400004237890244,
+          "chunk_prepare": 62.29195790365338,
+          "chunk_access": 94.972874969244,
+          "numeric_prepare": 162.0470419875346,
+          "numeric_search": 19.078875018749386,
+          "route_metadata": 16.783625003881752,
+          "route_input_diagnostics": 14.914583996869624,
+          "render": 3.7577080074697733,
+          "json_serialization": 0.3071249811910093
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 1,
+          "chunk_payload_read": 1891,
+          "chunk_prepare": 1891,
+          "chunk_access": 1,
+          "numeric_prepare": 1,
+          "numeric_search": 1,
+          "route_metadata": 1,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "3e7d140df9e9217f73777c3cecb489b477c8a692cd814f6745373e1690501b8c"
+      },
+      {
+        "name": "shaped",
+        "elapsed_ms": 1061.2236249726266,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 2.958333061542362,
+          "segment_count": 37.66841598553583,
+          "chunk_payload_read": 92.11769059766084,
+          "chunk_prepare": 167.56009554956108,
+          "chunk_access": 266.8841250706464,
+          "numeric_prepare": 457.22637500148267,
+          "numeric_search": 433.3336660056375,
+          "route_metadata": 55.553290992975235,
+          "route_input_diagnostics": 44.20158400898799,
+          "render": 11.13162498222664,
+          "json_serialization": 0.7365409983322024
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5152,
+          "chunk_prepare": 5152,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "8efeb1b006f91ef3ada90af7cdc3d8305694d05b970b0ce7a1fc222cc7c30723"
+      },
+      {
+        "name": "hills_high",
+        "elapsed_ms": 1246.017916011624,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 2.998459036462009,
+          "segment_count": 33.41558307874948,
+          "chunk_payload_read": 82.53549924120307,
+          "chunk_prepare": 158.94165128702298,
+          "chunk_access": 247.67795897787437,
+          "numeric_prepare": 428.20283299079165,
+          "numeric_search": 607.2843750007451,
+          "route_metadata": 68.58195801032707,
+          "route_input_diagnostics": 67.89954198757187,
+          "render": 10.036417050287127,
+          "json_serialization": 0.8402090170420706
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5152,
+          "chunk_prepare": 5152,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "c8626fa2d766a163903d953d0418749811809e892e3a964747927893f46e3e78"
+      },
+      {
+        "name": "moved_pin_hills_high",
+        "elapsed_ms": 1169.928124989383,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 4.061041050590575,
+          "segment_count": 32.25058305542916,
+          "chunk_payload_read": 86.30022482248023,
+          "chunk_prepare": 157.0853847078979,
+          "chunk_access": 249.44499996490777,
+          "numeric_prepare": 429.63033297564834,
+          "numeric_search": 600.3328340011649,
+          "route_metadata": 32.71404100814834,
+          "route_input_diagnostics": 26.2917919899337,
+          "render": 19.688874948769808,
+          "json_serialization": 0.8873750339262187
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5150,
+          "chunk_prepare": 5150,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "72bd9558c26d0005ec16988e96a2dd87a62a0fa1538651614387e8f3cfa6327f"
+      }
+    ],
+    [
+      {
+        "name": "distance_only",
+        "elapsed_ms": 235.27037497842684,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 2.869917021598667,
+          "segment_count": 12.835000001359731,
+          "chunk_payload_read": 33.98995945462957,
+          "chunk_prepare": 62.64328263932839,
+          "chunk_access": 98.95650000544265,
+          "numeric_prepare": 179.05945901293308,
+          "numeric_search": 22.023666999302804,
+          "route_metadata": 4.08458401216194,
+          "route_input_diagnostics": 6.253833998925984,
+          "render": 3.8713329704478383,
+          "json_serialization": 0.3315419889986515
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 1,
+          "chunk_payload_read": 1891,
+          "chunk_prepare": 1891,
+          "chunk_access": 1,
+          "numeric_prepare": 1,
+          "numeric_search": 1,
+          "route_metadata": 1,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "3e7d140df9e9217f73777c3cecb489b477c8a692cd814f6745373e1690501b8c"
+      },
+      {
+        "name": "shaped",
+        "elapsed_ms": 1047.375167021528,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 3.0103750177659094,
+          "segment_count": 33.22912601288408,
+          "chunk_payload_read": 222.1344111021608,
+          "chunk_prepare": 157.241900509689,
+          "chunk_access": 385.5435000732541,
+          "numeric_prepare": 565.5957499984652,
+          "numeric_search": 384.09608404617757,
+          "route_metadata": 17.11704197805375,
+          "route_input_diagnostics": 15.774541010614485,
+          "render": 10.460666962899268,
+          "json_serialization": 0.715582980774343
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5152,
+          "chunk_prepare": 5152,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "8efeb1b006f91ef3ada90af7cdc3d8305694d05b970b0ce7a1fc222cc7c30723"
+      },
+      {
+        "name": "hills_high",
+        "elapsed_ms": 1165.226833021734,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 2.9402500367723405,
+          "segment_count": 32.93254098389298,
+          "chunk_payload_read": 81.82384184328839,
+          "chunk_prepare": 157.67589048482478,
+          "chunk_access": 245.58512406656519,
+          "numeric_prepare": 428.31758299143985,
+          "numeric_search": 604.6587500022724,
+          "route_metadata": 32.881458988413215,
+          "route_input_diagnostics": 25.736749987117946,
+          "render": 9.910291992127895,
+          "json_serialization": 0.8076659869402647
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5152,
+          "chunk_prepare": 5152,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "c8626fa2d766a163903d953d0418749811809e892e3a964747927893f46e3e78"
+      },
+      {
+        "name": "moved_pin_hills_high",
+        "elapsed_ms": 1152.6575830066577,
+        "status": "complete",
+        "phases_ms": {
+          "snap": 1.7706259968690574,
+          "segment_count": 33.03200000664219,
+          "chunk_payload_read": 82.60471525136381,
+          "chunk_prepare": 158.15359319094568,
+          "chunk_access": 246.7704169685021,
+          "numeric_prepare": 427.29941598372534,
+          "numeric_search": 596.3835000293329,
+          "route_metadata": 26.7249169992283,
+          "route_input_diagnostics": 32.19108300982043,
+          "render": 9.988499979954213,
+          "json_serialization": 0.828874995931983
+        },
+        "phase_calls": {
+          "snap": 2,
+          "segment_count": 2,
+          "chunk_payload_read": 5150,
+          "chunk_prepare": 5150,
+          "chunk_access": 2,
+          "numeric_prepare": 2,
+          "numeric_search": 2,
+          "route_metadata": 2,
+          "route_input_diagnostics": 1,
+          "render": 1
+        },
+        "response_sha256": "72bd9558c26d0005ec16988e96a2dd87a62a0fa1538651614387e8f3cfa6327f"
+      }
+    ]
+  ],
+  "concurrent_batches": [
+    [
+      {
+        "name": "distance_only",
+        "elapsed_ms": 250.08341699140146,
+        "status": "complete",
+        "response_sha256": "3e7d140df9e9217f73777c3cecb489b477c8a692cd814f6745373e1690501b8c"
+      },
+      {
+        "name": "moved_pin_hills_high",
+        "elapsed_ms": 1737.0748340035789,
+        "status": "complete",
+        "response_sha256": "72bd9558c26d0005ec16988e96a2dd87a62a0fa1538651614387e8f3cfa6327f"
+      }
+    ],
+    [
+      {
+        "name": "distance_only",
+        "elapsed_ms": 506.3834169995971,
+        "status": "complete",
+        "response_sha256": "3e7d140df9e9217f73777c3cecb489b477c8a692cd814f6745373e1690501b8c"
+      },
+      {
+        "name": "moved_pin_hills_high",
+        "elapsed_ms": 1386.8094169883989,
+        "status": "complete",
+        "response_sha256": "72bd9558c26d0005ec16988e96a2dd87a62a0fa1538651614387e8f3cfa6327f"
+      }
+    ],
+    [
+      {
+        "name": "distance_only",
+        "elapsed_ms": 418.83591696387157,
+        "status": "complete",
+        "response_sha256": "3e7d140df9e9217f73777c3cecb489b477c8a692cd814f6745373e1690501b8c"
+      },
+      {
+        "name": "moved_pin_hills_high",
+        "elapsed_ms": 1198.5061669838615,
+        "status": "complete",
+        "response_sha256": "72bd9558c26d0005ec16988e96a2dd87a62a0fa1538651614387e8f3cfa6327f"
+      }
+    ]
+  ]
+}
