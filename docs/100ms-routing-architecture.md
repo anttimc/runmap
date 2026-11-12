@@ -1,5 +1,11 @@
 # Routing toward a 100 ms request budget
 
+The product target is a visible route update within one second for runs up to
+40 km after a settings change or pin release. See the
+[interaction target](routing-scalability.md#interaction-target) for scope and
+unresolved measurement conditions. The 100 ms backend budget below is a supporting
+engineering aspiration; neither target is a general delivered guarantee.
+
 Status: run planning and distance exploration use native numeric traversal when a matching numeric
 artifact is available. The API preserves snapping, costs, response fields,
 request deadlines, and automatic window expansion. Immutable working sets have

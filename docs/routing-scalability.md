@@ -3,6 +3,74 @@
 Design direction reviewed 2026-11-12. These are proposals, not implemented
 features or measured improvements. Outstanding tasks live in the [roadmap](roadmap.md).
 
+## Interaction target
+
+Support runs up to 40 km with a revised route visible within one second after a
+settings change or release of a dragged route pin. This is the user-agreed target,
+not current measured performance. It includes scheduling, server work, transport,
+and browser rendering, not just the shortest-path kernel. Pin reshaping itself
+remains unimplemented; its detailed interaction design is deferred while scaling
+is the focus.
+
+Measure warm edits, first requests in a new area, and process-cold requests
+separately. Do not hide a cold-area miss behind a warm-only claim. Hardware,
+concurrency, network conditions, and the acceptance percentile still need to be
+fixed before declaring the target met. The existing 100 ms backend target remains
+a supporting engineering aspiration, not a substitute for this interaction target.
+
+## Proposed architectural boundaries
+
+Keep Python preparation/API delivery and in-process Rust search. The first changes
+should concern data ownership and request lifetime; a separate routing service
+is not required to test this design.
+
+| Boundary | Proposed responsibility |
+| --- | --- |
+| Offline preparation | Publish versioned topology, packed preference data, geometry, and landmark tables with matching identities |
+| Shared graph store | Own immutable chunks, stable identifiers, cross-chunk adjacency, bounded residency, and coordinated loading |
+| Per-request Rust search | Own endpoint/pin overlays, costs, labels, queue, deadline, and cancellation; borrow shared graph data |
+| API orchestration | Validate requests, admit bounded work, assemble selected-route results, and report timing/limit outcomes |
+| Browser coordinator | Submit the latest settings revision, supersede obsolete work, and measure time until the route is visible |
+
+**Replace whole-area reconstruction with shared chunks.** Cache reusable decoded
+topology/index data as well as payload bytes. Request-local node remapping must
+not force rebuilding the entire adjacency index on every area change. Give each
+dataset generation separate ownership; hold borrowed chunks alive until its
+active searches finish. Bound both retained cache and in-flight working memory.
+
+**Separate topology, costs, and display geometry.** Prepare environment/signal
+data in compact chunk-addressable form to reduce per-request SQL/JSON/Python
+conversion. Attach only required cost channels to searches; load diagnostics and
+display geometry for selected traversals. Preserve geometry needed for exact shape
+integration and snapping: display-only deferral cannot remove those inputs.
+Preference edits should reuse prepared inputs while replacing query-local weights.
+
+**Let search bounds influence data loading.** Initially reuse chunks across the
+existing window retries. Subsequently evaluate incremental region expansion with
+valid frontier bounds, avoiding repeated full searches where state can safely be
+retained. Define how the search requests missing chunks without per-edge Python
+callbacks. Landmark rows should follow the same bounded data-access design.
+
+**Make superseded work stop.** Browser response rejection currently protects the
+display but does not immediately stop native work. Add request revisions and
+cooperative cancellation through preparation and Rust traversal. Use bounded
+admission and coalesce superseded pending edits per client without cancelling
+other users' work. Coordinate loads of the same chunk once; avoid a global lock
+around unrelated preparation. Cancellation and load failures must release leases.
+
+**Keep output work proportional to the selected route.** Batch selected-segment
+reads, reuse decoded geometry, and measure response construction and rendering.
+Keep elevation/export preparation outside the route-update critical path where
+the UI does not require it. Include any debounce delay in the one-second budget.
+
+First prove this on one machine with a documented memory budget. For hosting,
+publish immutable prepared datasets separately from serving, retain local routing
+data on workers, and route requests to workers with reusable regional data.
+Multiple workers currently need an explicit policy for process-local exploration
+snapshots and duplicated caches. Replicas help concurrent users; they do not by
+themselves make a slow single query meet the target. National coverage must be
+tested with fixed local requests and bounded active memory before public scaling.
+
 ## Evidence and current boundaries
 
 Responsiveness is the first product priority. Distinguish longer requested routes

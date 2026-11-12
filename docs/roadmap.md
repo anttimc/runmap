@@ -96,8 +96,13 @@ implemented. See [prepared data](reference/prepared-data.md#prepared-network-sql
 for contracts. Follow the [scalability proposal](routing-scalability.md):
 
 - Capture longer runs with actual preferences and separate graph preparation,
-  search, expansion, and visible browser latency. Choose representative route
-  lengths and an interaction budget with the user.
+  search, expansion, and visible browser latency. Target runs up to 40 km with
+  a revised route visible within one second of a settings change or pin release.
+  Fix benchmark hardware, concurrency, network conditions, and percentile; report
+  warm edits, cold-area requests, and process-cold requests separately.
+- Introduce shared immutable chunk/index ownership and packed optional cost data;
+  bound retained and in-flight memory. Add cooperative cancellation and bounded
+  admission for superseded edits. See [proposed boundaries](routing-scalability.md#proposed-architectural-boundaries).
 - Prototype directed landmark lower bounds on a relaxed distance graph; validate
   overlays, access restrictions, signal states, and dataset identities. Compare
   full latency and memory against the current geometric heuristic.

@@ -15,8 +15,10 @@ without relying on route optimization.
   Existing GPX export and the optional local Suunto integration provide the
   starting point; support for other watches is not yet committed.
 - **Interact responsively:** keep map use, route generation, and route review
-  responsive. Assess complete browser interactions as well as backend computation,
-  including changed inputs and uncached requests.
+  responsive. Target a revised route for runs up to 40 km within one second of
+  changing settings or releasing a dragged pin. This is an intended outcome,
+  not a delivered guarantee. Assess complete browser interactions as well as
+  backend computation, including changed inputs and uncached requests.
 - **Shape a route:** give runners more control over where a route goes while
   retaining useful guidance. Route shaping follows responsiveness in priority;
   automatic suggestions come later.
