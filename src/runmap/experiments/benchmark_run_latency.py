@@ -110,7 +110,8 @@ def measure_worker(database: Path, home: tuple[float, float], turnaround: tuple[
         elapsed = [cast(float, sample["elapsed_ms"]) for sample in samples]
         rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         return dict(backend="numeric" if data.numeric is not None else "reference",
-                    numeric_resident_bytes=data.numeric.resident_bytes if data.numeric is not None else 0,
+                    numeric_resident_bytes=(data.numeric.resident_bytes + data.numeric.chunk_store.resident_bytes
+                                            if data.numeric is not None else 0),
                     max_segments=limits.max_segments, max_retries=limits.max_retries,
                     dataset_id=data.dataset_id, request=options.model_dump(mode="json"), startup_ms=startup_ms,
                     first_request=first, repeated_requests=samples, repeated_summary=latency_summary(elapsed),

@@ -10,7 +10,8 @@ Status: run planning and distance exploration use native numeric traversal when 
 artifact is available. The API preserves snapping, costs, response fields,
 request deadlines, and automatic window expansion. Immutable working sets have
 a bounded LRU cache. Exploration snapshots retain sparse distance buffers.
-Chunk reuse between different working areas remains outstanding. See the
+Overlapping areas now reuse resident validated native chunks; merged area indexes
+and optional cost attachment still need work. See the
 [numeric format and benchmark commands](numeric-routing-format.md).
 
 For Rust phase timing, allocation traffic, and visual results on a fixed working
@@ -34,8 +35,8 @@ observations establish a cached-case improvement, not a general 100 ms guarantee
 turnaround at `(24.84, 60.24)` completed using 71,326 selected segments with the
 raised 200,000-segment API cap (five retries). Three repeated requests measured
 229 ms median and the first request 814 ms. The default 128 MiB working-set cache
-cannot retain both expanded graphs in that case, illustrating why shared chunk
-residency remains necessary for longer runs.
+could not retain both expanded graphs in that measurement. Shared chunk reuse is
+now implemented; these historical timings do not measure that change.
 
 Reproduce with `benchmark_run_latency` and the numeric sibling artifact present:
 
@@ -48,7 +49,8 @@ uv run python -m runmap.experiments.benchmark_run_latency \
 
 
 For the proposed next steps on loading, landmark bounds, and larger coverage,
-see [routing scalability](routing-scalability.md). These remain unimplemented.
+see [routing scalability](routing-scalability.md), which distinguishes delivered
+chunk reuse from the remaining proposals.
 
 ## Longer-run validation
 

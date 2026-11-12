@@ -1,7 +1,8 @@
 # Routing scalability and route reshaping
 
-Design direction reviewed 2026-11-12. These are proposals, not implemented
-features or measured improvements. Outstanding tasks live in the [roadmap](roadmap.md).
+Design direction reviewed 2026-11-12. Shared chunk reuse is implemented as
+described below; the broader boundaries and experiments remain proposals.
+Outstanding tasks live in the [roadmap](roadmap.md).
 
 ## Interaction target
 
@@ -82,8 +83,17 @@ arrival-movement labels. Python's `api/sqlite_runs.py` selects rectangular worki
 areas and retries with larger areas based on frontier and route-boundary checks.
 This expansion is heuristic, not a proof of global optimality.
 
-`api/numeric_data.py` caches whole working areas by bounds. An oversized graph
-bypasses the cache; changed bounds cannot reuse its chunks through this cache.
+`api/numeric_data.py` retains exact-area graphs and a byte-bounded
+`routing/numeric_store.py` shared chunk LRU. New bounds select chunk identities
+and fetch/prepare only misses. Rust retains immutable payloads, validated
+chunk-local adjacency, sorted node/arc identities, segment lengths, and safe
+geometric scales. Active graphs retain native owners after eviction or shutdown.
+New areas still merge node indexes and rebuild selection/frontier state; a single
+preparation lock still serializes unrelated loads. Optional cost data remains
+attached per area. Overlapping-window, concurrent-preparation, eviction, deadline,
+and route-equivalence tests cover reuse; long-route performance acceptance remains
+outstanding. An oversized graph bypasses exact-area retention but may reuse chunks
+that fit the shared cache. See [cache accounting](development.md#export-a-sqlite-network-dataset).
 Configured environment data is attached during graph loading even with preferences
 Off. The [2026-11-11 profile](archive/history/2026-11-11-distance-search-profile.md)
 records about 9 ms planning but seconds of preparation on a 19.6 km distance-only
@@ -96,7 +106,8 @@ bottleneck of a new request without measuring it.
 1. Capture representative longer runs with actual preferences, separating loading,
    search, retries, serialization, and browser latency. Include moved endpoints,
    cold/warm data, concurrent requests, and increasing coverage at fixed route size.
-2. Reuse immutable chunks across overlapping areas with byte-bounded residency.
+2. Build on the implemented shared chunk ownership and byte-bounded reuse.
+   Reduce area-wide index assembly and unrelated-load serialization.
    Separate topology from optional cost data; avoid full-area environment loading
    when unused while preserving selected-route diagnostics. Measure cold requests
    as well as warm reuse; increasing the whole-graph cache alone is insufficient.

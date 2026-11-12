@@ -64,8 +64,13 @@ avoiding the intermediate NumPy descriptors when a native graph is loaded.
 SQLite materializes a bytes payload per loaded chunk. Array views retain that
 immutable bytes owner and remain valid after the cursor or connection closes.
 This is direct buffer decoding, not memory mapping or a zero-copy path from disk.
-A future byte-bounded cache can retain these immutable chunk owners; eviction must
-not invalidate views retained by an active search or exploration snapshot.
+The native shared graph store retains immutable chunk owners and validated
+chunk-local indexes in a byte-bounded LRU. Bounds queries first select numeric
+chunk identities; only misses fetch payloads. Eviction releases the cache's
+reference, while native graphs retain owners for their lifetime. Exploration
+snapshots retain independent result buffers. Existing artifacts need no re-export.
+Each new area still merges node identities and computes selection/frontier state;
+this is not yet incremental traversal over a persistent global graph index.
 
 ## Identity and chunk connections
 
@@ -251,8 +256,8 @@ rendering, and caches immutable graphs in a byte-accounted LRU per artifact
 lifetime. API endpoint overlays pass snapped projected coordinates as well as
 chainage so shape integration uses the reference endpoint geometry. The graph
 loads selected topology, geometry, and hill totals; schema 2 keeps interval detail
-outside these BLOBs. Different
-bounds do not share retained chunks yet. Exploration snapshots retain only sparse
+outside these BLOBs. Different bounds share resident validated native chunks;
+area-wide selection and merged indexes remain separate. Exploration snapshots retain only sparse
 reached-node IDs/distances; numeric endpoint metadata for inspected segments is
 queried on demand from the source database. Their byte/TTL budget excludes graph
 owners because snapshot result bytes remain valid independently of graph-cache

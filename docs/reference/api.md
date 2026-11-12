@@ -158,7 +158,11 @@ excluded by the active policy. Exact limits/defaults are in
 Dataset services own read-only database connections and shared immutable numeric
 working sets. Searches own endpoint overlays, traversal state, cost context, and
 partial-endpoint hill detail. Numeric working sets are cached by exact bounds;
-different bounds currently do not share retained chunks.
+different bounds also reuse resident immutable chunks and their validated native
+topology through the same dataset service's shared graph store. Store loading is
+serialized by the existing preparation lock. Eviction and database shutdown do
+not invalidate chunk owners retained by active graphs. Area-wide node lookup,
+selection, and frontier state are still assembled for new bounds.
 With an environment join configured, a numeric working set also retains the
 selected physical-segment intervals. Search reads them from memory, while
 distance exploration keeps its distance-only cost.

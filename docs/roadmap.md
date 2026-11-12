@@ -100,8 +100,9 @@ for contracts. Follow the [scalability proposal](routing-scalability.md):
   a revised route visible within one second of a settings change or pin release.
   Fix benchmark hardware, concurrency, network conditions, and percentile; report
   warm edits, cold-area requests, and process-cold requests separately.
-- Introduce shared immutable chunk/index ownership and packed optional cost data;
-  bound retained and in-flight memory. Add cooperative cancellation and bounded
+- Extend shared chunk reuse to avoid area-wide index assembly and serialize only
+  related loads. Prepare packed optional cost data and bound in-flight memory.
+  Add cooperative cancellation and bounded
   admission for superseded edits. See [proposed boundaries](routing-scalability.md#proposed-architectural-boundaries).
 - Prototype directed landmark lower bounds on a relaxed distance graph; validate
   overlays, access restrictions, signal states, and dataset identities. Compare
@@ -128,9 +129,9 @@ Other remaining work:
 - Reduce temporary JSON/feature decoding in the reference loader if measured
   latency or peak memory justifies it. Preserve shared policy topology, artifact
   identities, and local indices; measure memory and bounded-search time.
-- Add byte-bounded chunk reuse across different working bounds, with dataset
-  generation, concurrency, and ownership guarantees. Benchmark overlapping
-  windows and long routes. Further incremental/hierarchical search, spatial
+- Validate implemented byte-bounded chunk reuse on representative overlapping
+  windows and long routes, including cold requests, cache churn, concurrent users,
+  and larger datasets at fixed route size. Further incremental/hierarchical search, spatial
   batching, and caching should follow profiles and preserve valid cost bounds.
   Address oversized graphs that bypass the cache and full-area environment
   attachment with preferences Off; preserve selected-route diagnostics. See the

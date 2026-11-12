@@ -205,6 +205,31 @@ def iter_numeric_payloads(connection: sqlite3.Connection, bounds: Bounds, *,
         yield NumericPayload(number, byte_size, payload)
 
 
+def numeric_chunk_ids(connection: sqlite3.Connection, bounds: Bounds) -> tuple[int, ...]:
+    """Select chunk identities without fetching already resident payloads."""
+    _validate_bounds(bounds)
+    west, south, east, north = bounds
+    return tuple(row[0] for row in connection.execute("""
+        SELECT number FROM chunk_bounds
+        WHERE west <= ? AND east >= ? AND south <= ? AND north >= ? ORDER BY number
+    """, (east, west, north, south)))
+
+
+def read_numeric_payload(connection: sqlite3.Connection, number: int, *,
+                         verify_checksums: bool = False) -> NumericPayload:
+    """Fetch one immutable chunk after a shared-store miss."""
+    row = connection.execute("SELECT payload, sha256, byte_size FROM numeric_chunks WHERE number = ?",
+                             (number,)).fetchone()
+    if row is None:
+        raise ValueError("Numeric chunk is missing")
+    payload, checksum, byte_size = row
+    if byte_size != len(payload):
+        raise ValueError("Numeric chunk byte count mismatch")
+    if verify_checksums and hashlib.sha256(payload).hexdigest() != checksum:
+        raise ValueError("Numeric chunk checksum mismatch")
+    return NumericPayload(number, byte_size, payload)
+
+
 def iter_numeric_chunks(connection: sqlite3.Connection, bounds: Bounds, *,
                         verify_checksums: bool = False) -> Iterator[StoredNumericChunk]:
     """Read bounded immutable array batches without decoding topology or features."""

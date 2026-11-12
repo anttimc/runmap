@@ -5,9 +5,7 @@ use crate::chunk_search::{self, SearchSettings, check_deadline};
 use crate::endpoint_overlay::{self, Endpoint, node_id};
 use crate::environment_cost::{self, EnvironmentIntervals};
 use crate::fields::FieldSettings;
-use crate::numeric::{
-    self, ARC_IDS, ARC_LENGTHS, ARC_NODES, ARC_SEGMENTS, Chunk, RoutingError, SEGMENT_IDS,
-};
+use crate::numeric::{self, ARC_IDS, ARC_LENGTHS, ARC_SEGMENTS, Chunk, RoutingError, SEGMENT_IDS};
 use crate::routing_cost::{CostSettings, ShapeSettings, parse_hill_intervals};
 use crate::signal_cost::{Arrival, GateRows, SignalData, SignalSettings, TurnRows};
 use pyo3::exceptions::{PyTimeoutError, PyValueError};
@@ -84,11 +82,11 @@ fn deadline(timeout: Option<f64>) -> PyResult<Option<Instant>> {
         .transpose()
 }
 
-fn views<'a>(py: Python<'a>, owners: &'a [Py<PyBytes>]) -> PyResult<Vec<Chunk<'a>>> {
+fn views<'a>(py: Python<'a>, owners: &'a [Arc<PreparedChunk>]) -> PyResult<Vec<Chunk<'a>>> {
     let _profile = crate::profiling::span(crate::profiling::Phase::Views);
     owners
         .iter()
-        .map(|owner| numeric::parse_chunk(owner.bind(py).as_bytes()).map_err(routing_error))
+        .map(|owner| numeric::parse_chunk(owner.payload.bind(py).as_bytes()).map_err(routing_error))
         .collect()
 }
 
@@ -195,9 +193,101 @@ fn validate_environment_graph(
     Ok(())
 }
 
+struct PreparedChunk {
+    payload: Py<PyBytes>,
+    index: chunk_graph::ChunkIndex,
+    resident_bytes: usize,
+}
+
+fn prepare_payload(
+    py: Python<'_>,
+    payload: Py<PyBytes>,
+    end: Option<Instant>,
+) -> PyResult<Arc<PreparedChunk>> {
+    let chunk = numeric::parse_chunk(payload.bind(py).as_bytes()).map_err(routing_error)?;
+    let index = py
+        .detach(|| {
+            check_deadline(end)?;
+            let index = chunk_graph::prepare_chunk(&chunk)?;
+            check_deadline(end)?;
+            Ok::<_, RoutingError>(index)
+        })
+        .map_err(routing_error)?;
+    let resident_bytes = payload.bind(py).as_bytes().len()
+        + chunk_graph::chunk_index_bytes(&index)
+        + std::mem::size_of::<PreparedChunk>()
+        + 128;
+    Ok(Arc::new(PreparedChunk {
+        payload,
+        index,
+        resident_bytes,
+    }))
+}
+
+/// Reusable validated topology and immutable adjacency payload for one chunk.
+#[pyclass(frozen, module = "runmap._routing_native")]
+pub struct NumericChunk {
+    data: Arc<PreparedChunk>,
+}
+
+#[pymethods]
+impl NumericChunk {
+    #[new]
+    #[pyo3(signature = (payload, *, timeout_seconds=None))]
+    fn new(py: Python<'_>, payload: Py<PyBytes>, timeout_seconds: Option<f64>) -> PyResult<Self> {
+        Ok(Self {
+            data: prepare_payload(py, payload, deadline(timeout_seconds)?)?,
+        })
+    }
+
+    #[getter]
+    fn resident_bytes(&self) -> usize {
+        self.data.resident_bytes
+    }
+
+    #[getter]
+    fn payload_bytes(&self, py: Python<'_>) -> usize {
+        self.data.payload.bind(py).as_bytes().len()
+    }
+}
+
+fn graph_from_chunks(
+    py: Python<'_>,
+    owners: Vec<Arc<PreparedChunk>>,
+    bounds: Option<Bounds>,
+    distance_scale: f64,
+    end: Option<Instant>,
+) -> PyResult<NumericGraph> {
+    if !distance_scale.is_finite() || !(0.0..=1.0).contains(&distance_scale) {
+        return Err(PyValueError::new_err(
+            "Distance scale must be between zero and one",
+        ));
+    }
+    let chunks = views(py, &owners)?;
+    let indexes: Vec<_> = owners.iter().map(|owner| &owner.index).collect();
+    let graph = py
+        .detach(|| {
+            check_deadline(end)?;
+            let graph = chunk_graph::build_prepared_graph(&chunks, &indexes, bounds)?;
+            check_deadline(end)?;
+            Ok::<_, RoutingError>(graph)
+        })
+        .map_err(routing_error)?;
+    let scale = indexes.iter().fold(distance_scale, |scale, index| {
+        scale.min(index.distance_scale)
+    });
+    Ok(NumericGraph {
+        owners,
+        graph,
+        distance_scale: scale,
+        environment: None,
+        signals: None,
+    })
+}
+
 #[pyclass(module = "runmap._routing_native")]
 pub struct NumericGraph {
-    owners: Vec<Py<PyBytes>>,
+    owners: Vec<Arc<PreparedChunk>>,
     graph: GraphIndex,
     distance_scale: f64,
     environment: Option<Arc<EnvironmentIntervals>>,
@@ -216,41 +306,43 @@ impl NumericGraph {
         timeout_seconds: Option<f64>,
     ) -> PyResult<Self> {
         let end = deadline(timeout_seconds)?;
-        if !distance_scale.is_finite() || !(0.0..=1.0).contains(&distance_scale) {
-            return Err(PyValueError::new_err(
-                "Distance scale must be between zero and one",
-            ));
-        }
-        let chunks = views(py, &payloads)?;
-        let (graph, scale) = py
-            .detach(|| {
-                check_deadline(end)?;
-                let graph = chunk_graph::build_graph(&chunks, bounds)?;
-                let mut scale = distance_scale;
-                for chunk in &chunks {
-                    check_deadline(end)?;
-                    for a in 0..chunk.counts.arcs {
-                        let u = chunk.columns[ARC_NODES].integer(a * 2) as usize;
-                        let v = chunk.columns[ARC_NODES].integer(a * 2 + 1) as usize;
-                        let xy = chunk.columns[crate::numeric::NODE_XY];
-                        let distance = (xy.float(u * 2) - xy.float(v * 2))
-                            .hypot(xy.float(u * 2 + 1) - xy.float(v * 2 + 1));
-                        if distance > 0.0 {
-                            scale = scale.min(chunk.columns[ARC_LENGTHS].float(a) / distance);
-                        }
-                    }
-                }
-                check_deadline(end)?;
-                Ok::<_, RoutingError>((graph, scale))
-            })
-            .map_err(routing_error)?;
-        Ok(Self {
-            owners: payloads,
-            graph,
-            distance_scale: scale,
-            environment: None,
-            signals: None,
-        })
+        let owners = payloads
+            .into_iter()
+            .map(|payload| prepare_payload(py, payload, end))
+            .collect::<PyResult<Vec<_>>>()?;
+        graph_from_chunks(py, owners, bounds, distance_scale, end)
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (chunks, *, bounds=None, distance_scale=0.0, timeout_seconds=None))]
+    fn from_chunks(
+        py: Python<'_>,
+        chunks: Vec<PyRef<'_, NumericChunk>>,
+        bounds: Option<Bounds>,
+        distance_scale: f64,
+        timeout_seconds: Option<f64>,
+    ) -> PyResult<Self> {
+        let owners = chunks.iter().map(|chunk| Arc::clone(&chunk.data)).collect();
+        graph_from_chunks(
+            py,
+            owners,
+            bounds,
+            distance_scale,
+            deadline(timeout_seconds)?,
+        )
+    }
+
+    #[getter]
+    fn chunk_bytes(&self) -> usize {
+        self.owners.iter().map(|chunk| chunk.resident_bytes).sum()
+    }
+
+    #[getter]
+    fn index_bytes(&self) -> usize {
+        chunk_graph::graph_index_bytes(&self.graph)
+            + self.owners.capacity() * std::mem::size_of::<Arc<PreparedChunk>>()
+            + std::mem::size_of::<Self>()
+            + 128
     }
 
     #[getter]

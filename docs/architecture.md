@@ -153,6 +153,16 @@ prepared graph buffers and orchestrates requests; Rust owns graph traversal,
 endpoint overlays, and cost evaluation during search. The same native graph
 service supports planning and distance exploration.
 
+The numeric data service owns a byte-bounded shared graph store for its opened
+artifact generation, alongside exact-area graph reuse. The store retains
+immutable native chunk owners and validated chunk-local topology. Overlapping
+areas borrow resident chunks and load only missing ones; native reference counts
+keep active graphs valid after eviction or database shutdown. Each new area still
+assembles a merged node lookup, selection masks, and frontier flags. Optional
+environment/signal data remains attached per area. Preparation uses the service's
+existing lock; concurrent searches keep independent mutable state. Cache budgets
+and remaining loading costs are described in [development](development.md).
+
 Native traversal evaluates a scalar objective and defers diagnostic arrays to
 selected-path evaluation. Read-only edge visits borrow a temporary base edge or
 an existing overlay edge. Predecessors retain compact base-arc or overlay-edge

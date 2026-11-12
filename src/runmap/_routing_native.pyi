@@ -1,6 +1,15 @@
-"""Typed signature for the scalar Rust field-integration binding."""
+"""Typed signatures for scalar integration and reusable native chunks."""
 
 from collections.abc import Sequence
+
+
+class NumericChunk:
+    def __init__(self, payload: bytes, *, timeout_seconds: float | None = None) -> None: ...
+    @property
+    def resident_bytes(self) -> int: ...
+    @property
+    def payload_bytes(self) -> int: ...
+
 
 def integrate_fields(
     points: Sequence[tuple[float, float]],

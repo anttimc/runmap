@@ -19,6 +19,7 @@ from runmap.routing.settings import resolve_shape_strengths
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.run_types import RunSettings
 from runmap.routing.profiles import exploration_profile
+from runmap.routing.numeric_store import SharedGraphStore
 from runmap.routing.types import Bounds, EdgeProfile
 
 
@@ -111,17 +112,28 @@ def _attach_environment(native: _routing_native.NumericGraph, connection: sqlite
 def load_numeric_graph(connection: sqlite3.Connection, bounds: Bounds, *,
                        deadline: float | None = None, verify_checksums: bool = False,
                        environment_connection: sqlite3.Connection | None = None,
-                       signal_connection: sqlite3.Connection | None = None) -> LoadedNumericGraph:
+                       signal_connection: sqlite3.Connection | None = None,
+                       chunk_store: SharedGraphStore | None = None) -> LoadedNumericGraph:
     metadata = network_metadata(connection)
     started = perf_counter()
+    if chunk_store is not None and chunk_store.connection is not connection:
+        raise ValueError("Shared graph store belongs to a different artifact connection")
     payloads: list[bytes] = []
-    for stored in iter_numeric_payloads(connection, bounds, verify_checksums=verify_checksums):
-        check_deadline(deadline)
-        payloads.append(stored.payload)
+    chunks: list[_routing_native.NumericChunk] = []
+    if chunk_store is None:
+        for stored in iter_numeric_payloads(connection, bounds, verify_checksums=verify_checksums):
+            check_deadline(deadline)
+            payloads.append(stored.payload)
+    else:
+        chunks = chunk_store.load(bounds, deadline, verify_checksums=verify_checksums)
     payload_ms = (perf_counter()-started)*1000
     started = perf_counter()
-    native = _routing_native.NumericGraph(payloads, bounds=bounds, distance_scale=metadata.distance_scale,
-                                          timeout_seconds=_remaining(deadline))
+    if chunk_store is None:
+        native = _routing_native.NumericGraph(payloads, bounds=bounds, distance_scale=metadata.distance_scale,
+                                              timeout_seconds=_remaining(deadline))
+    else:
+        native = _routing_native.NumericGraph.from_chunks(chunks, bounds=bounds, distance_scale=metadata.distance_scale,
+                                                          timeout_seconds=_remaining(deadline))
     environment_bytes = 0
     if environment_connection is not None:
         environment_bytes = _attach_environment(native, environment_connection, deadline)
@@ -135,7 +147,9 @@ def load_numeric_graph(connection: sqlite3.Connection, bounds: Bounds, *,
         signal_bytes = len(gates) * 64 + len(turns) * 96
         check_deadline(deadline)
     index_ms = (perf_counter()-started)*1000
-    return LoadedNumericGraph(native, metadata, bounds, len(payloads), sum(map(len, payloads)), payload_ms, index_ms,
+    chunk_count = len(payloads) if chunk_store is None else len(chunks)
+    buffer_bytes = sum(map(len, payloads)) if chunk_store is None else sum(c.payload_bytes for c in chunks)
+    return LoadedNumericGraph(native, metadata, bounds, chunk_count, buffer_bytes, payload_ms, index_ms,
                               environment_bytes, signal_bytes)
 
 

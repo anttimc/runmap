@@ -16,6 +16,7 @@ from runmap.paths.signals import open_signals
 from runmap.routing.deadlines import check_deadline
 from runmap.routing.geometry import projected_points
 from runmap.routing.numeric_search import LoadedNumericGraph, NumericEndpoint, load_numeric_graph
+from runmap.routing.numeric_store import SharedGraphStore
 from runmap.routing.types import Bounds
 
 
@@ -58,6 +59,7 @@ class NumericRoutingData:
         self.cache_bytes = cache_bytes
         self.resident_bytes = 0
         self.graphs: OrderedDict[Bounds, tuple[LoadedNumericGraph, int]] = OrderedDict()
+        self.chunk_store = SharedGraphStore(self.connection, cache_bytes // 2)
 
     def prepare(self, bounds: Bounds, snaps: tuple[Snap, Snap], deadline: float, *, include_hill_intervals: bool = False
                 ) -> tuple[LoadedNumericGraph, NumericEndpoint, NumericEndpoint]:
@@ -75,6 +77,8 @@ class NumericRoutingData:
             raise TimeoutError("Numeric graph preparation deadline")
         try:
             check_deadline(deadline)
+            self.chunk_store.resize(self.cache_bytes // 2)
+            self._evict_graphs(0)
             endpoints = tuple(self._endpoint(snap, include_hill_intervals=include_hill_intervals) for snap in snaps)
             cached = self.graphs.get(bounds)
             if cached is not None:
@@ -84,24 +88,28 @@ class NumericRoutingData:
             try:
                 graph = load_numeric_graph(self.connection, bounds, deadline=deadline,
                                            environment_connection=self.environment_connection,
-                                           signal_connection=self.signal_connection)
+                                           signal_connection=self.signal_connection, chunk_store=self.chunk_store)
             except sqlite3.OperationalError:
                 check_deadline(deadline)
                 raise
             finally:
                 self.connection.set_progress_handler(None, 0)
-            # Include an allowance for native CSR/index storage, beyond retained buffers.
-            size = (graph.buffer_bytes + graph.environment_bytes + graph.signal_bytes + graph.native.node_count * 256
-                    + graph.native.segment_count * 256)
-            while self.graphs and self.resident_bytes + size > self.cache_bytes:
-                _, (_, removed) = self.graphs.popitem(last=False)
-                self.resident_bytes -= removed
-            if size <= self.cache_bytes:
+            # Charge shared owners conservatively in both caches; active searches retain their own leases.
+            size = graph.native.chunk_bytes + graph.native.index_bytes + graph.environment_bytes + graph.signal_bytes
+            self._evict_graphs(size)
+            if size + self.chunk_store.resident_bytes <= self.cache_bytes:
                 self.graphs[bounds] = graph, size
                 self.resident_bytes += size
             return graph, endpoints
         finally:
+            self._evict_graphs(0)
             self.lock.release()
+
+    def _evict_graphs(self, incoming_bytes: int) -> None:
+        graph_budget = self.cache_bytes - self.chunk_store.resident_bytes
+        while self.graphs and self.resident_bytes + incoming_bytes > graph_budget:
+            _, (_, removed) = self.graphs.popitem(last=False)
+            self.resident_bytes -= removed
 
     def _endpoint(self, snap: Snap, *, include_hill_intervals: bool = False) -> NumericEndpoint:
         row = self.connection.execute(
@@ -116,6 +124,7 @@ class NumericRoutingData:
         with self.lock:
             self.graphs.clear()
             self.resident_bytes = 0
+            self.chunk_store.clear()
             self.connection.close()
             if self.environment_connection is not None:
                 self.environment_connection.close()

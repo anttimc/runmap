@@ -377,17 +377,27 @@ smaller routing working sets. Restart the API after changing the artifact. See
 [preprocessing and identity details](numeric-routing-format.md#export-and-read).
 
 `RUNMAP_NUMERIC_CACHE_BYTES` defaults to 134217728 (128 MiB) per API process.
-The LRU retains immutable graphs for exact working-area bounds, including their
-chunk buffers and an allowance for native indexes. Zero disables retention.
+The shared chunk LRU may retain up to half this budget; exact-area graphs use the
+remaining accounted capacity. Graph accounting includes their chunk owners and
+native index allocation capacities, plus allowances for environment/signal data.
+Shared owners are conservatively charged in both caches. Zero disables both.
 This is a cache accounting budget, not a process RSS cap: active requests retain
 evicted graphs safely, SQLite has its own page caches, and each search allocates
 request state. Two planning slots continue to bound simultaneous searches.
 Graphs hold their immutable buffers independently of the database connection.
-The cache belongs to one opened artifact generation and is cleared on shutdown;
+Both caches belong to one opened artifact generation and are cleared on shutdown;
 request costs and overlays are never cached.
 
-Changing working areas or expanding a window currently builds a new native index
-and rereads its selected BLOBs. Chunks are not yet reused between different bounds.
+Changing working areas or expanding a window selects chunk IDs without fetching
+their BLOBs. Resident chunks reuse their validated native topology, adjacency
+payloads, sorted node/arc identities, segment lengths, and safe distance scale.
+Only missing chunks are fetched and prepared. The area-wide node lookup,
+segment selection, and frontier flags are still assembled for each new rectangle;
+environment and signal attachment also remain area-wide. Preparation remains
+serialized under the numeric service lock. Rebuild the native extension after
+this change; existing artifacts need no re-export.
+For loads using the shared store, `payload_load_ms` includes preparation of native
+chunk misses; `index_prepare_ms` measures area assembly and optional cost attachment.
 No full graph is loaded at startup, and no per-edge Python graph is constructed
 on the numeric search path. Only selected route segments are decoded for run
 output. Exploration snapshots retain sparse reached-node IDs and distances,
