@@ -1,0 +1,14 @@
+[
+  {
+    "name": "mixed_preferences",
+    "home": [24.795, 60.216],
+    "turnaround": [25.03, 60.25],
+    "preferences": {
+      "hills": "low",
+      "signals": "low",
+      "environment_greenery": "low",
+      "environment_water": "low",
+      "environment_traffic": "low"
+    }
+  }
+]

@@ -398,6 +398,10 @@ serialized under the numeric service lock. Rebuild the native extension after
 this change; existing artifacts need no re-export.
 For loads using the shared store, `payload_load_ms` includes preparation of native
 chunk misses; `index_prepare_ms` measures area assembly and optional cost attachment.
+The [ordered-edit benchmark](archive/history/2026-11-12-shared-store-measurements.md#reproduction)
+records cache states, chunk misses, nested preparation phases, and optional
+two-request contention. It measures endpoint edits, not the planned intermediate
+pin interaction; HTTP and browser rendering are excluded.
 No full graph is loaded at startup, and no per-edge Python graph is constructed
 on the numeric search path. Only selected route segments are decoded for run
 output. Exploration snapshots retain sparse reached-node IDs and distances,

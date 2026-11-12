@@ -91,8 +91,13 @@ geometric scales. Active graphs retain native owners after eviction or shutdown.
 New areas still merge node indexes and rebuild selection/frontier state; a single
 preparation lock still serializes unrelated loads. Optional cost data remains
 attached per area. Overlapping-window, concurrent-preparation, eviction, deadline,
-and route-equivalence tests cover reuse; long-route performance acceptance remains
-outstanding. An oversized graph bypasses exact-area retention but may reuse chunks
+and route-equivalence tests cover reuse. The
+[November 12 measurements](archive/history/2026-11-12-shared-store-measurements.md)
+cover long-route setting/endpoint edits, cache controls, and two concurrent
+requests. They identify full-area optional-input attachment as the largest cold
+cost and about 2.1 s of planning for a fully cached 39.63 km mixed-preference
+request. Full interaction acceptance remains outstanding. An oversized graph
+bypasses exact-area retention but may reuse chunks
 that fit the shared cache. See [cache accounting](development.md#export-a-sqlite-network-dataset).
 Configured environment data is attached during graph loading even with preferences
 Off. The [2026-11-11 profile](archive/history/2026-11-11-distance-search-profile.md)

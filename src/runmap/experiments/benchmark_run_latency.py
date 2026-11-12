@@ -2,7 +2,7 @@
 
 import argparse
 from collections.abc import Callable, Iterator
-from contextlib import ExitStack, closing, contextmanager
+from contextlib import ExitStack, closing, contextmanager, nullcontext
 from dataclasses import dataclass, field
 from functools import wraps
 import hashlib
@@ -24,6 +24,8 @@ from runmap.api import sqlite_runs
 from runmap.routing_reference import sqlite_runs as reference_runs
 from runmap.experiments.latency import latency_summary
 from runmap.paths import local_network
+from runmap.routing import numeric_search, numeric_store
+from runmap.routing.numeric_store import SharedGraphStore
 from runmap.routing.cost_types import PreferenceLevel
 
 
@@ -66,6 +68,11 @@ def measure_phases() -> Iterator[PhaseTimes]:
         stack.enter_context(patch.object(reference_runs, "_retry_reason", _timed("boundary_check", reference_runs._retry_reason, phases)))
         stack.enter_context(patch.object(reference_runs, "render_run_result", _timed("render", reference_runs.render_run_result, phases)))
         stack.enter_context(patch.object(NumericRoutingData, "prepare", _timed("numeric_prepare", NumericRoutingData.prepare, phases)))
+        stack.enter_context(patch.object(SharedGraphStore, "load", _timed("chunk_access", SharedGraphStore.load, phases)))
+        stack.enter_context(patch.object(numeric_store, "read_numeric_payload", _timed("chunk_payload_read", numeric_store.read_numeric_payload, phases)))
+        stack.enter_context(patch.object(numeric_store._routing_native, "NumericChunk", _timed("chunk_prepare", numeric_store._routing_native.NumericChunk, phases)))
+        stack.enter_context(patch.object(numeric_search, "_attach_environment", _timed("environment_attach", numeric_search._attach_environment, phases)))
+        stack.enter_context(patch.object(numeric_search, "read_signals", _timed("signal_read", numeric_search.read_signals, phases)))
         stack.enter_context(patch.object(sqlite_runs, "numeric_plan_run", _timed("numeric_search", sqlite_runs.numeric_plan_run, phases)))
         stack.enter_context(patch.object(sqlite_runs, "load_route_segments", _timed("route_metadata", sqlite_runs.load_route_segments, phases)))
         stack.enter_context(patch.object(sqlite_runs, "render_numeric_result", _timed("render", sqlite_runs.render_numeric_result, phases)))
@@ -73,8 +80,9 @@ def measure_phases() -> Iterator[PhaseTimes]:
 
 
 def _request_sample(data: SQLitePathData, options: RunRequest, timeout_s: float,
-                    limits: sqlite_runs.RunAreaLimits = sqlite_runs.RunAreaLimits()) -> dict[str, object]:
-    with measure_phases() as phases:
+                    limits: sqlite_runs.RunAreaLimits = sqlite_runs.RunAreaLimits(), *,
+                    instrument: bool = True) -> dict[str, object]:
+    with measure_phases() if instrument else nullcontext(PhaseTimes()) as phases:
         started = perf_counter()
         response = sqlite_runs.generate_database_run(data, options, timeout_s=timeout_s, limits=limits)
         output_started = perf_counter()

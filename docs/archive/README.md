@@ -46,6 +46,9 @@ storage, reduced geometry allocation traffic, and remaining cost/traversal work.
 The [November 11 distance-only corridor profile](history/2026-11-11-distance-search-profile.md)
 compares Leppävaara–Oulunkylä against the earlier native build and separates
 millisecond searches from repeated graph/environment preparation.
+The [November 12 routing-edit measurements](history/2026-11-12-shared-store-measurements.md)
+measure long-route preference/endpoint edits after shared chunk reuse, with cache,
+optional-input, and concurrent-request controls.
 
 The [2026-11-02 integration comparison](history/2026-11-02-integration-comparison.md)
 compares spacing caps and minimum sample counts against a fine reference on real

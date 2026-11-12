@@ -95,13 +95,16 @@ Selective SQLite loading, packed data, and bounded native working sets are
 implemented. See [prepared data](reference/prepared-data.md#prepared-network-sqlite-database)
 for contracts. Follow the [scalability proposal](routing-scalability.md):
 
-- Capture longer runs with actual preferences and separate graph preparation,
-  search, expansion, and visible browser latency. Target runs up to 40 km with
+- Extend the [November 12 backend edit measurements](archive/history/2026-11-12-shared-store-measurements.md)
+  to more locations, larger prepared coverage at fixed route size, and visible
+  browser latency. Target runs up to 40 km with
   a revised route visible within one second of a settings change or pin release.
   Fix benchmark hardware, concurrency, network conditions, and percentile; report
   warm edits, cold-area requests, and process-cold requests separately.
-- Extend shared chunk reuse to avoid area-wide index assembly and serialize only
-  related loads. Prepare packed optional cost data and bound in-flight memory.
+- Prepare reusable packed environment/signal inputs, preserving selected-route
+  diagnostics while avoiding full-area attachment with zero weights. Extend
+  shared chunk reuse to avoid area-wide index assembly and serialize only related
+  loads. Bound in-flight memory.
   Add cooperative cancellation and bounded
   admission for superseded edits. See [proposed boundaries](routing-scalability.md#proposed-architectural-boundaries).
 - Prototype directed landmark lower bounds on a relaxed distance graph; validate
@@ -129,9 +132,9 @@ Other remaining work:
 - Reduce temporary JSON/feature decoding in the reference loader if measured
   latency or peak memory justifies it. Preserve shared policy topology, artifact
   identities, and local indices; measure memory and bounded-search time.
-- Validate implemented byte-bounded chunk reuse on representative overlapping
-  windows and long routes, including cold requests, cache churn, concurrent users,
-  and larger datasets at fixed route size. Further incremental/hierarchical search, spatial
+- Extend the recorded chunk-reuse measurements to additional starts, genuinely
+  cold storage, sustained concurrency, and larger datasets at fixed route size.
+  Further incremental/hierarchical search, spatial
   batching, and caching should follow profiles and preserve valid cost bounds.
   Address oversized graphs that bypass the cache and full-area environment
   attachment with preferences Off; preserve selected-route diagnostics. See the

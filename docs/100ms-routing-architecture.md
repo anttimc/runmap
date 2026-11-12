@@ -14,6 +14,17 @@ Overlapping areas now reuse resident validated native chunks; merged area indexe
 and optional cost attachment still need work. See the
 [numeric format and benchmark commands](numeric-routing-format.md).
 
+The [2026-11-12 edit measurements](archive/history/2026-11-12-shared-store-measurements.md)
+exercise changed preferences and endpoints after shared chunk reuse. A 38.54 km
+shaped request takes 1.42 s median across three repeated edit sequences at the
+default cache size. A 1 GiB control removes repeated topology loading but still
+leaves area assembly and signal-data work on endpoint edits. These are backend
+observations. With environment data configured but its preferences Off, default
+cache requests repeatedly reach the deadline. A fully cached 39.63 km route with
+mixed preferences still takes 2.22 s, about 2.10 s of it planning. Both preparation
+and search need improvements; the one-second visible-update target remains
+unverified.
+
 For Rust phase timing, allocation traffic, and visual results on a fixed working
 area, see the [2026-11-02 native profile](archive/history/2026-11-02-native-routing-profile.md).
 It separates normal-build timings from instrumentation overhead and does not

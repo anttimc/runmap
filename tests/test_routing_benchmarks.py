@@ -8,9 +8,12 @@ import unittest
 from rasterio.warp import transform
 
 from runmap.api import sqlite_runs
+from runmap import _routing_native
+from runmap.api.runs import PreferencesRequest, SettingsRequest
 from runmap.experiments.benchmark_numeric_chunks import probe_numeric_window
 from runmap.experiments.benchmark_run_latency import measure_worker
 from runmap.experiments.benchmark_native_routing import benchmark_native_routing
+from runmap.experiments.benchmark_routing_edits import EditBenchmarkSettings, EditScenario, measure_edits
 from runmap.paths.database import export_network_database
 from runmap.paths.numeric_database import export_numeric_database
 from test_database_features import BOUNDS
@@ -18,6 +21,34 @@ from test_path_database import publish_fixture
 
 
 class RoutingBenchmarkTests(unittest.TestCase):
+    def test_edit_sequence_preserves_results_and_disables_global_timers_for_concurrency(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, _, _ = publish_fixture(root)
+            database = root / "network.sqlite"
+            export_network_database(source, database)
+            export_numeric_database(database, root / "numeric-routing-v2.sqlite")
+            lon, lat = transform("EPSG:3067", "EPSG:4326", [375025, 375075, 375080], [6675000]*3)
+            first = EditScenario(name="baseline", home=(lon[0], lat[0]), turnaround=(lon[1], lat[1]),
+                                 settings=SettingsRequest(avoidance_ratio=0))
+            moved = EditScenario(name="moved", home=first.home, turnaround=(lon[2], lat[2]),
+                                 preferences=PreferencesRequest(hills="high"))
+            original_chunk = _routing_native.NumericChunk
+            report = measure_edits(database, (first, moved), EditBenchmarkSettings(repeats=2, concurrency=2))
+            self.assertIs(_routing_native.NumericChunk, original_chunk)
+            self.assertEqual(report["first_pass"][0]["cache_before"]["total_bytes"], 0)
+            self.assertGreater(report["first_pass"][0]["phase_calls"]["chunk_prepare"], 0)
+            self.assertGreater(report["first_pass"][0]["phases_ms"]["chunk_access"], 0)
+            self.assertLessEqual(report["final_cache"]["total_bytes"], report["cache_budget_bytes"])
+            for name in ("baseline", "moved"):
+                self.assertTrue(report["summaries"][name]["equivalent"])
+                self.assertEqual(report["summaries"][name]["statuses"], ["complete"]*2)
+                self.assertTrue(report["concurrent_summaries"][name]["equivalent"])
+            for batch in report["concurrent_batches"]:
+                for sample in batch:
+                    self.assertIsNone(sample["cache_before"])
+                    self.assertEqual(set(sample["phases_ms"]), {"json_serialization"})
+
     def test_native_benchmark_compares_run_costs_and_labels_preparation(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

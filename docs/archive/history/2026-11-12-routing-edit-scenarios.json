@@ -1,0 +1,25 @@
+[
+  {
+    "name": "distance_only",
+    "home": [24.795, 60.216],
+    "turnaround": [25.03, 60.25],
+    "settings": {"avoidance_ratio": 0}
+  },
+  {
+    "name": "shaped",
+    "home": [24.795, 60.216],
+    "turnaround": [25.03, 60.25]
+  },
+  {
+    "name": "hills_high",
+    "home": [24.795, 60.216],
+    "turnaround": [25.03, 60.25],
+    "preferences": {"hills": "high"}
+  },
+  {
+    "name": "moved_pin_hills_high",
+    "home": [24.795, 60.216],
+    "turnaround": [25.028, 60.251],
+    "preferences": {"hills": "high"}
+  }
+]
