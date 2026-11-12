@@ -16,6 +16,7 @@ exists, and [roadmap](roadmap.md) for outstanding work.
 | [Prepared data](reference/prepared-data.md) | OSM snapshots, artifact identity, publication, network schema, and spatial-selection contracts |
 | [API reference](reference/api.md) | Endpoint roles, result contracts, search limits, and request/cache lifetimes |
 | [Numeric routing format](numeric-routing-format.md) | Numeric artifact versions, identity, binary layout, and native working-set boundaries |
+| [Routing scalability](routing-scalability.md) | Proposed landmark experiment, loading improvements, and unresolved route-reshaping semantics |
 | [100 ms routing architecture](100ms-routing-architecture.md) | Routing latency target, dated observations, and outstanding performance acceptance |
 | [Distance shells](distance-shells.md) | Delivered distance visualization, approximation semantics, methods, and limits |
 | [Terrain mathematics](reference/terrain-mathematics.md) | Terrain calculations |

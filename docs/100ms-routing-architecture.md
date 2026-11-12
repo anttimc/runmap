@@ -41,6 +41,9 @@ uv run python -m runmap.experiments.benchmark_run_latency \
 ```
 
 
+For the proposed next steps on loading, landmark bounds, and larger coverage,
+see [routing scalability](routing-scalability.md). These remain unimplemented.
+
 ## Longer-run validation
 
 The API segment cap is now 650,000, with five retries, a 2,500 km² window

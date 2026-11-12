@@ -75,8 +75,11 @@ Municipal maps are reference model outputs, not measured noise or comfort labels
   the current OSM source alone does not supply its missing signal tags.
   Calibrate provisional Low=60 m / High=180 m detour weights using saved routes;
   record regional cold/warm latency, state expansion, memory, and local runner acceptance.
-- **Guided assembly:** add waypoints, retained sections, and avoidance guidance.
-  Validate directed walks, ordered constraints, repetition, and infeasible inputs.
+- **Route reshaping:** drag a route to a new ordered pin and reroute through it.
+  Decide how much of the old route may change: retained geometry, extra length,
+  or preference-cost limits; define hard/advisory limits and infeasibility.
+  Preserve repeated-traversal ordering, cross-leg costs, and keyboard/touch access.
+  See [design questions](routing-scalability.md#dragging-a-route-to-a-pin).
 - **Automatic suggestions:** offer bounded, geographically different complete runs
   with explicit constraints and local runner acceptance. The CLI anchor baseline
   remains experimental.
@@ -86,11 +89,22 @@ Municipal maps are reference model outputs, not measured noise or comfort labels
 
 <a id="next-sqlite-storage-and-bounded-network-loading"></a>
 
-## Later: storage and routing performance
+## Next: routing responsiveness and scaling
 
 Selective SQLite loading, packed data, and bounded native working sets are
 implemented. See [prepared data](reference/prepared-data.md#prepared-network-sqlite-database)
-for contracts. Remaining work:
+for contracts. Follow the [scalability proposal](routing-scalability.md):
+
+- Capture longer runs with actual preferences and separate graph preparation,
+  search, expansion, and visible browser latency. Choose representative route
+  lengths and an interaction budget with the user.
+- Prototype directed landmark lower bounds on a relaxed distance graph; validate
+  overlays, access restrictions, signal states, and dataset identities. Compare
+  full latency and memory against the current geometric heuristic.
+- Evaluate bound-driven expansion or incremental loading after measuring chunk
+  reuse and search improvements. Keep current heuristic expansion limits explicit.
+
+Other remaining work:
 
 - Tune window size, expansion rules, and deployment limits using the deferred
   performance checks. Expansion is heuristic and can miss a better route outside
