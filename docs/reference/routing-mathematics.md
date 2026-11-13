@@ -1,5 +1,10 @@
 # Run planner: cost calculation
 
+The search compares routes using length plus preference penalties. A lower cost
+is better under those settings; it is not a prediction of running time. The
+[glossary](../glossary.md) explains arcs, traversals, weights, and shape fields
+before the formulas below define their calculations.
+
 The current cost-model identifier is `distance-preferences-v1`. The hill model
 is `minetti-excess-uphill-preference-v4`, with weight table
 `minetti-excess-equivalent-metres-v4`. These identify separate contracts: a

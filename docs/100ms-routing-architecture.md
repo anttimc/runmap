@@ -4,15 +4,20 @@ The product target is a visible route update within one second for runs up to
 40 km after a settings change or pin release. See the
 [interaction target](routing-scalability.md#interaction-target) for scope and
 unresolved measurement conditions. The 100 ms backend budget below is a supporting
-engineering aspiration; neither target is a general delivered guarantee.
+engineering goal. Neither target has been established for general use.
+The [glossary](glossary.md) explains search, storage, and measurement terms.
 
-Status: run planning and distance exploration use native numeric traversal when a matching numeric
-artifact is available. The API preserves snapping, costs, response fields,
-request deadlines, and automatic window expansion. Immutable working sets have
-a bounded LRU cache. Exploration snapshots retain sparse distance buffers.
-Overlapping areas now reuse resident validated native chunks; merged area indexes
-and optional cost attachment still need work. See the
-[numeric format and benchmark commands](numeric-routing-format.md).
+Run planning and distance exploration use Rust search when a matching numeric
+routing file is available. Python still snaps locations to paths, manages request
+deadlines, and retries with larger search areas. The graph caches have byte
+budgets and remove older entries when space is needed. Overlapping areas share
+validated chunks, but still assemble some indexes and preference lookups for each
+area. Exploration snapshots keep only reached-node distances and metadata.
+See the [numeric format and benchmark commands](numeric-routing-format.md).
+
+The measurements below describe particular datasets and code versions. Read each
+with its cache state and measurement boundaries; earlier results do not measure
+later architectural changes.
 
 The [2026-11-12 edit measurements](archive/history/2026-11-12-shared-store-measurements.md)
 exercise changed preferences and endpoints after shared chunk reuse. A 38.54 km
@@ -27,17 +32,18 @@ and search need improvements; the one-second visible-update target remains
 unverified.
 
 The [conditional-input follow-up](archive/history/2026-11-12-conditional-routing-inputs.md)
-preserves the earlier complete response fingerprints while removing full-area
-environment/signal loading for Off preferences. At the default budget, the
+produces complete responses with the same hashes as before. It avoids loading
+environment and signal data for the whole area when their preferences are Off. At the default budget, the
 configured-environment 38.54 km case completed at a 1.05 s repeated median;
 peak RSS for that workload fell from 2,475 to 762 MiB.
 The [November 13 packed-input measurements](archive/history/2026-11-13-packed-routing-inputs.md)
 cover the optional hill/environment/signal artifact, reduced mixed-preference
 loading, and its original hill-only regression. The
 [compact-storage follow-up](archive/history/2026-11-13-compact-hill-inputs.md)
-restores warm hill-edit performance; cold activation and broader deployment
-acceptance remain outstanding.
-Area assembly, search improvements, and visible interaction acceptance remain.
+restores performance for hill edits using cached data. First activation of the
+hill channel and broader deployment checks remain outstanding. Assembling each
+area and searching it still need improvement. Browser measurements are also
+needed to assess the visible-update target.
 
 For Rust phase timing, allocation traffic, and visual results on a fixed working
 area, see the [2026-11-02 native profile](archive/history/2026-11-02-native-routing-profile.md).
@@ -101,7 +107,7 @@ across repeats. Numeric preparation took about 1.5–1.8 seconds and searches
 about 0.4–0.6 seconds across all attempts in representative repeated samples;
 other time includes segment-count checks and rendering. The 128 MiB graph
 cache cannot retain these large working sets, so repeated requests reload them.
-Long runs are supported here, but remain outside the 100 ms envelope.
+These long runs complete, but do not meet the 100 ms target in this measurement.
 
 Reproduce the request and record candidate lengths with:
 
@@ -183,53 +189,48 @@ requests but do not make preparation fast.
 
 ## Required storage and runtime
 
-Persist numeric search data offline in independently addressable chunks:
+The storage and search design below is mostly implemented. The
+[architecture](architecture.md#routing-backend-boundaries) describes current
+ownership and loading; the [roadmap](roadmap.md#next-routing-responsiveness-and-scaling)
+lists remaining work.
 
-- Stable numeric node, segment, and directed arc identifiers.
-- Chunk-local adjacency offsets and arc columns, with explicit cross-chunk
-  endpoint references. A crossing connection must remain distinguishable from a
-  physical dead end or a missing source connection.
-- Projected node coordinates and geometry points with offset arrays.
-- Eligibility masks for each supported profile, including node access and
-  prepared boundary restrictions.
-- Directional hill totals for complete segment traversals. Keep interval arrays
-  available for endpoint partial spans; do not decode every interval into objects.
-- Bounds and provenance identifying dataset, chunk format, and feature models.
+Prepare routing data before serving requests, in chunks that can be read
+individually. The data needs:
 
-Use a versioned binary representation with explicit dtypes, byte order, shapes,
-length checks, and integrity validation. Uncompressed, aligned arrays can be
-mapped read-only. Compressed chunks require a bounded decoded-buffer cache and
-must include decompression time in the cold-request benchmark. Persist descriptive
-metadata separately for selected-route rendering and inspection.
+- Stable integer IDs for nodes, segments, and directed arcs.
+- Connection indexes within chunks and references across chunk boundaries. Keep
+  unloaded connections distinct from physical dead ends and missing source data.
+- Projected coordinates and segment geometry.
+- Access flags for each supported policy, including node restrictions and prepared
+  boundary rules.
+- Directional hill totals for complete segments, with separate detail for partial
+  traversals. Topology format 3 keeps hills in the paired input file.
+- Bounds and metadata identifying the dataset, file format, and preparation models.
 
-The search runtime must traverse these arrays directly. Rust is already used for
-shape-field integration; extend that native boundary to graph traversal and cost
-evaluation. Avoid a Python callback, named tuple, string lookup, or dictionary
-allocation per visited arc. Keep the existing Python planner as a correctness
-reference during migration.
+Binary formats must specify number types, byte order, array shapes, lengths, and
+integrity checks. Aligned uncompressed arrays can support read-only mapping, but
+the current SQLite path reads payload bytes into memory. Compressed inputs need
+bounded decompression and a decoded-data cache; include this work in first-load
+measurements. Keep descriptive metadata separate for route display and inspection.
 
-A request owns endpoint overlays, request-specific shape integration, and search
-state. Shared chunks remain immutable. Evaluate shape costs lazily for traversed
-segments and reuse them between outbound/return searches. Whole-segment hill
-costs use directional totals; endpoint overlays integrate the corresponding
-partial interval ranges. Preserve one-way rules, policy exclusions, cost formulas,
-frontier reporting, and deadline behavior.
+Rust traverses the arrays directly, avoiding a Python call or new Python record
+for every visited arc. The Python planner remains a correctness reference. Each
+request keeps its own temporary endpoint connections, shape calculations, and
+search state. Shared chunks remain read-only. Calculate shape costs as needed and
+reuse them between outbound and return searches. Complete-segment hill costs use
+totals; partial endpoint connections use the corresponding intervals. Preserve
+one-way rules, access policies, cost formulas, boundary reporting, and deadlines.
 
-Prefer chunk-local identifiers plus explicit references over rebuilding a global
-dense graph for each window. A contiguous regional assembly is an acceptable
-intermediate implementation if it copies numeric columns in bulk and benchmarks
-within budget; it must not reconstruct per-edge Python records.
+Chunk-local indexes and explicit connections should reduce repeated assembly.
+Currently, each area still needs merged indexes and selection records. It must
+not rebuild Python objects for every edge. Reuse loaded chunks between window
+retries, limit cached bytes, and include dataset and feature versions in cache
+identities. Keep buffers alive while any search uses them, even after eviction.
+Avoid loading the whole dataset or using an unlimited object cache.
 
-Window expansion retains already loaded chunks and search-independent buffers.
-Maintain byte-bounded shared chunk residency with eviction; neither all-dataset
-preloading nor an unbounded object cache is acceptable. Cache identity includes
-dataset generation and feature versions. Request-specific overlays and costs must
-never mutate shared buffers. Mapping lifetime must outlive every search or
-snapshot retaining its data, including after cache eviction.
-
-Distance exploration uses the same numeric chunks and native traversal. Its
-reachable-node output and snapshot buffers have explicit byte limits; output
-work necessarily increases with the amount of reachable data requested.
+Distance exploration uses the same chunks and Rust search. Its result buffers
+have separate byte limits and remain valid independently of the graph cache.
+More reachable data still means more output work.
 
 ## Latency budget and acceptance
 
@@ -262,9 +263,9 @@ the reference. Equal-cost tie handling must be deterministic; explain any
 intentional route-selection changes.
 
 Publish p50/p95/p99 latency, loaded chunks and bytes, visited nodes/arcs, retries,
-peak RSS, and tracked allocations. Declare the supported spatial/distance and
-response-size envelope. A strict 100 ms bound for arbitrary distances, physical
-cold storage, or arbitrarily large exploration output cannot be inferred from
+peak RSS, and tracked allocations. State which areas, route lengths, and response
+sizes the measurements cover. A strict 100 ms bound for arbitrary distances,
+physical cold storage, or arbitrarily large exploration output cannot be inferred from
 fast local queries. If native search itself exceeds budget, evaluate spatial or
 hierarchical acceleration with valid lower bounds for request-specific shape and
 reuse costs. Shortcuts based only on physical distance are not automatically
@@ -272,12 +273,11 @@ valid for the planner's changing costs.
 
 ## Implementation sequence
 
-1. Add an end-to-end benchmark with explicit cold/warm modes and stage timings.
-2. Export versioned numeric chunks, validate them offline, and measure direct
-   buffer access independently of search.
-3. Implement native traversal over chunks, including cross-chunk links and
-   request endpoint overlays. Verify against the Python reference.
-4. Integrate bounded chunk residency, incremental window expansion, and the
-   shared distance-exploration path.
-5. Run the acceptance matrix and report the supported 100 ms envelope before
-   making that performance claim.
+The end-to-end benchmark, versioned numeric export, Rust traversal, bounded chunk
+reuse, and shared distance-exploration path are implemented. Area expansion still
+retries searches and assembles indexes for each new window. Loading chunks as the
+search needs them remains proposed work.
+
+Next, run the acceptance cases above and report which workloads meet the 100 ms
+target. Follow the [roadmap](roadmap.md#next-routing-responsiveness-and-scaling)
+for outstanding implementation and validation work.

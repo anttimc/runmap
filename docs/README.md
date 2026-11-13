@@ -1,7 +1,8 @@
 # Documentation
 
 Start with the [guide](guide.md) for what exists, [goals](goals.md) for why it
-exists, and [roadmap](roadmap.md) for outstanding work.
+exists, and [roadmap](roadmap.md) for outstanding work. Use the
+[glossary](glossary.md) for the meaning of code and data terms in Runmap.
 
 | Page | Authoritative content |
 | --- | --- |
@@ -11,18 +12,37 @@ exists, and [roadmap](roadmap.md) for outstanding work.
 | [Roadmap](roadmap.md) | Outstanding work, priorities, and acceptance criteria |
 | [Traffic-light avoidance](traffic-light-avoidance.md) | Crossing evidence attribution, stage approximation limits, and dated source inventory |
 | [Environment preferences design](environment-preferences.md) | Existing field meanings, tiled map delivery, segment costs, accepted preference controls, and OSM-only road-noise learning from municipal reference maps |
+| [Glossary](glossary.md) | Runmap meanings of network, search, preference, storage, and runtime terms |
 | [Architecture](architecture.md) | High-level components, dependencies, data flow, and ownership boundaries |
 | [Development](development.md) | Setup, preparation, commands, and configuration |
 | [Prepared data](reference/prepared-data.md) | OSM snapshots, artifact identity, publication, network schema, and spatial-selection contracts |
 | [API reference](reference/api.md) | Endpoint roles, result contracts, search limits, and request/cache lifetimes |
-| [Numeric routing format](numeric-routing-format.md) | Numeric artifact versions, identity, binary layout, and native working-set boundaries |
-| [Routing scalability](routing-scalability.md) | Shared chunk reuse, proposed landmark experiment, further loading improvements, and unresolved route-reshaping semantics |
+| [Numeric routing format](numeric-routing-format.md) | Routing file versions, matching rules, binary layout, and memory ownership |
+| [Routing scalability](routing-scalability.md) | How requests reuse data, proposed search improvements, and open route-reshaping decisions |
 | [100 ms routing architecture](100ms-routing-architecture.md) | Routing latency target, dated observations, and outstanding performance acceptance |
 | [Distance shells](distance-shells.md) | Delivered distance visualization, approximation semantics, methods, and limits |
 | [Terrain mathematics](reference/terrain-mathematics.md) | Terrain calculations |
 | [Routing mathematics](reference/routing-mathematics.md) | Planner calculations |
 | [Loop-length mixtures](reference/loop-length-mixture.md) | MAP polynomial mixture mathematics and implementation; proposed GP uncertainty and adaptive sampling |
 | [Archive](archive/README.md) | Dated plans, experiments, and supporting artifacts |
+
+## Writing clearly
+
+Start with what the reader needs to understand or do. Explain the flow in order:
+where data comes from, what happens to it, and what the user receives. Give each
+sentence one main idea. Prefer concrete verbs such as “load”, “keep”, and “search”
+to abstract phrases about boundaries or ownership.
+
+Use ordinary words where they preserve the meaning. When a code term matters,
+keep its exact name, explain it on first use, and link to the [glossary](glossary.md).
+Use “arc” for a stored directed connection and “edge” for a search connection;
+avoid treating them as interchangeable. Explain “numeric” as the data format and
+“native” as the Rust implementation. Keep exact schemas and formulas in their
+technical references rather than repeating them in an overview.
+
+Separate current behavior, proposed changes, and dated measurements. State which
+cache and measurement boundaries a performance claim uses. Preserve dated archive
+reports as historical evidence rather than rewriting their language.
 
 ## Maintenance rule
 

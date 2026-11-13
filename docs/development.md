@@ -1,5 +1,9 @@
 # Development and data preparation
 
+For the meaning of native, numeric, artifacts, sidecars, and cache terms, see
+the [glossary](glossary.md). The [architecture](architecture.md) explains how the
+prepared files reach a routing request.
+
 Run commands from the repository root. Python commands use uv; frontend commands
 use pnpm. Python 3.11+ is required by [pyproject.toml](../pyproject.toml).
 Node.js must be on PATH; the previously recorded frontend toolchain was Node.js
@@ -378,36 +382,41 @@ smaller routing working sets. Restart the API after changing the artifact. See
 [preprocessing and identity details](numeric-routing-format.md#export-and-read).
 
 `RUNMAP_NUMERIC_CACHE_BYTES` defaults to 134217728 (128 MiB) per API process.
-The shared topology LRU may retain up to half this budget.
-With packed inputs, the input store may additionally retain up to half;
-exact-area graphs use the
-remaining accounted capacity. Graph accounting includes their chunk owners and
-native index allocation capacities, plus allowances for environment/signal data.
-Area-graph keys also include loaded search-channel presence, so an
-Off graph cannot satisfy an On request. Actual weights stay request-local.
-Shared owners are conservatively charged in the stores and area graphs. Zero disables retention.
-This is a cache accounting budget, not a process RSS cap: active requests retain
-evicted graphs safely, SQLite has its own page caches, and each search allocates
-request state. Two planning slots continue to bound simultaneous searches.
-Graphs hold their immutable buffers independently of the database connection.
-All caches belong to one opened artifact generation and are cleared on shutdown;
-request costs and overlays are never cached.
+The shared topology cache can keep up to half this budget. With packed inputs,
+the input store can keep up to another half. Exact-area graphs use the remaining
+accounted capacity. Graph accounting includes retained chunk buffers, allocated
+Rust indexes, and allowances for environment and signal data. Shared data is
+conservatively charged in both stores and area graphs. Set the budget to zero to
+disable retention.
 
-Changing working areas or expanding a window selects chunk IDs without fetching
-their BLOBs. Resident chunks reuse their validated native topology, adjacency
-payloads, sorted node/arc identities, segment lengths, and safe distance scale.
-Only missing chunks are fetched and prepared. The area-wide node lookup,
-segment selection, and frontier flags are still assembled for each new rectangle.
-Without packed inputs, enabled environment/signal search channels load per area. With their
-preferences Off, API planning skips those loads. Configured environment unknown-
-length observations are completed only for returned route segments, after window
-selection; signals Off exposes no passage counts. Legacy loading uses embedded
-hill totals. With packed inputs, cached topology excludes those columns and hill
-totals load only when enabled. Partial endpoints load hill detail
-through the same [prepared input boundary](architecture.md#prepared-routing-inputs).
-Preparation and selected-route source reads remain
-serialized under the numeric service lock. Rebuild the native extension after
-this change; existing artifacts need no re-export to retain legacy behavior.
+A cached area graph records which search channels it contains. A graph prepared
+with a channel Off cannot serve a request that needs it On. Changing the actual
+weight within an enabled channel reuses the graph; weights belong to the request.
+
+This budget limits accounted cache bytes, not total process memory (RSS). Active
+requests can keep evicted graphs alive, SQLite has its own page caches, and each
+search needs working memory. Two planning slots limit simultaneous searches.
+Graphs keep their buffers alive independently of database connections. All caches
+belong to one opened dataset version and are cleared on shutdown. Request costs
+and temporary endpoint connections are never cached.
+
+When the working area changes, the service first selects chunk IDs without
+reading their binary payloads. Cached chunks reuse validated connections, sorted
+node and arc IDs, segment lengths, and the safe scale used by the distance lower
+bound. Only missing chunks are read and prepared. Each new rectangle still needs
+a merged node lookup, selected-segment records, and flags for connections beyond
+the boundary.
+
+Without packed inputs, enabled environment and signal channels load for each
+area. With those preferences Off, planning skips the loads. After choosing the
+final window, the server reads environment observations and unknown lengths only
+for the returned route. Signals Off reports no passage counts. Older loading
+uses embedded hill totals; packed loading removes these from cached topology and
+loads hill totals only when enabled. Partial endpoints load hill detail through
+the same [preparation interface](architecture.md#prepared-routing-inputs).
+Preparation and selected-route source reads still share a lock, so they wait for
+one another. Rebuild the native extension to use this behavior; existing artifacts
+need no re-export to keep the older loading path.
 
 To enable packed inputs, prepare a new artifact from the numeric database and
 the same optional sources configured for the API:

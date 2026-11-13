@@ -1,5 +1,9 @@
 # Prepared data contracts
 
+An artifact is a prepared file or set of files. A sidecar is a companion file
+tied to another dataset. The [glossary](../glossary.md) explains these terms and
+the distinction between physical segments and directed arcs.
+
 This reference covers artifact identity, publication, and spatial selection.
 See the [architecture](../architecture.md) for component relationships,
 [development](../development.md) for preparation commands and configuration, and

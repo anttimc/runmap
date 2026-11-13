@@ -2,8 +2,14 @@
 
 Runmap prepares local elevation and pedestrian-network data, then serves an
 interactive map for terrain exploration and run planning. A Python application
-owns preparation, storage, and HTTP delivery. Rust performs numerical routing
-inside that process, and a TypeScript/MapLibre application renders the map.
+owns preparation, storage, and HTTP delivery. A compiled Rust library searches
+for routes inside the Python process. A TypeScript application displays the results using MapLibre in the browser.
+
+A typical request follows a simple path: the browser sends a location and
+preferences, Python loads the relevant prepared data, Rust searches it, and
+Python returns a route for the browser to draw. The sections below follow that
+data from preparation to display. The [glossary](glossary.md) explains terms such
+as node, segment, arc, numeric, and native.
 
 ## System view
 
@@ -27,20 +33,21 @@ flowchart LR
     Browser --> Basemap["External basemap provider"]
 ```
 
-Acquisition and dataset preparation are explicit CLI operations. Interactive
-requests use prepared local coverage; panning does not acquire new source data.
+Data is downloaded and prepared with command-line tools before the server uses
+it. Map requests read local prepared files. Panning does not download new source
+data.
 Basemap tiles are a separate browser dependency and do not provide the network
 used for routing. SQLite is embedded file storage, with no database server.
 
 ## Data preparation
 
-**Shared OSM acquisition** can freeze a complete Geofabrik Finland PBF through
-`sources/geofabrik.py`. `sources/pbf.py` streams that snapshot with a temporary
-disk-backed location index, assembles complete area geometry, and publishes
-regional environment features and reference-complete highway JSON. Both outputs
-retain the same national snapshot identity. Existing environment and network
-preparation consume those outputs independently; interactive servers do not read
-the national PBF. Overpass remains an alternative source-acquisition path.
+**Shared OSM acquisition** starts with a fixed Geofabrik Finland PBF snapshot.
+`sources/geofabrik.py` downloads it, and `sources/pbf.py` reads it using a temporary
+on-disk location index. Preparation produces regional environment features and
+highway JSON with all referenced objects included. Both outputs record the same
+national source version. Environment and network preparation then use those
+outputs separately. The interactive server does not read the national PBF.
+Overpass is another way to acquire source data.
 
 **Elevation processing** validates source rasters and records their provenance
 in an elevation catalog. Coverage manifests pin the source versions for a region.
@@ -48,69 +55,72 @@ Smoothing and differentiation produce terrain tiles used by both map rendering
 and path measurements. Source elevation is retained for contours and reprocessing.
 
 **Network preparation** turns an OSM extract into a directed pedestrian graph,
-then samples the prepared terrain along its paths. Physical segments own geometry;
-directed arcs describe legal traversal. Policies, terrain-derived hill features,
-display classifications, and coverage information are prepared over the complete
-extract before runtime spatial selection. This preserves access and connectivity
-semantics when a request loads only part of the network.
+then samples the prepared terrain along its paths. Each physical segment stores
+the line of a path; directed arcs describe travel along it. Access rules, hill measurements, display
+categories, and coverage information are prepared for the full extract. A request
+can then load a smaller area while keeping the prepared access and connection
+rules.
 
 <a id="sqlite-storage-foundation"></a>
 
 ## Prepared storage
 
-`paths/signal_preparation.py` attributes full-dataset OSM crossing evidence to
-canonical charging gates and directed junction movements. `paths/signals.py`
-publishes an identity-bound `signals.sqlite` sidecar. Runtime loads only rows for
-selected segments, keeping original stage attribution through cropped windows.
-Native graphs retain compact signal maps alongside their environment data.
-Signals On uses movement-state search; Signals Off retains the optimized
-node-label search. Python reference planning implements the same passage contract
-with independent arc-state labels. See [traffic-light avoidance](traffic-light-avoidance.md).
+Traffic-light preparation reads crossing evidence for the full network.
+`paths/signal_preparation.py` decides where a route should count a crossing:
+at a gate along a segment or during a particular movement through a junction.
+`paths/signals.py` writes these records to `signals.sqlite`, with metadata tying
+it to the source network. Requests load records for selected segments while
+keeping the crossing interpretation prepared for the full network.
 
-`api/signals.py` serves viewport-bounded source-signal points from the sidecar's
-spatial index, independently of raster availability and route attribution.
-`web/src/traffic-lights.ts` owns the Environment-section point control, source-tag
-inspection, and cancellation/stale-response handling. Raw OSM is not loaded during
-interactive requests, and vehicle signal evidence remains visually distinct from
-explicit pedestrian evidence.
+With Signals On, Rust search remembers the incoming movement so it can charge
+crossings correctly. With Signals Off, it uses the faster node-only search.
+The Python reference implements the same passage rules with separate search
+records. See [traffic-light avoidance](traffic-light-avoidance.md).
 
-Regional environment preparation is independent of terrain and network topology.
-`environment/regional.py` normalizes retained OSM objects, selects full geometries
-through a spatial index, and writes haloed analytical blocks to one tiled TIFF.
-`api/environment_tiles.py` reads bounded raster windows and caches rendered XYZ
-PNGs. `web/src/environment-layers.ts` owns the main-map controls and legends;
-these layers sit below roads and routes. This display path requires neither raw
-source loading at request time nor a segment-feature join. Missing regional data
-leaves terrain and routing available. Artifact and diagnostic contracts belong to
-[prepared data](reference/prepared-data.md#regional-environment-bundles).
+The map's signal points follow a separate path. `api/signals.py` queries source
+points inside the viewport from the sidecar's spatial index. The browser control
+in `web/src/traffic-lights.ts` lets users inspect their source tags, distinguishes
+vehicle-light evidence from explicit pedestrian evidence, and ignores outdated
+responses. This does not require environment rasters or raw OSM reads at request
+time. Point counts and routing passage counts describe different things.
 
-Environment pilot acquisition is independent of network preparation.
-`sources/environment.py` uses optional OSMnx feature acquisition to retain raw
-Overpass responses, assembled GeoJSON objects, and a provenance manifest. These
-pilot artifacts feed `api/environment.py`, which serves a fixed published source
-and its provenance to a separate MapLibre inspection page. That page shares the
-neutral basemap and worker setup, but needs no terrain or path configuration.
-Its independent source layers and click inspection retain overlapping evidence;
-source data is not joined to routing. The
-offline `environment/` package normalizes independent evidence memberships and
-prepares metric raster channels, an evidence index, Web Mercator image previews,
-and a source-bound manifest. `api/environment_rasters.py` serves those previews
-and samples cells with nearby source evidence. The inspection frontend can load
-source geometry without a prepared raster bundle; neither path invokes model
-inference or network acquisition during map interaction. The
-[environment design](environment-preferences.md) describes tiled map delivery,
-proposed segment projection, costs/UI, and the independent OSM-only road-noise
-experiment; [development](development.md#acquire-environment-pilot-data)
-owns current acquisition commands and limitations.
+Regional environment preparation is separate from terrain and network connections.
+`environment/regional.py` selects retained OSM objects through a spatial index and
+writes one tiled TIFF. Each processing block includes surrounding data so values
+near block edges can use nearby features. `api/environment_tiles.py` reads the
+requested raster area and caches rendered map tiles. The controls and legends
+live in `web/src/environment-layers.ts`; the layers draw below roads and routes.
+They need no raw source loading or routing segment join during map requests.
+Terrain and routing remain available if regional environment data is missing.
+See [prepared data](reference/prepared-data.md#regional-environment-bundles) for
+file and diagnostic rules.
 
-The runtime uses three related artifact sets:
+A separate environment pilot supports source inspection. `sources/environment.py`
+can acquire OSM features through OSMnx and Overpass, retaining raw responses,
+assembled GeoJSON, and a manifest recording their origin. `api/environment.py`
+serves one published source to a separate MapLibre inspection page. Its layers
+remain independent, so overlapping evidence can be inspected without attaching
+it to the routing network.
 
-| Artifact | Responsibility |
+Offline tools in `environment/` also turn source evidence into metric raster
+values, an evidence index, image previews, and a matching manifest.
+`api/environment_rasters.py` serves previews and samples values with nearby source
+evidence. The inspection page can show source geometry without a raster bundle.
+Neither inspection path downloads data or runs model inference during interaction.
+The [environment design](environment-preferences.md) describes fields, map delivery,
+route costs, and the separate proposed road-noise learning experiment.
+[Development](development.md#acquire-environment-pilot-data) covers acquisition
+commands and limitations.
+
+The server reads these related prepared files:
+
+| Prepared files | Purpose |
 | --- | --- |
 | Elevation catalog, coverage manifests, and raster files | Identify source coverage and retain source/derived terrain products |
 | Prepared network SQLite database | Serve geometry, measurements, policy evidence, inspection, and spatial queries |
-| Numeric routing SQLite artifact | Supply compact graph buffers and prepared costs to native routing |
-| Environment join SQLite artifact | Bind analytical raster cells to physical segment chainage for optional native route costs |
+| Numeric routing SQLite database | Supply compact graph arrays for Rust search |
+| Environment join SQLite database | Store environment values along physical segments for optional route costs |
+| Signal sidecar and optional packed routing inputs | Store crossing records and reusable hill, environment, and signal data |
 
 The network and numeric artifacts must describe the same dataset and prepared
 models. Opening validates their identities. SQLite delivery reads selected data
@@ -128,18 +138,18 @@ are independent: missing path artifacts leave terrain rendering available.
 Terrain delivery reads raster products; path delivery queries the network database
 for tiles, snapping, and inspection.
 
-Distance exploration and run planning share the prepared network, eligibility
-policies, snapping semantics, and numeric graph service. Exploration computes
+Distance exploration and run planning use the same prepared network, access
+rules, location-snapping behavior, and numeric graph service. Exploration computes
 forward distances that can be reused for distance shading. Planning
 builds one-way or round-trip candidates with route-specific preferences.
 Distance surfaces and candidate geometry are assembled in Python from search
 results, while the browser handles presentation.
 
-Runtime loading is bounded by the requested search area rather than total dataset
-coverage. Unloaded connections and source-coverage edges are distinct: the service
-can enlarge a working area without treating a cropped connection as a genuine dead
-end. Planning expansion remains heuristic, so it does not guarantee a globally
-best route outside the loaded area.
+Requests load a limited search area rather than the whole prepared dataset. The
+service distinguishes a connection outside that area from the edge of the source
+dataset. It can then enlarge the search area without treating an unloaded path as
+a real dead end. Expansion uses heuristic checks, so a better route may still
+exist outside the loaded area.
 
 The [API reference](reference/api.md) covers endpoints, result contracts, search
 limits, and request lifetimes. Mathematical definitions live in the
@@ -148,96 +158,112 @@ limits, and request lifetimes. Mathematical definitions live in the
 
 ## Routing backend boundaries
 
-Native routing is an in-process Rust library exposed through PyO3. Python selects
-prepared graph buffers and orchestrates requests; Rust owns graph traversal,
-endpoint overlays, and cost evaluation during search. The same native graph
-service supports planning and distance exploration.
+Python and Rust run in the same server process. Python chooses the search area,
+loads prepared files, and builds the response. Rust searches the graph and
+calculates the costs of following its paths. PyO3 connects the two languages.
+Planning and distance exploration use the same Rust graph service.
 
-The numeric data service owns a byte-bounded shared graph store for its opened
-artifact generation, alongside exact-area graph reuse. The store retains
-immutable native chunk owners and validated chunk-local topology. Overlapping
-areas borrow resident chunks and load only missing ones; native reference counts
-keep active graphs valid after eviction or database shutdown. Each new area still
-assembles a merged node lookup, selection masks, and frontier flags. Optional
-environment/signal search data remains attached per area when requested.
-Preparation uses the service's existing lock; concurrent searches keep independent mutable state. Cache budgets
-and remaining loading costs are described in [development](development.md).
+### Reusing graph data
+
+The numeric data service keeps two kinds of cache. One reuses a graph already
+assembled for exactly the same area. The other, in `routing/numeric_store.py`,
+keeps independently loadable graph chunks within a byte budget. When a new area
+overlaps an earlier one, it can reuse those chunks and load only the missing ones.
+Each store belongs to the dataset version opened by the service.
+
+The chunks contain read-only data and validated connection indexes. A graph keeps
+references to the chunks it uses, so cache eviction or database shutdown does not
+invalidate an active search. For each new area, the service still merges node
+lookups and marks selected paths and connections that continue outside the area.
+A shared preparation lock still makes unrelated loads wait for one another.
+Concurrent searches have separate state. See [development](development.md) for
+cache budgets and configuration.
 
 ### Prepared routing inputs
 
-Hills, mapped environment fields, and signals share one prepared-routing-input
-boundary. Each supplies immutable derived observations for the validated dataset
-generation; request-local weights turn those observations into costs. Source
-rasters and evidence retain their own preparation and map-delivery lifetimes.
+Hills, environment, and traffic-light signals provide observations prepared before
+a request. The request's preference weights turn these observations into costs.
+The original rasters and source evidence remain available separately for map
+layers and inspection.
 
-| Channel | Routing representation | Detail needed for |
+| Input | Prepared data | When more detail is needed |
 | --- | --- | --- |
-| Hills | Directional segment totals with terrain-quality coverage | Exact partial-segment integration at endpoints or pins |
-| Environment | Segment-chainage intervals with field/support values | Partial integration and unknown-length observations |
-| Signals | Directed crossing gates and arrival-dependent turn movements | Passage attribution across segment and leg boundaries |
+| Hills | Totals for each travel direction, with terrain-quality information | When a route starts or ends partway along a segment |
+| Environment | Values and support flags over intervals along a segment | When integrating partial traversals or reporting lengths with unknown values |
+| Signals | Crossing gates and incoming-to-outgoing movement records | When counting passages through crossings, including between route legs |
 
-The numeric data service owns the source handles, validates identities, and leases
-access to `routing/prepared_inputs.py`. Search requirements select the channels
-needed by active preferences. Hills use chunk-resident totals and load partial-segment
-detail only when enabled. Environment and signal search data is attached only
-when its preferences are enabled. Zero-weight environment observations are filled
-from returned traversals after area expansion settles, using the same native
-integrator as eager search. Signals Off retains the existing absent passage counts.
-Distance exploration requests no optional search channels.
+The numeric data service opens the sources and checks that they match the active
+dataset. `routing/prepared_inputs.py` selects the input groups, called channels,
+needed by the request. Hills use complete-segment totals and load partial-segment
+detail only when enabled. Environment and signals are attached for search only
+when their preferences are enabled. Distance exploration loads no optional search
+channels.
 
-Graph reuse is keyed by bounds and loaded channel presence. Weight
-changes within an enabled channel reuse its inputs; partial hill detail belongs to
-the prepared request graph, while `NumericEndpoint` describes only a location.
-Availability describes the configured validated sources, independent
-of what a particular search loads. Shape fields and route reuse depend on the
-request and remain search-owned.
+With environment preferences Off, the server still reports environment
+observations. It reads only the returned route's data after choosing the final
+search area, using the same Rust calculation as search. With Signals Off, passage
+counts remain absent.
 
-This common boundary does not require identical representations. The optional
-`routing-inputs-v1.sqlite` and compressed `routing-inputs-v2.sqlite` artifacts pack
-all three channels against numeric chunk
-identities. `routing/input_store.py` retains validated native channel chunks and
-partial hill bytes under a bounded budget; active graphs retain native owners
-after eviction. Environment interval vectors and contiguous hill-total arrays are shared across overlapping graphs.
-Hill traversal indexes chunk/segment arrays directly; it does not build a per-segment
-hill ownership map. Packed loading discards legacy topology hill columns before
-cache retention. Converted topology format 3 removes those columns and the separate
-hill interval table from disk as well; its paired input artifact owns all routing hills.
-Hill detail is addressed by segment to avoid loading intervals for a whole area.
-Legacy artifacts use source-sidecar adapters through the same input boundary.
-The format and identity contract belongs in the
-[numeric format reference](numeric-routing-format.md#packed-routing-inputs).
+A cached graph is identified by its bounds and loaded channels. Changing a weight
+within an enabled channel reuses the observations. Partial hill detail belongs to
+the prepared request graph; `NumericEndpoint` contains only a location. Reported
+source availability describes the configured, validated sources, even when a
+request does not load them. Shape and route-reuse costs depend on the request and
+remain part of search.
 
-### Native traversal
+### Storing preference data separately
 
-Native traversal evaluates a scalar objective and defers diagnostic arrays to
-selected-path evaluation. Read-only edge visits borrow a temporary base edge or
-an existing overlay edge. Predecessors retain compact base-arc or overlay-edge
-identifiers; full edges are reconstructed only for the selected path. Shape
-integrals remain search-owned, and full segment geometry bypasses clipping.
+Optional `routing-inputs-v1.sqlite` and compressed `routing-inputs-v2.sqlite` files
+store all three channels by graph chunk. `routing/input_store.py` caches validated
+Rust input chunks and partial hill bytes within a byte budget. Overlapping graphs
+share environment interval arrays and hill-total arrays. Active graphs keep their
+input data alive after cache eviction.
 
-When configured, Python validates the environment join against the network and
-raster manifest. Packed inputs decode intervals directly in Rust; the legacy
-adapter attaches named measurement/support records for the bounded graph.
-`environment_fields.py` owns the Python field vocabulary and semantics. The PyO3
-boundary resolves weight names into dense native arrays and returns diagnostics
-by field name.
-Rust integrates the intervals in the arc cost callback;
-the configured join is not queried during search.
-The reference window loader can resolve the same join through network segment
-identities. Its planner integrates those intervals with the shared pure function
-and caches each directed arc's result for comparisons with native search.
+Rust reads hill totals directly by chunk and segment position. Packed loading
+removes the old hill columns from topology buffers before caching them. A
+conversion to topology format 3 also removes those columns and the separate hill
+interval table from disk. The paired input file then holds all routing hill data.
+Partial hill detail is loaded by segment, avoiding a read for the whole area.
+Older datasets still load their sources through the same preparation interface.
+See the [numeric format reference](numeric-routing-format.md#packed-routing-inputs)
+for file versions, layouts, and matching rules.
 
-Shared routing contracts, policies, geometry, and offline preparation live in
-`routing/`. The Python search and cost implementations live in
-`routing_reference/`, used for correctness comparisons and compatibility when a
-numeric artifact is absent. Both packages ship together. Shared preparation and
-native delivery do not depend on reference algorithms; API dispatch imports the
-reference backend only when selected.
+<a id="native-traversal"></a>
 
-The separation allows native execution and reference validation to evolve against
-the same prepared data and HTTP contracts. Module docstrings describe individual
-modules; [development](development.md#native-integration-kernel) explains builds
-and backend selection.
+### Searching and describing the selected path
+
+During search, Rust calculates the total cost needed to compare paths. It leaves
+full diagnostic breakdowns until a path has been selected. Search predecessors
+store compact references to base arcs or overlay edges; Rust reconstructs the
+full edge records only for the chosen path. Shape calculations belong to the
+request. Complete-segment shape calculations use the original geometry without
+creating clipped copies.
+
+Python checks that configured environment data matches the network and raster
+manifest. With packed inputs, Rust decodes environment intervals directly. With
+older inputs, Python passes named values and support records for the selected
+area. `environment_fields.py` defines the field names and meanings. The language
+interface turns preference names into indexed Rust arrays and returns diagnostics
+by field name. All required intervals are in memory before search; search does
+not query the environment database for each arc.
+
+The Python reference loader can read the same environment data by segment ID.
+It uses the shared Python integration function and caches each directed arc's
+result for comparisons with Rust.
+
+### Keeping a Python reference
+
+`routing/` holds shared contracts, policies, geometry, preparation code, and native
+adapters. `routing_reference/` holds the Python search and cost implementation.
+The reference implementation supports correctness comparisons and compatibility
+when a numeric artifact is absent. Both packages ship together, but the API loads
+the reference backend only when selected. Shared preparation does not depend on
+its search algorithms.
+
+This lets the two implementations evolve while using the same prepared data and
+HTTP contracts. Module docstrings explain individual modules;
+[development](development.md#native-integration-kernel) covers builds and backend
+selection.
 
 ## Browser application
 
@@ -262,10 +288,10 @@ current user-visible behavior are documented in the [guide](guide.md).
 
 ## Ownership and deployment
 
-Prepared datasets are read-only during path delivery. Dataset services retain
-bounded shared caches and database connections. Each search owns its endpoint
-overlay, cost context, and mutable traversal state, allowing concurrent searches
-over immutable graph data.
+The server reads prepared datasets without changing them. Dataset services keep
+shared caches and database connections. Each search has its own temporary endpoint
+connections, cost settings, and search records. Searches can therefore run
+concurrently over the same read-only graph data.
 
 Exploration snapshots and caches are process-local. Native snapshots retain
 independent search results and survive graph-cache eviction. A snapshot cannot be

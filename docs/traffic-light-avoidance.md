@@ -1,13 +1,19 @@
 # Traffic-light avoidance
 
-Traffic-light avoidance adds a finite cost to mapped pedestrian crossing passages.
-It is separate from the environment traffic preference, which models road-noise
-context. [Usage](guide.md#traffic-light-avoidance),
+Traffic-light avoidance makes routes through mapped pedestrian lights more
+expensive, so the planner can choose a reasonable detour. It does not ban those
+crossings or use live light timings. The environment traffic preference is
+separate: it models surrounding road noise.
+
+Routing counts prepared crossing steps, not simply signal points on the map.
+A gate records a crossing along a segment; a movement records a crossing when
+turning from one segment to another. The [glossary](glossary.md) explains these
+terms, including stages, passages, and unresolved evidence. [Usage](guide.md#traffic-light-avoidance),
 [preparation](development.md#prepare-traffic-light-passages),
 [storage](reference/prepared-data.md#traffic-light-sidecar), and
 [routing mathematics](reference/routing-mathematics.md#traffic-light-passages)
-own their respective contracts. Remaining calibration, field review, and
-performance acceptance are in the [roadmap](roadmap.md#planned-routing-improvements).
+cover the detailed rules. Remaining calibration, field review, and
+performance checks are in the [roadmap](roadmap.md#planned-routing-improvements).
 
 ## Evidence and attribution
 

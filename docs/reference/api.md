@@ -1,5 +1,8 @@
 # API and request contracts
 
+The [glossary](../glossary.md) explains traversals, chainage, snapshots, and other
+terms used in request and response descriptions.
+
 FastAPI's `/docs` provides live request and response schemas. This reference
 describes endpoint roles, identities, bounded search, and result lifetimes.
 See [architecture](../architecture.md) for the service boundaries and
