@@ -51,6 +51,7 @@ fn _routing_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module
     )?)?;
     module.add_class::<crate::native_graph::NumericChunk>()?;
+    module.add_class::<crate::native_graph::RoutingInputChunk>()?;
     module.add_class::<crate::native_graph::NumericGraph>()
 }
 

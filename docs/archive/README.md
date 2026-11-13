@@ -52,6 +52,9 @@ optional-input, and concurrent-request controls.
 The [conditional-input follow-up](history/2026-11-12-conditional-routing-inputs.md)
 checks the common hill/environment/signal boundary and selected-route Off-mode
 diagnostics against those responses and measures the resulting latency/memory.
+The [November 13 packed-input measurements](history/2026-11-13-packed-routing-inputs.md)
+record the reusable three-channel artifact, exact-response checks, cache controls,
+and the remaining hill-only performance regression.
 
 The [2026-11-02 integration comparison](history/2026-11-02-integration-comparison.md)
 compares spacing caps and minimum sample counts against a fine reference on real

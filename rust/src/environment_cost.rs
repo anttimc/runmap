@@ -2,6 +2,7 @@
 
 use crate::numeric::RoutingError;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Dense indices are internal; Python exchanges field names.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -30,7 +31,7 @@ pub struct EnvironmentInterval {
     pub traffic_context_support: f64,
 }
 
-pub type EnvironmentIntervals = HashMap<i64, Vec<EnvironmentInterval>>;
+pub type EnvironmentIntervals = HashMap<i64, Arc<Vec<EnvironmentInterval>>>;
 
 pub fn field_name(field: EnvironmentField) -> &'static str {
     match field {
@@ -59,7 +60,7 @@ pub fn validate_intervals(values: &EnvironmentIntervals) -> Result<(), RoutingEr
             return Err(RoutingError::Invalid("Missing environment intervals"));
         }
         let mut previous = 0.0;
-        for interval in intervals {
+        for interval in intervals.iter() {
             if !interval.start_m.is_finite()
                 || !interval.end_m.is_finite()
                 || (interval.start_m - previous).abs() > 1e-6
@@ -261,12 +262,12 @@ mod tests {
     #[test]
     fn validates_named_interval_fields_and_traversal_bounds() {
         let valid = [0.0, 10.0, 0.2, 0.4, 0.6, 0.1, 1.0, 1.0];
-        let values = HashMap::from([(7, vec![interval_from_row(valid)])]);
+        let values = HashMap::from([(7, Arc::new(vec![interval_from_row(valid)]))]);
         assert!(validate_intervals(&values).is_ok());
         for index in 0..valid.len() {
             let mut invalid = valid;
             invalid[index] = f64::INFINITY;
-            let values = HashMap::from([(7, vec![interval_from_row(invalid)])]);
+            let values = HashMap::from([(7, Arc::new(vec![interval_from_row(invalid)]))]);
             assert!(validate_intervals(&values).is_err());
         }
         let intervals = &values[&7];

@@ -11,6 +11,7 @@ from runmap import _routing_native
 from runmap.environment_fields import EnvironmentField
 from runmap.paths.environment_join import read_environment_segments
 from runmap.paths.numeric_hills import read_hill_intervals
+from runmap.paths.routing_inputs import read_hill_payload
 from runmap.routing.cost_types import PreferenceSettings
 from runmap.routing.deadlines import check_deadline
 
@@ -20,6 +21,7 @@ class PreparedRoutingInputs:
     numeric: sqlite3.Connection
     environment: sqlite3.Connection | None = None
     signals: sqlite3.Connection | None = None
+    packed: sqlite3.Connection | None = None
 
 
 @dataclass(frozen=True)
@@ -35,8 +37,9 @@ def search_input_requirements(preferences: PreferenceSettings) -> InputRequireme
 
 
 def endpoint_hill_detail(inputs: PreparedRoutingInputs, segment: int) -> bytes | None:
-    """Full-segment hill totals already travel with the immutable numeric chunks."""
-    return read_hill_intervals(inputs.numeric, segment)
+    """Keep partial-segment detail independent of endpoint location data."""
+    return (read_hill_payload(inputs.packed, segment) if inputs.packed is not None
+            else read_hill_intervals(inputs.numeric, segment))
 
 
 def route_environment_unknown(inputs: PreparedRoutingInputs, lengths: dict[int, float],

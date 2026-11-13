@@ -90,8 +90,11 @@ and fetch/prepare only misses. Rust retains immutable payloads, validated
 chunk-local adjacency, sorted node/arc identities, segment lengths, and safe
 geometric scales. Active graphs retain native owners after eviction or shutdown.
 New areas still merge node indexes and rebuild selection/frontier state; a single
-preparation lock still serializes unrelated loads. Enabled environment/signal
-search data remains attached per area; inactive channels skip those loads.
+preparation lock still serializes unrelated loads. With the optional
+[packed input artifact](numeric-routing-format.md#packed-routing-inputs), enabled
+channels reuse validated native chunks; environment interval vectors are shared
+across area graphs. Selected-segment lookup maps are still assembled per area.
+Without that artifact, enabled channels retain their legacy area attachment path.
 Overlapping-window, concurrent-preparation, eviction, deadline,
 and route-equivalence tests cover reuse. The
 [November 12 measurements](archive/history/2026-11-12-shared-store-measurements.md)
@@ -118,9 +121,8 @@ bottleneck of a new request without measuring it.
    cold/warm data, concurrent requests, and increasing coverage at fixed route size.
 2. Build on the implemented shared chunk ownership and byte-bounded reuse.
    Reduce area-wide index assembly and unrelated-load serialization.
-   Pack and reuse the common hill/environment/signal input channels. Inactive
-   environment/signal search loading and selected-route zero-weight diagnostics
-   are implemented; active channels still need reusable packed storage. Measure cold requests
+   Packed hill/environment/signal input reuse, conditional search loading, and
+   selected-route zero-weight diagnostics are implemented. Measure cold requests
    as well as warm reuse; increasing the whole-graph cache alone is insufficient.
 3. Prototype landmark lower bounds in the existing Rust search and compare equal
    requests against the current heuristic and reference results.

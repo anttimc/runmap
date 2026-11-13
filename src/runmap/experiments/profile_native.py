@@ -134,10 +134,11 @@ def profile(database: Path, numeric: Path, repeats: int, instrumented: bool,
         last = _snap(data, options, False, monotonic() + 60)
         if first is None or last is None:
             raise ValueError("Endpoints could not be snapped")
-        start = _endpoint(connection, first, include_hill_intervals=True)
-        destination = _endpoint(connection, last, include_hill_intervals=True)
+        start = _endpoint(connection, first)
+        destination = _endpoint(connection, last)
         points = projected_points([[first.longitude, first.latitude], [last.longitude, last.latitude]])
-        graph, prepare_ms, prepare_rows = _measure(lambda: load_numeric_graph(connection, DEFAULT_BOUNDS),
+        segments = tuple(endpoint.segment_id for endpoint in (start, destination) if endpoint.segment_id is not None)
+        graph, prepare_ms, prepare_rows = _measure(lambda: load_numeric_graph(connection, DEFAULT_BOUNDS, hill_segments=segments),
                                                    "allocations" if instrumented else "baseline", instrumented)
     workloads: dict[str, Callable[[], RoutingResult]] = {
         "distance_1km": lambda: numeric_distances(graph, start, 1000),

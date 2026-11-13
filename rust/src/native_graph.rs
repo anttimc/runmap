@@ -6,7 +6,8 @@ use crate::endpoint_overlay::{self, Endpoint, node_id};
 use crate::environment_cost::{self, EnvironmentIntervals};
 use crate::fields::FieldSettings;
 use crate::numeric::{self, ARC_IDS, ARC_LENGTHS, ARC_SEGMENTS, Chunk, RoutingError, SEGMENT_IDS};
-use crate::routing_cost::{CostSettings, ShapeSettings, parse_hill_intervals};
+use crate::routing_cost::{CostSettings, ShapeSettings, parse_hill_intervals_until};
+use crate::routing_input::{self, HillInputs, HillIntervals, InputChunk};
 use crate::signal_cost::{Arrival, GateRows, SignalData, SignalSettings, TurnRows};
 use pyo3::exceptions::{PyTimeoutError, PyValueError};
 use pyo3::prelude::*;
@@ -71,9 +72,11 @@ fn environment_intervals(
         .map(|(segment, rows)| {
             Ok((
                 segment,
-                rows.into_iter()
-                    .map(|row| environment_interval(row.bind(py)))
-                    .collect::<PyResult<Vec<_>>>()?,
+                Arc::new(
+                    rows.into_iter()
+                        .map(|row| environment_interval(row.bind(py)))
+                        .collect::<PyResult<Vec<_>>>()?,
+                ),
             ))
         })
         .collect::<PyResult<_>>()?;
@@ -190,12 +193,13 @@ fn request_hill_intervals(
     py: Python<'_>,
     values: Vec<(i64, Py<PyBytes>)>,
     end: Option<Instant>,
-) -> PyResult<HashMap<i64, Vec<[f64; 16]>>> {
+) -> PyResult<HillIntervals> {
     let mut intervals = HashMap::new();
     for (id, payload) in values {
         check_deadline(end).map_err(routing_error)?;
-        let parsed = parse_hill_intervals(payload.bind(py).as_bytes()).map_err(routing_error)?;
-        if id < 0 || intervals.insert(id, parsed).is_some() {
+        let parsed =
+            parse_hill_intervals_until(payload.bind(py).as_bytes(), end).map_err(routing_error)?;
+        if id < 0 || intervals.insert(id, Arc::new(parsed)).is_some() {
             return Err(PyValueError::new_err(
                 "Invalid or duplicate endpoint hill segment",
             ));
@@ -326,6 +330,33 @@ pub struct NumericChunk {
     data: Arc<PreparedChunk>,
 }
 
+/// Validated immutable routing inputs shared between graph selections.
+#[pyclass(frozen, module = "runmap._routing_native")]
+pub struct RoutingInputChunk {
+    data: Arc<InputChunk>,
+}
+
+#[pymethods]
+impl RoutingInputChunk {
+    #[new]
+    #[pyo3(signature = (payload, *, timeout_seconds=None))]
+    fn new(py: Python<'_>, payload: Py<PyBytes>, timeout_seconds: Option<f64>) -> PyResult<Self> {
+        let end = deadline(timeout_seconds)?;
+        let bytes = payload.bind(py).as_bytes();
+        let data = py
+            .detach(|| routing_input::parse(bytes, end))
+            .map_err(routing_error)?;
+        Ok(Self {
+            data: Arc::new(data),
+        })
+    }
+
+    #[getter]
+    fn resident_bytes(&self) -> usize {
+        self.data.resident_bytes
+    }
+}
+
 #[pymethods]
 impl NumericChunk {
     #[new]
@@ -378,6 +409,8 @@ fn graph_from_chunks(
         distance_scale: scale,
         environment: None,
         signals: None,
+        hills: Arc::new(HashMap::new()),
+        input_owners: Vec::new(),
     })
 }
 
@@ -388,10 +421,89 @@ pub struct NumericGraph {
     distance_scale: f64,
     environment: Option<Arc<EnvironmentIntervals>>,
     signals: Option<Arc<SignalData>>,
+    hills: Arc<HillInputs>,
+    input_owners: Vec<Arc<InputChunk>>,
 }
 
 #[pymethods]
 impl NumericGraph {
+    #[getter]
+    fn input_bytes(&self) -> usize {
+        let owners = self
+            .input_owners
+            .iter()
+            .map(|owner| owner.resident_bytes)
+            .sum::<usize>();
+        let maps = self.hills.capacity() * 64
+            + self
+                .environment
+                .as_ref()
+                .map_or(0, |rows| rows.capacity() * 64)
+            + self.signals.as_ref().map_or(0, |data| {
+                data.gates.capacity() * 96
+                    + data.turns.capacity() * 64
+                    + data
+                        .gates
+                        .values()
+                        .map(|rows| rows.capacity() * 24)
+                        .sum::<usize>()
+            });
+        owners + maps + self.input_owners.capacity() * std::mem::size_of::<Arc<InputChunk>>()
+    }
+
+    #[pyo3(signature = (chunks, *, timeout_seconds=None))]
+    fn set_input_chunks(
+        &mut self,
+        py: Python<'_>,
+        chunks: Vec<PyRef<'_, RoutingInputChunk>>,
+        timeout_seconds: Option<f64>,
+    ) -> PyResult<()> {
+        let end = deadline(timeout_seconds)?;
+        check_deadline(end).map_err(routing_error)?;
+        if chunks.is_empty() {
+            return Ok(());
+        }
+        if !self.input_owners.is_empty() {
+            return Err(PyValueError::new_err("Routing inputs already attached"));
+        }
+        let owners: Vec<_> = chunks.iter().map(|chunk| Arc::clone(&chunk.data)).collect();
+        if owners.iter().any(|owner| {
+            (owner.channel == 2 && self.environment.is_some())
+                || (owner.channel == 3 && self.signals.is_some())
+        }) {
+            return Err(PyValueError::new_err(
+                "Routing input channel already attached",
+            ));
+        }
+        let views = views(py, &self.owners)?;
+        let attached = py
+            .detach(|| {
+                let mut lengths = HashMap::new();
+                for (index, (chunk, selected)) in views.iter().zip(&self.graph.selected).enumerate()
+                {
+                    for (segment, enabled) in selected.iter().enumerate() {
+                        check_deadline(end)?;
+                        if *enabled {
+                            if let Some(length) = self.graph.lengths[index][segment] {
+                                lengths.insert(chunk.columns[SEGMENT_IDS].integer(segment), length);
+                            }
+                        }
+                    }
+                }
+                routing_input::attach(&owners, &lengths, end)
+            })
+            .map_err(routing_error)?;
+        self.hills = attached.hills;
+        if attached.environment.is_some() {
+            self.environment = attached.environment;
+        }
+        if attached.signals.is_some() {
+            self.signals = attached.signals;
+        }
+        self.input_owners = owners;
+        Ok(())
+    }
+
     #[new]
     #[pyo3(signature = (payloads, *, bounds=None, distance_scale=0.0, timeout_seconds=None))]
     fn new(
@@ -588,6 +700,7 @@ impl NumericGraph {
                         used_segments: HashSet::new(),
                         used_spans: HashMap::new(),
                         hill_intervals: HashMap::new(),
+                        hills: Arc::clone(&self.hills),
                     },
                 };
                 let result = chunk_search::search_routes(&self.graph, &chunks, &overlay, settings)?;
@@ -698,6 +811,7 @@ impl NumericGraph {
                             },
                         ),
                         hill_intervals,
+                        hills: Arc::clone(&self.hills),
                     },
                 };
                 let result = chunk_search::search_routes(&self.graph, &chunks, &overlay, settings)?;

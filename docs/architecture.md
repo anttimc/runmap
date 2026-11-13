@@ -178,24 +178,30 @@ rasters and evidence retain their own preparation and map-delivery lifetimes.
 
 The numeric data service owns the source handles, validates identities, and leases
 access to `routing/prepared_inputs.py`. Search requirements select the channels
-needed by active preferences. Hills use chunk-resident totals and load endpoint
+needed by active preferences. Hills use chunk-resident totals and load partial-segment
 detail only when enabled. Environment and signal search data is attached only
 when its preferences are enabled. Zero-weight environment observations are filled
 from returned traversals after area expansion settles, using the same native
 integrator as eager search. Signals Off retains the existing absent passage counts.
 Distance exploration requests no optional search channels.
 
-Graph reuse is keyed by bounds and environment/signal channel presence. Weight
-changes within an enabled channel reuse its inputs; hill endpoint detail remains
-request-local. Availability describes the configured validated sources, independent
+Graph reuse is keyed by bounds and loaded channel presence. Weight
+changes within an enabled channel reuse its inputs; partial hill detail belongs to
+the prepared request graph, while `NumericEndpoint` describes only a location.
+Availability describes the configured validated sources, independent
 of what a particular search loads. Shape fields and route reuse depend on the
 request and remain search-owned.
 
 This common boundary does not require identical representations. The current
-numeric format still embeds hill totals and stores hill endpoint detail separately;
-environment and signal sources remain sidecars. A future chunk-addressable input
-artifact includes all three channels, retaining their distinct directional,
-support, and movement semantics. Packed active-channel reuse is still planned.
+numeric format still embeds hill totals for compatibility. The optional
+`routing-inputs-v1.sqlite` artifact packs all three channels against numeric chunk
+identities. `routing/input_store.py` retains validated native channel chunks and
+partial hill bytes under a bounded budget; active graphs retain native owners
+after eviction. Environment interval vectors are shared across overlapping graphs.
+Hill detail is addressed by segment to avoid loading intervals for a whole area.
+Legacy artifacts use source-sidecar adapters through the same input boundary.
+The format and identity contract belongs in the
+[numeric format reference](numeric-routing-format.md#packed-routing-inputs).
 
 ### Native traversal
 
@@ -206,10 +212,11 @@ identifiers; full edges are reconstructed only for the selected path. Shape
 integrals remain search-owned, and full segment geometry bypasses clipping.
 
 When configured, Python validates the environment join against the network and
-raster manifest, selects its intervals for the bounded graph, and attaches named
-measurement/support records to the native graph. `environment_fields.py` owns
-the Python field vocabulary and semantics. The PyO3 boundary resolves interval
-and weight names into dense native arrays and returns diagnostics by field name.
+raster manifest. Packed inputs decode intervals directly in Rust; the legacy
+adapter attaches named measurement/support records for the bounded graph.
+`environment_fields.py` owns the Python field vocabulary and semantics. The PyO3
+boundary resolves weight names into dense native arrays and returns diagnostics
+by field name.
 Rust integrates the intervals in the arc cost callback;
 the configured join is not queried during search.
 The reference window loader can resolve the same join through network segment

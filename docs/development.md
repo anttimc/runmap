@@ -377,17 +377,19 @@ smaller routing working sets. Restart the API after changing the artifact. See
 [preprocessing and identity details](numeric-routing-format.md#export-and-read).
 
 `RUNMAP_NUMERIC_CACHE_BYTES` defaults to 134217728 (128 MiB) per API process.
-The shared chunk LRU may retain up to half this budget; exact-area graphs use the
+The shared topology LRU may retain up to half this budget.
+With packed inputs, the input store may additionally retain up to one quarter;
+exact-area graphs use the
 remaining accounted capacity. Graph accounting includes their chunk owners and
 native index allocation capacities, plus allowances for environment/signal data.
-Area-graph keys also include environment/signal search-channel presence, so an
+Area-graph keys also include loaded search-channel presence, so an
 Off graph cannot satisfy an On request. Actual weights stay request-local.
-Shared owners are conservatively charged in both caches. Zero disables both.
+Shared owners are conservatively charged in the stores and area graphs. Zero disables retention.
 This is a cache accounting budget, not a process RSS cap: active requests retain
 evicted graphs safely, SQLite has its own page caches, and each search allocates
 request state. Two planning slots continue to bound simultaneous searches.
 Graphs hold their immutable buffers independently of the database connection.
-Both caches belong to one opened artifact generation and are cleared on shutdown;
+All caches belong to one opened artifact generation and are cleared on shutdown;
 request costs and overlays are never cached.
 
 Changing working areas or expanding a window selects chunk IDs without fetching
@@ -395,7 +397,7 @@ their BLOBs. Resident chunks reuse their validated native topology, adjacency
 payloads, sorted node/arc identities, segment lengths, and safe distance scale.
 Only missing chunks are fetched and prepared. The area-wide node lookup,
 segment selection, and frontier flags are still assembled for each new rectangle.
-Enabled environment/signal search channels still load per area. With their
+Without packed inputs, enabled environment/signal search channels load per area. With their
 preferences Off, API planning skips those loads. Configured environment unknown-
 length observations are completed only for returned route segments, after window
 selection; signals Off exposes no passage counts. Hill totals remain embedded in
@@ -403,7 +405,37 @@ the current numeric buffers, while enabled partial endpoints load hill detail
 through the same [prepared input boundary](architecture.md#prepared-routing-inputs).
 Preparation and selected-route source reads remain
 serialized under the numeric service lock. Rebuild the native extension after
-this change; existing artifacts need no re-export.
+this change; existing artifacts need no re-export to retain legacy behavior.
+
+To enable packed inputs, prepare a new artifact from the numeric database and
+the same optional sources configured for the API:
+
+```sh
+uv run --no-sync python -m runmap.paths.routing_inputs \
+  data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite \
+  data/paths/prepared/helsinki-capital-area/routing-inputs-v1.sqlite \
+  --environment data/paths/prepared/helsinki-capital-area/environment-join.sqlite \
+  --signals data/paths/prepared/helsinki-capital-area/signals.sqlite
+```
+
+Omit `--environment` or `--signals` when those sources are not configured/present.
+Hills are included according to numeric metadata. The exporter refuses overwrite;
+prepare a new generation separately and replace artifacts only while the service
+is stopped. Restart to discover `routing-inputs-v1.sqlite` beside the selected
+numeric database. A mismatched present artifact fails startup. Runtime still needs
+configured source sidecars for identity checks, display, and selected-route diagnostics.
+See the [packed format contract](numeric-routing-format.md#packed-routing-inputs).
+
+Packed search loads bytes directly into validated native channel chunks, avoiding
+per-interval Python records. Overlapping graphs share environment vectors and hill
+totals. The input store also caches partial hill bytes by segment. Signal maps and
+segment lookup maps are still assembled per area; topology format 2 retains legacy
+hill totals for compatibility. Loading remains serialized, and retained cache
+budgets do not bound in-flight allocations or total RSS.
+The [packed-input measurements](archive/history/2026-11-13-packed-routing-inputs.md)
+record mixed-preference improvements and the remaining hill-only regression;
+this artifact is optional while those tradeoffs are addressed.
+
 For loads using the shared store, `payload_load_ms` includes preparation of native
 chunk misses; `index_prepare_ms` measures area assembly and optional cost attachment.
 Complete-request benchmarks separately report `route_input_diagnostics` for the

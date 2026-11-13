@@ -4,6 +4,7 @@ use crate::endpoint_overlay::{Edge, projected_length, segment_points};
 use crate::environment_cost::{self, EnvironmentIntervals};
 use crate::fields::{self, FieldSettings, IntegrationError};
 use crate::numeric::*;
+use crate::routing_input::{HillInputs, HillIntervals};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -24,7 +25,8 @@ pub struct CostSettings {
     pub shape: Option<ShapeSettings>,
     pub used_segments: HashSet<i64>,
     pub used_spans: HashMap<i64, Vec<(f64, f64)>>,
-    pub hill_intervals: HashMap<i64, Vec<[f64; 16]>>,
+    pub hill_intervals: HillIntervals,
+    pub hills: Arc<HillInputs>,
 }
 
 pub struct CostCache {
@@ -102,6 +104,13 @@ fn matching_chainage(a: f64, b: f64) -> bool {
 }
 
 pub fn parse_hill_intervals(payload: &[u8]) -> Result<Vec<[f64; 16]>, RoutingError> {
+    parse_hill_intervals_until(payload, None)
+}
+
+pub fn parse_hill_intervals_until(
+    payload: &[u8],
+    deadline: Option<Instant>,
+) -> Result<Vec<[f64; 16]>, RoutingError> {
     let _profile = crate::profiling::span(crate::profiling::Phase::HillDecode);
     if payload.is_empty() || payload.len() % 128 != 0 {
         return Err(RoutingError::Invalid("Invalid hill interval byte count"));
@@ -109,6 +118,7 @@ pub fn parse_hill_intervals(payload: &[u8]) -> Result<Vec<[f64; 16]>, RoutingErr
     let mut intervals = Vec::with_capacity(payload.len() / 128);
     let mut previous = 0.0;
     for bytes in payload.chunks_exact(128) {
+        crate::chunk_search::check_deadline(deadline)?;
         let row: [f64; 16] = std::array::from_fn(|i| {
             f64::from_le_bytes(bytes[i * 8..(i + 1) * 8].try_into().unwrap())
         });
@@ -157,6 +167,51 @@ fn integrate_hills<const N: usize>(
     settings: &CostSettings,
 ) -> Result<[f64; N], RoutingError> {
     let direction = usize::from(edge.backward);
+    let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
+    if let Some(hills) = settings.hills.get(&segment_id) {
+        if hills.totals[direction * 7 + 6] <= 0.0 {
+            return Err(RoutingError::Invalid("Hill features are unavailable"));
+        }
+        let length = chunk.columns[ARC_LENGTHS].float(edge.arc);
+        if edge.low < 0.0 || edge.high > length + 1e-6 {
+            return Err(RoutingError::Invalid(
+                "Partial hill traversal is outside physical chainage",
+            ));
+        }
+        if edge.low == 0.0 && edge.high == length {
+            return Ok(std::array::from_fn(|i| hills.totals[direction * 7 + i]));
+        }
+        let intervals = if hills.intervals.is_empty() {
+            settings
+                .hill_intervals
+                .get(&segment_id)
+                .map(|rows| rows.as_slice())
+                .ok_or(RoutingError::Invalid(
+                    "Partial hill traversal requires endpoint intervals",
+                ))?
+        } else {
+            hills.intervals.as_slice()
+        };
+        if intervals
+            .last()
+            .is_none_or(|row| !matching_chainage(row[1], length))
+        {
+            return Err(RoutingError::Invalid(
+                "Endpoint hill intervals do not cover the segment",
+            ));
+        }
+        let mut values = [0.0; N];
+        for row in intervals {
+            add_interval(
+                &mut values,
+                edge,
+                row[0],
+                row[1],
+                std::array::from_fn(|i| row[2 + direction * 7 + i]),
+            )?;
+        }
+        return Ok(values);
+    }
     let totals: [f64; N] = std::array::from_fn(|i| {
         chunk.columns[HILL_TOTALS].float((edge.segment * 2 + direction) * 7 + i)
     });
@@ -191,7 +246,7 @@ fn integrate_hills<const N: usize>(
                 "Endpoint hill intervals do not cover the segment",
             ));
         }
-        for row in intervals {
+        for row in intervals.iter() {
             add_interval(
                 &mut values,
                 edge,
@@ -544,7 +599,7 @@ mod tests {
             environment_weights: [0.0; 4],
             environment: Some(Arc::new(HashMap::from([(
                 7,
-                vec![
+                Arc::new(vec![
                     environment_cost::EnvironmentInterval {
                         start_m: 0.0,
                         end_m: 10.0,
@@ -559,14 +614,15 @@ mod tests {
                         context_support: 1.0,
                         traffic_context_support: 1.0,
                     },
-                ],
+                ]),
             )]))),
             shape: None,
             used_segments: HashSet::from([7]),
             used_spans: HashMap::new(),
+            hills: Arc::new(HashMap::new()),
             hill_intervals: HashMap::from([(
                 7,
-                vec![
+                Arc::new(vec![
                     [
                         0.0, 10.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0,
                         0.0, 10.0,
@@ -575,7 +631,7 @@ mod tests {
                         10.0, 20.0, 6.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 7.0, 0.0, 0.0, 0.0, 0.0,
                         0.0, 10.0,
                     ],
-                ],
+                ]),
             )]),
         }
     }
@@ -645,6 +701,39 @@ mod tests {
             environment_penalties: [0.1, 0.2, 0.3, 0.4],
             environment_unknown_m: [1000.0; environment_cost::FIELDS.len()],
         }
+    }
+
+    #[test]
+    fn packed_hills_override_embedded_totals_and_use_sparse_request_detail() {
+        let chunk = sample_chunk(&[], &[]);
+        let mut settings = sample_settings();
+        let intervals = settings.hill_intervals[&7].as_ref().clone();
+        let totals = [
+            30.0, 0.0, 0.0, 0.0, 0.0, 0.0, 25.0, 40.0, 0.0, 0.0, 0.0, 0.0, 0.0, 25.0,
+        ];
+        settings.hills = Arc::new(HashMap::from([(
+            7,
+            Arc::new(crate::routing_input::HillInput {
+                totals,
+                intervals: Vec::new(),
+            }),
+        )]));
+        let mut edge = sample_edge();
+        assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 30.0);
+        edge.backward = true;
+        assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 40.0);
+        edge.low = 5.0;
+        edge.high = 15.0;
+        assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 6.0);
+        settings.hill_intervals.clear();
+        assert!(hill_features(&chunk, edge, &settings).is_err());
+        settings.hills = Arc::new(HashMap::from([(
+            7,
+            Arc::new(crate::routing_input::HillInput { totals, intervals }),
+        )]));
+        assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 6.0);
+        edge.backward = false;
+        assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 4.5);
     }
 
     #[test]

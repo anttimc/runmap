@@ -1,6 +1,7 @@
 """Connect prepared numeric graphs and directed search requests to the Rust library."""
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 import math
 import sqlite3
 from time import monotonic, perf_counter
@@ -12,6 +13,7 @@ from runmap import _routing_native
 from runmap.environment_fields import EnvironmentField, EnvironmentValues, EnvironmentSupport
 from runmap.paths.database import NetworkMetadata, network_metadata
 from runmap.paths.numeric_database import iter_numeric_payloads
+from runmap.paths.numeric_hills import read_hill_intervals
 from runmap.paths.environment_join import read_environment_segments
 from runmap.paths.signals import read_signals
 from runmap.routing.environment_costs import EnvironmentWeights
@@ -38,6 +40,8 @@ class LoadedNumericGraph:
     index_prepare_ms: float
     environment_bytes: int = 0
     signal_bytes: int = 0
+    input_bytes: int = 0
+    hill_intervals: Mapping[int, bytes] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -47,7 +51,6 @@ class NumericEndpoint:
     graph_offset_m: float = 0.0
     chainage_m: float | None = None
     point: Point | None = None
-    hill_intervals: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -113,7 +116,8 @@ def load_numeric_graph(connection: sqlite3.Connection, bounds: Bounds, *,
                        deadline: float | None = None, verify_checksums: bool = False,
                        environment_connection: sqlite3.Connection | None = None,
                        signal_connection: sqlite3.Connection | None = None,
-                       chunk_store: SharedGraphStore | None = None) -> LoadedNumericGraph:
+                       chunk_store: SharedGraphStore | None = None,
+                       hill_segments: tuple[int, ...] = ()) -> LoadedNumericGraph:
     metadata = network_metadata(connection)
     started = perf_counter()
     if chunk_store is not None and chunk_store.connection is not connection:
@@ -150,7 +154,13 @@ def load_numeric_graph(connection: sqlite3.Connection, bounds: Bounds, *,
     chunk_count = len(payloads) if chunk_store is None else len(chunks)
     buffer_bytes = sum(map(len, payloads)) if chunk_store is None else sum(c.payload_bytes for c in chunks)
     return LoadedNumericGraph(native, metadata, bounds, chunk_count, buffer_bytes, payload_ms, index_ms,
-                              environment_bytes, signal_bytes)
+                              environment_bytes, signal_bytes, hill_intervals=legacy_hill_detail(connection, hill_segments))
+
+
+def legacy_hill_detail(connection: sqlite3.Connection, segments: tuple[int, ...]) -> dict[int, bytes]:
+    """Adapt older artifacts without attaching cost inputs to endpoint locations."""
+    return {segment: payload for segment in dict.fromkeys(segments)
+            if (payload := read_hill_intervals(connection, segment)) is not None}
 
 
 def _segment_endpoint(endpoint: NumericEndpoint) -> tuple[int, float, float | None] | None:
@@ -201,8 +211,7 @@ def numeric_shortest_path(graph: LoadedNumericGraph, start: NumericEndpoint, des
                           signal_arrival: tuple[int, float, float] | None = None) -> NumericPath:
     if hill_weight > 0 and graph.metadata.models.hill_model is None:
         raise ValueError("Hill features are unavailable")
-    intervals = {endpoint.segment_id: endpoint.hill_intervals for endpoint in (start, destination)
-                 if hill_weight > 0 and endpoint.segment_id is not None and endpoint.hill_intervals is not None}
+    intervals = graph.hill_intervals if hill_weight > 0 else {}
     result = graph.native.shortest_path(start.node_id, destination.node_id,
         start_segment=_segment_endpoint(start), destination_segment=_segment_endpoint(destination),
         start_point=start.point, destination_point=destination.point,

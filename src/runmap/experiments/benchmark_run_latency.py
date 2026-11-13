@@ -26,6 +26,8 @@ from runmap.experiments.latency import latency_summary
 from runmap.paths import local_network
 from runmap.routing import numeric_search, numeric_store
 from runmap.routing.numeric_store import SharedGraphStore
+from runmap.routing.input_store import SharedInputStore
+from runmap.routing import input_store
 from runmap.routing.cost_types import PreferenceLevel
 
 
@@ -71,6 +73,10 @@ def measure_phases() -> Iterator[PhaseTimes]:
         stack.enter_context(patch.object(SharedGraphStore, "load", _timed("chunk_access", SharedGraphStore.load, phases)))
         stack.enter_context(patch.object(numeric_store, "read_numeric_payload", _timed("chunk_payload_read", numeric_store.read_numeric_payload, phases)))
         stack.enter_context(patch.object(numeric_store._routing_native, "NumericChunk", _timed("chunk_prepare", numeric_store._routing_native.NumericChunk, phases)))
+        stack.enter_context(patch.object(SharedInputStore, "load", _timed("input_chunk_access", SharedInputStore.load, phases)))
+        stack.enter_context(patch.object(input_store, "read_input_payload", _timed("input_payload_read", input_store.read_input_payload, phases)))
+        stack.enter_context(patch.object(input_store, "read_hill_payload", _timed("input_hill_detail_read", input_store.read_hill_payload, phases)))
+        stack.enter_context(patch.object(input_store._routing_native, "RoutingInputChunk", _timed("input_chunk_prepare", input_store._routing_native.RoutingInputChunk, phases)))
         stack.enter_context(patch.object(numeric_search, "_attach_environment", _timed("environment_attach", numeric_search._attach_environment, phases)))
         stack.enter_context(patch.object(numeric_search, "read_signals", _timed("signal_read", numeric_search.read_signals, phases)))
         stack.enter_context(patch.object(sqlite_runs, "numeric_plan_run", _timed("numeric_search", sqlite_runs.numeric_plan_run, phases)))

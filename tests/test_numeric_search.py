@@ -65,6 +65,8 @@ class NumericSearchTests(unittest.TestCase):
             self.segments = {key: number for number, key in connection.execute(
                 "SELECT number, external_id FROM identities WHERE kind='segment'")}
             self.hill_intervals = {key: read_hill_intervals(connection, number) for key, number in self.segments.items()}
+            self.graph = replace(self.graph, hill_intervals={self.segments[key]: value
+                for key, value in self.hill_intervals.items() if value is not None})
         self.keys = {number: key for key, number in self.nodes.items()}
 
     def _endpoint(self, key: str) -> NumericEndpoint:
@@ -180,8 +182,7 @@ class NumericSearchTests(unittest.TestCase):
         self.assertEqual(reference.candidates[0].legs[0].path.cost, path.cost)
 
     def _segment_endpoint(self, key: str, offset: float) -> NumericEndpoint:
-        return NumericEndpoint(segment_id=self.segments[key], graph_offset_m=offset,
-                               hill_intervals=self.hill_intervals[key])
+        return NumericEndpoint(segment_id=self.segments[key], graph_offset_m=offset)
 
     def _snap(self, segment: str, offset: float, x: float) -> Snap:
         lon, lat = transform("EPSG:3067", "EPSG:4326", [x], [6675000])
@@ -336,13 +337,13 @@ class NumericSearchTests(unittest.TestCase):
         start, end = self._segment_endpoint("sb", 25), self._segment_endpoint("sb", 75)
         for payload in (None, b"bad", bytes(128), np.full((1, 16), math.nan, dtype="<f8").tobytes()):
             with self.subTest(payload=payload), self.assertRaises(ValueError):
-                numeric_shortest_path(self.graph, replace(start, hill_intervals=payload),
-                    replace(end, hill_intervals=payload), hill_weight=6)
-        intervals = np.frombuffer(start.hill_intervals, dtype="<f8").copy().reshape(-1, 16)
+                graph = replace(self.graph, hill_intervals={} if payload is None else {start.segment_id: payload})
+                numeric_shortest_path(graph, start, end, hill_weight=6)
+        intervals = np.frombuffer(self.hill_intervals["sb"], dtype="<f8").copy().reshape(-1, 16)
         intervals[-1, 1] = 99
         with self.assertRaisesRegex(ValueError, "do not cover"):
-            numeric_shortest_path(self.graph, replace(start, hill_intervals=intervals.tobytes()),
-                replace(end, hill_intervals=intervals.tobytes()), hill_weight=6)
+            numeric_shortest_path(replace(self.graph, hill_intervals={start.segment_id: intervals.tobytes()}),
+                start, end, hill_weight=6)
         # Full-segment traversal uses totals without requiring interval detail.
         self.assertIsNotNone(numeric_shortest_path(self.graph, self._endpoint("s"), self._endpoint("b"),
                                                   hill_weight=6).cost)
@@ -355,8 +356,7 @@ class NumericSearchTests(unittest.TestCase):
                          distance_scale=self.graph.metadata.distance_scale))
         home, end = self._segment_endpoint("sb", 25), self._segment_endpoint("bc", 75)
         actual = numeric_shortest_path(self.graph, home, end, hill_weight=6)
-        original = numeric_shortest_path(legacy, replace(home, hill_intervals=None),
-                                         replace(end, hill_intervals=None), hill_weight=6)
+        original = numeric_shortest_path(replace(legacy, hill_intervals={}), home, end, hill_weight=6)
         self.assertEqual(actual.arc_ids.tolist(), original.arc_ids.tolist())
         np.testing.assert_allclose(actual.components, original.components, atol=1e-10, rtol=1e-12)
         np.testing.assert_allclose(actual.hill_features, original.hill_features, atol=1e-10, rtol=1e-12)

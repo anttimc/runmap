@@ -101,11 +101,11 @@ for contracts. Follow the [scalability proposal](routing-scalability.md):
   a revised route visible within one second of a settings change or pin release.
   Fix benchmark hardware, concurrency, network conditions, and percentile; report
   warm edits, cold-area requests, and process-cold requests separately.
-- Prepare versioned reusable hill/environment/signal input chunks. Include
-  directional hill totals and partial detail, environment support/unknown coverage,
-  and directed signal gates/movements. The common input boundary and conditional
-  search loading are implemented; active environment/signal channels still load
-  per area. Preserve selected-route diagnostics and existing artifact compatibility.
+- Extend the [packed-input measurements](archive/history/2026-11-13-packed-routing-inputs.md)
+  to larger coverage, additional starts, cold storage, and sustained concurrency.
+  Resolve the measured hill-only loading/search regression before making packed
+  inputs standard. Remove duplicated legacy hill totals in a future topology
+  format migration and reduce per-segment hill lookup/attachment overhead.
   Extend
   shared chunk reuse to avoid area-wide index assembly and serialize only related
   loads. Bound in-flight memory.

@@ -58,7 +58,9 @@ def _cache_state(data: SQLitePathData) -> dict[str, int]:
         raise ValueError("Routing edit measurements require a matching numeric artifact")
     return dict(graphs=len(data.numeric.graphs), graph_bytes=data.numeric.resident_bytes,
                 chunks=len(data.numeric.chunk_store.chunks), chunk_bytes=data.numeric.chunk_store.resident_bytes,
-                total_bytes=data.numeric.resident_bytes + data.numeric.chunk_store.resident_bytes)
+                input_chunks=len(data.numeric.input_store.chunks) if data.numeric.input_store else 0,
+                input_bytes=data.numeric.input_store.resident_bytes if data.numeric.input_store else 0,
+                total_bytes=data.numeric.resident_bytes + data.numeric._shared_bytes())
 
 
 def _measure_edit(data: SQLitePathData, scenario: EditScenario, settings: EditBenchmarkSettings, *,
@@ -122,6 +124,9 @@ def measure_edits(database: Path, scenarios: tuple[EditScenario, ...],
                     startup_ms=startup_ms, cache_budget_bytes=settings.cache_bytes, final_cache=_cache_state(data),
                     environment_path=str(settings.environment_path) if settings.environment_path else None,
                     environment_raster_bundle=str(settings.environment_raster_bundle) if settings.environment_raster_bundle else None,
+                    packed_input_identity=(json.loads(data.numeric.input_connection.execute(
+                        "SELECT value FROM metadata WHERE key='identity'").fetchone()[0])
+                        if data.numeric is not None and data.numeric.input_connection is not None else None),
                     limits=RunAreaLimits().__dict__, timeout_s=settings.timeout_s,
                     first_pass=first, repeated_passes=repeated, summaries=summaries,
                     concurrent_batches=concurrent, concurrent_summaries=concurrent_summaries,

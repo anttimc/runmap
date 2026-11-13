@@ -8,6 +8,7 @@ pub mod fields;
 pub mod numeric;
 mod profiling;
 pub mod routing_cost;
+pub mod routing_input;
 pub mod signal_cost;
 
 #[cfg(feature = "python")]

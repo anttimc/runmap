@@ -157,11 +157,15 @@ excluded by the active policy. Exact limits/defaults are in
 
 Dataset services own read-only database connections and shared immutable numeric
 working sets. Searches own endpoint overlays, traversal state, cost context, and
-partial-endpoint hill detail. Hills, environment fields, and signals share the
+prepared partial-segment hill inputs. Endpoints describe locations only.
+Hills, environment fields, and signals share the
 [prepared input boundary](../architecture.md#prepared-routing-inputs).
-Numeric working sets are cached by bounds and environment/signal channel presence;
+Numeric working sets are cached by bounds and loaded channel presence;
 different bounds also reuse resident immutable chunks and their validated native
-topology through the same dataset service's shared graph store. Store loading is
+topology through the same dataset service's shared graph store. With the optional
+[packed artifact](../numeric-routing-format.md#packed-routing-inputs), a separate
+bounded input store reuses hill totals, environment intervals, and signal records;
+partial hill detail is cached by segment. Store loading is
 serialized by the existing preparation lock. Eviction and database shutdown do
 not invalidate chunk owners retained by active graphs. Area-wide node lookup,
 selection, and frontier state are still assembled for new bounds.

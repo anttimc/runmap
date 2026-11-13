@@ -29,9 +29,12 @@ unverified.
 The [conditional-input follow-up](archive/history/2026-11-12-conditional-routing-inputs.md)
 preserves the earlier complete response fingerprints while removing full-area
 environment/signal loading for Off preferences. At the default budget, the
-configured-environment 38.54 km case now completes at a 1.05 s repeated median;
-peak RSS for the workload falls from 2,475 to 762 MiB. Active-channel packing,
-area assembly, search improvements, and visible interaction acceptance remain.
+configured-environment 38.54 km case completed at a 1.05 s repeated median;
+peak RSS for that workload fell from 2,475 to 762 MiB.
+The [November 13 packed-input measurements](archive/history/2026-11-13-packed-routing-inputs.md)
+cover the optional hill/environment/signal artifact, reduced mixed-preference
+loading, and a hill-only regression that must be resolved before standard use.
+Area assembly, search improvements, and visible interaction acceptance remain.
 
 For Rust phase timing, allocation traffic, and visual results on a fixed working
 area, see the [2026-11-02 native profile](archive/history/2026-11-02-native-routing-profile.md).

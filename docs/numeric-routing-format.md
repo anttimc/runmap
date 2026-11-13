@@ -96,7 +96,7 @@ must remain distinguishable from source coverage boundaries and true dead ends.
 
 Signal passages are loaded separately from an optional identity-validated
 [`signals.sqlite` sidecar](reference/prepared-data.md#traffic-light-sidecar).
-The main graph binary layout stays at version 2. Python passes bounded gate and
+The main graph binary layout stays at version 2. Without packed inputs, Python passes bounded gate and
 movement rows into native maps; their estimated retained bytes count toward the
 working-set cache budget. No raw OSM evidence enters a request working set.
 Signals On uses movement labels and carries arrival context across run legs;
@@ -143,15 +143,16 @@ an unavailable observation is not interpreted as measured zero.
 With prepared hills in SQLite schema 2, interval columns are also empty, but
 directional totals remain populated. Complete-segment traversal reads those
 totals. Hills-enabled planning loads detail only for snapped endpoint segments;
-distance exploration and hills Off load no interval detail. Endpoint detail is
-request-local, so graph-cache keys and owners stay independent of endpoints and
-hill preferences. Legacy embedded intervals remain usable without conversion.
+distance exploration and hills Off load no interval detail. Detail belongs to the
+prepared request graph, not `NumericEndpoint`, which contains only location data.
+Legacy graph-cache keys remain independent of endpoints and hill preferences.
+Legacy embedded intervals remain usable without conversion.
 
 Hills are one channel of [prepared routing inputs](architecture.md#prepared-routing-inputs),
 alongside mapped environment fields and directed signals. Their current placement
-inside the topology payload is a storage compatibility detail. The common input
-boundary preserves directional totals and endpoint-only detail; packed input
-artifact work must include hills rather than treating them as a separate subsystem.
+inside the topology payload is a storage compatibility detail. Optional packed
+inputs supply hill totals through the same loading/ownership boundary as other
+channels; a future topology format can remove the duplicated legacy totals.
 
 ### Separate endpoint intervals
 
@@ -168,9 +169,58 @@ the order above. Raw interval values are preserved exactly. Rust checks finite,
 nonnegative values, contiguous increasing spans, and coverage of the original
 segment before integrating a partial span. Physical sampled length in the seven
 features can differ from graph chainage length; complete traversal is identified
-using the original arc length, not sampled length. The Python endpoint container
-owns immutable detail bytes; native search copies only these small endpoint
+using the original arc length, not sampled length. The prepared request graph
+owns immutable detail bytes; native search copies only these small partial-segment
 arrays into request-local state before releasing the GIL.
+
+### Packed routing inputs
+
+`routing-inputs-v1.sqlite` is an optional read-only companion to the numeric
+artifact. Preparation consumes numeric hills and validated environment/signal
+sidecars; map rendering and selected-route zero-weight diagnostics keep their
+existing source artifacts. The runtime discovers this filename beside the numeric
+database. A present but incompatible artifact fails startup; absence retains
+legacy loading. Rebuild the native extension before enabling it.
+
+The SQLite schema and binary input format are version 1, independent of topology
+format 2. Metadata records available channels and a SHA-256 identity over numeric
+schema/metadata, ordered numeric chunk checksums, a streaming digest of separated
+hill interval IDs/checksums/raw sizes, and configured environment/signal
+source metadata (including models and raster identity). Changing the configured
+source set requires a matching export. Export holds source read transactions and
+publishes atomically to a previously absent destination. Source artifacts must
+remain immutable; their identity metadata is trusted as in existing sidecars.
+
+`chunks(number, channel, payload, sha256, byte_size)` uses the topology chunk ID
+and channel ID (1 hills, 2 environment, 3 signals) as its key. Every available
+channel covers every retained physical segment in that chunk, including empty
+signal records. `segment_chunks(segment_id, chunk_id)` retains physical ownership.
+`hill_details(segment_id, payload, sha256, byte_size)` stores exact partial hill
+rows separately, so enabling hills does not load area-wide interval detail.
+Every loaded payload is checked against its byte count and SHA-256. Startup scans
+hill checksum metadata for schema 2 without decoding the interval payloads.
+
+Packed chunks start with `<8sIIQ`: magic `RUNINP01`, version 1, channel, and segment
+count. Sorted, unique segment records start with `<qdQQ`: numeric ID, original
+graph length, first row count, second row count. All integers/floats are little
+endian, and there is no alignment padding between records.
+
+| Channel | Following data |
+| --- | --- |
+| Hills | 14 float64 directional totals; optional first-count rows of 16 float64 partial detail; second count zero. The exporter writes totals-only chunks and puts detail in `hill_details`. |
+| Environment | First-count rows of eight float64 values: start/end chainage, greenery/water/traffic/wetland, context support, traffic support. Unknown values use NaN; second count zero. |
+| Signals | First-count gate rows `<dQQ` (offset, unresolved flag, direction bits), then second-count movement rows `<qqQ` (node, incoming segment, unresolved). Outgoing segment is the record ID. Incoming segments may lie outside the chunk or area. |
+
+Hill detail BLOBs contain the same raw 16-float64 rows as legacy decompressed
+intervals. Native decoding validates shapes, flags, identifiers, intervals, and
+coverage before ownership is shared; area attachment checks graph segment lengths
+and required coverage. Active preferences load only their channels. Partial hill
+bytes load only for requested endpoint segments. Environment vectors are reference
+counted across overlapping graphs; signal lookup maps are assembled for selected
+outgoing segments, preserving arrivals from outside the window. Eviction or database
+closure does not invalidate inputs retained by active native graphs/requests.
+
+See [preparation and cache budgets](development.md#export-a-sqlite-network-dataset).
 
 Export validates finite values, dimensions, references, incidence, CSR consistency,
 bounds, flags, and IDs, then stores a checksum. Decoding always validates header,

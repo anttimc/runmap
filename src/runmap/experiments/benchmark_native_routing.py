@@ -18,7 +18,6 @@ from runmap.paths.database import network_metadata, open_network_database
 from runmap.paths.exploration import Snap
 from runmap.paths.local_network import load_local_network
 from runmap.paths.numeric_database import open_numeric_database
-from runmap.paths.numeric_hills import read_hill_intervals
 from runmap.routing.cost_types import PreferenceLevel, PreferenceSettings
 from runmap.routing.geometry import projected_points
 from runmap.routing.numeric_planner import NumericRunResult, numeric_plan_run
@@ -32,12 +31,11 @@ from runmap.routing.types import Bounds
 DEFAULT_BOUNDS: Bounds = (374971.56657009746, 6675095.112818664, 381827.50090309826, 6680883.1672423985)
 
 
-def _endpoint(connection: sqlite3.Connection, snap: Snap, *, include_hill_intervals: bool = False) -> NumericEndpoint:
+def _endpoint(connection: sqlite3.Connection, snap: Snap) -> NumericEndpoint:
     row = connection.execute("SELECT number FROM identities WHERE kind='segment' AND external_id=?", (snap.segment_id,)).fetchone()
     if row is None:
         raise ValueError("Snapped segment is missing from numeric identities")
-    return NumericEndpoint(segment_id=int(row[0]), graph_offset_m=snap.graph_offset_m, chainage_m=snap.chainage_m,
-                           hill_intervals=read_hill_intervals(connection, int(row[0])) if include_hill_intervals else None)
+    return NumericEndpoint(segment_id=int(row[0]), graph_offset_m=snap.graph_offset_m, chainage_m=snap.chainage_m)
 
 
 def _canonical_result(result: NumericRunResult) -> str:
@@ -116,12 +114,13 @@ def benchmark_native_routing(database: Path, numeric: Path, bounds: Bounds = DEF
         home_snap, turnaround_snap = _snap(data, options, True, monotonic()+60), _snap(data, options, False, monotonic()+60)
         if home_snap is None or turnaround_snap is None:
             raise ValueError("Benchmark endpoints have no eligible snap")
-        first = _endpoint(connection, home_snap, include_hill_intervals=hills != "off")
-        last = _endpoint(connection, turnaround_snap, include_hill_intervals=hills != "off")
+        first = _endpoint(connection, home_snap)
+        last = _endpoint(connection, turnaround_snap)
         points = projected_points([[home_snap.longitude, home_snap.latitude], [turnaround_snap.longitude, turnaround_snap.latitude]])
         snap_ms = (perf_counter()-started)*1000
         started = perf_counter()
-        graph = load_numeric_graph(connection, bounds)
+        segments = tuple(endpoint.segment_id for endpoint in (first, last) if endpoint.segment_id is not None)
+        graph = load_numeric_graph(connection, bounds, hill_segments=segments if hills != "off" else ())
         prepare_ms = (perf_counter()-started)*1000
     result, samples, deterministic = _sample_runs(graph, first, last, points, options, repeats)
     distance_samples, reached = _sample_distances(graph, first, options, repeats)
