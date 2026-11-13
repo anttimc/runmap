@@ -103,9 +103,10 @@ for contracts. Follow the [scalability proposal](routing-scalability.md):
   warm edits, cold-area requests, and process-cold requests separately.
 - Extend the [packed-input measurements](archive/history/2026-11-13-packed-routing-inputs.md)
   to larger coverage, additional starts, cold storage, and sustained concurrency.
-  Resolve the measured hill-only loading/search regression before making packed
-  inputs standard. Remove duplicated legacy hill totals in a future topology
-  format migration and reduce per-segment hill lookup/attachment overhead.
+  Validate the compact hill arrays, compressed input loading, and topology-only
+  generation across those workloads before making packed inputs standard.
+  Reduce cold hill-channel activation and startup identity-scanning latency;
+  restored warm-edit performance does not establish first-activation acceptance.
   Extend
   shared chunk reuse to avoid area-wide index assembly and serialize only related
   loads. Bound in-flight memory.

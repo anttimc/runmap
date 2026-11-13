@@ -33,7 +33,10 @@ configured-environment 38.54 km case completed at a 1.05 s repeated median;
 peak RSS for that workload fell from 2,475 to 762 MiB.
 The [November 13 packed-input measurements](archive/history/2026-11-13-packed-routing-inputs.md)
 cover the optional hill/environment/signal artifact, reduced mixed-preference
-loading, and a hill-only regression that must be resolved before standard use.
+loading, and its original hill-only regression. The
+[compact-storage follow-up](archive/history/2026-11-13-compact-hill-inputs.md)
+restores warm hill-edit performance; cold activation and broader deployment
+acceptance remain outstanding.
 Area assembly, search improvements, and visible interaction acceptance remain.
 
 For Rust phase timing, allocation traffic, and visual results on a fixed working
@@ -75,6 +78,11 @@ see [routing scalability](routing-scalability.md), which distinguishes delivered
 chunk reuse from the remaining proposals.
 
 ## Longer-run validation
+
+The [2026-11-13 compact-storage follow-up](archive/history/2026-11-13-compact-hill-inputs.md)
+measures the later 40 km workload after removing duplicated hill storage and
+restoring packed-hill edit performance. It does not establish browser acceptance
+of the one-second target. The observations below retain their original context.
 
 The API segment cap is now 650,000, with five retries, a 2,500 km² window
 limit, and the existing 15-second deadline. A request from `(24.795, 60.216)`

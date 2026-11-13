@@ -290,5 +290,5 @@ class NumericChunkTests(unittest.TestCase):
                 self.assertEqual(stored.chunk.arrays["hill_features"].shape, (0, 2, 7))
             with self.assertRaises(sqlite3.OperationalError):
                 connection.execute("DELETE FROM numeric_chunks")
-        with self.assertRaisesRegex(ValueError, "schema"):
+        with self.assertRaisesRegex(ValueError, "schema|format"):
             open_numeric_database(reference)

@@ -13,8 +13,9 @@ from runmap.routing.types import Bounds
 class SharedGraphStore:
     """Coordinate chunk ownership under the numeric data owner's preparation lock."""
 
-    def __init__(self, connection: sqlite3.Connection, cache_bytes: int) -> None:
+    def __init__(self, connection: sqlite3.Connection, cache_bytes: int, *, external_hills: bool = False) -> None:
         self.connection = connection
+        self.external_hills = external_hills
         self.chunks: OrderedDict[int, _routing_native.NumericChunk] = OrderedDict()
         self.resident_bytes = 0
         self.resize(cache_bytes)
@@ -42,7 +43,8 @@ class SharedGraphStore:
                 stored = read_numeric_payload(self.connection, number, verify_checksums=verify_checksums)
                 check_deadline(deadline)
                 chunk = _routing_native.NumericChunk(
-                    stored.payload, timeout_seconds=None if deadline is None else max(0.0, deadline - monotonic()))
+                    stored.payload, timeout_seconds=None if deadline is None else max(0.0, deadline - monotonic()),
+                    external_hills=self.external_hills)
                 check_deadline(deadline)
                 if chunk.resident_bytes <= self.cache_bytes:
                     self._evict(chunk.resident_bytes)

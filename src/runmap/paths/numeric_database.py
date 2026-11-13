@@ -174,10 +174,11 @@ def open_numeric_database(path: Path, cache_kib: int = 16384, *, check_same_thre
         raise ValueError("Page-cache target must be positive")
     connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, check_same_thread=check_same_thread)
     try:
-        if connection.execute("PRAGMA user_version").fetchone()[0] not in (1, NUMERIC_SCHEMA_VERSION):
+        schema = connection.execute("PRAGMA user_version").fetchone()[0]
+        if schema not in (1, NUMERIC_SCHEMA_VERSION, 3):
             raise ValueError("Unsupported numeric database schema")
         row = connection.execute("SELECT value FROM metadata WHERE key = 'numeric_format_version'").fetchone()
-        if row is None or int(row[0]) != FORMAT_VERSION:
+        if row is None or (schema, int(row[0])) not in ((1, FORMAT_VERSION), (2, FORMAT_VERSION), (3, 3)):
             raise ValueError("Unsupported numeric chunk format")
         network_metadata(connection)
         connection.execute(f"PRAGMA cache_size = {-cache_kib}")

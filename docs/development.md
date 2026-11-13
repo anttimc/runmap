@@ -356,7 +356,7 @@ the JSON loader. Distance shells require the matching numeric artifact.
 ### Export a SQLite network dataset
 
 Run planning and distance exploration use the [numeric routing artifact](numeric-routing-format.md) when
-`numeric-routing-v2.sqlite` is present beside `network.sqlite`, or when
+`numeric-routing-v3.sqlite` or `numeric-routing-v2.sqlite` is present beside `network.sqlite`, or when
 `RUNMAP_NUMERIC_DATABASE` names it explicitly. Export it once from the matching
 prepared network, then restart the API:
 
@@ -368,7 +368,8 @@ uv run python -m runmap.cli paths export-numeric \
 
 Startup validates metadata without loading graph chunks. A mismatched or explicitly
 configured missing artifact fails startup; re-export after replacing the source
-network. Without a numeric artifact, both use the existing local SQLite backend.
+network. Default discovery prefers version 3 when both filenames exist; an explicit
+`RUNMAP_NUMERIC_DATABASE` takes precedence. Without a numeric artifact, both use the existing local SQLite backend.
 Existing binary version-2 numeric artifacts work without re-export. New exports
 omit segments forbidden by every supported policy and store detailed hill
 intervals separately in SQLite schema 2. Rebuild the native extension, re-export
@@ -378,7 +379,7 @@ smaller routing working sets. Restart the API after changing the artifact. See
 
 `RUNMAP_NUMERIC_CACHE_BYTES` defaults to 134217728 (128 MiB) per API process.
 The shared topology LRU may retain up to half this budget.
-With packed inputs, the input store may additionally retain up to one quarter;
+With packed inputs, the input store may additionally retain up to half;
 exact-area graphs use the
 remaining accounted capacity. Graph accounting includes their chunk owners and
 native index allocation capacities, plus allowances for environment/signal data.
@@ -400,8 +401,9 @@ segment selection, and frontier flags are still assembled for each new rectangle
 Without packed inputs, enabled environment/signal search channels load per area. With their
 preferences Off, API planning skips those loads. Configured environment unknown-
 length observations are completed only for returned route segments, after window
-selection; signals Off exposes no passage counts. Hill totals remain embedded in
-the current numeric buffers, while enabled partial endpoints load hill detail
+selection; signals Off exposes no passage counts. Legacy loading uses embedded
+hill totals. With packed inputs, cached topology excludes those columns and hill
+totals load only when enabled. Partial endpoints load hill detail
 through the same [prepared input boundary](architecture.md#prepared-routing-inputs).
 Preparation and selected-route source reads remain
 serialized under the numeric service lock. Rebuild the native extension after
@@ -421,20 +423,49 @@ uv run --no-sync python -m runmap.paths.routing_inputs \
 Omit `--environment` or `--signals` when those sources are not configured/present.
 Hills are included according to numeric metadata. The exporter refuses overwrite;
 prepare a new generation separately and replace artifacts only while the service
-is stopped. Restart to discover `routing-inputs-v1.sqlite` beside the selected
+is stopped. Restart to discover `routing-inputs-v2.sqlite` (preferred) or
+`routing-inputs-v1.sqlite` beside the selected
 numeric database. A mismatched present artifact fails startup. Runtime still needs
 configured source sidecars for identity checks, display, and selected-route diagnostics.
 See the [packed format contract](numeric-routing-format.md#packed-routing-inputs).
 
+To remove the duplicate source hill storage and compress independently loaded input
+chunks, convert an existing matching pair to a new generation directory:
+
+```sh
+uv run --no-sync python -m runmap.paths.compact_routing \
+  data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite \
+  data/paths/prepared/helsinki-capital-area/routing-inputs-v1.sqlite \
+  data/paths/prepared/helsinki-capital-area-compact \
+  --environment data/paths/prepared/helsinki-capital-area/environment-join.sqlite \
+  --signals data/paths/prepared/helsinki-capital-area/signals.sqlite
+```
+
+This publishes `numeric-routing-v3.sqlite` and `routing-inputs-v2.sqlite` together
+by renaming a completed staging directory. The output directory must not exist.
+Select the new numeric file with `RUNMAP_NUMERIC_DATABASE`; retain the existing
+network, raster bundle, and configured environment/signal sources. Keep both new
+files together: topology-only generations require their matching packed inputs.
+The converter checks source integrity, preserves numeric identities, strips all
+hill columns/detail from topology, compresses input records, and rebinds the
+pair's identity. It does not replace source artifacts or change the base
+`export-numeric` command, which still produces a version-2 conversion source.
+
 Packed search loads bytes directly into validated native channel chunks, avoiding
 per-interval Python records. Overlapping graphs share environment vectors and hill
-totals. The input store also caches partial hill bytes by segment. Signal maps and
-segment lookup maps are still assembled per area; topology format 2 retains legacy
-hill totals for compatibility. Loading remains serialized, and retained cache
+totals in contiguous chunk arrays, addressed directly by chunk and segment during
+search. Symmetric forward/reverse quality lengths and ascent/descent values are
+stored once without changing floating-point values; asymmetric source vectors
+retain their full representation. Hill attachment validates chunk membership and lengths once; it retains
+an index permutation only when topology order differs from packed order. The input
+store also caches partial hill bytes by segment. Signal maps and environment
+lookups are still assembled per area. Loading remains serialized, and retained cache
 budgets do not bound in-flight allocations or total RSS.
-The [packed-input measurements](archive/history/2026-11-13-packed-routing-inputs.md)
-record mixed-preference improvements and the remaining hill-only regression;
-this artifact is optional while those tradeoffs are addressed.
+The original [packed-input measurements](archive/history/2026-11-13-packed-routing-inputs.md)
+record the earlier hill regression; the
+[compact-storage follow-up](archive/history/2026-11-13-compact-hill-inputs.md)
+records the revised representation and remaining latency limits. Packed artifacts
+remain optional pending broader workload and deployment acceptance.
 
 For loads using the shared store, `payload_load_ms` includes preparation of native
 chunk misses; `index_prepare_ms` measures area assembly and optional cost attachment.
@@ -540,8 +571,9 @@ candidate JSON chunks one at a time and assembles a local Python graph.
 Global incidence counts distinguish unloaded connections from true dead ends.
 Prepared policies and hills remain in the indexed feature tables. Local requests
 read only their selected policy and omit the unused saved projected geometry.
-The reference backend skips hill feature loading when unused. Numeric buffers
-currently include hill arrays, but distance exploration does not evaluate them. Run coverage checks inspect candidate route segments
+The reference backend skips hill feature loading when unused. Legacy numeric buffers
+include hill arrays; packed loading and topology format 3 exclude them from retained
+topology. Distance exploration loads no packed hill channel. Run coverage checks inspect candidate route segments
 rather than every segment in each attempted window.
 
 Restart after changing the selected dataset. A missing database leaves path services
@@ -673,7 +705,7 @@ authorization layer; do not expose a deployment containing private coverage.
 | `RUNMAP_PATH_BACKEND` | `sqlite`; `json` explicitly enables the legacy full graph loader |
 | `RUNMAP_PATH_DATABASE_CONNECTIONS` | 2 exclusively leased read-only connections per worker |
 | `RUNMAP_PATH_DATABASE_CACHE_KIB` | 16,384 KiB page-cache target per connection; excludes decoded responses, tile caches, and OS caches |
-| `RUNMAP_NUMERIC_DATABASE` | Optional numeric artifact override; otherwise auto-detect sibling `numeric-routing-v2.sqlite` |
+| `RUNMAP_NUMERIC_DATABASE` | Optional numeric artifact override; otherwise prefer sibling `numeric-routing-v3.sqlite`, then `numeric-routing-v2.sqlite` |
 | `RUNMAP_NUMERIC_CACHE_BYTES` | 134,217,728 accounted bytes of retained numeric working sets per process |
 | `RUNMAP_RUN_DEADLINE` | 15 seconds per planner request |
 | `RUNMAP_RUN_MAX_AREA_KM2` | 2,500 km² maximum run-planning query area |
@@ -762,7 +794,8 @@ uv run --extra web --extra experiments python -m runmap.experiments.loop_length_
   --widths 0 0.06 0.12 0.18 0.24 0.30 0.36 0.42
 ```
 
-The matching `numeric-routing-v2.sqlite` must be beside the network database.
+The matching numeric artifact must be beside the network database; version 3
+also requires its paired packed inputs.
 Use a fresh output directory; existing samples are never overwritten. A pilot
 can use `--grid 3 3 --widths 0 0.18 0.42`. Defaults match the full command above.
 This is an offline experiment, not an automatic route recommendation feature.

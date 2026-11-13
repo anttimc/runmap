@@ -14,6 +14,10 @@ measurements separate from historical reports, and identify their dataset/model.
 
 ## Planning and implementation history
 
+The [2026-11-13 compact hill follow-up](history/2026-11-13-compact-hill-inputs.md)
+records the packed-hill regression fix, topology-only conversion, compressed input
+storage, response equivalence, and remaining interaction latency.
+
 The [2026-11-04 route-mode UI review](history/2026-11-04-route-mode-ui.md)
 records basic browser checks, user acceptance of current routing, and deferred
 UI review.

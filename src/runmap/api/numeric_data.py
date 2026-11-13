@@ -54,10 +54,15 @@ class NumericRoutingData:
                     network_feature_identity=metadata.feature_identity,
                     raster_dataset_id=manifest["dataset_id"],
                     raster_sha256=manifest["artifacts"][0]["sha256"])
-            input_path = path.with_name("routing-inputs-v1.sqlite")
+            input_path = path.with_name("routing-inputs-v2.sqlite")
+            if not input_path.is_file():
+                input_path = path.with_name("routing-inputs-v1.sqlite")
             if input_path.is_file():
                 self.input_connection = open_routing_inputs(input_path, self.connection,
                     self.environment_connection, self.signal_connection)
+            if (self.connection.execute("PRAGMA user_version").fetchone()[0] == 3
+                    and self.input_connection is None):
+                raise ValueError("Topology-only routing requires matching packed inputs")
         except BaseException:
             if self.input_connection is not None:
                 self.input_connection.close()
@@ -71,8 +76,9 @@ class NumericRoutingData:
         self.cache_bytes = cache_bytes
         self.resident_bytes = 0
         self.graphs: OrderedDict[tuple[Bounds, bool, bool, bool], tuple[LoadedNumericGraph, int]] = OrderedDict()
-        self.chunk_store = SharedGraphStore(self.connection, cache_bytes // 2)
-        self.input_store = (SharedInputStore(self.connection, self.input_connection, cache_bytes // 4)
+        self.chunk_store = SharedGraphStore(self.connection, cache_bytes // 2,
+                                            external_hills=self.input_connection is not None)
+        self.input_store = (SharedInputStore(self.connection, self.input_connection, cache_bytes // 2)
                             if self.input_connection is not None else None)
         self.inputs = PreparedRoutingInputs(self.connection, self.environment_connection,
                                             self.signal_connection, self.input_connection)
@@ -97,7 +103,7 @@ class NumericRoutingData:
             check_deadline(deadline)
             self.chunk_store.resize(self.cache_bytes // 2)
             if self.input_store is not None:
-                self.input_store.resize(self.cache_bytes // 4)
+                self.input_store.resize(self.cache_bytes // 2)
             self._evict_graphs(0)
             endpoints = tuple(self._endpoint(snap) for snap in snaps)
             key = bounds, requirements.environment, requirements.signals, requirements.hills if self.input_store else False

@@ -28,7 +28,9 @@ class SQLitePathData:
             if (self.metadata.coverage is None or self.metadata.method is None
                     or self.metadata.measurement_sha256 is None):
                 raise ValueError("Path API requires prepared measurements and coverage")
-            candidate = numeric_path or path.with_name("numeric-routing-v2.sqlite")
+            candidate = numeric_path or path.with_name("numeric-routing-v3.sqlite")
+            if numeric_path is None and not candidate.is_file():
+                candidate = path.with_name("numeric-routing-v2.sqlite")
             if numeric_path is not None or candidate.is_file():
                 self.numeric = NumericRoutingData(candidate, self.metadata, numeric_cache_bytes,
                                                   environment_path=environment_path,

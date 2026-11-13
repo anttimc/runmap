@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import sqlite3
 import struct
+import zlib
 from tempfile import NamedTemporaryFile
 
 from runmap import _routing_native
@@ -28,6 +29,31 @@ HEADER = struct.Struct("<8sIIQ")
 SEGMENT = struct.Struct("<qdQQ")
 GATE = struct.Struct("<dQQ")
 TURN = struct.Struct("<qqQ")
+COMPRESSED_HEADER = struct.Struct("<8sQ")
+MAX_INPUT_BYTES = 64 * 1024**2
+
+
+def compress_payload(payload: bytes) -> bytes:
+    """Bound independently compressed records so readers need no whole-area buffer."""
+    if not payload or len(payload) > MAX_INPUT_BYTES:
+        raise ValueError("Invalid routing input decompressed size")
+    return COMPRESSED_HEADER.pack(b"RUNZIP01", len(payload)) + zlib.compress(payload, level=1)
+
+
+def _decompress_payload(payload: bytes) -> bytes:
+    if len(payload) < COMPRESSED_HEADER.size:
+        raise ValueError("Truncated compressed routing input")
+    magic, size = COMPRESSED_HEADER.unpack_from(payload)
+    if magic != b"RUNZIP01" or not 0 < size <= MAX_INPUT_BYTES:
+        raise ValueError("Invalid routing input decompressed size")
+    decoder = zlib.decompressobj()
+    try:
+        raw = decoder.decompress(payload[COMPRESSED_HEADER.size:], size + 1)
+    except zlib.error as error:
+        raise ValueError("Invalid compressed routing input") from error
+    if len(raw) != size or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail:
+        raise ValueError("Invalid routing input decompressed size")
+    return raw
 
 
 def _metadata(connection: sqlite3.Connection) -> dict[str, object]:
@@ -64,6 +90,19 @@ def _hill_detail_identity(numeric: sqlite3.Connection) -> str:
     for row in numeric.execute("SELECT segment_id, sha256, raw_size FROM hill_intervals ORDER BY segment_id"):
         digest.update(json.dumps(row, separators=(",", ":"), allow_nan=False).encode())
         digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def packed_hill_identity(connection: sqlite3.Connection) -> str:
+    """Bind topology-only generations to the sole stored hill channel and detail."""
+    digest = hashlib.sha256()
+    for query in (
+            "SELECT number, sha256, byte_size FROM chunks WHERE channel=1 ORDER BY number",
+            "SELECT segment_id, sha256, byte_size FROM hill_details ORDER BY segment_id"):
+        digest.update(query.encode())
+        for row in connection.execute(query):
+            digest.update(json.dumps(row, separators=(",", ":")).encode())
+            digest.update(b"\n")
     return digest.hexdigest()
 
 
@@ -228,6 +267,8 @@ def export_routing_inputs(numeric_path: Path, destination: Path, *,
     try:
         with ExitStack() as stack:
             numeric = stack.enter_context(closing(open_numeric_database(numeric_path)))
+            if numeric.execute("PRAGMA user_version").fetchone()[0] == 3:
+                raise ValueError("Topology-only artifacts must retain their paired packed inputs")
             environment = None if environment_path is None else stack.enter_context(closing(
                 sqlite3.connect(environment_path.resolve().as_uri() + "?mode=ro", uri=True)))
             signals = None if signal_path is None else stack.enter_context(closing(
@@ -257,11 +298,14 @@ def open_routing_inputs(path: Path, numeric: sqlite3.Connection,
     connection = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, check_same_thread=False)
     try:
         metadata = _metadata(connection)
-        if (connection.execute("PRAGMA user_version").fetchone()[0] != FORMAT_VERSION
-                or metadata.get("format_version") != FORMAT_VERSION):
+        storage_version = connection.execute("PRAGMA user_version").fetchone()[0]
+        if storage_version not in (1, 2) or metadata.get("format_version") != storage_version:
             raise ValueError("Unsupported routing input format")
         if metadata.get("identity") != input_identity(numeric, environment, signals):
             raise ValueError("Routing input source identity mismatch")
+        if (numeric.execute("PRAGMA user_version").fetchone()[0] == 3
+                and _metadata(numeric).get("routing_hill_identity") != packed_hill_identity(connection)):
+            raise ValueError("Routing hill source identity mismatch")
         channels = _channels(numeric, environment, signals)
         if metadata.get("channels") != list(channels) or input_channels(connection) != channels:
             raise ValueError("Invalid routing input channels")
@@ -284,6 +328,8 @@ def read_input_payload(connection: sqlite3.Connection, number: int, channel: int
         raise ValueError("Routing input byte count mismatch")
     if hashlib.sha256(payload).hexdigest() != checksum:
         raise ValueError("Routing input checksum mismatch")
+    if connection.execute("PRAGMA user_version").fetchone()[0] == 2:
+        payload = _decompress_payload(payload)
     if len(payload) < HEADER.size or HEADER.unpack_from(payload)[:3] != (MAGIC, FORMAT_VERSION, channel):
         raise ValueError("Routing input channel header mismatch")
     return payload
@@ -301,10 +347,16 @@ def read_hill_payload(connection: sqlite3.Connection, segment: int) -> bytes:
     if row is None:
         raise ValueError("Routing hill detail is missing")
     payload, checksum, size = row
-    if not isinstance(payload, bytes) or len(payload) != size or size <= 0 or size % 128:
+    storage_version = connection.execute("PRAGMA user_version").fetchone()[0]
+    if (not isinstance(payload, bytes) or len(payload) != size or size <= 0
+            or (storage_version == 1 and size % 128)):
         raise ValueError("Routing hill detail byte count mismatch")
     if hashlib.sha256(payload).hexdigest() != checksum:
         raise ValueError("Routing hill detail checksum mismatch")
+    if storage_version == 2:
+        payload = _decompress_payload(payload)
+    if len(payload) % 128:
+        raise ValueError("Routing hill detail byte count mismatch")
     return payload
 
 

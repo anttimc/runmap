@@ -1,4 +1,4 @@
-//! Checked views over the version-2 immutable numeric chunk format.
+//! Checked views over legacy numeric chunks and version-3 topology-only chunks.
 
 #[derive(Debug, PartialEq)]
 pub enum RoutingError {
@@ -103,7 +103,11 @@ fn lengths(c: Counts) -> Result<[usize; 23]> {
 }
 
 pub fn parse_chunk(payload: &[u8]) -> Result<Chunk<'_>> {
-    if payload.len() < 64 || &payload[..8] != b"RUNNUM02" || payload[8..12] != 2u32.to_le_bytes() {
+    if payload.len() < 64 {
+        return Err(RoutingError::Invalid("Truncated numeric chunk header"));
+    }
+    let topology_only = &payload[..8] == b"RUNNUM03" && payload[8..12] == 3u32.to_le_bytes();
+    if !topology_only && (&payload[..8] != b"RUNNUM02" || payload[8..12] != 2u32.to_le_bytes()) {
         return Err(RoutingError::Invalid(
             "Unsupported or truncated numeric chunk header",
         ));
@@ -122,9 +126,17 @@ pub fn parse_chunk(payload: &[u8]) -> Result<Chunk<'_>> {
         points: counts[4],
         intervals: counts[5],
     };
+    if topology_only && c.intervals != 0 {
+        return Err(RoutingError::Invalid(
+            "Topology-only chunks cannot contain hill intervals",
+        ));
+    }
     let mut columns = [Column { bytes: &[] }; 23];
     let mut position = 64usize;
     for (i, length) in lengths(c)?.into_iter().enumerate() {
+        if topology_only && i >= HILL_OFFSETS {
+            break;
+        }
         position = position
             .checked_add(63)
             .ok_or(RoutingError::Invalid("Numeric chunk size overflow"))?
@@ -250,7 +262,9 @@ pub fn validate_chunk(chunk: &Chunk<'_>) -> Result<()> {
         return Err(RoutingError::Invalid("Invalid numeric policy flags"));
     }
     validate_offsets(chunk.columns[GEOMETRY_OFFSETS], c.segments, c.points)?;
-    validate_offsets(chunk.columns[HILL_OFFSETS], c.segments, c.intervals)?;
+    if !chunk.columns[HILL_OFFSETS].bytes.is_empty() {
+        validate_offsets(chunk.columns[HILL_OFFSETS], c.segments, c.intervals)?;
+    }
     validate_adjacency(chunk, OUTGOING_OFFSETS, OUTGOING_ARCS, 0)?;
     validate_adjacency(chunk, INCOMING_OFFSETS, INCOMING_ARCS, 1)
 }

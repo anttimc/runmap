@@ -93,7 +93,11 @@ New areas still merge node indexes and rebuild selection/frontier state; a singl
 preparation lock still serializes unrelated loads. With the optional
 [packed input artifact](numeric-routing-format.md#packed-routing-inputs), enabled
 channels reuse validated native chunks; environment interval vectors are shared
-across area graphs. Selected-segment lookup maps are still assembled per area.
+across area graphs. Hill totals use shared contiguous chunk arrays and direct
+chunk/segment addressing. Packed graph buffers omit legacy hill columns; an
+explicit format-3 conversion removes those columns and interval detail from disk,
+with hills owned solely by the paired compressed input artifact. Environment and
+signal lookup maps are still assembled per area.
 Without that artifact, enabled channels retain their legacy area attachment path.
 Overlapping-window, concurrent-preparation, eviction, deadline,
 and route-equivalence tests cover reuse. The

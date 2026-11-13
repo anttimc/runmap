@@ -360,10 +360,32 @@ impl RoutingInputChunk {
 #[pymethods]
 impl NumericChunk {
     #[new]
-    #[pyo3(signature = (payload, *, timeout_seconds=None))]
-    fn new(py: Python<'_>, payload: Py<PyBytes>, timeout_seconds: Option<f64>) -> PyResult<Self> {
+    #[pyo3(signature = (payload, *, timeout_seconds=None, external_hills=false))]
+    fn new(
+        py: Python<'_>,
+        mut payload: Py<PyBytes>,
+        timeout_seconds: Option<f64>,
+        external_hills: bool,
+    ) -> PyResult<Self> {
+        let end = deadline(timeout_seconds)?;
+        check_deadline(end).map_err(routing_error)?;
+        if external_hills {
+            let bytes = payload.bind(py).as_bytes();
+            let chunk = numeric::parse_chunk(bytes).map_err(routing_error)?;
+            if !chunk.columns[numeric::HILL_TOTALS].bytes.is_empty() {
+                // Validate before discarding legacy columns, then retain topology only.
+                numeric::validate_chunk(&chunk).map_err(routing_error)?;
+                let last = chunk.columns[numeric::INCOMING_ARCS].bytes;
+                let size = last.as_ptr() as usize - bytes.as_ptr() as usize + last.len();
+                let mut topology = bytes[..size].to_vec();
+                topology[..8].copy_from_slice(b"RUNNUM03");
+                topology[8..12].copy_from_slice(&3u32.to_le_bytes());
+                topology[56..64].fill(0);
+                payload = PyBytes::new(py, &topology).unbind();
+            }
+        }
         Ok(Self {
-            data: prepare_payload(py, payload, deadline(timeout_seconds)?)?,
+            data: prepare_payload(py, payload, end)?,
         })
     }
 
@@ -409,7 +431,7 @@ fn graph_from_chunks(
         distance_scale: scale,
         environment: None,
         signals: None,
-        hills: Arc::new(HashMap::new()),
+        hills: Arc::new(Vec::new()),
         input_owners: Vec::new(),
     })
 }
@@ -434,7 +456,13 @@ impl NumericGraph {
             .iter()
             .map(|owner| owner.resident_bytes)
             .sum::<usize>();
-        let maps = self.hills.capacity() * 64
+        let maps = self.hills.capacity() * std::mem::size_of::<Option<routing_input::HillView>>()
+            + self
+                .hills
+                .iter()
+                .flatten()
+                .map(|view| view.positions.capacity() * std::mem::size_of::<usize>())
+                .sum::<usize>()
             + self
                 .environment
                 .as_ref()
@@ -479,21 +507,35 @@ impl NumericGraph {
         let attached = py
             .detach(|| {
                 let mut lengths = HashMap::new();
-                for (index, (chunk, selected)) in views.iter().zip(&self.graph.selected).enumerate()
-                {
-                    for (segment, enabled) in selected.iter().enumerate() {
-                        check_deadline(end)?;
-                        if *enabled {
-                            if let Some(length) = self.graph.lengths[index][segment] {
-                                lengths.insert(chunk.columns[SEGMENT_IDS].integer(segment), length);
+                if owners.iter().any(|owner| owner.channel != 1) {
+                    for (index, (chunk, selected)) in
+                        views.iter().zip(&self.graph.selected).enumerate()
+                    {
+                        for (segment, enabled) in selected.iter().enumerate() {
+                            check_deadline(end)?;
+                            if *enabled {
+                                if let Some(length) = self.graph.lengths[index][segment] {
+                                    lengths.insert(
+                                        chunk.columns[SEGMENT_IDS].integer(segment),
+                                        length,
+                                    );
+                                }
                             }
                         }
                     }
                 }
-                routing_input::attach(&owners, &lengths, end)
+                let hills = routing_input::attach_hills(
+                    &owners,
+                    &views,
+                    &self.graph.lengths,
+                    &self.graph.selected,
+                    end,
+                )?;
+                Ok::<_, RoutingError>((routing_input::attach(&owners, &lengths, end)?, hills))
             })
             .map_err(routing_error)?;
-        self.hills = attached.hills;
+        let (attached, hills) = attached;
+        self.hills = Arc::new(hills);
         if attached.environment.is_some() {
             self.environment = attached.environment;
         }

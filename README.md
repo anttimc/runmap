@@ -37,7 +37,8 @@ Missing path artifacts leave terrain exploration available.
 The default path backend requires an exported sibling `network.sqlite`; see
 [SQLite setup](docs/development.md#export-a-sqlite-network-dataset). Exploration
 and run planning load bounded local graphs without the source JSON. A matching
-`numeric-routing-v2.sqlite` enables native run planning and distance exploration
+`numeric-routing-v2.sqlite` (or a converted version-3 generation) enables native
+run planning and distance exploration
 with a bounded working-set cache; see the SQLite setup instructions above.
 
 ## Documentation

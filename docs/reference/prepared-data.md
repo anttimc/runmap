@@ -307,7 +307,9 @@ observations describe the actual traversals.
 
 ## Numeric routing artifact
 
-`numeric-routing-v2.sqlite` is exported from the prepared network database. Its
+`numeric-routing-v2.sqlite` is exported from the prepared network database;
+an explicit conversion produces topology-only `numeric-routing-v3.sqlite` with
+paired compressed routing inputs. Its
 metadata must match that database exactly. Network schema, numeric database schema,
 and binary chunk versions are separate contracts. An explicitly selected missing
 or incompatible numeric artifact fails loading; it is not silently replaced with
@@ -317,7 +319,9 @@ Numeric preparation assigns stable dataset-local identities and partitions
 topology into spatial chunks. It preserves complete segments, shared junction
 identities, policy permissions, and prepared costs. Segments forbidden by every
 supported profile are omitted from the numeric policy union. Full-segment hill
-totals are shared with graph buffers; partial endpoint interval detail is stored
+totals use shared input arrays when packed inputs are enabled, and legacy graph
+columns otherwise. Topology-only generations contain no hill columns or detail.
+Partial endpoint interval detail is stored
 separately and loaded only when needed.
 
 The [numeric format](../numeric-routing-format.md) owns byte layout, versions,

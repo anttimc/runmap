@@ -192,12 +192,16 @@ Availability describes the configured validated sources, independent
 of what a particular search loads. Shape fields and route reuse depend on the
 request and remain search-owned.
 
-This common boundary does not require identical representations. The current
-numeric format still embeds hill totals for compatibility. The optional
-`routing-inputs-v1.sqlite` artifact packs all three channels against numeric chunk
+This common boundary does not require identical representations. The optional
+`routing-inputs-v1.sqlite` and compressed `routing-inputs-v2.sqlite` artifacts pack
+all three channels against numeric chunk
 identities. `routing/input_store.py` retains validated native channel chunks and
 partial hill bytes under a bounded budget; active graphs retain native owners
-after eviction. Environment interval vectors are shared across overlapping graphs.
+after eviction. Environment interval vectors and contiguous hill-total arrays are shared across overlapping graphs.
+Hill traversal indexes chunk/segment arrays directly; it does not build a per-segment
+hill ownership map. Packed loading discards legacy topology hill columns before
+cache retention. Converted topology format 3 removes those columns and the separate
+hill interval table from disk as well; its paired input artifact owns all routing hills.
 Hill detail is addressed by segment to avoid loading intervals for a whole area.
 Legacy artifacts use source-sidecar adapters through the same input boundary.
 The format and identity contract belongs in the

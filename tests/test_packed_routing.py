@@ -19,6 +19,7 @@ from runmap.environment_fields import EnvironmentField
 from runmap.paths.database import network_metadata
 from runmap.paths.exploration import Snap
 from runmap.paths.routing_inputs import export_routing_inputs, read_input_payload
+from runmap.paths.compact_routing import compact_routing
 from runmap.routing.environment_costs import EnvironmentWeights
 from runmap.routing.input_store import SharedInputStore
 from runmap.routing.numeric_search import (LoadedNumericGraph, NumericEndpoint, NumericPath,
@@ -93,6 +94,29 @@ class PackedRoutingTests(unittest.TestCase):
                 store.load(bounds, InputRequirements(environment=True), monotonic()-1)
             store.resize(0)
             self.assertEqual(store.resident_bytes, 0)
+
+    def test_topology_only_generation_matches_all_channel_and_off_responses(self) -> None:
+        requests = [self.fixture.request.model_copy(update={"preferences": prefs, "mode": mode})
+                    for prefs in (PreferencesRequest(), PreferencesRequest(hills="high"),
+                        PreferencesRequest(hills="high", environment_greenery="low", signals="low"))
+                    for mode in ("round_trip", "one_way")]
+        expected = [generate_database_run(self.fixture.data, request) for request in requests]
+        export_routing_inputs(self.numeric, self.packed, environment_path=self.fixture.environment,
+                              signal_path=self.numeric.with_name("signals.sqlite"))
+        output = self.numeric.parent / "compact"
+        compact_routing(self.numeric, self.packed, output, environment_path=self.fixture.environment,
+                        signal_path=self.numeric.with_name("signals.sqlite"))
+        # Keep default artifact discovery under test, including precedence over version 2.
+        (output / "network.sqlite").symlink_to(self.fixture.database)
+        (output / "signals.sqlite").symlink_to(self.numeric.with_name("signals.sqlite"))
+        with closing(SQLitePathData(output / "network.sqlite", environment_path=self.fixture.environment,
+                                    environment_raster_bundle=self.fixture.bundle)) as data:
+            assert data.numeric is not None
+            self.assertEqual(data.numeric.connection.execute("PRAGMA user_version").fetchone()[0], 3)
+            for request, baseline in zip(requests, expected):
+                actual = generate_database_run(data, request)
+                self.assertEqual(actual.status, "complete")
+                self.assertEqual(actual.model_dump(exclude={"elapsed_s"}), baseline.model_dump(exclude={"elapsed_s"}))
 
 
 class PackedHillTests(unittest.TestCase):
@@ -226,7 +250,7 @@ class PackedInputLifetimeTests(unittest.TestCase):
                         self.assertEqual(reader.call_count, 2)
                         retained = tuple(data.input_store.chunks)
                         # Force eviction on expansion while keeping a positive input budget.
-                        data.cache_bytes = 4 * data.input_store.resident_bytes
+                        data.cache_bytes = 2 * data.input_store.resident_bytes
                 self.assertEqual(reader.call_count, 4)
             self.assertIsNot(cases[0][0].native, cases[1][0].native)
             self.assertTrue(any(key not in data.input_store.chunks for key in retained))

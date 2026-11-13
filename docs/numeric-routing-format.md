@@ -1,12 +1,12 @@
-# Numeric routing artifact, version 2
+# Numeric routing artifacts
 
 This implements numeric storage for the
 [100 ms routing architecture](100ms-routing-architecture.md). It is an offline
 artifact alongside the reference database, used by the HTTP planner and distance
 exploration with bounded working-set caching.
 
-The [sqleton schema visualization](reference/numeric-routing-schema.svg) shows
-the database tables, indexes, and declared foreign keys. See
+The [schema visualization](reference/numeric-routing-schema.svg) shows
+the legacy schema-2 database tables, indexes, and declared foreign keys. See
 [generation instructions](reference/schema-visualization.md) to refresh it.
 
 ## Export and read
@@ -44,6 +44,14 @@ and schema 2 artifacts with separate detail. The binary chunk layout remains
 version 2. Rebuild the native extension before using the new exporter/runtime;
 older runtimes reject the new SQLite schema. Re-export to a new destination and
 restart the API to obtain the smaller working sets.
+
+The optional `runmap.paths.compact_routing` conversion publishes SQLite schema 3
+with binary format 3 and a paired compressed input artifact. It preserves topology
+identities, geometry, access masks, bounds, and adjacency; it removes all four hill
+columns and the `hill_intervals` table. Routing hill data lives solely in the paired
+input artifact. See [conversion instructions](development.md#export-a-sqlite-network-dataset).
+Readers accept schema/format pairs (1, 2), (2, 2), and (3, 3).
+Default API discovery prefers `numeric-routing-v3.sqlite`, then version 2.
 
 Version 2 adds explicit node eligibility masks. Arc eligibility alone cannot
 represent the reference behavior for a search starting at a blocked node.
@@ -96,7 +104,8 @@ must remain distinguishable from source coverage boundaries and true dead ends.
 
 Signal passages are loaded separately from an optional identity-validated
 [`signals.sqlite` sidecar](reference/prepared-data.md#traffic-light-sidecar).
-The main graph binary layout stays at version 2. Without packed inputs, Python passes bounded gate and
+The legacy graph binary layout is version 2; topology-only chunks use version 3.
+Without packed inputs, Python passes bounded gate and
 movement rows into native maps; their estimated retained bytes count toward the
 working-set cache budget. No raw OSM evidence enters a request working set.
 Signals On uses movement labels and carries arrival context across run legs;
@@ -129,6 +138,13 @@ The ordered layout is defined by `array_layouts` in
 | `incoming_offsets`, `incoming_arcs` | Corresponding reverse-search adjacency |
 | `hill_offsets`, `hill_chainage`, `hill_features`, `hill_totals` | Legacy embedded intervals and complete-segment directional totals; schema 2 uses zero offsets and empty interval columns |
 
+Binary format 3 uses magic `RUNNUM03`, version 3, and the same 64-byte header.
+Its interval count must be zero. Only the first 19 columns, through
+`incoming_arcs`, are serialized, with the same shapes/alignment. No hill offsets,
+padding for removed columns, or hill totals follow them. Native legacy readers
+retain their old layout; a version-3 buffer without attached hills rejects a
+positive hill-cost traversal instead of reading missing columns.
+
 Projected coordinates use EPSG:3067. Forward/backward hill features have shape
 `(intervals, 2, 7)` and totals have shape `(segments, 2, 7)`. Feature order is
 penalty, ascent, descent, valid length, trusted length, fallback length, total
@@ -149,8 +165,8 @@ Legacy graph-cache keys remain independent of endpoints and hill preferences.
 Legacy embedded intervals remain usable without conversion.
 
 Hills are one channel of [prepared routing inputs](architecture.md#prepared-routing-inputs),
-alongside mapped environment fields and directed signals. Their current placement
-inside the topology payload is a storage compatibility detail. Optional packed
+alongside mapped environment fields and directed signals. Their placement
+inside legacy topology payloads is a storage compatibility detail. Optional packed
 inputs supply hill totals through the same loading/ownership boundary as other
 channels; a future topology format can remove the duplicated legacy totals.
 
@@ -175,21 +191,37 @@ arrays into request-local state before releasing the GIL.
 
 ### Packed routing inputs
 
-`routing-inputs-v1.sqlite` is an optional read-only companion to the numeric
+`routing-inputs-v1.sqlite` is an optional read-only companion to the legacy numeric
 artifact. Preparation consumes numeric hills and validated environment/signal
 sidecars; map rendering and selected-route zero-weight diagnostics keep their
 existing source artifacts. The runtime discovers this filename beside the numeric
-database. A present but incompatible artifact fails startup; absence retains
-legacy loading. Rebuild the native extension before enabling it.
+database. Converted generations use `routing-inputs-v2.sqlite`, preferred when both
+filenames exist. A present but incompatible artifact fails startup. Absence retains
+legacy loading for schema 1/2; schema 3 requires its paired inputs. Rebuild the native extension before enabling it.
 
 The SQLite schema and binary input format are version 1, independent of topology
-format 2. Metadata records available channels and a SHA-256 identity over numeric
+formats 2/3. Metadata records available channels and a SHA-256 identity over numeric
 schema/metadata, ordered numeric chunk checksums, a streaming digest of separated
 hill interval IDs/checksums/raw sizes, and configured environment/signal
 source metadata (including models and raster identity). Changing the configured
 source set requires a matching export. Export holds source read transactions and
 publishes atomically to a previously absent destination. Source artifacts must
 remain immutable; their identity metadata is trusted as in existing sidecars.
+
+Compressed storage uses SQLite user version 2 and metadata `format_version=2`;
+the decompressed binary input protocol remains version 1. Every `chunks.payload`
+and `hill_details.payload` contains `<8sQ` (`RUNZIP01`, decompressed byte count)
+followed by one zlib stream, compressed at level 1. Stored checksums and byte sizes
+cover the envelope and compressed bytes. Readers bound decompression to the
+declared size (at most 64 MiB per record), require exact completion, and reject
+trailing streams/data before native validation. Cache accounting charges decoded
+native arrays or decoded endpoint bytes, not compressed disk size.
+
+Schema 3 metadata additionally binds `routing_hill_identity` to ordered packed hill
+chunk and detail checksums/sizes. The paired input identity is recomputed against
+the stripped topology; copying unrelated packed inputs cannot satisfy it. The
+converter validates source records and publishes the completed directory together.
+Source schema 1/2 artifacts and their v1 companions remain readable unchanged.
 
 `chunks(number, channel, payload, sha256, byte_size)` uses the topology chunk ID
 and channel ID (1 hills, 2 environment, 3 signals) as its key. Every available
@@ -214,7 +246,16 @@ endian, and there is no alignment padding between records.
 Hill detail BLOBs contain the same raw 16-float64 rows as legacy decompressed
 intervals. Native decoding validates shapes, flags, identifiers, intervals, and
 coverage before ownership is shared; area attachment checks graph segment lengths
-and required coverage. Active preferences load only their channels. Partial hill
+and required coverage. Hills must cover the same complete chunks as topology;
+attachment matches IDs/lengths and shares a contiguous total array per chunk.
+Normal direction pairs use eight float64 values: seven forward features and the
+backward penalty, with reverse ascent/descent exchanged and quality lengths shared.
+This representation is used only when the shared values match bit for bit; an
+asymmetric chunk retains all 14 source values. This native representation does
+not change the binary input protocol or round any values.
+Traversal uses chunk/segment indices, with a permutation only for different record
+orders. Packed loading converts legacy topology buffers to format 3 before cache
+retention, releasing embedded hill data. Active preferences load only their channels. Partial hill
 bytes load only for requested endpoint segments. Environment vectors are reference
 counted across overlapping graphs; signal lookup maps are assembled for selected
 outgoing segments, preserving arrivals from outside the window. Eviction or database
@@ -311,8 +352,8 @@ available. It preserves validation, working-area limits, expansion, and response
 rendering, and caches immutable graphs in a byte-accounted LRU per artifact
 lifetime. API endpoint overlays pass snapped projected coordinates as well as
 chainage so shape integration uses the reference endpoint geometry. The graph
-loads selected topology, geometry, and hill totals; schema 2 keeps interval detail
-outside these BLOBs. Different bounds share resident validated native chunks;
+loads selected topology and geometry. Legacy loading retains hill totals; packed
+loading keeps hills in separate shared input arrays. Different bounds share resident validated native chunks;
 area-wide selection and merged indexes remain separate. Exploration snapshots retain only sparse
 reached-node IDs/distances; numeric endpoint metadata for inspected segments is
 queried on demand from the source database. Their byte/TTL budget excludes graph

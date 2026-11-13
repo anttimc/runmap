@@ -168,8 +168,15 @@ fn integrate_hills<const N: usize>(
 ) -> Result<[f64; N], RoutingError> {
     let direction = usize::from(edge.backward);
     let segment_id = chunk.columns[SEGMENT_IDS].integer(edge.segment);
-    if let Some(hills) = settings.hills.get(&segment_id) {
-        if hills.totals[direction * 7 + 6] <= 0.0 {
+    if let Some(view) = settings.hills.get(edge.chunk).and_then(Option::as_ref) {
+        let position = if view.positions.is_empty() {
+            edge.segment
+        } else {
+            view.positions[edge.segment]
+        };
+        let totals = crate::routing_input::hill_totals(&view.owner, position, edge.backward)
+            .ok_or(RoutingError::Invalid("Hill features are unavailable"))?;
+        if totals[6] <= 0.0 {
             return Err(RoutingError::Invalid("Hill features are unavailable"));
         }
         let length = chunk.columns[ARC_LENGTHS].float(edge.arc);
@@ -179,9 +186,11 @@ fn integrate_hills<const N: usize>(
             ));
         }
         if edge.low == 0.0 && edge.high == length {
-            return Ok(std::array::from_fn(|i| hills.totals[direction * 7 + i]));
+            return Ok(std::array::from_fn(|i| totals[i]));
         }
-        let intervals = if hills.intervals.is_empty() {
+        let intervals = if let Some(rows) = view.owner.intervals.get(&position) {
+            rows.as_slice()
+        } else {
             settings
                 .hill_intervals
                 .get(&segment_id)
@@ -189,8 +198,6 @@ fn integrate_hills<const N: usize>(
                 .ok_or(RoutingError::Invalid(
                     "Partial hill traversal requires endpoint intervals",
                 ))?
-        } else {
-            hills.intervals.as_slice()
         };
         if intervals
             .last()
@@ -211,6 +218,11 @@ fn integrate_hills<const N: usize>(
             )?;
         }
         return Ok(values);
+    }
+    if chunk.columns[HILL_TOTALS].bytes.is_empty() {
+        return Err(RoutingError::Invalid(
+            "Hill features require prepared routing inputs",
+        ));
     }
     let totals: [f64; N] = std::array::from_fn(|i| {
         chunk.columns[HILL_TOTALS].float((edge.segment * 2 + direction) * 7 + i)
@@ -619,7 +631,7 @@ mod tests {
             shape: None,
             used_segments: HashSet::from([7]),
             used_spans: HashMap::new(),
-            hills: Arc::new(HashMap::new()),
+            hills: Arc::new(Vec::new()),
             hill_intervals: HashMap::from([(
                 7,
                 Arc::new(vec![
@@ -711,13 +723,16 @@ mod tests {
         let totals = [
             30.0, 0.0, 0.0, 0.0, 0.0, 0.0, 25.0, 40.0, 0.0, 0.0, 0.0, 0.0, 0.0, 25.0,
         ];
-        settings.hills = Arc::new(HashMap::from([(
-            7,
-            Arc::new(crate::routing_input::HillInput {
-                totals,
-                intervals: Vec::new(),
+        settings.hills = Arc::new(vec![Some(crate::routing_input::HillView {
+            owner: Arc::new(crate::routing_input::HillChunk {
+                ids: vec![7],
+                lengths: vec![25.0],
+                totals: Vec::new(),
+                general_totals: vec![totals],
+                intervals: HashMap::new(),
             }),
-        )]));
+            positions: Vec::new(),
+        })]);
         let mut edge = sample_edge();
         assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 30.0);
         edge.backward = true;
@@ -727,10 +742,16 @@ mod tests {
         assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 6.0);
         settings.hill_intervals.clear();
         assert!(hill_features(&chunk, edge, &settings).is_err());
-        settings.hills = Arc::new(HashMap::from([(
-            7,
-            Arc::new(crate::routing_input::HillInput { totals, intervals }),
-        )]));
+        settings.hills = Arc::new(vec![Some(crate::routing_input::HillView {
+            owner: Arc::new(crate::routing_input::HillChunk {
+                ids: vec![7],
+                lengths: vec![25.0],
+                totals: Vec::new(),
+                general_totals: vec![totals],
+                intervals: HashMap::from([(0, intervals)]),
+            }),
+            positions: Vec::new(),
+        })]);
         assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 6.0);
         edge.backward = false;
         assert_eq!(hill_features(&chunk, edge, &settings).unwrap()[0], 4.5);
