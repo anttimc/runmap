@@ -46,6 +46,7 @@ function setup(context, handler) {
       showModal() {},
       close() {},
       click: () => listeners.get("click")?.(),
+      input: () => listeners.get("input")?.(),
     });
   }
   context.mock.method(globalThis, "fetch", handler);
@@ -105,7 +106,7 @@ test("dialog sends the captured route and uses the operation ID to recover a los
   );
 });
 
-test("a restored creation offers selection-only retry", async (context) => {
+test("a restored creation awaiting watch selection offers selection-only retry", async (context) => {
   const id = "00000000-0000-4000-8000-000000000001";
   const requests = [];
   const elements = setup(context, async (url, options) => {
@@ -114,7 +115,7 @@ test("a restored creation offers selection-only retry", async (context) => {
     return Response.json({
       id,
       name: "Earlier route",
-      use_in_watch: false,
+      use_in_watch: true,
       state: options ? "selected" : "created",
       error: null,
     });
@@ -125,13 +126,81 @@ test("a restored creation offers selection-only retry", async (context) => {
   elements.get("run-suunto").click();
   await flush();
   assert.equal(elements.get("suunto-select").hidden, false);
-  assert.equal(elements.get("suunto-watch").checked, false);
+  assert.equal(elements.get("suunto-watch").checked, true);
+  assert.equal(elements.get("suunto-name").disabled, true);
   elements.get("suunto-select").click();
   await flush();
   const writes = requests.filter(([, options]) => options?.method === "POST");
   assert.equal(writes.length, 1);
   assert.equal(writes[0][0], `/api/integrations/suunto/imports/${id}/select`);
   assert.match(elements.get("suunto-status").textContent, /Selected for watch sync/);
+});
+
+for (const [state, useInWatch] of [
+  ["selected", true],
+  ["created", false],
+]) {
+  test(`reopening a completed ${state} export allows a new route name`, async (context) => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    const writes = [];
+    const elements = setup(context, async (url, options) => {
+      if (url.endsWith("/suunto")) return Response.json({ configured: true });
+      if (url.endsWith("/profile")) return Response.json({ dataset_id: "dataset", intervals: [] });
+      if (options) {
+        const body = JSON.parse(options.body);
+        writes.push(body);
+        return Response.json({ id: body.operation_id, ...body, state: "selected", error: null });
+      }
+      return Response.json({
+        id,
+        name: "Earlier route",
+        use_in_watch: useInWatch,
+        state,
+        error: null,
+      });
+    });
+    localStorage.setItem("runmap.suunto.operation", id);
+    startSuuntoExport("dataset", () => original);
+    await flush();
+    elements.get("run-suunto").click();
+    await flush();
+    const name = elements.get("suunto-name");
+    assert.equal(name.disabled, false);
+    assert.equal(elements.get("suunto-send").disabled, false);
+    assert.equal(localStorage.getItem("runmap.suunto.operation"), null);
+    name.value = "Evening seaside run";
+    name.input();
+    elements.get("suunto-send").click();
+    await flush();
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].name, "Evening seaside run");
+    assert.notEqual(writes[0].operation_id, id);
+  });
+}
+
+test("an unconfirmed export stays locked until starting a new export", async (context) => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const elements = setup(context, async (url) => {
+    if (url.endsWith("/suunto")) return Response.json({ configured: true });
+    return Response.json({
+      id,
+      name: "Unconfirmed route",
+      use_in_watch: true,
+      state: "post-pending",
+    });
+  });
+  localStorage.setItem("runmap.suunto.operation", id);
+  startSuuntoExport("dataset", () => original);
+  await flush();
+  elements.get("run-suunto").click();
+  await flush();
+  assert.equal(elements.get("suunto-name").disabled, true);
+  assert.equal(localStorage.getItem("runmap.suunto.operation"), id);
+  assert.match(elements.get("suunto-status").textContent, /Check your Suunto library/);
+  elements.get("suunto-new").click();
+  assert.equal(elements.get("suunto-name").disabled, false);
+  assert.equal(elements.get("suunto-send").disabled, false);
+  assert.equal(localStorage.getItem("runmap.suunto.operation"), null);
 });
 
 test("uncertain creation explains manual inspection and never claims watch delivery", () => {

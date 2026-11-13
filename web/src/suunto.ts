@@ -118,6 +118,27 @@ export function startSuuntoExport(datasetId: string, selected: () => Candidate |
     status.textContent = operationMessage(operation);
   }
 
+  function startNewExport(): void {
+    id = null;
+    operation = undefined;
+    remember(null);
+    if (candidate)
+      name.value = `Runmap · ${candidateName(candidate)} · ${(candidate.distance_m / 1000).toFixed(2)} km`;
+    watch.checked = true;
+    status.textContent = "";
+    render();
+  }
+
+  async function restoreExport(): Promise<void> {
+    await check();
+    if (
+      operation?.state === "selected" ||
+      (operation?.state === "created" && !operation.use_in_watch)
+    ) {
+      startNewExport();
+    }
+  }
+
   void request<{ configured: boolean }>("")
     .then((config) => {
       button.hidden = !config.configured;
@@ -136,23 +157,14 @@ export function startSuuntoExport(datasetId: string, selected: () => Candidate |
       name.value = `Runmap · ${candidateName(candidate)} · ${(candidate.distance_m / 1000).toFixed(2)} km`;
     dialog.showModal();
     render();
-    if (id) void perform(check);
+    if (id) void perform(restoreExport);
   });
   name.addEventListener("input", render);
   element("suunto-close").addEventListener("click", () => dialog.close());
   refresh.addEventListener("click", () => {
     void perform(check);
   });
-  fresh.addEventListener("click", () => {
-    id = null;
-    operation = undefined;
-    remember(null);
-    if (candidate)
-      name.value = `Runmap · ${candidateName(candidate)} · ${(candidate.distance_m / 1000).toFixed(2)} km`;
-    watch.checked = true;
-    status.textContent = "";
-    render();
-  });
+  fresh.addEventListener("click", startNewExport);
   retry.addEventListener("click", () => {
     void perform(async () => {
       operation = await request<Operation>(`/imports/${id}/select`, {});

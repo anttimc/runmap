@@ -240,7 +240,11 @@ The importer uses an unofficial API; its separate evidence confirms sync on a
 Suunto Vertical. Broader watch support and elevation display still need acceptance.
 
 The dialog remembers the latest operation ID locally. Reopen it and use
-**Check status** after a lost response or restart. **Retry watch selection**
+**Check status** after a lost response or restart. After a confirmed successful
+export (watch selection, or creation when **Use on watch** was off), reopening
+starts a new export with an editable name for the displayed route. Pending
+exports keep the name locked; **Start new export** unlocks it for another export.
+**Retry watch selection**
 uses the existing route without creating another. If creation is unconfirmed,
 check the Suunto library before **Start new export**; creation is never retried
 automatically. Earlier receipts remain on the server even after starting a new
