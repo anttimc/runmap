@@ -788,6 +788,20 @@ observations default to `/private/tmp/runmap-planning-check`; pass another direc
 as the first argument. Use real routes separately for local runner acceptance and
 latency measurements.
 
+The shared-settings check uses the same Vite and API servers and defaults to a
+Chrome debugger on 9233 (`RUNMAP_DEBUG_PORT` overrides it):
+
+```sh
+node web/scripts/check-run-settings.mjs
+```
+
+It checks automatic preset application on selection, persistence across reloads,
+shared one-way/round-trip settings, new-preset naming and cancellation, explicit
+saving of edits, keyboard help and Escape dismissal, and mobile dialog bounds. It opens a temporary
+tab and restores the original preset storage afterward. Screenshots default to
+`/private/tmp/runmap-settings-check`; an optional first argument changes that path.
+`RUNMAP_WEB_ORIGIN` overrides the default `http://127.0.0.1:5173`.
+
 ## Experiments and reports
 
 ### Loop-length parameter grid

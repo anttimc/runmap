@@ -1,8 +1,9 @@
 # Using Runmap
 
 Runmap uses one map with a compact **Plan run** panel, independent **Map layers**
-controls, and a **Settings** dialog. The planner and Distance from start share
-the home/start location and routing policies. Changing routing inputs marks an
+controls, a shared **Run settings** dialog, and a **Map settings** dialog.
+The planner and Distance from start share the home/start location and routing
+policies. Changing routing inputs marks an
 existing run out of date. Map appearance changes affect presentation only.
 
 ## Environment source inspection
@@ -166,17 +167,20 @@ are not estimated. Actual run lengths may differ. See
 [turnaround shading](distance-shells.md#estimated-turnaround-region) for limits.
 
 Choose **Off / One way / Round trip / loop** in the Plan run heading. Off is the
-initial selection. Either planning choice reveals endpoint controls, supported
-hill preferences, and Generate run in the panel footer.
+initial selection. Either planning choice reveals endpoint controls and Generate
+run in the panel footer. **Run settings** in the Plan run heading opens the shared
+preferences and path policy for both modes.
 
 1. Choose a Start if the shared start is not already selected. For One way,
    destination selection starts automatically. For round trips, choose the
    turnaround method described above. Choose a distinct second point.
    Drag either marker to adjust it.
-2. For round trips, choose Orientation and adjust Loop width with the slider or
+2. For round trips, open Run settings to choose Orientation and adjust Loop width
+   with the slider, or adjust width on the map
    by dragging the midpoint circle edge or handle. The centre stays at the
    endpoint midpoint. One-way planning hides these controls.
-3. Adjust Avoid hills where supported, then select Generate run. Generate again
+3. In Run settings, adjust Avoid hills and surroundings preferences where supported,
+   then close the dialog and select Generate run. Generate again
    after moving endpoints or changing routing settings.
 4. The floating **Your run** card at the lower right shows the selected route's
    distance beside the title and direction underneath, independently of the
@@ -314,7 +318,8 @@ sections are not available.
 
 ## Shared settings and coverage
 
-Open Settings from the map legend. **Paths & routing** offers all prepared
+Open **Run settings** from the Plan run heading, including when planning is Off.
+**Paths & routing** offers all prepared
 candidates or explicitly paved/gravel surfaces, with unknown surface tags kept
 explicit. Stairs are avoided by default. Access, pedestrian direction, and
 prepared route boundaries govern eligibility for
@@ -322,10 +327,40 @@ snapping, exploration, and planning. Display filters cannot restore paths reject
 during import. The default snap radius is 50 m, configurable up to 200 m under
 Endpoint snapping.
 
-**Map appearance** contains Elevation contours and Hide building-access dead ends.
+Open **Settings** from the map legend for **Map appearance**, which contains
+Elevation contours and Hide building-access dead ends.
 The latter hides conservatively identified building-access dead ends.
 This affects colored geometry only: legal snapping and routing still use those
 branches. The separate basemap may continue to show them faintly.
+
+### Preference presets
+
+In **Run settings**, selecting a saved preset applies it immediately. Choose
+**New preset** to reveal the name field, then **Save preset** to keep the current
+route preferences, allowed surfaces, stair policy, endpoint snap radius, loop
+width, and orientation. Enter saves the new preset; Cancel or Escape in the name
+field dismisses naming without changing settings. Duplicate names are rejected.
+
+Editing a selected preset shows **Unsaved changes** and enables **Save changes**.
+Saving updates that preset without asking for a name. Edits do not automatically
+overwrite saved presets. **Delete** removes the selected preset while keeping
+current settings. **Custom settings** means no saved preset is selected.
+
+Both search modes use the same settings. Loop width and orientation apply only
+to round trips and remain stored when using One way. Presets exclude endpoints,
+search mode, target loop length, and map appearance. Loading a preset updates
+shared path exploration and marks affected existing runs out of date; generate
+again to apply route changes. Orientation can select an existing candidate.
+Unavailable preferences fall back to Off with a status message; the saved preset
+stays unchanged until explicitly updated.
+
+Presets persist across visits in this browser's local storage for the current
+site address. They require no account or backend storage and do not sync between
+browsers or devices. Clearing site data removes them. Select a preset after reopening to apply it; reopening alone does not restore
+a saved preset. Storage failures leave
+manual settings usable and report an actionable status.
+
+### Prepared coverage
 
 The terrain region and default capital-area path dataset use the same
 40 × 40 km square near Leppävaara, with a visible path coverage boundary.

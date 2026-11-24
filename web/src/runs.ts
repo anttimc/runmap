@@ -172,6 +172,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     supportedHillLevels.includes(preset.level),
   );
   if (availableHillPresets.length === 0) availableHillPresets.push(hillPresets[0]);
+  hills.dataset.levels = JSON.stringify(availableHillPresets.map((preset) => preset.level));
   hills.max = String(availableHillPresets.length - 1);
   hills.value = String(
     Math.max(
@@ -232,6 +233,7 @@ export function startRunPlanner(map: Map, options: Options): RunControls {
     slider.value = String(
       Math.max(0, levels.indexOf(options.runPlanner?.preference_defaults[key] ?? "off")),
     );
+    slider.dataset.levels = JSON.stringify(levels);
     slider.disabled = levels.length <= 1;
     label.htmlFor = slider.id;
     const output = document.createElement("output");

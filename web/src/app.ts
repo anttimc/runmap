@@ -5,6 +5,7 @@ import type { ColorStop, Location, PathConfig, PathPolicy } from "./api-types";
 import { element } from "./dom";
 import { startPaths, type PathControls } from "./paths";
 import { startRunPlanner, type RunControls } from "./runs";
+import { startRunSettings } from "./run-settings";
 import { createSharedState } from "./state";
 
 function readPathPolicy(): PathPolicy {
@@ -79,12 +80,16 @@ export async function startMapTools(map: Map, stops: ColorStop[]): Promise<void>
   });
   document.addEventListener("plannerpick", () => paths.modeChanged());
 
+  function policyChanged(): void {
+    state.policy = readPathPolicy();
+    paths.policyChanged();
+    planner?.policyChanged();
+  }
+  startRunSettings(policyChanged);
   for (const id of ["path-surface", "path-avoid-stairs", "outing-radius"]) {
     element<HTMLInputElement | HTMLSelectElement>(id).addEventListener("change", (event) => {
       if (!(event.target as HTMLInputElement | HTMLSelectElement).reportValidity()) return;
-      state.policy = readPathPolicy();
-      paths.policyChanged();
-      planner?.policyChanged();
+      policyChanged();
     });
   }
   map.on("click", (event) => {

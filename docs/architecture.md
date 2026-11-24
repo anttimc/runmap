@@ -271,6 +271,15 @@ The browser owns map rendering, interaction state, and requests to the API.
 A coordinator shares the start location and routing policy between path
 exploration and planning. Feature controllers own their requests and displayed
 results. Map-layer visibility is independent of planner activation.
+`web/src/run-settings.ts` connects the shared run-settings dialog to named
+browser-local presets. `web/src/presets.ts` validates their versioned storage
+format and stores semantic preference levels independently of slider positions.
+Selecting a preset applies all values before notifying routing controllers; unsupported
+levels fall back to Off without rewriting the stored preset. Presets contain
+routing preferences, path policy, and loop shape, excluding endpoints, planner
+mode, and map presentation. Edits are stored only through Save changes or creation of a new preset. The
+name form is shown only during creation. No API or server persistence is involved.
+
 The browser requests the selected candidate's route profile and serializes its
 ordered sample coordinates and available elevations to GPX for local download.
 Profile sampling retains geometry vertices and adds terrain samples along edges.

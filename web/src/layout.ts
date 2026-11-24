@@ -41,24 +41,8 @@ export function startLayout(): void {
     toggle.textContent = collapsed ? "Expand" : "Collapse";
   });
 
-  const dialog = element<HTMLDialogElement>("settings-dialog");
-  for (const opener of document.querySelectorAll<HTMLButtonElement>("[data-settings]")) {
-    opener.addEventListener("click", () => {
-      dialog.showModal();
-    });
-  }
-  element("settings-close").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("click", (event) => {
-    if (event.target !== dialog) return;
-    const bounds = dialog.getBoundingClientRect();
-    if (
-      event.clientX < bounds.left ||
-      event.clientX > bounds.right ||
-      event.clientY < bounds.top ||
-      event.clientY > bounds.bottom
-    )
-      dialog.close();
-  });
+  connectDialog("settings-dialog", "[data-settings]", "settings-close");
+  connectDialog("run-settings-dialog", "[data-run-settings]", "run-settings-close");
 
   const sections = document.querySelectorAll<HTMLButtonElement>("[data-section]");
   for (const button of sections) {
@@ -77,6 +61,26 @@ export function startLayout(): void {
       `${panel.getBoundingClientRect().height}px`,
     );
   }).observe(panel);
+}
+
+/** Native modal dialogs keep keyboard focus inside the active settings menu. */
+function connectDialog(id: string, selector: string, closeId: string): void {
+  const dialog = element<HTMLDialogElement>(id);
+  for (const opener of document.querySelectorAll<HTMLButtonElement>(selector)) {
+    opener.addEventListener("click", () => dialog.showModal());
+  }
+  element(closeId).addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (event) => {
+    if (event.target !== dialog) return;
+    const bounds = dialog.getBoundingClientRect();
+    if (
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom
+    )
+      dialog.close();
+  });
 }
 
 /** Keep help available to mouse, keyboard and touch without expanding the panels. */

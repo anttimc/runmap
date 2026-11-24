@@ -9,8 +9,8 @@ without relying on route optimization.
 
 - **Plan with preferences:** make it easy to express the desired terrain and
   surroundings, generate a route, and understand the resulting tradeoffs.
-  Reusing preferences through a saved profile or multiple presets is a possible
-  improvement; its form is not yet decided.
+  Reuse preferences through named browser-local presets; cross-device reuse
+  remains a possible improvement.
 - **Take the route running:** make transfer to a sports watch straightforward.
   Existing GPX export and the optional local Suunto integration provide the
   starting point; support for other watches is not yet committed.
@@ -42,8 +42,9 @@ target for wider coverage, rather than a promise of nationwide availability.
 
 The core planning and export features are present. Improve the everyday workflow
 before expanding automatic recommendations: prioritize responsiveness, then
-route shaping. Consider saved preferences and hosting as ways to make repeated
-use and sharing easier; their implementation and scheduling remain undecided.
+route shaping. Browser-local presets support repeated use. Consider hosting and
+cross-device preferences to make sharing and reuse easier; their scope and
+scheduling remain undecided.
 
 Keep exploration useful on its own. Discovering training hills is an intended
 outcome, not a claim that automatic hill discovery is already available.
@@ -61,7 +62,7 @@ Terrain and path measurements inform route choice; they do not establish current
 path conditions or predict heart rate, personal effort, or training outcomes.
 Social features, live activity tracking, training prescriptions, and turn-by-turn
 navigation are outside the current product scope. Accounts are not a current
-requirement; whether saved preferences or hosting need them remains undecided.
+requirement; whether future preference sync or hosting needs them remains undecided.
 
 See the [guide](guide.md) for delivered behavior and the [roadmap](roadmap.md)
 for next steps and optional experiments.

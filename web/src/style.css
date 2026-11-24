@@ -59,6 +59,7 @@ summary {
   font-weight: 600;
 }
 select,
+input[type="text"],
 input[type="number"] {
   width: 100%;
   padding: 6px 8px;
@@ -1229,4 +1230,111 @@ h1 {
 }
 .environment-preference output {
   text-align: right;
+}
+
+/* Shared run settings keep saved preferences separate from map presentation. */
+#preset-controls {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+#run-settings-dialog {
+  width: min(430px, calc(100vw - 36px));
+}
+#run-settings-dialog .settings-content {
+  padding: 6px 20px 20px;
+}
+#run-settings-dialog .settings-content > section + section {
+  border-top: 1px solid #d6ddd5;
+  margin-top: 18px;
+  padding-top: 4px;
+}
+#run-settings-dialog .settings-content h3 {
+  font-size: 0.875rem;
+  margin: 14px 0 10px;
+}
+#run-settings-dialog .control-label > h3 {
+  margin-bottom: 6px;
+}
+#run-settings-dialog button,
+#run-settings-dialog select,
+#run-settings-dialog input[type="text"] {
+  font-size: 0.875rem;
+  min-height: 40px;
+}
+#run-settings-dialog .help-trigger {
+  min-height: 28px;
+  min-width: 28px;
+}
+.preset-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#run-preset {
+  flex: 1;
+  min-width: 0;
+}
+#preset-new {
+  white-space: nowrap;
+}
+.preset-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.preset-create {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #c5cfca;
+  border-radius: 10px;
+  background: #f0f4ef;
+}
+.preset-create label {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+}
+#preset-status {
+  color: #596568;
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+}
+#preset-status:empty {
+  display: none;
+}
+#run-preferences {
+  gap: 0;
+}
+#run-settings-dialog .environment-preference {
+  min-height: 46px;
+  grid-template-columns: minmax(145px, 1.2fr) minmax(65px, 1fr) 34px;
+  font-size: 0.875rem;
+}
+#run-settings-dialog .environment-preference input[type="range"] {
+  min-height: 36px;
+}
+#run-settings-dialog .environment-preference .control-label {
+  gap: 4px;
+}
+#run-settings-dialog .environment-preference label,
+#run-settings-dialog .environment-preference .control-label {
+  font-weight: 500;
+}
+#run-settings-dialog .environment-preference output {
+  font-size: 0.8125rem;
+  color: #087f8c;
+}
+@media (max-width: 600px) {
+  #run-settings-dialog {
+    width: 100%;
+  }
+  #run-settings-dialog .settings-content {
+    padding-inline: 16px;
+  }
+  #run-settings-dialog .environment-preference {
+    grid-template-columns: minmax(140px, 1.2fr) minmax(55px, 1fr) 32px;
+  }
 }

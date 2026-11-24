@@ -19,9 +19,11 @@ automatic suggestions come later. Map exploration, including finding training
 hills and rough route design without optimization, remains a secondary purpose.
 See [goals](goals.md) for audience and scope.
 
-Saved preferences (one profile or multiple presets), cloud access for sharing
-with friends, and broader Finnish coverage need scope decisions before being
-scheduled. Public hosting is a longer-term ambition subject to operating resources.
+Named browser-local preference presets and shared run settings are implemented.
+Keyboard/touch review and local runner acceptance of the settings workflow remain
+outstanding. Cross-device preference sync, cloud access for sharing with friends,
+and broader Finnish coverage need scope decisions before being scheduled. Public
+hosting is a longer-term ambition subject to operating resources.
 The detailed backlog below still needs review against these priorities; section
 order does not establish execution order.
 
