@@ -1,17 +1,48 @@
 # Runmap
 
-Runmap helps runners plan routes around their preferences, explore terrain and
-surroundings, and export a chosen route to a sports watch. Current prepared
-coverage focuses on the Helsinki capital area.
+**Simple running route optimization based on your preferences**
 
-Plan one-way routes or round trips with hill, environment, and traffic-light
-preferences, inspect route elevation, and download a GPX track. An optional
-local Suunto integration supports sending routes for watch sync. Independent
-terrain, path-gradient, and distance layers also support map exploration.
+Getting from A to B is only part of planning a run. You might want a loop from
+home, gentler climbs, more greenery, a stretch by the water, or fewer stops at
+traffic lights. Runmap brings those choices into route planning, with a map
+that helps you see the terrain before you head out.
 
-The application currently runs with locally prepared data. Cloud hosting and
-wider coverage in Finland are future ambitions. See the [guide](docs/guide.md)
-for existing behavior and limitations, and the [goals](docs/goals.md) for direction.
+## Build the run around you
+
+- **Shape a round trip.** Pick a start and turnaround, then adjust loop width
+  and direction to explore different routes home. One-way planning is available
+  too.
+- **Start with a distance in mind.** Enter a target loop length to highlight
+  estimated turnaround locations, choose one on the map, and generate a route.
+  The estimate guides your choice; the resulting distance can differ.
+- **Choose the surroundings.** Prefer greenery or proximity to water, reduce
+  modeled traffic exposure, and avoid mapped wetlands. Set hill and
+  traffic-light avoidance independently, with surface and stair controls for
+  the paths you want to run.
+- **Read the landscape.** Explore terrain slope, path gradients, flat stretches,
+  and distance from your start—even before generating a route. Inspect the
+  chosen run's elevation profile and estimated ascent and descent.
+- **Keep your preferences and take the route with you.** Save named presets in
+  your browser, download a GPX track, or use the optional local Suunto integration
+  to send a route for watch sync.
+
+For example, plan a loop from home with a roughly 10 km target, prefer greenery,
+turn up hill avoidance for an easier day, and check the elevation profile before
+exporting it. Preferences guide route choices; available paths and prepared data
+determine what is possible.
+
+## Current availability
+
+Runmap is a hobby project that runs locally with prepared data. Current coverage
+is a 40 × 40 km area around Leppävaara in the Helsinki capital region. Data is
+not bundled with the repository, so a fresh checkout needs data preparation
+before route planning is available. Environment and traffic-light preferences
+require their corresponding prepared datasets.
+
+Terrain and surroundings are estimates based on mapped data, rather than live
+path conditions or measured traffic noise. See the [guide](docs/guide.md) for
+current behavior and limitations. Cloud hosting and wider coverage in Finland
+are future ambitions; see the [goals](docs/goals.md) for direction.
 
 ## Quick start
 
@@ -51,3 +82,7 @@ with a bounded working-set cache; see the SQLite setup instructions above.
 - [Terrain mathematics](docs/reference/terrain-mathematics.md) and
   [routing mathematics](docs/reference/routing-mathematics.md): implemented calculations.
 - [Documentation maintenance](docs/README.md) and [historical archive](docs/archive/README.md).
+
+## License
+
+[MIT](LICENSE).
