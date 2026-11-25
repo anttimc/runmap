@@ -6,9 +6,16 @@ The planner and Distance from start share the home/start location and routing
 policies. Changing routing inputs marks an
 existing run out of date. Map appearance changes affect presentation only.
 
-## Environment source inspection
+<a id="environment-source-inspection"></a>
 
-Open **Environment inspection** from the map header, or visit `/environment.html`.
+## Environment data inspector (developer tool)
+
+Visit `/environment.html` directly to open this optional developer tool. It is
+not linked from the running map; use the main map's Environment layers and run
+preferences for route planning. The inspector requires the separately acquired
+Leppävaara pilot dataset. Without it, the page shows a setup link and a return
+link to Runmap instead of inactive inspection controls.
+
 This separate experimental map displays the locally acquired OSM pilot. Forest,
 water polygons, waterways/coastline, and major roads start visible. Wetlands,
 parks, nature-reserve designations, buildings, and mapped paths can be enabled independently.

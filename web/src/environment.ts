@@ -248,12 +248,15 @@ function inspectLocation(map: Map, location: LngLat): void {
 
 async function start(): Promise<void> {
   const response = await fetch("/api/environment/config", { cache: "no-store" });
-  if (!response.ok)
-    throw new Error(
-      response.status === 404
-        ? "Pilot unavailable. Acquire the environment source data first (see development docs)."
-        : "Unable to load pilot metadata.",
-    );
+  if (response.status === 404) {
+    element("inspection-status").textContent = "Environment pilot unavailable.";
+    element("inspection-unavailable").hidden = false;
+    element("inspection-tools").hidden = true;
+    element("inspection-map").hidden = true;
+    document.body.classList.add("is-unavailable");
+    return;
+  }
+  if (!response.ok) throw new Error("Unable to load pilot metadata. Reload to retry.");
   const config = (await response.json()) as InspectionConfig;
   const manifest = config.manifest;
   const metadata = element("inspection-metadata");

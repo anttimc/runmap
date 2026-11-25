@@ -80,12 +80,17 @@ uv run --extra environment python -m unittest discover -s tests \
 
 ### Inspect environment source geometry
 
+The **Environment data inspector (developer tool)** is available directly at
+`/environment.html`; it is not linked from the main running map.
 After acquiring the pilot, run the usual API and frontend servers (see
 [server commands below](#native-integration-kernel)) and open `http://localhost:5173/environment.html`.
 The page is also included in `pnpm --dir web build` and served by FastAPI at
 `/environment.html` when `web/dist` exists. It loads independently of terrain
 and path configuration. Source-layer controls and overlap inspection are
-described in the [guide](guide.md#environment-source-inspection).
+described in the [guide](guide.md#environment-data-inspector-developer-tool).
+Without the pilot, the inspector displays a missing-data page with a setup link
+and a return link to Runmap. The setup link opens this repository's development
+guide on GitHub, so it also works when serving only the built frontend.
 
 `RUNMAP_ENVIRONMENT_DIRECTORY` selects one completed acquisition directory;
 the default is `data/environment/raw/leppavaara-pilot/` relative to the project

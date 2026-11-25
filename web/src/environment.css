@@ -98,6 +98,12 @@ dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
+body.is-unavailable aside {
+  position: static;
+  width: min(100%, 600px);
+  margin: 32px auto;
+  border: 0;
+}
 @media (max-width: 700px) {
   #inspection-map {
     inset: 0 0 48% 0;

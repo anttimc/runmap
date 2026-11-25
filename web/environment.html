@@ -3,42 +3,55 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Environment inspection · Runmap</title>
+    <title>Environment data inspector · Runmap</title>
   </head>
   <body>
     <div id="inspection-map" aria-label="Interactive environment source map"></div>
     <aside aria-labelledby="title">
-      <a href="/">← Running map</a>
-      <h1 id="title">Environment inspection</h1>
+      <a href="/">← Back to Runmap</a>
+      <h1 id="title">Environment data inspector</h1>
+      <p>Developer tool</p>
       <p id="inspection-status" role="status">Loading pilot metadata…</p>
-      <p>
-        Mapped OSM evidence. Missing objects remain unknown. Road class is not measured traffic.
-      </p>
-      <fieldset id="raster-layers" disabled>
-        <legend>Experimental raster layers</legend>
-      </fieldset>
-      <p id="raster-status" role="status">Checking prepared rasters…</p>
-      <fieldset id="inspection-layers" disabled>
-        <legend>Independent source layers</legend>
-      </fieldset>
-      <button id="fit-pilot" type="button" disabled>Fit pilot</button>
-      <p class="boundary-key">Solid purple: pilot core · dashed: query envelope</p>
-      <details>
-        <summary>Source identity and limitations</summary>
-        <div id="inspection-metadata"></div>
-      </details>
-      <h2>Inspect overlaps</h2>
-      <button id="inspect-center" type="button" disabled>Inspect map center</button>
-      <p>
-        Click the map to list every visible source object at that location. Toggle layers to compare
-        evidence.
-      </p>
-      <h3>Raster cell</h3>
-      <div id="raster-selection" aria-live="polite">
-        Click the map to inspect all environment scores.
+      <section id="inspection-unavailable" aria-labelledby="unavailable-title" hidden>
+        <h2 id="unavailable-title">Source data is not installed</h2>
+        <p>This developer tool needs the separate Leppävaara environment pilot dataset.</p>
+        <p>
+          <a
+            href="https://github.com/anttimc/runmap/blob/main/docs/development.md#acquire-environment-pilot-data"
+            >Set up the environment pilot dataset</a
+          >, then reload this page.
+        </p>
+      </section>
+      <div id="inspection-tools">
+        <p>
+          Mapped OSM evidence. Missing objects remain unknown. Road class is not measured traffic.
+        </p>
+        <fieldset id="raster-layers" disabled>
+          <legend>Experimental raster layers</legend>
+        </fieldset>
+        <p id="raster-status" role="status">Checking prepared rasters…</p>
+        <fieldset id="inspection-layers" disabled>
+          <legend>Independent source layers</legend>
+        </fieldset>
+        <button id="fit-pilot" type="button" disabled>Fit pilot</button>
+        <p class="boundary-key">Solid purple: pilot core · dashed: query envelope</p>
+        <details>
+          <summary>Source identity and limitations</summary>
+          <div id="inspection-metadata"></div>
+        </details>
+        <h2>Inspect overlaps</h2>
+        <button id="inspect-center" type="button" disabled>Inspect map center</button>
+        <p>
+          Click the map to list every visible source object at that location. Toggle layers to
+          compare evidence.
+        </p>
+        <h3>Raster cell</h3>
+        <div id="raster-selection" aria-live="polite">
+          Click the map to inspect all environment scores.
+        </div>
+        <h3>Source objects</h3>
+        <div id="inspection-selection" aria-live="polite"></div>
       </div>
-      <h3>Source objects</h3>
-      <div id="inspection-selection" aria-live="polite"></div>
     </aside>
     <script type="module" src="/src/environment.ts"></script>
   </body>
