@@ -1,7 +1,7 @@
 # Using Runmap
 
 Runmap uses one map with a compact **Plan run** panel, independent **Map layers**
-controls, a shared **Run settings** dialog, and a **Map settings** dialog.
+controls, a shared **Run settings** view in the planning panel, and a **Map settings** dialog.
 The planner and Distance from start share the home/start location and routing
 policies. Changing routing inputs marks an
 existing run out of date. Map appearance changes affect presentation only.
@@ -175,8 +175,13 @@ are not estimated. Actual run lengths may differ. See
 
 Choose **Off / One way / Round trip / loop** in the Plan run heading. Off is the
 initial selection. Either planning choice reveals endpoint controls and Generate
-run in the panel footer. **Run settings** in the Plan run heading opens the shared
-preferences and path policy for both modes.
+run in the panel footer. **Run settings** in the Plan run heading replaces the
+left planning panel with shared preferences and path policy for both modes.
+Its heading and **Back to plan** button stay visible while settings scroll.
+Changes apply immediately; **Back to plan** returns to endpoints and Generate
+run. Escape also returns to planning when focus is in settings, after dismissing
+any open help popup or preset name form. The map remains interactive.
+On phones, settings use the same bottom planning panel.
 
 1. Choose a Start if the shared start is not already selected. For One way,
    destination selection starts automatically. For round trips, choose the
@@ -187,7 +192,7 @@ preferences and path policy for both modes.
    by dragging the midpoint circle edge or handle. The centre stays at the
    endpoint midpoint. One-way planning hides these controls.
 3. In Run settings, adjust Avoid hills and surroundings preferences where supported,
-   then close the dialog and select Generate run. Generate again
+   then select Back to plan and Generate run. Generate again
    after moving endpoints or changing routing settings.
 4. The floating **Your run** card at the lower right shows the selected route's
    distance beside the title and direction underneath, independently of the

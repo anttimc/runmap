@@ -271,7 +271,10 @@ The browser owns map rendering, interaction state, and requests to the API.
 A coordinator shares the start location and routing policy between path
 exploration and planning. Feature controllers own their requests and displayed
 results. Map-layer visibility is independent of planner activation.
-`web/src/run-settings.ts` connects the shared run-settings dialog to named
+`web/src/layout.ts` switches the left planning panel between planning and run
+settings, manages keyboard focus, and keeps the map interactive. The same views
+share the bottom planning panel on phones. Map settings remain a modal dialog.
+`web/src/run-settings.ts` connects the shared run-settings view to named
 browser-local presets. `web/src/presets.ts` validates their versioned storage
 format and stores semantic preference levels independently of slider positions.
 Selecting a preset applies all values before notifying routing controllers; unsupported

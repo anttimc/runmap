@@ -1,4 +1,4 @@
-/** Manage responsive panel layout, settings dialogs, and contextual help. */
+/** Manage responsive planner views, map settings, and contextual help. */
 import type { PaddingOptions } from "maplibre-gl";
 
 import { element } from "./dom.ts";
@@ -42,7 +42,7 @@ export function startLayout(): void {
   });
 
   connectDialog("settings-dialog", "[data-settings]", "settings-close");
-  connectDialog("run-settings-dialog", "[data-run-settings]", "run-settings-close");
+  startRunSettingsPanel();
 
   const sections = document.querySelectorAll<HTMLButtonElement>("[data-section]");
   for (const button of sections) {
@@ -61,6 +61,46 @@ export function startLayout(): void {
       `${panel.getBoundingClientRect().height}px`,
     );
   }).observe(panel);
+}
+
+/** Switch planner views without blocking map interaction or discarding settings. */
+export function startRunSettingsPanel(): void {
+  const panel = document.querySelector<HTMLElement>(".controls")!;
+  const settings = element("run-settings-panel");
+  const back = element<HTMLButtonElement>("run-settings-back");
+  const openers = document.querySelectorAll<HTMLButtonElement>("[data-run-settings]");
+  let opener: HTMLButtonElement | undefined;
+  const close = (): void => {
+    if (settings.hidden) return;
+    settings.hidden = true;
+    panel.dataset.view = "plan";
+    panel.setAttribute("aria-labelledby", "controls-title");
+    for (const button of openers) button.setAttribute("aria-expanded", "false");
+    opener?.focus();
+  };
+  for (const button of openers) {
+    button.addEventListener("click", () => {
+      opener = button;
+      panel.classList.remove("is-collapsed");
+      element("panel-toggle").setAttribute("aria-expanded", "true");
+      element("panel-toggle").textContent = "Collapse";
+      panel.dataset.view = "settings";
+      panel.setAttribute("aria-labelledby", "run-settings-title");
+      settings.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+      settings.dispatchEvent(new Event("runsettingsopen"));
+      back.focus();
+    });
+  }
+  back.addEventListener("click", close);
+  settings.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !event.defaultPrevented) {
+      // Contextual help and preset naming handle Escape before leaving settings.
+      if (settings.querySelector(".help-content:popover-open")) return;
+      event.preventDefault();
+      close();
+    }
+  });
 }
 
 /** Native modal dialogs keep keyboard focus inside the active settings menu. */

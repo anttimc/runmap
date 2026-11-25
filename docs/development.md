@@ -802,7 +802,8 @@ node web/scripts/check-run-settings.mjs
 
 It checks automatic preset application on selection, persistence across reloads,
 shared one-way/round-trip settings, new-preset naming and cancellation, explicit
-saving of edits, keyboard help and Escape dismissal, and mobile dialog bounds. It opens a temporary
+saving of edits, keyboard help, Back to plan and Escape navigation, and desktop/mobile
+panel bounds. It opens a temporary
 tab and restores the original preset storage afterward. Screenshots default to
 `/private/tmp/runmap-settings-check`; an optional first argument changes that path.
 `RUNMAP_WEB_ORIGIN` overrides the default `http://127.0.0.1:5173`.

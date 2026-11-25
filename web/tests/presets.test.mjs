@@ -64,7 +64,7 @@ function setup(context, initial = null) {
     "run-preset",
     "preset-name",
     "preset-controls",
-    "run-settings-dialog",
+    "run-settings-panel",
     "preset-new",
     "preset-create",
     "preset-cancel",
@@ -204,7 +204,6 @@ test("new preset naming supports Enter, Escape and retry after a storage failure
   assert.equal(nodes["preset-create"].hidden, true);
   assert.equal(decodePresets(stored.get(PRESET_STORAGE_KEY))[0].name, "Quiet paths");
   nodes["run-avoidance"].value = "0.4";
-  nodes["run-settings-dialog"].open = true;
-  nodes["run-settings-dialog"].dispatchEvent(new Event("toggle"));
+  nodes["run-settings-panel"].dispatchEvent(new Event("runsettingsopen"));
   assert.equal(nodes["preset-update"].disabled, false);
 });

@@ -182,9 +182,7 @@ export function startRunSettings(policyChanged: () => void): void {
   ]) {
     for (const event of ["input", "change"]) control(id).addEventListener(event, settingsEdited);
   }
-  element<HTMLDialogElement>("run-settings-dialog").addEventListener("toggle", () => {
-    if (element<HTMLDialogElement>("run-settings-dialog").open) settingsEdited();
-  });
+  element("run-settings-panel").addEventListener("runsettingsopen", settingsEdited);
   newButton.addEventListener("click", () => creating(true));
   element("preset-cancel").addEventListener("click", () => {
     creating(false);

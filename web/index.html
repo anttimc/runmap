@@ -38,7 +38,14 @@
           <section class="layer-section planner-section">
             <div class="heading-row planner-heading">
               <h2 class="section-title">Plan run</h2>
-              <button type="button" data-run-settings>Run settings</button>
+              <button
+                type="button"
+                data-run-settings
+                aria-controls="run-settings-panel"
+                aria-expanded="false"
+              >
+                Run settings
+              </button>
               <button id="run-clear" class="text-button" type="button" hidden>Clear</button>
               <select id="plan-mode" aria-label="Plan run" disabled>
                 <option value="off">Off</option>
@@ -139,6 +146,246 @@
             ><button id="run-cancel" type="button" hidden>Cancel</button>
           </div>
         </footer>
+        <section id="run-settings-panel" aria-labelledby="run-settings-title" hidden>
+          <header class="heading-row">
+            <h2 id="run-settings-title">Run settings</h2>
+            <button id="run-settings-back" type="button">Back to plan</button>
+          </header>
+          <div class="settings-content">
+            <section aria-labelledby="preset-title">
+              <div class="control-label">
+                <h3 id="preset-title">Preset</h3>
+                <span class="help-tip"
+                  ><button
+                    type="button"
+                    class="help-trigger"
+                    aria-label="About preference presets"
+                    aria-expanded="false"
+                  >
+                    ?
+                  </button>
+                  <span role="tooltip" class="help-content"
+                    >Selecting a preset applies it immediately. Edits are saved only with Save
+                    changes. Presets share settings between one-way and round-trip searches,
+                    including path policy and loop shape. Loop shape applies only to round trips.
+                    Endpoints, search mode, and map appearance are excluded. Saved only in this
+                    browser for this site address; clearing site data removes them. They do not sync
+                    across devices.</span
+                  >
+                </span>
+              </div>
+              <fieldset id="preset-controls" disabled>
+                <div class="preset-picker">
+                  <select id="run-preset" aria-labelledby="preset-title">
+                    <option value="">Custom settings</option>
+                  </select>
+                  <button
+                    id="preset-new"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="preset-create"
+                  >
+                    New preset
+                  </button>
+                </div>
+                <div id="preset-actions" class="preset-actions" hidden>
+                  <button id="preset-update" type="button">Save changes</button>
+                  <button id="preset-delete" class="text-button" type="button">Delete</button>
+                </div>
+                <div id="preset-create" class="preset-create" hidden>
+                  <label for="preset-name">Preset name</label>
+                  <input
+                    id="preset-name"
+                    type="text"
+                    maxlength="60"
+                    autocomplete="off"
+                    placeholder="e.g. Quiet paths"
+                  />
+                  <div class="preset-actions">
+                    <button id="preset-save" class="primary-button" type="button">
+                      Save preset
+                    </button>
+                    <button id="preset-cancel" type="button">Cancel</button>
+                  </div>
+                </div>
+              </fieldset>
+              <p id="preset-status" role="status"></p>
+            </section>
+            <section aria-labelledby="run-preferences-title">
+              <h3 id="run-preferences-title">Route preferences</h3>
+              <div id="run-preferences" hidden>
+                <div class="environment-preference">
+                  <div class="control-label">
+                    <span
+                      ><label for="run-hills">Avoid hills</label>
+                      <span class="help-tip"
+                        ><button
+                          type="button"
+                          class="help-trigger"
+                          aria-label="About hill avoidance"
+                          aria-expanded="false"
+                        >
+                          ?</button
+                        ><span role="tooltip" class="help-content"
+                          ><span id="run-hills-description">No preference for flatter paths.</span
+                          ><br />Prefer gentler climbs using a running effort estimate adjusted to
+                          soften slopes below 5%. Flat terrain and moderate descents add no hill
+                          penalty. Missing or uncertain terrain uses a conservative fallback.</span
+                        ></span
+                      ></span
+                    >
+                  </div>
+                  <input
+                    id="run-hills"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="1"
+                    value="0"
+                    disabled
+                    aria-valuetext="Off"
+                    aria-describedby="run-hills-description"
+                  />
+                  <div id="run-hills-labels" class="range-notes" aria-hidden="true">
+                    <span>Off</span><span>Low</span><span>High</span>
+                  </div>
+                  <output id="run-hills-value" for="run-hills">Off</output>
+                </div>
+                <span id="run-signal-help" class="help-tip" hidden>
+                  <button
+                    type="button"
+                    class="help-trigger"
+                    aria-label="About traffic-light avoidance"
+                    aria-expanded="false"
+                  >
+                    ?
+                  </button>
+                  <span id="run-signal-help-content" role="tooltip" class="help-content">
+                    <span id="run-signal-availability" hidden></span>
+                    Prefer fewer mapped signal crossings. Low trades about 60 m of additional route
+                    cost to avoid a passage; High about 180 m. Other preferences affect the
+                    tradeoff, and unavoidable lights remain possible. Uncertain crossing movements
+                    receive the same penalty. Mapping may omit lights; counts do not predict waiting
+                    time.
+                  </span>
+                </span>
+              </div>
+            </section>
+            <section id="run-shape-controls" aria-labelledby="run-shape-title">
+              <h3 id="run-shape-title">Loop shape</h3>
+              <label class="control-label" for="run-orientation">Orientation</label>
+              <select
+                id="run-orientation"
+                title="Choose the preferred travel direction around the midpoint. Paths and crossings can affect the final shape."
+              >
+                <option value="clockwise">Clockwise</option>
+                <option value="counter-clockwise">Counter-clockwise</option>
+              </select>
+              <div class="control-label">
+                <span
+                  ><label for="run-avoidance">Loop width</label>
+                  <span class="help-tip"
+                    ><button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="More information"
+                      aria-expanded="false"
+                    >
+                      ?</button
+                    ><span role="tooltip" class="help-content" id="run-shape-help">
+                      A soft preference to go around the midpoint, not a minimum clearance. Zero
+                      disables shape penalties while keeping route preferences. The selected
+                      orientation guides the route around the midpoint.
+                    </span></span
+                  ></span
+                ><output id="run-avoidance-value"></output>
+              </div>
+              <input
+                id="run-avoidance"
+                type="range"
+                min="0"
+                max="0.6"
+                step="0.01"
+                value="0.18"
+                aria-describedby="run-shape-help"
+              />
+            </section>
+            <section id="settings-paths" aria-labelledby="path-rules-title">
+              <div class="control-label">
+                <h3 id="path-rules-title">Paths &amp; routing</h3>
+                <span class="help-tip"
+                  ><button
+                    type="button"
+                    class="help-trigger"
+                    aria-label="More information"
+                    aria-expanded="false"
+                  >
+                    ?</button
+                  ><span role="tooltip" class="help-content"
+                    >Applies to distance highlighting and run planning.</span
+                  ></span
+                >
+              </div>
+              <div class="path-settings">
+                <div class="control-label">
+                  <label class="control-label" for="path-surface">Allowed surfaces</label>
+                  <span class="help-tip"
+                    ><button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="More information"
+                      aria-expanded="false"
+                    >
+                      ?</button
+                    ><span role="tooltip" class="help-content">
+                      Surface tags describe material; they do not prove maintenance. Unknown
+                      surfaces stay explicit.
+                    </span></span
+                  >
+                </div>
+                <select id="path-surface" disabled>
+                  <option value="all">All prepared candidate paths</option>
+                  <option value="surfaced">Paved / gravel surface tags</option>
+                </select>
+                <label class="contour-toggle"
+                  ><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid
+                  stairs</label
+                >
+                <details class="settings-group">
+                  <summary>Endpoint snapping</summary>
+                  <label class="control-label" for="outing-radius">Maximum snap offset (m)</label>
+                  <input
+                    id="outing-radius"
+                    type="number"
+                    min="1"
+                    max="200"
+                    step="1"
+                    value="50"
+                    disabled
+                  />
+                  <span class="help-tip"
+                    ><button
+                      type="button"
+                      class="help-trigger"
+                      aria-label="More information"
+                      aria-expanded="false"
+                    >
+                      ?</button
+                    ><span role="tooltip" class="help-content">
+                      How far a selected location may move to an eligible path. Connectors are
+                      visual, not validated access routes.
+                    </span></span
+                  >
+                </details>
+                <details class="settings-group">
+                  <summary>Prepared network and measurements</summary>
+                  <ul id="path-importer-notes"></ul>
+                  <p id="path-settings" class="explanation"></p>
+                </details>
+              </div>
+            </section>
+          </div>
+        </section>
       </section>
       <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
         <header class="heading-row">
@@ -187,243 +434,6 @@
             <label class="contour-toggle"
               ><input id="contours-visible" type="checkbox" checked /> Elevation contours</label
             >
-          </section>
-        </div>
-      </dialog>
-      <dialog id="run-settings-dialog" class="settings-dialog" aria-labelledby="run-settings-title">
-        <header class="heading-row">
-          <h2 id="run-settings-title">Run settings</h2>
-          <button id="run-settings-close" type="button" autofocus>Close</button>
-        </header>
-        <div class="settings-content">
-          <section aria-labelledby="preset-title">
-            <div class="control-label">
-              <h3 id="preset-title">Preset</h3>
-              <span class="help-tip"
-                ><button
-                  type="button"
-                  class="help-trigger"
-                  aria-label="About preference presets"
-                  aria-expanded="false"
-                >
-                  ?
-                </button>
-                <span role="tooltip" class="help-content"
-                  >Selecting a preset applies it immediately. Edits are saved only with Save
-                  changes. Presets share settings between one-way and round-trip searches, including
-                  path policy and loop shape. Loop shape applies only to round trips. Endpoints,
-                  search mode, and map appearance are excluded. Saved only in this browser for this
-                  site address; clearing site data removes them. They do not sync across
-                  devices.</span
-                >
-              </span>
-            </div>
-            <fieldset id="preset-controls" disabled>
-              <div class="preset-picker">
-                <select id="run-preset" aria-labelledby="preset-title">
-                  <option value="">Custom settings</option>
-                </select>
-                <button
-                  id="preset-new"
-                  type="button"
-                  aria-expanded="false"
-                  aria-controls="preset-create"
-                >
-                  New preset
-                </button>
-              </div>
-              <div id="preset-actions" class="preset-actions" hidden>
-                <button id="preset-update" type="button">Save changes</button>
-                <button id="preset-delete" class="text-button" type="button">Delete</button>
-              </div>
-              <div id="preset-create" class="preset-create" hidden>
-                <label for="preset-name">Preset name</label>
-                <input
-                  id="preset-name"
-                  type="text"
-                  maxlength="60"
-                  autocomplete="off"
-                  placeholder="e.g. Quiet paths"
-                />
-                <div class="preset-actions">
-                  <button id="preset-save" class="primary-button" type="button">Save preset</button>
-                  <button id="preset-cancel" type="button">Cancel</button>
-                </div>
-              </div>
-            </fieldset>
-            <p id="preset-status" role="status"></p>
-          </section>
-          <section aria-labelledby="run-preferences-title">
-            <h3 id="run-preferences-title">Route preferences</h3>
-            <div id="run-preferences" hidden>
-              <div class="environment-preference">
-                <div class="control-label">
-                  <span
-                    ><label for="run-hills">Avoid hills</label>
-                    <span class="help-tip"
-                      ><button
-                        type="button"
-                        class="help-trigger"
-                        aria-label="About hill avoidance"
-                        aria-expanded="false"
-                      >
-                        ?</button
-                      ><span role="tooltip" class="help-content"
-                        ><span id="run-hills-description">No preference for flatter paths.</span
-                        ><br />Prefer gentler climbs using a running effort estimate adjusted to
-                        soften slopes below 5%. Flat terrain and moderate descents add no hill
-                        penalty. Missing or uncertain terrain uses a conservative fallback.</span
-                      ></span
-                    ></span
-                  >
-                </div>
-                <input
-                  id="run-hills"
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="1"
-                  value="0"
-                  disabled
-                  aria-valuetext="Off"
-                  aria-describedby="run-hills-description"
-                />
-                <div id="run-hills-labels" class="range-notes" aria-hidden="true">
-                  <span>Off</span><span>Low</span><span>High</span>
-                </div>
-                <output id="run-hills-value" for="run-hills">Off</output>
-              </div>
-              <span id="run-signal-help" class="help-tip" hidden>
-                <button
-                  type="button"
-                  class="help-trigger"
-                  aria-label="About traffic-light avoidance"
-                  aria-expanded="false"
-                >
-                  ?
-                </button>
-                <span id="run-signal-help-content" role="tooltip" class="help-content">
-                  <span id="run-signal-availability" hidden></span>
-                  Prefer fewer mapped signal crossings. Low trades about 60 m of additional route
-                  cost to avoid a passage; High about 180 m. Other preferences affect the tradeoff,
-                  and unavoidable lights remain possible. Uncertain crossing movements receive the
-                  same penalty. Mapping may omit lights; counts do not predict waiting time.
-                </span>
-              </span>
-            </div>
-          </section>
-          <section id="run-shape-controls" aria-labelledby="run-shape-title">
-            <h3 id="run-shape-title">Loop shape</h3>
-            <label class="control-label" for="run-orientation">Orientation</label>
-            <select
-              id="run-orientation"
-              title="Choose the preferred travel direction around the midpoint. Paths and crossings can affect the final shape."
-            >
-              <option value="clockwise">Clockwise</option>
-              <option value="counter-clockwise">Counter-clockwise</option>
-            </select>
-            <div class="control-label">
-              <span
-                ><label for="run-avoidance">Loop width</label>
-                <span class="help-tip"
-                  ><button
-                    type="button"
-                    class="help-trigger"
-                    aria-label="More information"
-                    aria-expanded="false"
-                  >
-                    ?</button
-                  ><span role="tooltip" class="help-content" id="run-shape-help">
-                    A soft preference to go around the midpoint, not a minimum clearance. Zero
-                    disables shape penalties while keeping route preferences. The selected
-                    orientation guides the route around the midpoint.
-                  </span></span
-                ></span
-              ><output id="run-avoidance-value"></output>
-            </div>
-            <input
-              id="run-avoidance"
-              type="range"
-              min="0"
-              max="0.6"
-              step="0.01"
-              value="0.18"
-              aria-describedby="run-shape-help"
-            />
-          </section>
-          <section id="settings-paths" aria-labelledby="path-rules-title">
-            <div class="control-label">
-              <h3 id="path-rules-title">Paths &amp; routing</h3>
-              <span class="help-tip"
-                ><button
-                  type="button"
-                  class="help-trigger"
-                  aria-label="More information"
-                  aria-expanded="false"
-                >
-                  ?</button
-                ><span role="tooltip" class="help-content"
-                  >Applies to distance highlighting and run planning.</span
-                ></span
-              >
-            </div>
-            <div class="path-settings">
-              <div class="control-label">
-                <label class="control-label" for="path-surface">Allowed surfaces</label>
-                <span class="help-tip"
-                  ><button
-                    type="button"
-                    class="help-trigger"
-                    aria-label="More information"
-                    aria-expanded="false"
-                  >
-                    ?</button
-                  ><span role="tooltip" class="help-content">
-                    Surface tags describe material; they do not prove maintenance. Unknown surfaces
-                    stay explicit.
-                  </span></span
-                >
-              </div>
-              <select id="path-surface" disabled>
-                <option value="all">All prepared candidate paths</option>
-                <option value="surfaced">Paved / gravel surface tags</option>
-              </select>
-              <label class="contour-toggle"
-                ><input id="path-avoid-stairs" type="checkbox" checked disabled /> Avoid
-                stairs</label
-              >
-              <details class="settings-group">
-                <summary>Endpoint snapping</summary>
-                <label class="control-label" for="outing-radius">Maximum snap offset (m)</label>
-                <input
-                  id="outing-radius"
-                  type="number"
-                  min="1"
-                  max="200"
-                  step="1"
-                  value="50"
-                  disabled
-                />
-                <span class="help-tip"
-                  ><button
-                    type="button"
-                    class="help-trigger"
-                    aria-label="More information"
-                    aria-expanded="false"
-                  >
-                    ?</button
-                  ><span role="tooltip" class="help-content">
-                    How far a selected location may move to an eligible path. Connectors are visual,
-                    not validated access routes.
-                  </span></span
-                >
-              </details>
-              <details class="settings-group">
-                <summary>Prepared network and measurements</summary>
-                <ul id="path-importer-notes"></ul>
-                <p id="path-settings" class="explanation"></p>
-              </details>
-            </div>
           </section>
         </div>
       </dialog>

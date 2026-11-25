@@ -65,7 +65,14 @@ try {
   original = await evaluate('localStorage.getItem("runmap.preference-presets.v1")');
   assert.equal(await evaluate('document.querySelectorAll("#run-hills").length'), 1);
   await evaluate('document.querySelector("[data-run-settings]").click()');
-  assert.equal(await evaluate('document.getElementById("run-settings-dialog").open'), true);
+  assert.equal(await evaluate('document.getElementById("run-settings-panel").hidden'), false);
+  assert.equal(await evaluate('document.querySelector(".controls").dataset.view'), "settings");
+  assert.equal(await evaluate('document.querySelectorAll("dialog:modal").length'), 0);
+  assert.equal(await evaluate("document.activeElement.id"), "run-settings-back");
+  assert.equal(
+    await evaluate('document.querySelector(".controls").getBoundingClientRect().left'),
+    18,
+  );
   await evaluate(`
     document.getElementById("plan-mode").value = "one_way";
     document.getElementById("plan-mode").dispatchEvent(new Event("change"));
@@ -83,6 +90,18 @@ try {
   assert.equal(await evaluate('document.getElementById("preset-load")'), null);
   const savedId = await evaluate('document.getElementById("run-preset").value');
   await screenshot("desktop");
+  assert.equal(
+    await evaluate(`(() => {
+      const header = document.querySelector("#run-settings-panel > header");
+      const content = document.querySelector("#run-settings-panel .settings-content");
+      const top = header.getBoundingClientRect().top;
+      content.scrollTop = content.scrollHeight;
+      const fixed = content.scrollTop > 0 && header.getBoundingClientRect().top === top;
+      content.scrollTop = 0;
+      return fixed;
+    })()`),
+    true,
+  );
   const previousDocument = await evaluate("performance.timeOrigin");
   await call("Page.reload");
   await wait(`performance.timeOrigin !== ${previousDocument}`);
@@ -104,7 +123,7 @@ try {
   `);
   assert.equal(await evaluate('document.getElementById("run-hills").value'), "1");
   assert.equal(await evaluate('document.getElementById("run-shape-controls").hidden'), true);
-  await evaluate('document.getElementById("run-settings-close").focus()');
+  await evaluate('document.getElementById("run-settings-back").focus()');
   await call("Input.dispatchKeyEvent", {
     type: "keyDown",
     key: "Tab",
@@ -119,7 +138,7 @@ try {
   });
   assert.equal(
     await evaluate(
-      'document.querySelector("#run-settings-dialog .help-content").matches(":popover-open")',
+      'document.querySelector("#run-settings-panel .help-content").matches(":popover-open")',
     ),
     true,
   );
@@ -135,7 +154,20 @@ try {
     code: "Escape",
     windowsVirtualKeyCode: 27,
   });
-  await wait('document.getElementById("run-settings-dialog").open === false');
+  // The first Escape dismisses help, leaving settings available.
+  assert.equal(await evaluate('document.getElementById("run-settings-panel").hidden'), false);
+  await evaluate('document.getElementById("run-settings-back").click()');
+  assert.equal(await evaluate('document.getElementById("run-settings-panel").hidden'), true);
+  assert.equal(await evaluate('document.activeElement.hasAttribute("data-run-settings")'), true);
+  await evaluate('document.querySelector("[data-run-settings]").click()');
+  await call("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
+  });
+  await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape" });
+  await wait('document.getElementById("run-settings-panel").hidden === true');
   await call("Emulation.setDeviceMetricsOverride", {
     width: 390,
     height: 844,
@@ -145,9 +177,9 @@ try {
   await evaluate('document.querySelector("[data-run-settings]").click()');
   assert.equal(
     await evaluate(`(() => {
-    const dialog = document.getElementById("run-settings-dialog");
-    const bounds = dialog.getBoundingClientRect();
-    return bounds.left >= 0 && bounds.right <= innerWidth && dialog.scrollWidth <= dialog.clientWidth;
+    const panel = document.getElementById("run-settings-panel");
+    const bounds = panel.getBoundingClientRect();
+    return bounds.left >= 0 && bounds.right <= innerWidth && panel.scrollWidth <= panel.clientWidth;
   })()`),
     true,
   );
@@ -168,7 +200,7 @@ try {
     windowsVirtualKeyCode: 27,
   });
   assert.equal(await evaluate('document.getElementById("preset-create").hidden'), true);
-  assert.equal(await evaluate('document.getElementById("run-settings-dialog").open'), true);
+  assert.equal(await evaluate('document.getElementById("run-settings-panel").hidden'), false);
   await evaluate('document.getElementById("preset-new").click()');
   await evaluate('document.getElementById("preset-cancel").click()');
   assert.equal(await evaluate('document.getElementById("preset-create").hidden'), true);
@@ -200,7 +232,7 @@ try {
   });
   assert.equal(
     await evaluate(
-      'document.getElementById("run-settings-dialog").scrollWidth <= document.getElementById("run-settings-dialog").clientWidth',
+      'document.getElementById("run-settings-panel").scrollWidth <= document.getElementById("run-settings-panel").clientWidth',
     ),
     true,
   );
