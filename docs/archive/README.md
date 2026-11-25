@@ -12,6 +12,12 @@ old setup instructions, output paths, or removed commands. Use
 [current development instructions](../development.md) for new runs. Keep new
 measurements separate from historical reports, and identify their dataset/model.
 
+Personal absolute repository paths in archived reports have been normalized to
+paths relative to the repository root; recorded measurements are unchanged.
+The [inspection requirements](requirements-inspection.txt) preserve the historical
+Python 3.9/macOS environment referenced by the [data download report](history/07-download-data.md).
+Use the current uv setup for application development.
+
 ## Planning and implementation history
 
 The [2026-11-13 compact hill follow-up](history/2026-11-13-compact-hill-inputs.md)

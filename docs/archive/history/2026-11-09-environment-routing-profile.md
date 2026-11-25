@@ -147,7 +147,7 @@ uv run python artifacts/environment-profile-2026-11-09/profile_environment.py \
 uv run python artifacts/environment-profile-2026-11-09/profile_environment.py \
   --short-only --cache-mib 256 --only off traffic_high all_high \
   --report artifacts/environment-profile-2026-11-09/cache256.json
-source /Users/anttimc/.cargo/env
+source "$HOME/.cargo/env"
 uv run maturin build --release --bindings pyo3 \
   --features python,profiling,pyo3/extension-module \
   --out /private/tmp/runmap-environment-profile

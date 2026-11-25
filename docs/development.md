@@ -23,8 +23,8 @@ pnpm --dir web install
 ```
 
 The web extra includes the API, image, and geometry dependencies; experiments
-adds Matplotlib. The old `requirements-inspection.txt` records a historical
-inspection environment and is not the application setup procedure.
+adds Matplotlib. The archived [inspection requirements](archive/requirements-inspection.txt)
+record a historical inspection environment and are not the application setup procedure.
 
 ## Acquire environment pilot data
 

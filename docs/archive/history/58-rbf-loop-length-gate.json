@@ -2,7 +2,7 @@
   "created_utc": "2026-10-30T06:38:34.065896+00:00",
   "observations": 5475,
   "input_predictions_sha256": "90362c66902d6063b289c90ed48845f4569d823247e27a71b0c5093b380dfe1b",
-  "input_analysis": "/Users/anttimc/coding/runmap/artifacts/loop-length-fit/leppavaara-north-2026-10-28-final",
+  "input_analysis": "artifacts/loop-length-fit/leppavaara-north-2026-10-28-final",
   "validation": {
     "block_size": 5,
     "buffer": 1,

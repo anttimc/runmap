@@ -85,8 +85,8 @@ The reusable inspector and its local environment can be run with:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements-inspection.txt
+.venv/bin/python -m pip install -r docs/archive/requirements-inspection.txt
 PYTHONPATH=src .venv/bin/python -m runmap.elevation.inspect data/raw/leppavaara/elevation-2m.tif --report data/raw/leppavaara/inspection.json
 ```
 
-`requirements-inspection.txt` records the tested Python 3.9/macOS environment. The JSON report contains structural checks, valid-cell counts, elevation statistics, and geographic bounds. The download checksum remains in the provenance sidecar.
+The archived [inspection requirements](../requirements-inspection.txt) record the tested Python 3.9/macOS environment. The JSON report contains structural checks, valid-cell counts, elevation statistics, and geographic bounds. The download checksum remains in the provenance sidecar.

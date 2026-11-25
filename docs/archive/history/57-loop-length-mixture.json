@@ -1,7 +1,7 @@
 {
   "created_utc": "2026-10-29T08:47:00.480103+00:00",
   "input_predictions_sha256": "90362c66902d6063b289c90ed48845f4569d823247e27a71b0c5093b380dfe1b",
-  "input_analysis": "/Users/anttimc/coding/runmap/artifacts/loop-length-fit/leppavaara-north-2026-10-28-final",
+  "input_analysis": "artifacts/loop-length-fit/leppavaara-north-2026-10-28-final",
   "source": {
     "revision": "99a120329cc4a59b6ca0d6a071df200f36977c32",
     "working_tree_status": " M docs/README.md\n M docs/development.md\n M docs/roadmap.md\n?? docs/reference/loop-length-mixture.md\n?? src/runmap/experiments/fit_loop_length_mixture.py\n?? src/runmap/experiments/loop_length_mixture.py\n?? tests/test_loop_length_mixture.py\n",

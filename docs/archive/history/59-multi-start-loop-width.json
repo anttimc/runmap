@@ -55,7 +55,7 @@
       "python_rust_source_sha256": "315d7bf0dac12bae0e54d94f1c7cef5d647664aa793e0e087b4b2338e90d9e6e"
     },
     "machine": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
-    "database": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/network.sqlite",
+    "database": "data/paths/prepared/helsinki-capital-area/network.sqlite",
     "run_area_limits": {
       "max_area_km2": 2500,
       "max_segments": 650000,

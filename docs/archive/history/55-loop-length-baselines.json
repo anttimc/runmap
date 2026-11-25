@@ -45,8 +45,8 @@
       "timeout_s": 3.0
     },
     "sample_count": 3200,
-    "database": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/network.sqlite",
-    "numeric_database": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite",
+    "database": "data/paths/prepared/helsinki-capital-area/network.sqlite",
+    "numeric_database": "data/paths/prepared/helsinki-capital-area/numeric-routing-v2.sqlite",
     "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",
     "metadata": {
       "dataset_id": "2f8b220e40a1cf1c40b733db19b1be939e7e93ca064e52c3c110f29f824034b5",

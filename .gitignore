@@ -8,6 +8,8 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+.ruff_cache/
+private-notes/
 web/node_modules/
 web/dist/
 .pnpm-store/

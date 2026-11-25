@@ -49,7 +49,7 @@
         "input_bytes": 49118528,
         "total_bytes": 116186336
       },
-      "environment_path": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
+      "environment_path": "data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
       "environment_raster_bundle": "data/environment/prepared/helsinki-capital-area-v3",
       "packed_input_identity": "edd521ac81d0e76bc70cdc7bd76839926b03b66ed6d1096dc340b350439a45ce",
       "limits": {
@@ -2863,7 +2863,7 @@
         "input_bytes": 67079904,
         "total_bytes": 134147712
       },
-      "environment_path": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
+      "environment_path": "data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
       "environment_raster_bundle": "data/environment/prepared/helsinki-capital-area-v3",
       "packed_input_identity": "edd521ac81d0e76bc70cdc7bd76839926b03b66ed6d1096dc340b350439a45ce",
       "limits": {
@@ -3490,7 +3490,7 @@
         "input_bytes": 452698488,
         "total_bytes": 1951100909
       },
-      "environment_path": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
+      "environment_path": "data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
       "environment_raster_bundle": "data/environment/prepared/helsinki-capital-area-v3",
       "packed_input_identity": "edd521ac81d0e76bc70cdc7bd76839926b03b66ed6d1096dc340b350439a45ce",
       "limits": {
@@ -4075,7 +4075,7 @@
         "input_bytes": 0,
         "total_bytes": 67096696
       },
-      "environment_path": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
+      "environment_path": "data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
       "environment_raster_bundle": "data/environment/prepared/helsinki-capital-area-v3",
       "packed_input_identity": null,
       "limits": {
@@ -6845,7 +6845,7 @@
         "input_bytes": 49118528,
         "total_bytes": 116186336
       },
-      "environment_path": "/Users/anttimc/coding/runmap/data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
+      "environment_path": "data/paths/prepared/helsinki-capital-area/environment-join.sqlite",
       "environment_raster_bundle": "data/environment/prepared/helsinki-capital-area-v3",
       "packed_input_identity": "c09fbf8f93a2aee36d6c3d0acf9c592b6821433883c29443b7fa297ff5aa9efa",
       "limits": {
