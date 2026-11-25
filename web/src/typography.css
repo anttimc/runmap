@@ -1,0 +1,15 @@
+/** Shared, locally served typography inspired by transport and wayfinding signs. */
+@import "@fontsource/barlow/latin-400.css";
+@import "@fontsource/barlow/latin-500.css";
+@import "@fontsource/barlow/latin-600.css";
+@import "@fontsource/barlow/latin-700.css";
+
+:root {
+  --font-ui: "Barlow", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-ui);
+  font-synthesis: none;
+}
+
+.maplibregl-map {
+  font-family: var(--font-ui);
+}

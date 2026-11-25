@@ -268,6 +268,11 @@ selection.
 ## Browser application
 
 The browser owns map rendering, interaction state, and requests to the API.
+Both browser pages share Barlow typography through `web/src/typography.css`.
+The Fontsource package supplies Latin webfonts in weights 400–700 under the
+SIL Open Font License. Vite bundles the font assets for local serving; typography
+does not require an external font service. The Latin subset includes Finnish letters.
+The font's copyright notice and license ship at `/fonts/barlow-OFL.txt`.
 A coordinator shares the start location and routing policy between path
 exploration and planning. Feature controllers own their requests and displayed
 results. Map-layer visibility is independent of planner activation.
